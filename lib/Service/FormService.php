@@ -129,6 +129,23 @@ class FormService
             }
         }
 
+        // Hash the share password if provided (store hash, never plaintext)
+        if (isset($form['settings']['share_password'])) {
+            $password = $form['settings']['share_password'];
+            if (!empty($password)) {
+                // Only hash if it's not already hashed (new password)
+                // Hashed passwords start with $2y$ (bcrypt)
+                if (strpos($password, '$2y$') !== 0) {
+                    $form['settings']['share_password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+                }
+            } else {
+                // Password was cleared
+                unset($form['settings']['share_password_hash']);
+            }
+            // Never store plaintext password
+            unset($form['settings']['share_password']);
+        }
+
         $form['modified_at'] = date('c');
 
         // Save - Nextcloud handles locking internally

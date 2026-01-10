@@ -16,13 +16,13 @@
     />
 
     <!-- Textarea -->
-    <textarea
+    <NcTextArea
       v-else-if="question.type === 'textarea'"
       :value="value"
-      rows="4"
-      class="textarea-input"
-      @input="$emit('update:value', $event.target.value)"
-    ></textarea>
+      :rows="4"
+      resize="vertical"
+      @update:model-value="$emit('update:value', $event)"
+    />
 
     <!-- Single Choice (Radio) -->
     <div v-else-if="question.type === 'choice'" class="choice-options">

@@ -12,6 +12,7 @@ return [
 
         // Public routes (anonymous access via share token)
         ['name' => 'public#showForm', 'url' => '/public/{token}', 'verb' => 'GET'],
+        ['name' => 'public#authenticate', 'url' => '/public/{token}', 'verb' => 'POST'],
         ['name' => 'public#submit', 'url' => '/public/{token}/submit', 'verb' => 'POST'],
         ['name' => 'public#showResults', 'url' => '/public/{token}/results', 'verb' => 'GET'],
 

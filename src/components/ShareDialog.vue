@@ -44,12 +44,17 @@
           {{ t('Password protect') }}
         </NcCheckboxRadioSwitch>
 
-        <NcTextField
-          v-if="linkSettings.passwordProtected"
-          v-model="linkSettings.password"
-          type="password"
-          :label="t('Password')"
-        />
+        <div v-if="linkSettings.passwordProtected" class="password-field">
+          <NcTextField
+            v-model="linkSettings.password"
+            type="password"
+            :label="t('Password')"
+            :placeholder="t('Enter new password')"
+          />
+          <NcButton type="primary" @click="savePassword">
+            {{ t('Save') }}
+          </NcButton>
+        </div>
 
         <NcCheckboxRadioSwitch
           :model-value="linkSettings.expires"
@@ -142,6 +147,18 @@ export default {
           shareToken.value = props.form.settings.public_token;
           const baseUrl = window.location.origin;
           shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{token}', { token: shareToken.value })}`;
+
+          // Load password setting
+          if (props.form.settings.share_password) {
+            linkSettings.passwordProtected = true;
+            linkSettings.password = '********'; // Don't show actual password
+          }
+
+          // Load expiration setting
+          if (props.form.settings.share_expires_at) {
+            linkSettings.expires = true;
+            linkSettings.expiresAt = new Date(props.form.settings.share_expires_at);
+          }
         }
       } catch (error) {
         console.error('Error loading shares:', error);
@@ -213,6 +230,13 @@ export default {
       linkSettings.passwordProtected = enabled;
       if (!enabled) {
         linkSettings.password = '';
+        saveLinkSettings();
+      }
+    };
+
+    const savePassword = () => {
+      if (linkSettings.password) {
+        saveLinkSettings();
       }
     };
 
@@ -224,6 +248,43 @@ export default {
         linkSettings.expiresAt = date;
       } else {
         linkSettings.expiresAt = null;
+      }
+      saveLinkSettings();
+    };
+
+    const saveLinkSettings = async () => {
+      try {
+        const settings = {
+          ...props.form.settings,
+        };
+
+        // Update password
+        if (linkSettings.passwordProtected && linkSettings.password) {
+          settings.share_password = linkSettings.password;
+        } else {
+          settings.share_password = null;
+        }
+
+        // Update expiration
+        if (linkSettings.expires && linkSettings.expiresAt) {
+          settings.share_expires_at = linkSettings.expiresAt.toISOString();
+        } else {
+          settings.share_expires_at = null;
+        }
+
+        await axios.put(
+          generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
+          { settings }
+        );
+
+        // Update local form object
+        props.form.settings.share_password = settings.share_password;
+        props.form.settings.share_expires_at = settings.share_expires_at;
+
+        showSuccess(t('Settings saved'));
+      } catch (error) {
+        showError(t('Failed to save settings'));
+        console.error(error);
       }
     };
 
@@ -246,6 +307,7 @@ export default {
       copyLink,
       togglePassword,
       toggleLinkExpiration,
+      savePassword,
       openFilesShare,
       t,
     };
@@ -309,6 +371,14 @@ export default {
   padding: 16px;
   background: var(--color-background-hover);
   border-radius: var(--border-radius-large);
+
+  .password-field {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
 }
 
 .share-internal {

@@ -122,6 +122,26 @@ class PublicController extends Controller
             $fileId = $result['fileId'];
             $form = $result['form'];
 
+            // Check if form has expired
+            if (!empty($form['settings']['share_expires_at'])) {
+                $expiresAt = new \DateTime($form['settings']['share_expires_at']);
+                if ($expiresAt < new \DateTime()) {
+                    return $this->errorResponse('This form has expired', Http::STATUS_GONE);
+                }
+            }
+
+            // Check if form is password protected
+            if (!empty($form['settings']['share_password_hash'])) {
+                $providedPassword = $this->request->getParam('password');
+                if (empty($providedPassword)) {
+                    // Show password form
+                    return $this->showPasswordForm($token);
+                }
+                if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
+                    return $this->showPasswordForm($token, 'Incorrect password');
+                }
+            }
+
             // Check if form requires login
             if ($form['settings']['require_login'] ?? false) {
                 $user = $this->userSession->getUser();
@@ -139,6 +159,8 @@ class PublicController extends Controller
             unset($form['responses']);
             unset($form['_index']);
             unset($form['permissions']);
+            unset($form['settings']['share_password_hash']);
+            unset($form['settings']['share_password']);
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('token', $token);
@@ -247,6 +269,72 @@ class PublicController extends Controller
     }
 
     /**
+     * Authenticate password-protected form (POST handler)
+     * @return TemplateResponse|RedirectResponse
+     */
+    #[PublicPage]
+    #[NoCSRFRequired]
+    #[BruteForceProtection(action: 'formvox_password')]
+    public function authenticate(string $token)
+    {
+        try {
+            $result = $this->findFormByToken($token);
+
+            if ($result === null) {
+                return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
+            }
+
+            $fileId = $result['fileId'];
+            $form = $result['form'];
+
+            // Check if form has expired
+            if (!empty($form['settings']['share_expires_at'])) {
+                $expiresAt = new \DateTime($form['settings']['share_expires_at']);
+                if ($expiresAt < new \DateTime()) {
+                    return $this->errorResponse('This form has expired', Http::STATUS_GONE);
+                }
+            }
+
+            // Check password
+            if (!empty($form['settings']['share_password_hash'])) {
+                $providedPassword = $this->request->getParam('password');
+                if (empty($providedPassword) || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
+                    $response = $this->showPasswordForm($token, 'Incorrect password');
+                    $response->throttle();
+                    return $response;
+                }
+            }
+
+            // Password correct - show the form
+            // Remove sensitive data for public view
+            unset($form['responses']);
+            unset($form['_index']);
+            unset($form['permissions']);
+            unset($form['settings']['share_password_hash']);
+            unset($form['settings']['share_password']);
+
+            // Provide initial state to JavaScript
+            $this->initialState->provideInitialState('token', $token);
+            $this->initialState->provideInitialState('fileId', $fileId);
+            $this->initialState->provideInitialState('form', $form);
+
+            Util::addScript(Application::APP_ID, 'formvox-public');
+            Util::addStyle(Application::APP_ID, 'public');
+
+            return new TemplateResponse(
+                Application::APP_ID,
+                'public/respond',
+                [
+                    'appId' => Application::APP_ID,
+                ],
+                'public'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage());
+        }
+    }
+
+    /**
      * Show public results (if enabled)
      */
     #[PublicPage]
@@ -296,6 +384,31 @@ class PublicController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
+    }
+
+    /**
+     * Show password form for protected forms
+     */
+    private function showPasswordForm(string $token, ?string $error = null): TemplateResponse
+    {
+        // Try to get form title for display
+        $title = 'Protected Form';
+        $result = $this->findFormByToken($token);
+        if ($result !== null) {
+            $title = $result['form']['title'] ?? $title;
+        }
+
+        return new TemplateResponse(
+            Application::APP_ID,
+            'public/password',
+            [
+                'appId' => Application::APP_ID,
+                'token' => $token,
+                'title' => $title,
+                'error' => $error,
+            ],
+            'public'
+        );
     }
 
     /**
