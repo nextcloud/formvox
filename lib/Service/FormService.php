@@ -257,6 +257,70 @@ class FormService
     }
 
     /**
+     * Get file by ID without user context (for public/system access)
+     * This searches through all users' files
+     */
+    public function getFileByIdPublic(int $fileId): File
+    {
+        // Use the mount manager to get the file directly
+        $nodes = $this->rootFolder->getById($fileId);
+
+        if (empty($nodes)) {
+            throw new NotFoundException('Form not found');
+        }
+
+        $file = $nodes[0];
+        if (!($file instanceof File)) {
+            throw new \RuntimeException('Not a file');
+        }
+
+        return $file;
+    }
+
+    /**
+     * Load a form by file ID (public access - no user context needed)
+     */
+    public function loadPublic(int $fileId): array
+    {
+        $file = $this->getFileByIdPublic($fileId);
+        $content = $file->getContent();
+        $form = json_decode($content, true);
+
+        if ($form === null) {
+            throw new \RuntimeException('Invalid form file format');
+        }
+
+        return $form;
+    }
+
+    /**
+     * Append a response to a form (public access - no user context needed)
+     */
+    public function appendResponsePublic(int $fileId, array $response): array
+    {
+        $file = $this->getFileByIdPublic($fileId);
+        $form = json_decode($file->getContent(), true);
+
+        // Initialize responses array if not exists
+        if (!isset($form['responses'])) {
+            $form['responses'] = [];
+        }
+
+        // Add response
+        $form['responses'][] = $response;
+
+        // Update index
+        $this->indexService->updateIndex($form, $response, count($form['responses']) - 1);
+
+        $form['modified_at'] = date('c');
+
+        // Save
+        $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return $response;
+    }
+
+    /**
      * Create form structure
      */
     private function createFormStructure(string $title, string $userId, ?string $template = null): array

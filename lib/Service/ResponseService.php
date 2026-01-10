@@ -65,8 +65,8 @@ class ResponseService
             $response['score'] = $this->calculateScore($form, $answers);
         }
 
-        // Append response
-        return $this->formService->appendResponse($fileId, $response);
+        // Append response (use public method since no user is logged in)
+        return $this->formService->appendResponsePublic($fileId, $response);
     }
 
     /**
@@ -116,6 +116,23 @@ class ResponseService
     public function getSummary(int $fileId): array
     {
         $form = $this->formService->load($fileId);
+        return $this->buildSummary($form);
+    }
+
+    /**
+     * Get summary statistics for a form (public access)
+     */
+    public function getSummaryPublic(int $fileId): array
+    {
+        $form = $this->formService->loadPublic($fileId);
+        return $this->buildSummary($form);
+    }
+
+    /**
+     * Build summary from form data
+     */
+    private function buildSummary(array $form): array
+    {
 
         $summary = [
             'responseCount' => $this->indexService->getResponseCount($form),

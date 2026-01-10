@@ -188,7 +188,7 @@ class PublicController extends Controller
      */
     #[PublicPage]
     #[NoCSRFRequired]
-    #[AnonRateLimit(limit: 10, period: 3600)]
+    #[AnonRateLimit(limit: 100, period: 3600)]
     #[BruteForceProtection(action: 'formvox_submit')]
     public function submit(string $token, array $answers): DataResponse
     {
@@ -357,8 +357,8 @@ class PublicController extends Controller
                 return $this->errorResponse('Results are not available for this form', Http::STATUS_FORBIDDEN);
             }
 
-            // Get summary
-            $summary = $this->responseService->getSummary($fileId);
+            // Get summary (use public method - no user context)
+            $summary = $this->responseService->getSummaryPublic($fileId);
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('token', $token);
