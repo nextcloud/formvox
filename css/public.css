@@ -1,0 +1,380 @@
+/**
+ * FormVox - Public (anonymous) styles
+ */
+
+/* Fix scroll issues */
+html, body, #body-public {
+  height: auto !important;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+}
+
+/* Reset for public pages */
+#body-public {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  min-height: 100vh;
+}
+
+#body-public #content {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+/* Public container */
+#formvox-public {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  padding-bottom: 80px;
+}
+
+/* Respond container within public */
+#formvox-public .respond-container {
+  max-width: 100%;
+}
+
+/* Public form header */
+#formvox-public .form-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 30px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+#formvox-public .form-header h1 {
+  margin: 0 0 12px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+#formvox-public .form-header .form-description {
+  font-size: 16px;
+  color: #555;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Page indicator */
+#formvox-public .page-indicator {
+  text-align: center;
+  padding: 12px 20px;
+  background: rgba(0, 130, 201, 0.1);
+  color: #0082c9;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+
+/* Public questions */
+#formvox-public .question-container {
+  margin-bottom: 20px;
+  padding: 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease;
+}
+
+#formvox-public .question-container:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Questions wrapper */
+#formvox-public .questions {
+  margin-bottom: 20px;
+}
+
+#formvox-public .question-label {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+#formvox-public .question-description {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+/* Public inputs */
+#formvox-public input[type="text"],
+#formvox-public input[type="number"],
+#formvox-public input[type="email"],
+#formvox-public input[type="date"],
+#formvox-public input[type="time"],
+#formvox-public textarea,
+#formvox-public select {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+#formvox-public input:focus,
+#formvox-public textarea:focus,
+#formvox-public select:focus {
+  outline: none;
+  border-color: #0082c9;
+}
+
+/* Public choice options */
+#formvox-public .choice-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#formvox-public .choice-options label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f8f8f8;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#formvox-public .choice-options label:hover {
+  background: #f0f0f0;
+}
+
+#formvox-public .choice-options input[type="radio"],
+#formvox-public .choice-options input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+
+/* Public scale */
+#formvox-public .scale-options {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+#formvox-public .scale-option {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 2px solid #e0e0e0;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#formvox-public .scale-option:hover {
+  border-color: #0082c9;
+}
+
+#formvox-public .scale-option.selected {
+  background: #0082c9;
+  border-color: #0082c9;
+  color: white;
+}
+
+/* Public rating */
+#formvox-public .rating-input {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+#formvox-public .star-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 32px;
+  color: #ddd;
+  transition: color 0.2s, transform 0.1s;
+  padding: 0;
+}
+
+#formvox-public .star-button:hover {
+  transform: scale(1.1);
+}
+
+#formvox-public .star-button.filled {
+  color: #ffc107;
+}
+
+/* Matrix table styling */
+#formvox-public .matrix-input {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+#formvox-public .matrix-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+#formvox-public .matrix-table th,
+#formvox-public .matrix-table td {
+  padding: 12px 16px;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+}
+
+#formvox-public .matrix-table th:last-child,
+#formvox-public .matrix-table td:last-child {
+  border-right: none;
+}
+
+#formvox-public .matrix-table tr:last-child td {
+  border-bottom: none;
+}
+
+#formvox-public .matrix-table th {
+  background: #f5f5f5;
+  font-weight: 600;
+  color: #333;
+}
+
+#formvox-public .matrix-table .row-label {
+  text-align: left;
+  font-weight: 500;
+  background: #fafafa;
+}
+
+/* Public form actions */
+#formvox-public .form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+}
+
+#formvox-public .form-actions button,
+#formvox-public .form-actions .button-vue {
+  padding: 14px 40px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  border: none;
+  border-radius: 24px !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+#formvox-public .form-actions button[type="submit"],
+#formvox-public .form-actions .button-vue--vue-primary {
+  background: linear-gradient(135deg, #0082c9 0%, #0070b0 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 130, 201, 0.3);
+}
+
+#formvox-public .form-actions button[type="submit"]:hover,
+#formvox-public .form-actions .button-vue--vue-primary:hover {
+  background: linear-gradient(135deg, #0070b0 0%, #005a90 100%) !important;
+  box-shadow: 0 6px 16px rgba(0, 130, 201, 0.4);
+  transform: translateY(-1px);
+}
+
+#formvox-public .form-actions button[type="submit"]:disabled,
+#formvox-public .form-actions .button-vue--vue-primary:disabled {
+  background: #ccc !important;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Public success */
+#formvox-public .success-message {
+  text-align: center;
+  padding: 60px 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+#formvox-public .success-message svg {
+  color: #46ba61;
+}
+
+#formvox-public .success-message h2 {
+  font-size: 28px;
+  color: #333;
+  margin: 20px 0 10px;
+}
+
+#formvox-public .success-message p {
+  font-size: 16px;
+  color: #666;
+}
+
+/* Public error */
+#formvox-public .error-message {
+  background: #e53935;
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+/* Score display for public */
+#formvox-public .score-display {
+  margin: 30px 0;
+  padding: 30px;
+  background: #f8f8f8;
+  border-radius: 12px;
+}
+
+#formvox-public .score-display h3 {
+  font-size: 20px;
+  color: #333;
+  margin: 0 0 15px;
+}
+
+#formvox-public .score-value {
+  font-size: 48px;
+  font-weight: bold;
+  color: #333;
+}
+
+#formvox-public .score-percentage {
+  font-size: 32px;
+  color: #0082c9;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  #formvox-public {
+    padding: 20px 16px;
+  }
+
+  #formvox-public .form-header h1 {
+    font-size: 24px;
+  }
+
+  #formvox-public .question-container {
+    padding: 16px;
+  }
+
+  #formvox-public .scale-option {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+}

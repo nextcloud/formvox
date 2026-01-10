@@ -1,0 +1,232 @@
+/**
+ * FormVox - Respond styles
+ */
+
+.respond-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Form header */
+.form-header {
+  margin-bottom: 30px;
+}
+
+.form-header h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  color: var(--color-main-text);
+}
+
+.form-header .form-description {
+  color: var(--color-text-maxcontrast);
+  font-size: 16px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Page indicator */
+.page-indicator {
+  text-align: center;
+  color: var(--color-text-maxcontrast);
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* Questions */
+.questions {
+  margin-bottom: 30px;
+}
+
+.question-container {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+}
+
+/* Question renderer */
+.question-renderer .question-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.question-renderer .question-label .required {
+  color: var(--color-error);
+}
+
+.question-renderer .question-description {
+  font-size: 14px;
+  color: var(--color-text-maxcontrast);
+  margin: 0 0 12px;
+}
+
+/* Input styles */
+.textarea-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.dropdown-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-main-background);
+  font-size: 14px;
+}
+
+.time-input {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+}
+
+/* Scale input */
+.scale-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scale-input .scale-label {
+  font-size: 14px;
+  color: var(--color-text-maxcontrast);
+}
+
+.scale-input .scale-options {
+  display: flex;
+  gap: 8px;
+}
+
+.scale-input .scale-option {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-main-background);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.scale-input .scale-option:hover {
+  border-color: var(--color-primary);
+}
+
+.scale-input .scale-option.selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+/* Rating input */
+.rating-input {
+  display: flex;
+  gap: 4px;
+}
+
+.rating-input .star-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-border-dark);
+  transition: color 0.2s;
+  padding: 4px;
+}
+
+.rating-input .star-button:hover,
+.rating-input .star-button.filled {
+  color: #ffc107;
+}
+
+/* Matrix input */
+.matrix-input {
+  overflow-x: auto;
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.matrix-table th,
+.matrix-table td {
+  padding: 10px;
+  text-align: center;
+  border: 1px solid var(--color-border);
+}
+
+.matrix-table th {
+  background: var(--color-background-dark);
+  font-weight: 600;
+}
+
+.matrix-table .row-label {
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Error message */
+.error-message {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: var(--color-error);
+  color: white;
+  border-radius: var(--border-radius);
+}
+
+/* Success message */
+.success-message {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.success-message h2 {
+  margin: 20px 0 10px;
+}
+
+.success-message p {
+  color: var(--color-text-maxcontrast);
+  margin-bottom: 20px;
+}
+
+/* Score display */
+.score-display {
+  margin: 30px 0;
+  padding: 20px;
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+}
+
+.score-display h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.score-display .score-value {
+  font-size: 36px;
+  font-weight: bold;
+}
+
+.score-display .score-percentage {
+  font-size: 24px;
+  color: var(--color-primary);
+}

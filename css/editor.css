@@ -1,0 +1,152 @@
+/**
+ * FormVox - Editor styles
+ */
+
+.editor-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header */
+.editor-header {
+  margin-bottom: 20px;
+}
+
+.editor-header .title-input input {
+  font-size: 24px;
+  font-weight: bold;
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+.editor-header .title-input input:focus {
+  outline: none;
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.editor-header .description-input {
+  margin-top: 10px;
+}
+
+/* Toolbar */
+.editor-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Question editor */
+.question-editor {
+  background: var(--color-main-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-large);
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+.question-editor:hover {
+  border-color: var(--color-primary-element);
+}
+
+.question-editor.collapsed .question-body {
+  display: none;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.question-header .drag-handle {
+  cursor: grab;
+  color: var(--color-text-maxcontrast);
+}
+
+.question-header .drag-handle:active {
+  cursor: grabbing;
+}
+
+.question-header .question-number {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.question-header .type-select {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-main-background);
+}
+
+.question-header .question-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.question-body {
+  padding: 16px;
+}
+
+/* Options editor */
+.options-editor h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.option-item .option-handle {
+  cursor: grab;
+  color: var(--color-text-maxcontrast);
+}
+
+.option-item .score-input {
+  width: 80px;
+}
+
+/* Save status */
+.save-status {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 16px;
+  background: var(--color-success);
+  color: white;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  transition: opacity 0.3s, background 0.3s;
+}
+
+.save-status.saving {
+  background: var(--color-warning);
+}
+
+/* Preview */
+.preview-container {
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+  padding: 20px;
+}
