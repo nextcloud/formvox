@@ -12,7 +12,6 @@ const app = createApp(Respond, {
   token,
   fileId,
   form,
-  isPublic: true,
 });
 
 // Make translation functions globally available

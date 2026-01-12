@@ -217,52 +217,6 @@ class ApiController extends Controller
     }
 
     /**
-     * Submit a response (authenticated user)
-     */
-    #[NoAdminRequired]
-    public function respond(int $fileId, array $answers): DataResponse
-    {
-        try {
-            $user = $this->userSession->getUser();
-            if ($user === null) {
-                return new DataResponse(
-                    ['error' => 'Not authenticated'],
-                    Http::STATUS_UNAUTHORIZED
-                );
-            }
-
-            $form = $this->formService->load($fileId);
-            $role = $this->permissionService->getRole($form, $user->getUID());
-
-            if (!$this->permissionService->canRespond($role)) {
-                return new DataResponse(
-                    ['error' => 'Permission denied'],
-                    Http::STATUS_FORBIDDEN
-                );
-            }
-
-            $response = $this->responseService->submitAuthenticated(
-                $fileId,
-                $answers,
-                $user->getUID(),
-                $user->getDisplayName()
-            );
-
-            return new DataResponse(['response' => $response], Http::STATUS_CREATED);
-        } catch (\RuntimeException $e) {
-            return new DataResponse(
-                ['error' => $e->getMessage()],
-                Http::STATUS_BAD_REQUEST
-            );
-        } catch (\Exception $e) {
-            return new DataResponse(
-                ['error' => $e->getMessage()],
-                Http::STATUS_INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    /**
      * Get responses for a form
      */
     #[NoAdminRequired]

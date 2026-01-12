@@ -7,7 +7,6 @@ return [
         // Page routes
         ['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
         ['name' => 'page#editor', 'url' => '/edit/{fileId}', 'verb' => 'GET'],
-        ['name' => 'page#respond', 'url' => '/respond/{fileId}', 'verb' => 'GET'],
         ['name' => 'page#results', 'url' => '/results/{fileId}', 'verb' => 'GET'],
 
         // Public routes (anonymous access via fileId + token)
@@ -24,7 +23,6 @@ return [
         ['name' => 'api#delete', 'url' => '/api/form/{fileId}', 'verb' => 'DELETE'],
 
         // API routes - Responses
-        ['name' => 'api#respond', 'url' => '/api/form/{fileId}/respond', 'verb' => 'POST'],
         ['name' => 'api#getResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'GET'],
         ['name' => 'api#deleteResponse', 'url' => '/api/form/{fileId}/responses/{responseId}', 'verb' => 'DELETE'],
 

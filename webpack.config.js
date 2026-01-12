@@ -8,7 +8,6 @@ module.exports = {
   entry: {
     main: './src/main.js',
     editor: './src/editor.js',
-    respond: './src/respond.js',
     results: './src/results.js',
     public: './src/public.js',
   },

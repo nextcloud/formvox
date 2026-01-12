@@ -7,9 +7,11 @@ namespace OCA\FormVox\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\IRequest;
+use OCP\IURLGenerator;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
@@ -20,6 +22,7 @@ class PageController extends Controller
     private FormService $formService;
     private PermissionService $permissionService;
     private IInitialState $initialState;
+    private IURLGenerator $urlGenerator;
     private ?string $userId;
 
     public function __construct(
@@ -27,12 +30,14 @@ class PageController extends Controller
         FormService $formService,
         PermissionService $permissionService,
         IInitialState $initialState,
+        IURLGenerator $urlGenerator,
         ?string $userId
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
         $this->permissionService = $permissionService;
         $this->initialState = $initialState;
+        $this->urlGenerator = $urlGenerator;
         $this->userId = $userId;
     }
 
@@ -53,18 +58,28 @@ class PageController extends Controller
 
     /**
      * Form editor page
+     * @return TemplateResponse|RedirectResponse
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    public function editor(int $fileId): TemplateResponse
+    public function editor(int $fileId)
     {
         $form = $this->formService->load($fileId);
         $role = $this->permissionService->getRole($form, $this->userId ?? '');
         $permissions = $this->permissionService->getPermissionsForRole($role);
 
         if (!$permissions['editQuestions']) {
-            // Redirect to respond page if user can't edit
-            return $this->respond($fileId);
+            // Redirect to public form URL if user can't edit
+            $token = $form['settings']['public_token'] ?? null;
+            if ($token) {
+                $publicUrl = $this->urlGenerator->linkToRoute('formvox.public.showForm', [
+                    'fileId' => $fileId,
+                    'token' => $token,
+                ]);
+                return new RedirectResponse($publicUrl);
+            }
+            // No public token - show error
+            throw new \OCP\AppFramework\Http\NotFoundResponse();
         }
 
         // Provide initial state to JavaScript
@@ -77,27 +92,6 @@ class PageController extends Controller
         Util::addStyle(Application::APP_ID, 'editor');
 
         return new TemplateResponse(Application::APP_ID, 'editor', [
-            'appId' => Application::APP_ID,
-        ]);
-    }
-
-    /**
-     * Respond to form page (authenticated users)
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function respond(int $fileId): TemplateResponse
-    {
-        $form = $this->formService->loadPublicData($fileId);
-
-        // Provide initial state to JavaScript
-        $this->initialState->provideInitialState('fileId', $fileId);
-        $this->initialState->provideInitialState('form', $form);
-
-        Util::addScript(Application::APP_ID, 'formvox-respond');
-        Util::addStyle(Application::APP_ID, 'respond');
-
-        return new TemplateResponse(Application::APP_ID, 'respond', [
             'appId' => Application::APP_ID,
         ]);
     }

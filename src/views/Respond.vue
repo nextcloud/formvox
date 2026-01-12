@@ -93,19 +93,15 @@ export default {
   props: {
     fileId: {
       type: Number,
-      default: null,
+      required: true,
     },
     token: {
       type: String,
-      default: null,
+      required: true,
     },
     form: {
       type: Object,
       required: true,
-    },
-    isPublic: {
-      type: Boolean,
-      default: false,
     },
     isPreview: {
       type: Boolean,
@@ -246,12 +242,10 @@ export default {
       error.value = null;
 
       try {
-        let url;
-        if (props.isPublic && props.token) {
-          url = generateUrl('/apps/formvox/public/{fileId}/{token}/submit', { fileId: props.fileId, token: props.token });
-        } else {
-          url = generateUrl('/apps/formvox/api/form/{fileId}/respond', { fileId: props.fileId });
-        }
+        const url = generateUrl('/apps/formvox/public/{fileId}/{token}/submit', {
+          fileId: props.fileId,
+          token: props.token
+        });
 
         const response = await axios.post(url, { answers });
 
@@ -272,11 +266,10 @@ export default {
     };
 
     const viewResults = () => {
-      if (props.isPublic && props.token) {
-        window.location.href = generateUrl('/apps/formvox/public/{fileId}/{token}/results', { fileId: props.fileId, token: props.token });
-      } else {
-        window.location.href = generateUrl('/apps/formvox/results/{fileId}', { fileId: props.fileId });
-      }
+      window.location.href = generateUrl('/apps/formvox/public/{fileId}/{token}/results', {
+        fileId: props.fileId,
+        token: props.token
+      });
     };
 
     return {
