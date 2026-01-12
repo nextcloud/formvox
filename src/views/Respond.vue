@@ -1,14 +1,35 @@
 <template>
-  <div class="respond-container">
-    <div v-if="submitted" class="success-message">
-      <CheckIcon :size="64" />
-      <h2>{{ t('Thank you!') }}</h2>
-      <p>{{ t('Your response has been recorded.') }}</p>
+  <div class="respond-container" :style="containerStyles">
+    <!-- Header Zone -->
+    <div v-if="headerBlocks.length > 0" class="zone-header">
+      <BlockRenderer
+        v-for="block in headerBlocks"
+        :key="block.id"
+        :block="block"
+        :global-styles="globalStyles"
+      />
+    </div>
+
+    <!-- Thank You Page (after submission) -->
+    <div v-if="submitted" class="thank-you-zone">
+      <template v-if="thankYouBlocks.length > 0">
+        <BlockRenderer
+          v-for="block in thankYouBlocks"
+          :key="block.id"
+          :block="block"
+          :global-styles="globalStyles"
+        />
+      </template>
+      <template v-else>
+        <CheckIcon :size="64" :fill-color="globalStyles.primaryColor || '#0082c9'" />
+        <h2>{{ t('Thank you!') }}</h2>
+        <p>{{ t('Your response has been recorded.') }}</p>
+      </template>
 
       <div v-if="score" class="score-display">
         <h3>{{ t('Your score') }}</h3>
         <div class="score-value">{{ score.total }} / {{ score.max }}</div>
-        <div class="score-percentage">{{ score.percentage }}%</div>
+        <div class="score-percentage" :style="{ color: globalStyles.primaryColor }">{{ score.percentage }}%</div>
       </div>
 
       <NcButton v-if="showResultsLink" @click="viewResults">
@@ -16,13 +37,14 @@
       </NcButton>
     </div>
 
+    <!-- Form -->
     <form v-else @submit.prevent="submit">
       <div class="form-header">
         <h1>{{ form.title }}</h1>
         <p v-if="form.description" class="form-description">{{ form.description }}</p>
       </div>
 
-      <div v-if="currentPage" class="page-indicator">
+      <div v-if="currentPage && pages.length > 1" class="page-indicator">
         {{ t('Page {current} of {total}', { current: currentPageIndex + 1, total: pages.length }) }}
       </div>
 
@@ -62,6 +84,7 @@
           type="primary"
           native-type="submit"
           :disabled="submitting || isPreview"
+          :style="submitButtonStyles"
         >
           {{ submitting ? t('Submitting...') : t('Submit') }}
         </NcButton>
@@ -71,6 +94,16 @@
         {{ error }}
       </div>
     </form>
+
+    <!-- Footer Zone -->
+    <div v-if="footerBlocks.length > 0" class="zone-footer">
+      <BlockRenderer
+        v-for="block in footerBlocks"
+        :key="block.id"
+        :block="block"
+        :global-styles="globalStyles"
+      />
+    </div>
   </div>
 </template>
 
@@ -81,6 +114,7 @@ import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { t } from '@/utils/l10n';
 import QuestionRenderer from '../components/QuestionRenderer.vue';
+import BlockRenderer from '../components/pagebuilder/BlockRenderer.vue';
 import CheckIcon from '../components/icons/CheckIcon.vue';
 
 export default {
@@ -88,6 +122,7 @@ export default {
   components: {
     NcButton,
     QuestionRenderer,
+    BlockRenderer,
     CheckIcon,
   },
   props: {
@@ -103,6 +138,10 @@ export default {
       type: Object,
       required: true,
     },
+    branding: {
+      type: Object,
+      default: () => ({}),
+    },
     isPreview: {
       type: Boolean,
       default: false,
@@ -117,6 +156,35 @@ export default {
     const score = ref(null);
     const showResultsLink = ref(false);
     const currentPageIndex = ref(0);
+
+    // Layout zones from branding
+    const headerBlocks = computed(() => props.branding?.layout?.header || []);
+    const footerBlocks = computed(() => props.branding?.layout?.footer || []);
+    const thankYouBlocks = computed(() => props.branding?.layout?.thankYou || []);
+    const globalStyles = computed(() => props.branding?.globalStyles || {
+      primaryColor: '#0082c9',
+      backgroundColor: '#ffffff',
+    });
+
+    // Container styles based on global styles
+    const containerStyles = computed(() => {
+      const bg = globalStyles.value.backgroundColor;
+      if (bg && bg !== '#ffffff') {
+        return { backgroundColor: bg };
+      }
+      return {};
+    });
+
+    const submitButtonStyles = computed(() => {
+      const primary = globalStyles.value.primaryColor;
+      if (primary) {
+        return {
+          backgroundColor: primary,
+          borderColor: primary,
+        };
+      }
+      return {};
+    });
 
     // Initialize answers
     props.form.questions?.forEach(q => {
@@ -285,6 +353,12 @@ export default {
       hasPreviousPage,
       hasNextPage,
       visibleQuestions,
+      headerBlocks,
+      footerBlocks,
+      thankYouBlocks,
+      globalStyles,
+      containerStyles,
+      submitButtonStyles,
       updateAnswer,
       previousPage,
       nextPage,
@@ -301,6 +375,30 @@ export default {
   max-width: 700px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.zone-header {
+  margin-bottom: 24px;
+}
+
+.zone-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.thank-you-zone {
+  text-align: center;
+  padding: 40px 20px;
+
+  h2 {
+    margin: 20px 0 10px;
+  }
+
+  p {
+    color: var(--color-text-maxcontrast);
+    margin-bottom: 20px;
+  }
 }
 
 .form-header {
@@ -348,20 +446,6 @@ export default {
   background: var(--color-error);
   color: white;
   border-radius: var(--border-radius);
-}
-
-.success-message {
-  text-align: center;
-  padding: 60px 20px;
-
-  h2 {
-    margin: 20px 0 10px;
-  }
-
-  p {
-    color: var(--color-text-maxcontrast);
-    margin-bottom: 20px;
-  }
 }
 
 .score-display {

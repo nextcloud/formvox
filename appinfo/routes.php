@@ -33,5 +33,13 @@ return [
 
         // API routes - Index management
         ['name' => 'api#rebuildIndex', 'url' => '/api/form/{fileId}/rebuild-index', 'verb' => 'POST'],
+
+        // Branding routes (admin only, except images which are public)
+        ['name' => 'branding#get', 'url' => '/api/branding', 'verb' => 'GET'],
+        ['name' => 'branding#saveLayout', 'url' => '/api/branding/layout', 'verb' => 'PUT'],
+        ['name' => 'branding#saveStyles', 'url' => '/api/branding/styles', 'verb' => 'PUT'],
+        ['name' => 'branding#uploadBlockImage', 'url' => '/api/branding/image/{blockId}', 'verb' => 'POST'],
+        ['name' => 'branding#deleteBlockImage', 'url' => '/api/branding/image/{blockId}', 'verb' => 'DELETE'],
+        ['name' => 'branding#blockImage', 'url' => '/branding/image/{blockId}', 'verb' => 'GET'],
     ],
 ];

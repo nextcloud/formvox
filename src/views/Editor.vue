@@ -25,6 +25,17 @@
             {{ t('Add question') }}
           </NcButton>
 
+          <NcButton
+            v-if="hasPages"
+            type="secondary"
+            @click="addPage"
+          >
+            <template #icon>
+              <PagesIcon :size="20" />
+            </template>
+            {{ t('Add page') }}
+          </NcButton>
+
           <NcButton @click="showPreview = !showPreview">
             <template #icon>
               <EyeIcon :size="20" />
@@ -33,6 +44,12 @@
           </NcButton>
 
           <NcActions>
+            <NcActionButton @click="togglePages">
+              <template #icon>
+                <PagesIcon :size="20" />
+              </template>
+              {{ hasPages ? t('Disable pages') : t('Enable pages') }}
+            </NcActionButton>
             <NcActionButton @click="showSettings = true">
               <template #icon>
                 <CogIcon :size="20" />
@@ -54,6 +71,28 @@
           </NcActions>
         </div>
 
+        <!-- Page tabs when pages are enabled -->
+        <div v-if="hasPages && !showPreview" class="page-tabs">
+          <div
+            v-for="(page, pageIndex) in form.pages"
+            :key="page.id"
+            class="page-tab"
+            :class="{ active: currentPageIndex === pageIndex }"
+            @click="currentPageIndex = pageIndex"
+          >
+            <span class="page-title">{{ page.title || t('Page {n}', { n: pageIndex + 1 }) }}</span>
+            <span class="page-question-count">({{ page.questions.length }})</span>
+            <NcActions v-if="form.pages.length > 1" class="page-actions">
+              <NcActionButton @click.stop="renamePage(pageIndex)">
+                {{ t('Rename') }}
+              </NcActionButton>
+              <NcActionButton @click.stop="deletePage(pageIndex)">
+                {{ t('Delete') }}
+              </NcActionButton>
+            </NcActions>
+          </div>
+        </div>
+
         <div v-if="showPreview" class="preview-container">
           <Respond
             :form="form"
@@ -63,27 +102,56 @@
         </div>
 
         <div v-else class="questions-container">
-          <draggable
-            v-model="form.questions"
-            item-key="id"
-            handle=".drag-handle"
-            @end="debouncedSave"
-          >
-            <template #item="{ element, index }">
-              <QuestionEditor
-                :question="element"
-                :index="index"
-                :questions="form.questions"
-                @update="updateQuestion(index, $event)"
-                @delete="deleteQuestion(index)"
-                @duplicate="duplicateQuestion(index)"
-              />
-            </template>
-          </draggable>
+          <!-- Page-based view -->
+          <template v-if="hasPages">
+            <draggable
+              v-model="currentPageQuestions"
+              item-key="id"
+              handle=".drag-handle"
+              group="questions"
+              @end="onQuestionDragEnd"
+            >
+              <template #item="{ element }">
+                <QuestionEditor
+                  :question="element"
+                  :index="getQuestionIndex(element.id)"
+                  :questions="form.questions"
+                  @update="updateQuestionById(element.id, $event)"
+                  @delete="deleteQuestionById(element.id)"
+                  @duplicate="duplicateQuestionById(element.id)"
+                />
+              </template>
+            </draggable>
 
-          <div v-if="form.questions.length === 0" class="empty-questions">
-            <p>{{ t('No questions yet. Click "Add question" to get started.') }}</p>
-          </div>
+            <div v-if="currentPageQuestions.length === 0" class="empty-questions">
+              <p>{{ t('No questions on this page. Click "Add question" to add one.') }}</p>
+            </div>
+          </template>
+
+          <!-- Single page view (no pages) -->
+          <template v-else>
+            <draggable
+              v-model="form.questions"
+              item-key="id"
+              handle=".drag-handle"
+              @end="debouncedSave"
+            >
+              <template #item="{ element, index }">
+                <QuestionEditor
+                  :question="element"
+                  :index="index"
+                  :questions="form.questions"
+                  @update="updateQuestion(index, $event)"
+                  @delete="deleteQuestion(index)"
+                  @duplicate="duplicateQuestion(index)"
+                />
+              </template>
+            </draggable>
+
+            <div v-if="form.questions.length === 0" class="empty-questions">
+              <p>{{ t('No questions yet. Click "Add question" to get started.') }}</p>
+            </div>
+          </template>
         </div>
 
         <div class="save-status" :class="{ saving: saving }">
@@ -112,7 +180,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import {
   NcContent,
   NcAppContent,
@@ -136,6 +204,7 @@ import EyeIcon from '../components/icons/EyeIcon.vue';
 import CogIcon from '../components/icons/CogIcon.vue';
 import ShareIcon from '../components/icons/ShareIcon.vue';
 import ChartIcon from '../components/icons/ChartIcon.vue';
+import PagesIcon from '../components/icons/PagesIcon.vue';
 
 export default {
   name: 'Editor',
@@ -156,6 +225,7 @@ export default {
     CogIcon,
     ShareIcon,
     ChartIcon,
+    PagesIcon,
   },
   props: {
     fileId: {
@@ -181,8 +251,31 @@ export default {
     const showSettings = ref(false);
     const showShare = ref(false);
     const showPreview = ref(false);
+    const currentPageIndex = ref(0);
 
     let saveTimeout = null;
+
+    // Computed: check if pages are enabled
+    const hasPages = computed(() => {
+      return Array.isArray(form.pages) && form.pages.length > 0;
+    });
+
+    // Computed: get questions for the current page
+    const currentPageQuestions = computed({
+      get() {
+        if (!hasPages.value) return [];
+        const page = form.pages[currentPageIndex.value];
+        if (!page) return [];
+        // Return the actual question objects for this page
+        return page.questions.map(qId => form.questions.find(q => q.id === qId)).filter(Boolean);
+      },
+      set(newQuestions) {
+        if (!hasPages.value) return;
+        // Update the page's question IDs based on the new order
+        form.pages[currentPageIndex.value].questions = newQuestions.map(q => q.id);
+        debouncedSave();
+      }
+    });
 
     const save = async () => {
       saving.value = true;
@@ -223,6 +316,10 @@ export default {
         showIf: null,
       };
       form.questions.push(newQuestion);
+      // If pages are enabled, add to current page
+      if (hasPages.value && form.pages[currentPageIndex.value]) {
+        form.pages[currentPageIndex.value].questions.push(newQuestion.id);
+      }
       debouncedSave();
     };
 
@@ -246,6 +343,111 @@ export default {
       debouncedSave();
     };
 
+    // Page management functions
+    const togglePages = () => {
+      if (hasPages.value) {
+        // Disable pages: flatten all questions back to simple list
+        form.pages = [];
+        currentPageIndex.value = 0;
+      } else {
+        // Enable pages: create first page with all existing questions
+        form.pages = [{
+          id: `p${uuidv4().split('-')[0]}`,
+          title: '',
+          questions: form.questions.map(q => q.id),
+        }];
+        currentPageIndex.value = 0;
+      }
+      debouncedSave();
+    };
+
+    const addPage = () => {
+      if (!hasPages.value) return;
+      const newPage = {
+        id: `p${uuidv4().split('-')[0]}`,
+        title: '',
+        questions: [],
+      };
+      form.pages.push(newPage);
+      currentPageIndex.value = form.pages.length - 1;
+      debouncedSave();
+    };
+
+    const deletePage = (pageIndex) => {
+      if (!hasPages.value || form.pages.length <= 1) return;
+      // Remove the page (questions remain in form.questions but are unassigned)
+      form.pages.splice(pageIndex, 1);
+      // Adjust current page index if needed
+      if (currentPageIndex.value >= form.pages.length) {
+        currentPageIndex.value = form.pages.length - 1;
+      }
+      debouncedSave();
+    };
+
+    const renamePage = (pageIndex) => {
+      const page = form.pages[pageIndex];
+      const newTitle = prompt(t('Enter page title:'), page.title || '');
+      if (newTitle !== null) {
+        page.title = newTitle;
+        debouncedSave();
+      }
+    };
+
+    // Page-aware question management
+    const getQuestionIndex = (questionId) => {
+      return form.questions.findIndex(q => q.id === questionId);
+    };
+
+    const updateQuestionById = (questionId, updatedQuestion) => {
+      const index = getQuestionIndex(questionId);
+      if (index !== -1) {
+        form.questions[index] = updatedQuestion;
+        debouncedSave();
+      }
+    };
+
+    const deleteQuestionById = (questionId) => {
+      const index = getQuestionIndex(questionId);
+      if (index !== -1) {
+        form.questions.splice(index, 1);
+        // Also remove from current page
+        if (hasPages.value) {
+          const page = form.pages[currentPageIndex.value];
+          const qIndex = page.questions.indexOf(questionId);
+          if (qIndex !== -1) {
+            page.questions.splice(qIndex, 1);
+          }
+        }
+        debouncedSave();
+      }
+    };
+
+    const duplicateQuestionById = (questionId) => {
+      const index = getQuestionIndex(questionId);
+      if (index !== -1) {
+        const original = form.questions[index];
+        const duplicate = {
+          ...JSON.parse(JSON.stringify(original)),
+          id: `q${uuidv4().split('-')[0]}`,
+        };
+        form.questions.splice(index + 1, 0, duplicate);
+        // Also add to current page after the original
+        if (hasPages.value) {
+          const page = form.pages[currentPageIndex.value];
+          const qIndex = page.questions.indexOf(questionId);
+          if (qIndex !== -1) {
+            page.questions.splice(qIndex + 1, 0, duplicate.id);
+          }
+        }
+        debouncedSave();
+      }
+    };
+
+    const onQuestionDragEnd = () => {
+      // The v-model on currentPageQuestions already handles updating page.questions
+      debouncedSave();
+    };
+
     const updateSettings = (newSettings) => {
       Object.assign(form.settings, newSettings);
       debouncedSave();
@@ -266,11 +468,23 @@ export default {
       showSettings,
       showShare,
       showPreview,
+      currentPageIndex,
+      hasPages,
+      currentPageQuestions,
       debouncedSave,
       addQuestion,
       updateQuestion,
       deleteQuestion,
       duplicateQuestion,
+      togglePages,
+      addPage,
+      deletePage,
+      renamePage,
+      getQuestionIndex,
+      updateQuestionById,
+      deleteQuestionById,
+      duplicateQuestionById,
+      onQuestionDragEnd,
       updateSettings,
       updatePermissions,
       viewResults,
@@ -308,6 +522,51 @@ export default {
   margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.page-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+  overflow-x: auto;
+
+  .page-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background: var(--color-background-dark);
+    }
+
+    &.active {
+      background: var(--color-main-background);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-title {
+      font-weight: 500;
+    }
+
+    .page-question-count {
+      font-size: 12px;
+      color: var(--color-text-maxcontrast);
+    }
+
+    .page-actions {
+      margin-left: auto;
+    }
+  }
 }
 
 .questions-container {

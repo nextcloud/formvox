@@ -71,16 +71,6 @@
         />
       </div>
 
-      <div class="share-internal">
-        <h3>{{ t('Share with Nextcloud users') }}</h3>
-        <p class="share-internal-description">
-          {{ t('You can also share via the Files app using standard Nextcloud sharing.') }}
-        </p>
-        <NcButton @click="openFilesShare">
-          {{ t('Open in Files') }}
-        </NcButton>
-      </div>
-
       <div class="actions">
         <NcButton @click="$emit('close')">
           {{ t('Done') }}
@@ -288,11 +278,6 @@ export default {
       }
     };
 
-    const openFilesShare = () => {
-      // Open the file in the Files app
-      window.location.href = generateUrl('/apps/files/?fileid={fileId}', { fileId: props.fileId });
-    };
-
     onMounted(() => {
       loadExistingShare();
     });
@@ -308,7 +293,6 @@ export default {
       togglePassword,
       toggleLinkExpiration,
       savePassword,
-      openFilesShare,
       t,
     };
   },
@@ -378,16 +362,6 @@ export default {
     align-items: flex-end;
     margin-top: 8px;
     margin-bottom: 16px;
-  }
-}
-
-.share-internal {
-  margin-bottom: 24px;
-
-  .share-internal-description {
-    color: var(--color-text-maxcontrast);
-    margin: 0 0 12px;
-    font-size: 14px;
   }
 }
 

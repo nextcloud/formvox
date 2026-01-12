@@ -21,6 +21,7 @@ use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
+use OCA\FormVox\Service\BrandingService;
 
 class PublicController extends Controller
 {
@@ -28,6 +29,7 @@ class PublicController extends Controller
     private IURLGenerator $urlGenerator;
     private FormService $formService;
     private ResponseService $responseService;
+    private BrandingService $brandingService;
     private IInitialState $initialState;
 
     public function __construct(
@@ -36,6 +38,7 @@ class PublicController extends Controller
         IURLGenerator $urlGenerator,
         FormService $formService,
         ResponseService $responseService,
+        BrandingService $brandingService,
         IInitialState $initialState
     ) {
         parent::__construct(Application::APP_ID, $request);
@@ -43,6 +46,7 @@ class PublicController extends Controller
         $this->urlGenerator = $urlGenerator;
         $this->formService = $formService;
         $this->responseService = $responseService;
+        $this->brandingService = $brandingService;
         $this->initialState = $initialState;
     }
 
@@ -123,10 +127,14 @@ class PublicController extends Controller
             unset($form['settings']['share_password_hash']);
             unset($form['settings']['share_password']);
 
+            // Get branding settings
+            $branding = $this->brandingService->getBranding();
+
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);
             $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('form', $form);
+            $this->initialState->provideInitialState('branding', $branding);
 
             Util::addScript(Application::APP_ID, 'formvox-public');
             Util::addStyle(Application::APP_ID, 'public');
@@ -268,10 +276,14 @@ class PublicController extends Controller
             unset($form['settings']['share_password_hash']);
             unset($form['settings']['share_password']);
 
+            // Get branding settings
+            $branding = $this->brandingService->getBranding();
+
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);
             $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('form', $form);
+            $this->initialState->provideInitialState('branding', $branding);
 
             Util::addScript(Application::APP_ID, 'formvox-public');
             Util::addStyle(Application::APP_ID, 'public');

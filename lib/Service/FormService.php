@@ -9,6 +9,7 @@ use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\IUserSession;
+use OCP\IDBConnection;
 use OCA\FormVox\AppInfo\Application;
 
 class FormService
@@ -16,15 +17,18 @@ class FormService
     private IRootFolder $rootFolder;
     private IUserSession $userSession;
     private IndexService $indexService;
+    private IDBConnection $db;
 
     public function __construct(
         IRootFolder $rootFolder,
         IUserSession $userSession,
-        IndexService $indexService
+        IndexService $indexService,
+        IDBConnection $db
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->indexService = $indexService;
+        $this->db = $db;
     }
 
     /**
@@ -258,23 +262,108 @@ class FormService
 
     /**
      * Get file by ID without user context (for public/system access)
-     * This searches through all users' files
+     * Uses database lookup to find the owner and then accesses via their folder
+     * Supports both personal folders (home::) and group folders
      */
     public function getFileByIdPublic(int $fileId): File
     {
-        // Use the mount manager to get the file directly
-        $nodes = $this->rootFolder->getById($fileId);
+        // Look up the file in the database to find the storage
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('s.id', 's.numeric_id')
+            ->from('filecache', 'fc')
+            ->innerJoin('fc', 'storages', 's', 'fc.storage = s.numeric_id')
+            ->where($qb->expr()->eq('fc.fileid', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
 
-        if (empty($nodes)) {
+        $result = $qb->executeQuery();
+        $row = $result->fetch();
+        $result->closeCursor();
+
+        if ($row === false) {
             throw new NotFoundException('Form not found');
         }
 
-        $file = $nodes[0];
-        if (!($file instanceof File)) {
-            throw new \RuntimeException('Not a file');
+        $storageId = $row['id'];
+        $storageNumericId = (int)$row['numeric_id'];
+
+        // Case 1: Personal folder (home::username)
+        if (strpos($storageId, 'home::') === 0) {
+            $userId = substr($storageId, 6);
+            $userFolder = $this->rootFolder->getUserFolder($userId);
+            $nodes = $userFolder->getById($fileId);
+
+            if (!empty($nodes)) {
+                $file = $nodes[0];
+                if ($file instanceof File) {
+                    return $file;
+                }
+            }
+            throw new NotFoundException('Form not found');
         }
 
-        return $file;
+        // Case 2: Group folder (local::.../__groupfolders/{id}/)
+        if (preg_match('#__groupfolders/(\d+)/#', $storageId, $matches)) {
+            $groupFolderId = (int)$matches[1];
+
+            // Find a user who has access to this group folder
+            $userId = $this->findUserWithGroupFolderAccess($groupFolderId);
+            if ($userId !== null) {
+                $userFolder = $this->rootFolder->getUserFolder($userId);
+                $nodes = $userFolder->getById($fileId);
+
+                if (!empty($nodes)) {
+                    $file = $nodes[0];
+                    if ($file instanceof File) {
+                        return $file;
+                    }
+                }
+            }
+            throw new NotFoundException('Form not found');
+        }
+
+        throw new NotFoundException('Form not found');
+    }
+
+    /**
+     * Find a user who has access to a group folder
+     */
+    private function findUserWithGroupFolderAccess(int $groupFolderId): ?string
+    {
+        // Get groups that have access to this group folder
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('group_id')
+            ->from('group_folders_groups')
+            ->where($qb->expr()->eq('folder_id', $qb->createNamedParameter($groupFolderId, \PDO::PARAM_INT)))
+            ->setMaxResults(10);
+
+        $result = $qb->executeQuery();
+        $groups = [];
+        while ($row = $result->fetch()) {
+            $groups[] = $row['group_id'];
+        }
+        $result->closeCursor();
+
+        if (empty($groups)) {
+            return null;
+        }
+
+        // Find a user in one of these groups
+        foreach ($groups as $groupId) {
+            $qb = $this->db->getQueryBuilder();
+            $qb->select('uid')
+                ->from('group_user')
+                ->where($qb->expr()->eq('gid', $qb->createNamedParameter($groupId)))
+                ->setMaxResults(1);
+
+            $result = $qb->executeQuery();
+            $row = $result->fetch();
+            $result->closeCursor();
+
+            if ($row !== false) {
+                return $row['uid'];
+            }
+        }
+
+        return null;
     }
 
     /**
