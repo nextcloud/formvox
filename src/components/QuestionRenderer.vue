@@ -5,7 +5,7 @@
       <span v-if="question.required" class="required">*</span>
     </label>
     <p v-if="question.description" class="question-description">
-      {{ question.description }}
+      {{ renderedDescription }}
     </p>
 
     <!-- Text -->
@@ -34,7 +34,7 @@
         :name="`question-${question.id}`"
         @update:model-value="$emit('update:value', option.value)"
       >
-        {{ option.label }}
+        {{ renderPiping(option.label) }}
       </NcCheckboxRadioSwitch>
     </div>
 
@@ -47,7 +47,7 @@
         type="checkbox"
         @update:model-value="toggleMultiple(option.value, $event)"
       >
-        {{ option.label }}
+        {{ renderPiping(option.label) }}
       </NcCheckboxRadioSwitch>
     </div>
 
@@ -60,7 +60,7 @@
     >
       <option value="">{{ t('Select...') }}</option>
       <option v-for="option in question.options" :key="option.id" :value="option.value">
-        {{ option.label }}
+        {{ renderPiping(option.label) }}
       </option>
     </select>
 
@@ -196,24 +196,67 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    allQuestions: {
+      type: Array,
+      default: () => [],
+    },
   },
   emits: ['update:value'],
   setup(props, { emit }) {
-    // Piping support - replace {{qX}} with answers
-    const renderedQuestion = computed(() => {
-      let text = props.question.question || '';
+    // Helper function to format answer for display
+    const formatAnswerForDisplay = (answer) => {
+      if (answer === undefined || answer === null || answer === '') {
+        return null; // Don't replace if no answer
+      }
+      if (Array.isArray(answer)) {
+        // Multiple choice - join with commas
+        return answer.length > 0 ? answer.join(', ') : null;
+      }
+      if (typeof answer === 'object') {
+        // Matrix - show row:value pairs
+        const entries = Object.entries(answer);
+        return entries.length > 0 ? entries.map(([k, v]) => `${k}: ${v}`).join('; ') : null;
+      }
+      return String(answer);
+    };
+
+    // Piping support - replace {{Q1}} or {{qXXX}} with answers
+    // {{Q1}}, {{Q2}} etc. = 1-based question number
+    // {{qXXXX}} = question ID (e.g. q1a2b3c4)
+    const applyPiping = (text) => {
+      if (!text) return '';
       const matches = text.match(/\{\{(\w+)\}\}/g);
       if (matches) {
         matches.forEach(match => {
-          const questionId = match.replace(/\{\{|\}\}/g, '');
-          const answer = props.allAnswers[questionId];
-          if (answer !== undefined && answer !== '') {
-            text = text.replace(match, answer);
+          const ref = match.replace(/\{\{|\}\}/g, '');
+          let questionId = null;
+
+          // Check if it's a numeric reference like Q1, Q2 (1-based index)
+          const numMatch = ref.match(/^Q(\d+)$/i);
+          if (numMatch) {
+            const index = parseInt(numMatch[1], 10) - 1; // Convert to 0-based
+            if (props.allQuestions && props.allQuestions[index]) {
+              questionId = props.allQuestions[index].id;
+            }
+          } else {
+            // Direct question ID reference (e.g. qXXXX)
+            questionId = ref;
+          }
+
+          if (questionId) {
+            const answer = props.allAnswers[questionId];
+            const displayValue = formatAnswerForDisplay(answer);
+            if (displayValue !== null) {
+              text = text.replace(match, displayValue);
+            }
           }
         });
       }
       return text;
-    });
+    };
+
+    const renderedQuestion = computed(() => applyPiping(props.question.question || ''));
+    const renderedDescription = computed(() => applyPiping(props.question.description || ''));
 
     const scaleRange = computed(() => {
       const min = props.question.scaleMin || 1;
@@ -274,8 +317,13 @@ export default {
       }
     };
 
+    // Method wrapper for template use
+    const renderPiping = (text) => applyPiping(text);
+
     return {
       renderedQuestion,
+      renderedDescription,
+      renderPiping,
       scaleRange,
       ratingRange,
       toggleMultiple,

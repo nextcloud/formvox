@@ -56,6 +56,12 @@
               </template>
               {{ t('Settings') }}
             </NcActionButton>
+            <NcActionButton @click="showBranding = true">
+              <template #icon>
+                <PaletteIcon :size="20" />
+              </template>
+              {{ t('Branding') }}
+            </NcActionButton>
             <NcActionButton @click="showShare = true">
               <template #icon>
                 <ShareIcon :size="20" />
@@ -94,11 +100,19 @@
         </div>
 
         <div v-if="showPreview" class="preview-container">
-          <Respond
-            :form="form"
-            :is-preview="true"
-            @submit="() => {}"
-          />
+          <div v-if="publicPreviewUrl" class="preview-iframe-wrapper">
+            <iframe
+              :src="publicPreviewUrl"
+              class="preview-iframe"
+              frameborder="0"
+            />
+          </div>
+          <div v-else class="preview-no-link">
+            <p>{{ t('Create a public link first to preview the form.') }}</p>
+            <NcButton type="primary" @click="showShare = true">
+              {{ t('Create public link') }}
+            </NcButton>
+          </div>
         </div>
 
         <div v-else class="questions-container">
@@ -176,6 +190,13 @@
       :form="form"
       @close="showShare = false"
     />
+
+    <FormBrandingEditor
+      v-if="showBranding"
+      :branding="form.branding"
+      @update:branding="updateBranding"
+      @close="showBranding = false"
+    />
   </NcContent>
 </template>
 
@@ -198,13 +219,14 @@ import draggable from 'vuedraggable';
 import QuestionEditor from '../components/QuestionEditor.vue';
 import SettingsPanel from '../components/SettingsPanel.vue';
 import ShareDialog from '../components/ShareDialog.vue';
-import Respond from './Respond.vue';
+import FormBrandingEditor from '../components/FormBrandingEditor.vue';
 import PlusIcon from '../components/icons/PlusIcon.vue';
 import EyeIcon from '../components/icons/EyeIcon.vue';
 import CogIcon from '../components/icons/CogIcon.vue';
 import ShareIcon from '../components/icons/ShareIcon.vue';
 import ChartIcon from '../components/icons/ChartIcon.vue';
 import PagesIcon from '../components/icons/PagesIcon.vue';
+import PaletteIcon from '../components/icons/PaletteIcon.vue';
 
 export default {
   name: 'Editor',
@@ -219,13 +241,14 @@ export default {
     QuestionEditor,
     SettingsPanel,
     ShareDialog,
-    Respond,
+    FormBrandingEditor,
     PlusIcon,
     EyeIcon,
     CogIcon,
     ShareIcon,
     ChartIcon,
     PagesIcon,
+    PaletteIcon,
   },
   props: {
     fileId: {
@@ -244,16 +267,31 @@ export default {
       type: Object,
       required: true,
     },
+    adminBranding: {
+      type: Object,
+      default: null,
+    },
   },
   setup(props) {
     const form = reactive({ ...props.initialForm });
     const saving = ref(false);
     const showSettings = ref(false);
     const showShare = ref(false);
+    const showBranding = ref(false);
     const showPreview = ref(false);
     const currentPageIndex = ref(0);
 
     let saveTimeout = null;
+
+    // Computed: get public preview URL (if public token exists)
+    const publicPreviewUrl = computed(() => {
+      const token = form.settings?.public_token;
+      if (!token) return null;
+      return generateUrl('/apps/formvox/public/{fileId}/{token}', {
+        fileId: props.fileId,
+        token: token
+      });
+    });
 
     // Computed: check if pages are enabled
     const hasPages = computed(() => {
@@ -288,6 +326,7 @@ export default {
             questions: form.questions,
             settings: form.settings,
             pages: form.pages,
+            branding: form.branding,
           }
         );
       } catch (error) {
@@ -458,6 +497,11 @@ export default {
       debouncedSave();
     };
 
+    const updateBranding = (newBranding) => {
+      form.branding = newBranding;
+      debouncedSave();
+    };
+
     const viewResults = () => {
       window.location.href = generateUrl('/apps/formvox/results/{fileId}', { fileId: props.fileId });
     };
@@ -467,10 +511,12 @@ export default {
       saving,
       showSettings,
       showShare,
+      showBranding,
       showPreview,
       currentPageIndex,
       hasPages,
       currentPageQuestions,
+      publicPreviewUrl,
       debouncedSave,
       addQuestion,
       updateQuestion,
@@ -487,6 +533,7 @@ export default {
       onQuestionDragEnd,
       updateSettings,
       updatePermissions,
+      updateBranding,
       viewResults,
       t,
     };
@@ -582,9 +629,38 @@ export default {
 }
 
 .preview-container {
-  background: var(--color-background-hover);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
   border-radius: var(--border-radius-large);
-  padding: 20px;
+  padding: 0;
+  min-height: calc(100vh - 200px);
+}
+
+.preview-iframe-wrapper {
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 200px);
+}
+
+.preview-iframe {
+  width: 100%;
+  height: calc(100vh - 200px);
+  min-height: calc(100vh - 200px);
+  border: none;
+  border-radius: var(--border-radius-large);
+}
+
+.preview-no-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  color: var(--color-text-maxcontrast);
+
+  p {
+    margin-bottom: 16px;
+  }
 }
 
 .save-status {

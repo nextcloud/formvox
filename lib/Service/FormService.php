@@ -93,6 +93,14 @@ class FormService
             throw new \RuntimeException('Invalid form file format');
         }
 
+        // Ensure default values for optional fields (backwards compatibility)
+        if (!array_key_exists('branding', $form)) {
+            $form['branding'] = null;
+        }
+        if (!array_key_exists('pages', $form)) {
+            $form['pages'] = null;
+        }
+
         return $form;
     }
 
@@ -126,9 +134,10 @@ class FormService
         }
 
         // Update allowed fields
-        $allowedFields = ['title', 'description', 'settings', 'questions', 'pages', 'permissions', '_index'];
+        // Use array_key_exists instead of isset to allow null values (e.g., branding: null)
+        $allowedFields = ['title', 'description', 'settings', 'questions', 'pages', 'permissions', '_index', 'branding'];
         foreach ($allowedFields as $field) {
-            if (isset($data[$field])) {
+            if (array_key_exists($field, $data)) {
                 $form[$field] = $data[$field];
             }
         }
@@ -434,6 +443,7 @@ class FormService
             ],
             'questions' => [],
             'pages' => null,
+            'branding' => null, // null = use admin defaults, object = custom branding
             '_index' => [
                 '_checksum' => '',
                 'response_count' => 0,

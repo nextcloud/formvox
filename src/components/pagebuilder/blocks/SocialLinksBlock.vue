@@ -4,7 +4,7 @@
       <a
         v-for="link in visibleLinks"
         :key="link.platform"
-        :href="editMode ? undefined : link.url"
+        :href="editMode ? undefined : link.normalizedUrl"
         :title="link.platform"
         class="social-icon"
         :class="{ 'edit-mode': editMode }"
@@ -39,6 +39,15 @@ const SOCIAL_ICONS = {
   website: GlobeIcon,
 };
 
+// Ensure URL has a protocol
+const normalizeUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:') || url.startsWith('tel:')) {
+    return url;
+  }
+  return `https://${url}`;
+};
+
 export default {
   name: 'SocialLinksBlock',
   props: {
@@ -49,7 +58,10 @@ export default {
     const alignmentClass = computed(() => `align-${props.block.alignment || 'center'}`);
 
     const visibleLinks = computed(() => {
-      return (props.block.settings.links || []).filter(link => link.url);
+      return (props.block.settings.links || []).filter(link => link.url).map(link => ({
+        ...link,
+        normalizedUrl: normalizeUrl(link.url),
+      }));
     });
 
     const getSocialIcon = (platform) => {

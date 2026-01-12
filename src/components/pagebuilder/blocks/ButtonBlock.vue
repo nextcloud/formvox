@@ -1,7 +1,7 @@
 <template>
   <div class="block-button" :class="alignmentClass">
     <a
-      :href="editMode ? undefined : (block.settings.url || '#')"
+      :href="buttonUrl"
       class="button-link"
       :class="{ 'edit-mode': editMode }"
       :style="buttonStyle"
@@ -17,6 +17,17 @@
 import { computed } from 'vue';
 import { t } from '@/utils/l10n';
 
+// Ensure URL has a protocol
+const normalizeUrl = (url) => {
+  if (!url) return '#';
+  // Already has protocol
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:') || url.startsWith('tel:')) {
+    return url;
+  }
+  // Add https:// by default
+  return `https://${url}`;
+};
+
 export default {
   name: 'ButtonBlock',
   props: {
@@ -26,6 +37,11 @@ export default {
   },
   setup(props) {
     const alignmentClass = computed(() => `align-${props.block.alignment || 'center'}`);
+
+    const buttonUrl = computed(() => {
+      if (props.editMode) return undefined;
+      return normalizeUrl(props.block.settings.url);
+    });
 
     const buttonStyle = computed(() => {
       const bgColor = props.block.settings.backgroundColor || props.globalStyles.primaryColor || '#0082c9';
@@ -37,7 +53,7 @@ export default {
       };
     });
 
-    return { alignmentClass, buttonStyle, t };
+    return { alignmentClass, buttonUrl, buttonStyle, t };
   },
 };
 </script>

@@ -138,8 +138,8 @@ export default {
           const baseUrl = window.location.origin;
           shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{fileId}/{token}', { fileId: props.fileId, token: shareToken.value })}`;
 
-          // Load password setting
-          if (props.form.settings.share_password) {
+          // Load password setting (check hash since plaintext is removed after save)
+          if (props.form.settings.share_password_hash) {
             linkSettings.passwordProtected = true;
             linkSettings.password = '********'; // Don't show actual password
           }

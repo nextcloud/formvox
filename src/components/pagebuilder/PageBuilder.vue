@@ -323,8 +323,8 @@
               </div>
               <div class="editor-field">
                 <NcCheckboxRadioSwitch
-                  :checked.sync="selectedBlock.settings.newTab"
-                  @update:checked="saveLayout"
+                  :model-value="selectedBlock.settings.newTab"
+                  @update:model-value="(val) => { selectedBlock.settings.newTab = val; saveLayout(); }"
                 >
                   {{ t('Open in new tab') }}
                 </NcCheckboxRadioSwitch>
@@ -376,11 +376,11 @@
               <div class="editor-field">
                 <label>{{ t('Demo progress (%)') }}</label>
                 <NcTextField
-                  v-model.number="selectedBlock.settings.demoProgress"
+                  :model-value="String(selectedBlock.settings.demoProgress ?? 50)"
                   type="number"
                   min="0"
                   max="100"
-                  @update:model-value="debouncedSave"
+                  @update:model-value="(val) => { selectedBlock.settings.demoProgress = Number(val); debouncedSave(); }"
                 />
               </div>
               <div class="editor-field">
@@ -408,8 +408,8 @@
               </div>
               <div class="editor-field">
                 <NcCheckboxRadioSwitch
-                  :checked.sync="selectedBlock.settings.showPercentage"
-                  @update:checked="saveLayout"
+                  :model-value="selectedBlock.settings.showPercentage"
+                  @update:model-value="(val) => { selectedBlock.settings.showPercentage = val; saveLayout(); }"
                 >
                   {{ t('Show percentage') }}
                 </NcCheckboxRadioSwitch>
@@ -494,8 +494,13 @@ export default {
       type: Object,
       required: true,
     },
+    embedded: {
+      type: Boolean,
+      default: false,
+    },
   },
-  setup(props) {
+  emits: ['update:branding'],
+  setup(props, { emit }) {
     const layout = reactive({ ...props.initialBranding.layout });
     const globalStyles = reactive({ ...props.initialBranding.globalStyles });
     const saving = ref(false);
@@ -579,7 +584,21 @@ export default {
       backgroundColor: globalStyles.backgroundColor,
     }));
 
+    // Emit branding update for embedded mode
+    const emitBrandingUpdate = () => {
+      if (props.embedded) {
+        emit('update:branding', {
+          layout: JSON.parse(JSON.stringify(layout)),
+          globalStyles: JSON.parse(JSON.stringify(globalStyles)),
+        });
+      }
+    };
+
     const saveLayout = async () => {
+      if (props.embedded) {
+        emitBrandingUpdate();
+        return;
+      }
       saving.value = true;
       try {
         await axios.put(generateUrl('/apps/formvox/api/branding/layout'), { layout });
@@ -592,6 +611,10 @@ export default {
     };
 
     const saveStyles = async () => {
+      if (props.embedded) {
+        emitBrandingUpdate();
+        return;
+      }
       saving.value = true;
       try {
         await axios.put(generateUrl('/apps/formvox/api/branding/styles'), { globalStyles });

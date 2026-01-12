@@ -58,6 +58,7 @@
             :question="question"
             :value="answers[question.id]"
             :all-answers="answers"
+            :all-questions="form.questions"
             @update:value="updateAnswer(question.id, $event)"
           />
         </div>
@@ -128,11 +129,11 @@ export default {
   props: {
     fileId: {
       type: Number,
-      required: true,
+      default: 0,
     },
     token: {
       type: String,
-      required: true,
+      default: '',
     },
     form: {
       type: Object,
@@ -157,10 +158,6 @@ export default {
     const showResultsLink = ref(false);
     const currentPageIndex = ref(0);
 
-    // Layout zones from branding
-    const headerBlocks = computed(() => props.branding?.layout?.header || []);
-    const footerBlocks = computed(() => props.branding?.layout?.footer || []);
-    const thankYouBlocks = computed(() => props.branding?.layout?.thankYou || []);
     const globalStyles = computed(() => props.branding?.globalStyles || {
       primaryColor: '#0082c9',
       backgroundColor: '#ffffff',
@@ -210,6 +207,52 @@ export default {
 
     const hasPreviousPage = computed(() => currentPageIndex.value > 0);
     const hasNextPage = computed(() => currentPageIndex.value < pages.value.length - 1);
+
+    // Calculate real progress based on answered questions
+    const realProgress = computed(() => {
+      const questions = props.form.questions || [];
+      if (questions.length === 0) return 0;
+
+      let answeredCount = 0;
+      for (const question of questions) {
+        const answer = answers[question.id];
+        // Check if question has been answered
+        if (answer !== undefined && answer !== '' && answer !== null) {
+          if (Array.isArray(answer)) {
+            if (answer.length > 0) answeredCount++;
+          } else if (typeof answer === 'object') {
+            // Matrix questions - check if at least one row is answered
+            if (Object.keys(answer).length > 0) answeredCount++;
+          } else {
+            answeredCount++;
+          }
+        }
+      }
+
+      return Math.round((answeredCount / questions.length) * 100);
+    });
+
+    // Inject real progress into progress bar blocks
+    const injectProgress = (blocks) => {
+      if (!blocks || blocks.length === 0) return [];
+      return blocks.map(block => {
+        if (block.type === 'progressBar') {
+          return {
+            ...block,
+            settings: {
+              ...block.settings,
+              progress: realProgress.value,
+            },
+          };
+        }
+        return block;
+      });
+    };
+
+    // Layout zones from branding (with injected progress)
+    const headerBlocks = computed(() => injectProgress(props.branding?.layout?.header || []));
+    const footerBlocks = computed(() => injectProgress(props.branding?.layout?.footer || []));
+    const thankYouBlocks = computed(() => props.branding?.layout?.thankYou || []);
 
     // Visible questions based on current page and showIf conditions
     const visibleQuestions = computed(() => {

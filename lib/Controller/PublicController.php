@@ -120,15 +120,16 @@ class PublicController extends Controller
                 }
             }
 
+            // Get branding settings - use form-specific if set, otherwise admin defaults
+            $branding = $this->getEffectiveBranding($form);
+
             // Remove sensitive data for public view
             unset($form['responses']);
             unset($form['_index']);
             unset($form['permissions']);
             unset($form['settings']['share_password_hash']);
             unset($form['settings']['share_password']);
-
-            // Get branding settings
-            $branding = $this->brandingService->getBranding();
+            unset($form['branding']); // Don't expose branding in form data
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);
@@ -150,6 +151,19 @@ class PublicController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
+    }
+
+    /**
+     * Get effective branding for a form (form-specific or admin defaults)
+     */
+    private function getEffectiveBranding(array $form): array
+    {
+        // If form has custom branding, use it
+        if (!empty($form['branding'])) {
+            return $form['branding'];
+        }
+        // Otherwise use admin defaults
+        return $this->brandingService->getBranding();
     }
 
     /**
@@ -269,15 +283,16 @@ class PublicController extends Controller
             }
 
             // Password correct - show the form
+            // Get branding settings - use form-specific if set, otherwise admin defaults
+            $branding = $this->getEffectiveBranding($form);
+
             // Remove sensitive data for public view
             unset($form['responses']);
             unset($form['_index']);
             unset($form['permissions']);
             unset($form['settings']['share_password_hash']);
             unset($form['settings']['share_password']);
-
-            // Get branding settings
-            $branding = $this->brandingService->getBranding();
+            unset($form['branding']); // Don't expose branding in form data
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);

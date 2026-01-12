@@ -16,11 +16,13 @@ use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\PermissionService;
+use OCA\FormVox\Service\BrandingService;
 
 class PageController extends Controller
 {
     private FormService $formService;
     private PermissionService $permissionService;
+    private BrandingService $brandingService;
     private IInitialState $initialState;
     private IURLGenerator $urlGenerator;
     private ?string $userId;
@@ -29,6 +31,7 @@ class PageController extends Controller
         IRequest $request,
         FormService $formService,
         PermissionService $permissionService,
+        BrandingService $brandingService,
         IInitialState $initialState,
         IURLGenerator $urlGenerator,
         ?string $userId
@@ -36,6 +39,7 @@ class PageController extends Controller
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
         $this->permissionService = $permissionService;
+        $this->brandingService = $brandingService;
         $this->initialState = $initialState;
         $this->urlGenerator = $urlGenerator;
         $this->userId = $userId;
@@ -82,11 +86,15 @@ class PageController extends Controller
             throw new \OCP\AppFramework\Http\NotFoundResponse();
         }
 
+        // Get admin branding for preview fallback
+        $adminBranding = $this->brandingService->getBranding();
+
         // Provide initial state to JavaScript
         $this->initialState->provideInitialState('fileId', $fileId);
         $this->initialState->provideInitialState('form', $form);
         $this->initialState->provideInitialState('role', $role);
         $this->initialState->provideInitialState('permissions', $permissions);
+        $this->initialState->provideInitialState('adminBranding', $adminBranding);
 
         Util::addScript(Application::APP_ID, 'formvox-editor');
         Util::addStyle(Application::APP_ID, 'editor');

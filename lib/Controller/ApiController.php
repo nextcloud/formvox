@@ -127,7 +127,8 @@ class ApiController extends Controller
         ?array $questions = null,
         ?array $settings = null,
         ?array $pages = null,
-        ?array $permissions = null
+        ?array $permissions = null,
+        ?array $branding = null
     ): DataResponse
     {
         // Build data array from individual parameters
@@ -138,6 +139,14 @@ class ApiController extends Controller
         if ($settings !== null) $data['settings'] = $settings;
         if ($pages !== null) $data['pages'] = $pages;
         if ($permissions !== null) $data['permissions'] = $permissions;
+        // Branding can be null (use admin defaults) or an array (custom branding)
+        // Check the raw request body to see if branding was explicitly sent
+        $requestBody = file_get_contents('php://input');
+        $requestData = json_decode($requestBody, true) ?? [];
+        if (array_key_exists('branding', $requestData)) {
+            // Use the value from request data since the parameter might not capture null correctly
+            $data['branding'] = $requestData['branding'];
+        }
 
         if (empty($data)) {
             return new DataResponse(

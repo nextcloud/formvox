@@ -8,12 +8,14 @@ const fileId = loadState('formvox', 'fileId');
 const initialForm = loadState('formvox', 'form');
 const role = loadState('formvox', 'role');
 const permissions = loadState('formvox', 'permissions');
+const adminBranding = loadState('formvox', 'adminBranding', null);
 
 const app = createApp(Editor, {
   fileId,
   initialForm,
   role,
   permissions,
+  adminBranding,
 });
 
 // Make translation functions globally available
