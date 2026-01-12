@@ -146,7 +146,7 @@ export default {
         if (props.form.settings?.public_token) {
           shareToken.value = props.form.settings.public_token;
           const baseUrl = window.location.origin;
-          shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{token}', { token: shareToken.value })}`;
+          shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{fileId}/{token}', { fileId: props.fileId, token: shareToken.value })}`;
 
           // Load password setting
           if (props.form.settings.share_password) {
@@ -183,7 +183,7 @@ export default {
 
         shareToken.value = token;
         const baseUrl = window.location.origin;
-        shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{token}', { token })}`;
+        shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{fileId}/{token}', { fileId: props.fileId, token })}`;
 
         // Update local form object
         props.form.settings.public_token = token;

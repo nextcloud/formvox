@@ -10,11 +10,11 @@ return [
         ['name' => 'page#respond', 'url' => '/respond/{fileId}', 'verb' => 'GET'],
         ['name' => 'page#results', 'url' => '/results/{fileId}', 'verb' => 'GET'],
 
-        // Public routes (anonymous access via share token)
-        ['name' => 'public#showForm', 'url' => '/public/{token}', 'verb' => 'GET'],
-        ['name' => 'public#authenticate', 'url' => '/public/{token}', 'verb' => 'POST'],
-        ['name' => 'public#submit', 'url' => '/public/{token}/submit', 'verb' => 'POST'],
-        ['name' => 'public#showResults', 'url' => '/public/{token}/results', 'verb' => 'GET'],
+        // Public routes (anonymous access via fileId + token)
+        ['name' => 'public#showForm', 'url' => '/public/{fileId}/{token}', 'verb' => 'GET'],
+        ['name' => 'public#authenticate', 'url' => '/public/{fileId}/{token}', 'verb' => 'POST'],
+        ['name' => 'public#submit', 'url' => '/public/{fileId}/{token}/submit', 'verb' => 'POST'],
+        ['name' => 'public#showResults', 'url' => '/public/{fileId}/{token}/results', 'verb' => 'GET'],
 
         // API routes - Forms
         ['name' => 'api#list', 'url' => '/api/forms', 'verb' => 'GET'],

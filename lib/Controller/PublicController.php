@@ -17,8 +17,6 @@ use OCP\AppFramework\Services\IInitialState;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
-use OCP\Files\IRootFolder;
-use OCP\IUserManager;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
@@ -26,8 +24,6 @@ use OCA\FormVox\Service\ResponseService;
 
 class PublicController extends Controller
 {
-    private IRootFolder $rootFolder;
-    private IUserManager $userManager;
     private IUserSession $userSession;
     private IURLGenerator $urlGenerator;
     private FormService $formService;
@@ -36,8 +32,6 @@ class PublicController extends Controller
 
     public function __construct(
         IRequest $request,
-        IRootFolder $rootFolder,
-        IUserManager $userManager,
         IUserSession $userSession,
         IURLGenerator $urlGenerator,
         FormService $formService,
@@ -45,8 +39,6 @@ class PublicController extends Controller
         IInitialState $initialState
     ) {
         parent::__construct(Application::APP_ID, $request);
-        $this->rootFolder = $rootFolder;
-        $this->userManager = $userManager;
         $this->userSession = $userSession;
         $this->urlGenerator = $urlGenerator;
         $this->formService = $formService;
@@ -55,53 +47,24 @@ class PublicController extends Controller
     }
 
     /**
-     * Find a form by its public token
-     * Searches all users' files for a form with the matching token
+     * Load form by fileId and validate the public token
+     * Returns form data if valid, null otherwise
      */
-    private function findFormByToken(string $token): ?array
+    private function loadAndValidateForm(int $fileId, string $token): ?array
     {
-        // Search through all users' files for forms with this token
-        $users = $this->userManager->search('');
+        try {
+            $form = $this->formService->loadPublic($fileId);
 
-        foreach ($users as $user) {
-            $userFolder = $this->rootFolder->getUserFolder($user->getUID());
-            $result = $this->searchFormsInFolder($userFolder, $token);
-            if ($result !== null) {
-                return $result;
+            // Validate token matches
+            $storedToken = $form['settings']['public_token'] ?? null;
+            if ($storedToken === null || $storedToken !== $token) {
+                return null;
             }
+
+            return $form;
+        } catch (\Exception $e) {
+            return null;
         }
-
-        return null;
-    }
-
-    /**
-     * Recursively search for forms with a specific token
-     */
-    private function searchFormsInFolder($folder, string $token): ?array
-    {
-        foreach ($folder->getDirectoryListing() as $node) {
-            if ($node instanceof \OCP\Files\File && $node->getExtension() === Application::FILE_EXTENSION) {
-                try {
-                    $content = $node->getContent();
-                    $form = json_decode($content, true);
-                    if ($form !== null && ($form['settings']['public_token'] ?? null) === $token) {
-                        return [
-                            'fileId' => $node->getId(),
-                            'form' => $form,
-                        ];
-                    }
-                } catch (\Exception $e) {
-                    // Skip invalid files
-                }
-            } elseif ($node instanceof \OCP\Files\Folder) {
-                $result = $this->searchFormsInFolder($node, $token);
-                if ($result !== null) {
-                    return $result;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -110,17 +73,14 @@ class PublicController extends Controller
      */
     #[PublicPage]
     #[NoCSRFRequired]
-    public function showForm(string $token)
+    public function showForm(int $fileId, string $token)
     {
         try {
-            $result = $this->findFormByToken($token);
+            $form = $this->loadAndValidateForm($fileId, $token);
 
-            if ($result === null) {
+            if ($form === null) {
                 return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
             }
-
-            $fileId = $result['fileId'];
-            $form = $result['form'];
 
             // Check if form has expired
             if (!empty($form['settings']['share_expires_at'])) {
@@ -135,10 +95,10 @@ class PublicController extends Controller
                 $providedPassword = $this->request->getParam('password');
                 if (empty($providedPassword)) {
                     // Show password form
-                    return $this->showPasswordForm($token);
+                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form');
                 }
                 if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-                    return $this->showPasswordForm($token, 'Incorrect password');
+                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
                 }
             }
 
@@ -147,12 +107,13 @@ class PublicController extends Controller
                 $user = $this->userSession->getUser();
                 if ($user === null) {
                     // Redirect to login page with redirect back to this form
-                    // Use relative URL for redirect_url parameter
-                    $currentUrl = $this->urlGenerator->linkToRoute('formvox.public.showForm', ['token' => $token]);
+                    $currentUrl = $this->urlGenerator->linkToRoute('formvox.public.showForm', [
+                        'fileId' => $fileId,
+                        'token' => $token
+                    ]);
                     $loginUrl = $this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $currentUrl]);
                     return new RedirectResponse($loginUrl);
                 }
-                // User is logged in, continue to show the form
             }
 
             // Remove sensitive data for public view
@@ -163,8 +124,8 @@ class PublicController extends Controller
             unset($form['settings']['share_password']);
 
             // Provide initial state to JavaScript
-            $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('fileId', $fileId);
+            $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('form', $form);
 
             Util::addScript(Application::APP_ID, 'formvox-public');
@@ -190,12 +151,12 @@ class PublicController extends Controller
     #[NoCSRFRequired]
     #[AnonRateLimit(limit: 100, period: 3600)]
     #[BruteForceProtection(action: 'formvox_submit')]
-    public function submit(string $token, array $answers): DataResponse
+    public function submit(int $fileId, string $token, array $answers): DataResponse
     {
         try {
-            $result = $this->findFormByToken($token);
+            $form = $this->loadAndValidateForm($fileId, $token);
 
-            if ($result === null) {
+            if ($form === null) {
                 $response = new DataResponse(
                     ['error' => 'Form not found'],
                     Http::STATUS_NOT_FOUND
@@ -203,9 +164,6 @@ class PublicController extends Controller
                 $response->throttle();
                 return $response;
             }
-
-            $fileId = $result['fileId'];
-            $form = $result['form'];
 
             // Check if form requires login
             if ($form['settings']['require_login'] ?? false) {
@@ -275,17 +233,14 @@ class PublicController extends Controller
     #[PublicPage]
     #[NoCSRFRequired]
     #[BruteForceProtection(action: 'formvox_password')]
-    public function authenticate(string $token)
+    public function authenticate(int $fileId, string $token)
     {
         try {
-            $result = $this->findFormByToken($token);
+            $form = $this->loadAndValidateForm($fileId, $token);
 
-            if ($result === null) {
+            if ($form === null) {
                 return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
             }
-
-            $fileId = $result['fileId'];
-            $form = $result['form'];
 
             // Check if form has expired
             if (!empty($form['settings']['share_expires_at'])) {
@@ -299,7 +254,7 @@ class PublicController extends Controller
             if (!empty($form['settings']['share_password_hash'])) {
                 $providedPassword = $this->request->getParam('password');
                 if (empty($providedPassword) || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-                    $response = $this->showPasswordForm($token, 'Incorrect password');
+                    $response = $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
                     $response->throttle();
                     return $response;
                 }
@@ -314,8 +269,8 @@ class PublicController extends Controller
             unset($form['settings']['share_password']);
 
             // Provide initial state to JavaScript
-            $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('fileId', $fileId);
+            $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('form', $form);
 
             Util::addScript(Application::APP_ID, 'formvox-public');
@@ -339,17 +294,14 @@ class PublicController extends Controller
      */
     #[PublicPage]
     #[NoCSRFRequired]
-    public function showResults(string $token): TemplateResponse
+    public function showResults(int $fileId, string $token): TemplateResponse
     {
         try {
-            $result = $this->findFormByToken($token);
+            $form = $this->loadAndValidateForm($fileId, $token);
 
-            if ($result === null) {
+            if ($form === null) {
                 return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
             }
-
-            $fileId = $result['fileId'];
-            $form = $result['form'];
 
             // Check if results are visible
             $showResults = $form['settings']['show_results'] ?? 'never';
@@ -361,8 +313,8 @@ class PublicController extends Controller
             $summary = $this->responseService->getSummaryPublic($fileId);
 
             // Provide initial state to JavaScript
-            $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('fileId', $fileId);
+            $this->initialState->provideInitialState('token', $token);
             $this->initialState->provideInitialState('form', [
                 'title' => $form['title'],
                 'description' => $form['description'],
@@ -389,20 +341,14 @@ class PublicController extends Controller
     /**
      * Show password form for protected forms
      */
-    private function showPasswordForm(string $token, ?string $error = null): TemplateResponse
+    private function showPasswordForm(int $fileId, string $token, string $title, ?string $error = null): TemplateResponse
     {
-        // Try to get form title for display
-        $title = 'Protected Form';
-        $result = $this->findFormByToken($token);
-        if ($result !== null) {
-            $title = $result['form']['title'] ?? $title;
-        }
-
         return new TemplateResponse(
             Application::APP_ID,
             'public/password',
             [
                 'appId' => Application::APP_ID,
+                'fileId' => $fileId,
                 'token' => $token,
                 'title' => $title,
                 'error' => $error,

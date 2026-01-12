@@ -29,7 +29,7 @@ FormVox is a Nextcloud app for creating and managing forms and polls.
 - End-to-end encryption compatible
 - No database migrations needed
     ]]></description>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <licence>agpl</licence>
     <author mail="info@formvox.app">FormVox</author>
     <namespace>FormVox</namespace>

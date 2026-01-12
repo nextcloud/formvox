@@ -248,7 +248,7 @@ export default {
       try {
         let url;
         if (props.isPublic && props.token) {
-          url = generateUrl('/apps/formvox/public/{token}/submit', { token: props.token });
+          url = generateUrl('/apps/formvox/public/{fileId}/{token}/submit', { fileId: props.fileId, token: props.token });
         } else {
           url = generateUrl('/apps/formvox/api/form/{fileId}/respond', { fileId: props.fileId });
         }
@@ -273,7 +273,7 @@ export default {
 
     const viewResults = () => {
       if (props.isPublic && props.token) {
-        window.location.href = generateUrl('/apps/formvox/public/{token}/results', { token: props.token });
+        window.location.href = generateUrl('/apps/formvox/public/{fileId}/{token}/results', { fileId: props.fileId, token: props.token });
       } else {
         window.location.href = generateUrl('/apps/formvox/results/{fileId}', { fileId: props.fileId });
       }
