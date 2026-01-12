@@ -11,6 +11,7 @@ module.exports = {
     results: './src/results.js',
     public: './src/public.js',
     admin: './src/admin.js',
+    files: './src/files.js',
   },
   output: {
     filename: 'formvox-[name].js',

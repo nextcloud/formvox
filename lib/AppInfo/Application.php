@@ -8,6 +8,8 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCA\Files\Event\LoadAdditionalScriptsEvent;
+use OCA\FormVox\Listener\LoadFilesPluginListener;
 use OCA\FormVox\Preview\FormPreview;
 
 class Application extends App implements IBootstrap
@@ -25,6 +27,9 @@ class Application extends App implements IBootstrap
     {
         // Register preview provider for .fvform files
         $context->registerPreviewProvider(FormPreview::class, self::MIME_TYPE);
+
+        // Register Files app integration listener
+        $context->registerEventListener(LoadAdditionalScriptsEvent::class, LoadFilesPluginListener::class);
     }
 
     public function boot(IBootContext $context): void

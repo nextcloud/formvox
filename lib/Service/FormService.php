@@ -178,13 +178,64 @@ class FormService
 
     /**
      * List all forms accessible to the current user
+     * Uses database query for fast lookups instead of recursive folder scanning
      */
     public function listForms(): array
     {
-        $userFolder = $this->getUserFolder();
-        $forms = [];
+        $user = $this->userSession->getUser();
+        if ($user === null) {
+            return [];
+        }
+        $userId = $user->getUID();
 
-        $this->findFormsRecursive($userFolder, $forms);
+        // Query database directly for .fvform files - much faster than recursive scan
+        // Just search by filename extension, mimetype may not be registered yet
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('fc.fileid', 'fc.name', 'fc.path', 'fc.mtime', 'fc.size')
+            ->from('filecache', 'fc')
+            ->where($qb->expr()->like('fc.name', $qb->createNamedParameter('%.fvform')));
+
+        $result = $qb->executeQuery();
+        $forms = [];
+        $userFolder = $this->getUserFolder();
+
+        while ($row = $result->fetch()) {
+            try {
+                // Check if user has access to this file
+                $nodes = $userFolder->getById((int)$row['fileid']);
+                if (empty($nodes)) {
+                    continue;
+                }
+
+                $file = $nodes[0];
+                if (!($file instanceof File)) {
+                    continue;
+                }
+
+                // Only load minimal data from file for the list view
+                $content = $file->getContent();
+                $form = json_decode($content, true);
+
+                if ($form === null) {
+                    continue;
+                }
+
+                $forms[] = [
+                    'fileId' => $file->getId(),
+                    'path' => $file->getPath(),
+                    'name' => $file->getName(),
+                    'title' => $form['title'] ?? 'Untitled',
+                    'description' => $form['description'] ?? '',
+                    'responseCount' => $form['_index']['response_count'] ?? count($form['responses'] ?? []),
+                    'createdAt' => $form['created_at'] ?? null,
+                    'modifiedAt' => $form['modified_at'] ?? null,
+                ];
+            } catch (\Exception $e) {
+                // Skip files we can't access
+                continue;
+            }
+        }
+        $result->closeCursor();
 
         return $forms;
     }

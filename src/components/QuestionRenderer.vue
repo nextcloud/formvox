@@ -16,13 +16,14 @@
     />
 
     <!-- Textarea -->
-    <NcTextArea
-      v-else-if="question.type === 'textarea'"
-      :value="value"
-      :rows="4"
-      resize="vertical"
-      @update:model-value="$emit('update:value', $event)"
-    />
+    <div v-else-if="question.type === 'textarea'" class="textarea-wrapper">
+      <textarea
+        :value="value"
+        rows="4"
+        class="nc-textarea"
+        @input="$emit('update:value', $event.target.value)"
+      />
+    </div>
 
     <!-- Single Choice (Radio) -->
     <div v-else-if="question.type === 'choice'" class="choice-options">
@@ -170,6 +171,7 @@ import { t } from '@/utils/l10n';
 import { computed } from 'vue';
 import {
   NcTextField,
+  NcTextArea,
   NcCheckboxRadioSwitch,
   NcDateTimePicker,
 } from '@nextcloud/vue';
@@ -179,6 +181,7 @@ export default {
   name: 'QuestionRenderer',
   components: {
     NcTextField,
+    NcTextArea,
     NcCheckboxRadioSwitch,
     NcDateTimePicker,
     StarIcon,
@@ -355,31 +358,90 @@ export default {
     color: var(--color-text-maxcontrast);
     margin: 0 0 12px;
   }
+
+  // NcTextArea styling
+  :deep(.textarea) {
+    width: 100%;
+    min-height: 100px;
+  }
+
+  :deep(textarea) {
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+  }
 }
 
-.textarea-input {
+.textarea-wrapper {
   width: 100%;
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+}
+
+.nc-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 2px solid var(--color-border-dark);
+  border-radius: var(--border-radius-large);
+  background-color: var(--color-main-background);
   font-family: inherit;
   font-size: 14px;
+  line-height: 1.5;
   resize: vertical;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--color-primary-element);
+    outline: none;
+  }
+
+  &:hover:not(:focus) {
+    border-color: var(--color-primary-element-light);
+  }
 }
 
 .choice-options {
   display: flex;
   flex-direction: column;
   gap: 8px;
+
+  :deep(.checkbox-radio-switch) {
+    width: 100%;
+
+    .checkbox-radio-switch__label {
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+  }
+
+  :deep(.checkbox-radio-switch__content) {
+    white-space: normal;
+    word-wrap: break-word;
+  }
 }
 
 .dropdown-select {
+  display: block;
   width: 100%;
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  background: var(--color-main-background);
+  height: auto;
+  min-height: 48px;
+  padding: 14px 12px;
+  border: 2px solid var(--color-border-dark);
+  border-radius: var(--border-radius-large);
+  background-color: var(--color-main-background);
+  font-family: inherit;
   font-size: 14px;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--color-primary-element);
+    outline: none;
+  }
+
+  &:hover:not(:focus) {
+    border-color: var(--color-primary-element-light);
+  }
 }
 
 .time-input {

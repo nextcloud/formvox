@@ -1,0 +1,25 @@
+/**
+ * FormVox - Filetype icons
+ * Registers icons for .fvform files in the Files app
+ */
+
+/* Icon for application/x-fvform mimetype */
+.icon-filetype-application-x-fvform,
+.icon-filetype-fvform {
+    background-image: url('../img/filetypes/application-x-fvform.svg');
+}
+
+/* For Vue Files app in NC 28+ */
+[data-cy-files-list-row-name$=".fvform"] .files-list__row-icon,
+.files-list__row[data-cy-files-list-row-name$=".fvform"] .files-list__row-icon {
+    background-image: url('../img/filetypes/application-x-fvform.svg') !important;
+    background-size: 32px 32px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Legacy Files app */
+tr[data-file$=".fvform"] .thumbnail,
+tr[data-file$=".fvform"] .icon-default-style {
+    background-image: url('../img/filetypes/application-x-fvform.svg') !important;
+}
