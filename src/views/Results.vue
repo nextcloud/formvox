@@ -54,20 +54,53 @@
           >
             <h3>{{ question.question }}</h3>
 
-            <div v-if="isChoiceType(question.type)" class="chart-container">
-              <div
-                v-for="(count, answer) in question.answerCounts"
-                :key="answer"
-                class="bar-item"
-              >
-                <div class="bar-label">{{ answer }}</div>
-                <div class="bar-wrapper">
-                  <div
-                    class="bar"
-                    :style="{ width: getBarWidth(count, summary.responseCount) }"
-                  ></div>
+            <div v-if="isChoiceType(question.type)" class="chart-section">
+              <div class="chart-toggle">
+                <NcButton
+                  :type="getChartType(question.id) === 'bar' ? 'primary' : 'tertiary'"
+                  @click="setChartType(question.id, 'bar')"
+                >
+                  {{ t('Bar') }}
+                </NcButton>
+                <NcButton
+                  :type="getChartType(question.id) === 'pie' ? 'primary' : 'tertiary'"
+                  @click="setChartType(question.id, 'pie')"
+                >
+                  {{ t('Pie') }}
+                </NcButton>
+                <NcButton
+                  :type="getChartType(question.id) === 'doughnut' ? 'primary' : 'tertiary'"
+                  @click="setChartType(question.id, 'doughnut')"
+                >
+                  {{ t('Doughnut') }}
+                </NcButton>
+              </div>
+
+              <div class="chart-display">
+                <BarChart
+                  v-if="getChartType(question.id) === 'bar'"
+                  :data="question.answerCounts"
+                  :horizontal="true"
+                />
+                <PieChart
+                  v-else-if="getChartType(question.id) === 'pie'"
+                  :data="question.answerCounts"
+                />
+                <DoughnutChart
+                  v-else-if="getChartType(question.id) === 'doughnut'"
+                  :data="question.answerCounts"
+                />
+              </div>
+
+              <div class="chart-legend">
+                <div
+                  v-for="(count, answer) in question.answerCounts"
+                  :key="answer"
+                  class="legend-item"
+                >
+                  <span class="legend-label">{{ answer }}</span>
+                  <span class="legend-value">{{ count }} ({{ getPercentage(count, summary.responseCount) }}%)</span>
                 </div>
-                <div class="bar-count">{{ count }} ({{ getPercentage(count, summary.responseCount) }}%)</div>
               </div>
             </div>
 
@@ -84,6 +117,38 @@
                 <span class="stat-label">{{ t('Max') }}</span>
                 <span class="stat-value">{{ question.max }}</span>
               </div>
+            </div>
+
+            <div v-else-if="isMatrixType(question.type)" class="matrix-summary">
+              <table class="matrix-results-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th
+                      v-for="col in getMatrixColumns(question.id)"
+                      :key="col.id"
+                    >
+                      {{ col.label }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in getMatrixRows(question.id)"
+                    :key="row.id"
+                  >
+                    <td class="row-label">{{ row.label }}</td>
+                    <td
+                      v-for="col in getMatrixColumns(question.id)"
+                      :key="col.id"
+                      class="matrix-cell"
+                    >
+                      <span class="cell-count">{{ getMatrixCount(question.answerCounts, row.id, col.value) }}</span>
+                      <span class="cell-percent">({{ getMatrixPercentage(question.answerCounts, row.id, col.value) }}%)</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             <div v-else class="text-responses">
@@ -116,7 +181,7 @@
                   <span v-else class="anonymous">{{ t('Anonymous') }}</span>
                 </td>
                 <td v-for="question in form.questions" :key="question.id">
-                  {{ formatAnswer(response.answers[question.id]) }}
+                  {{ formatAnswer(response.answers[question.id], question) }}
                 </td>
                 <td v-if="permissions.deleteResponses">
                   <NcButton
@@ -153,6 +218,9 @@ import axios from '@nextcloud/axios';
 import { showError, showSuccess } from '@nextcloud/dialogs';
 import EditIcon from '../components/icons/EditIcon.vue';
 import DeleteIcon from '../components/icons/DeleteIcon.vue';
+import PieChart from '../components/charts/PieChart.vue';
+import BarChart from '../components/charts/BarChart.vue';
+import DoughnutChart from '../components/charts/DoughnutChart.vue';
 
 export default {
   name: 'Results',
@@ -165,6 +233,9 @@ export default {
     NcLoadingIcon,
     EditIcon,
     DeleteIcon,
+    PieChart,
+    BarChart,
+    DoughnutChart,
   },
   props: {
     fileId: {
@@ -189,6 +260,15 @@ export default {
     const view = ref('summary');
     const summary = ref({ responseCount: 0, questions: [] });
     const responses = ref([]);
+    const chartTypes = ref({}); // Store chart type per question
+
+    const getChartType = (questionId) => {
+      return chartTypes.value[questionId] || 'bar';
+    };
+
+    const setChartType = (questionId, type) => {
+      chartTypes.value[questionId] = type;
+    };
 
     const loadData = async () => {
       loading.value = true;
@@ -214,6 +294,36 @@ export default {
       return ['number', 'scale', 'rating'].includes(type);
     };
 
+    const isMatrixType = (type) => {
+      return type === 'matrix';
+    };
+
+    // Get matrix rows from form question definition
+    const getMatrixRows = (questionId) => {
+      const question = props.form.questions.find(q => q.id === questionId);
+      return question?.rows || [];
+    };
+
+    // Get matrix columns from form question definition
+    const getMatrixColumns = (questionId) => {
+      const question = props.form.questions.find(q => q.id === questionId);
+      return question?.columns || [];
+    };
+
+    // Get count for a specific row/column combination from answerCounts
+    // answerCounts format is "row1:1": 123, "row1:2": 456, etc.
+    const getMatrixCount = (answerCounts, rowId, colValue) => {
+      const key = `${rowId}:${colValue}`;
+      return answerCounts[key] || 0;
+    };
+
+    // Get percentage for a specific row/column combination
+    const getMatrixPercentage = (answerCounts, rowId, colValue) => {
+      const count = getMatrixCount(answerCounts, rowId, colValue);
+      if (summary.value.responseCount === 0) return 0;
+      return Math.round((count / summary.value.responseCount) * 100);
+    };
+
     const getBarWidth = (count, total) => {
       if (total === 0) return '0%';
       return `${(count / total) * 100}%`;
@@ -229,12 +339,39 @@ export default {
       return date.toLocaleString();
     };
 
-    const formatAnswer = (answer) => {
+    const formatAnswer = (answer, question = null) => {
       if (Array.isArray(answer)) {
+        // For multiple choice, try to show labels instead of values
+        if (question && question.options) {
+          const labels = answer.map(val => {
+            const option = question.options.find(o => o.value === val);
+            return option ? option.label : val;
+          });
+          return labels.join(', ');
+        }
         return answer.join(', ');
       }
       if (typeof answer === 'object' && answer !== null) {
+        // Matrix type - show row labels with column labels
+        if (question && question.type === 'matrix' && question.rows && question.columns) {
+          const parts = [];
+          for (const [rowId, colValue] of Object.entries(answer)) {
+            const row = question.rows.find(r => r.id === rowId);
+            const col = question.columns.find(c => c.value === colValue);
+            const rowLabel = row ? row.label : rowId;
+            const colLabel = col ? col.label : colValue;
+            parts.push(`${rowLabel}: ${colLabel}`);
+          }
+          return parts.join(', ');
+        }
         return JSON.stringify(answer);
+      }
+      // For single choice, try to show label instead of value
+      if (question && question.options && answer) {
+        const option = question.options.find(o => o.value === answer);
+        if (option) {
+          return option.label;
+        }
       }
       return answer || '-';
     };
@@ -287,8 +424,16 @@ export default {
       view,
       summary,
       responses,
+      chartTypes,
+      getChartType,
+      setChartType,
       isChoiceType,
       isNumericType,
+      isMatrixType,
+      getMatrixRows,
+      getMatrixColumns,
+      getMatrixCount,
+      getMatrixPercentage,
       getBarWidth,
       getPercentage,
       formatDate,
@@ -353,39 +498,38 @@ export default {
   }
 }
 
-.chart-container {
-  .bar-item {
+.chart-section {
+  .chart-toggle {
     display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-    gap: 10px;
+    gap: 8px;
+    margin-bottom: 20px;
   }
 
-  .bar-label {
-    width: 150px;
-    text-align: right;
-    font-size: 14px;
+  .chart-display {
+    margin-bottom: 20px;
+    min-height: 200px;
   }
 
-  .bar-wrapper {
-    flex: 1;
-    height: 24px;
-    background: var(--color-background-dark);
-    border-radius: var(--border-radius);
-    overflow: hidden;
-  }
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 15px;
+    border-top: 1px solid var(--color-border);
 
-  .bar {
-    height: 100%;
-    background: var(--color-primary);
-    border-radius: var(--border-radius);
-    transition: width 0.3s ease;
-  }
+    .legend-item {
+      display: flex;
+      gap: 8px;
+      font-size: 14px;
+    }
 
-  .bar-count {
-    width: 80px;
-    font-size: 14px;
-    color: var(--color-text-maxcontrast);
+    .legend-label {
+      font-weight: 500;
+    }
+
+    .legend-value {
+      color: var(--color-text-maxcontrast);
+    }
   }
 }
 
@@ -407,6 +551,45 @@ export default {
       display: block;
       font-size: 24px;
       font-weight: bold;
+    }
+  }
+}
+
+.matrix-summary {
+  overflow-x: auto;
+
+  .matrix-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+
+    th, td {
+      padding: 10px 15px;
+      text-align: center;
+      border: 1px solid var(--color-border);
+    }
+
+    th {
+      background: var(--color-background-dark);
+      font-weight: 600;
+    }
+
+    .row-label {
+      text-align: left;
+      font-weight: 500;
+      background: var(--color-background-dark);
+    }
+
+    .matrix-cell {
+      .cell-count {
+        font-weight: 600;
+        display: block;
+      }
+
+      .cell-percent {
+        font-size: 12px;
+        color: var(--color-text-maxcontrast);
+      }
     }
   }
 }
