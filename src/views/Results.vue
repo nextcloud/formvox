@@ -160,6 +160,56 @@
         </div>
 
         <div v-else class="responses-view">
+          <div class="pagination-controls">
+            <div class="pagination-info">
+              {{ t('Showing {start}-{end} of {total}', {
+                start: (currentPage - 1) * pageSize + 1,
+                end: Math.min(currentPage * pageSize, responses.length),
+                total: responses.length
+              }) }}
+            </div>
+            <div class="pagination-buttons">
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === 1"
+                @click="currentPage = 1"
+              >
+                &laquo;
+              </NcButton>
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === 1"
+                @click="currentPage--"
+              >
+                &lsaquo;
+              </NcButton>
+              <span class="page-indicator">{{ currentPage }} / {{ totalPages }}</span>
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
+              >
+                &rsaquo;
+              </NcButton>
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === totalPages"
+                @click="currentPage = totalPages"
+              >
+                &raquo;
+              </NcButton>
+            </div>
+            <div class="page-size-selector">
+              <label>{{ t('Per page:') }}</label>
+              <select v-model="pageSize" @change="currentPage = 1">
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+                <option :value="250">250</option>
+              </select>
+            </div>
+          </div>
+
           <table class="responses-table">
             <thead>
               <tr>
@@ -172,7 +222,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="response in responses" :key="response.id">
+              <tr v-for="response in paginatedResponses" :key="response.id">
                 <td>{{ formatDate(response.submitted_at) }}</td>
                 <td>
                   <span v-if="response.respondent.type === 'user'">
@@ -196,6 +246,40 @@
               </tr>
             </tbody>
           </table>
+
+          <div v-if="totalPages > 1" class="pagination-controls bottom">
+            <div class="pagination-buttons">
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === 1"
+                @click="currentPage = 1"
+              >
+                &laquo;
+              </NcButton>
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === 1"
+                @click="currentPage--"
+              >
+                &lsaquo;
+              </NcButton>
+              <span class="page-indicator">{{ currentPage }} / {{ totalPages }}</span>
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
+              >
+                &rsaquo;
+              </NcButton>
+              <NcButton
+                type="tertiary"
+                :disabled="currentPage === totalPages"
+                @click="currentPage = totalPages"
+              >
+                &raquo;
+              </NcButton>
+            </div>
+          </div>
         </div>
       </div>
     </NcAppContent>
@@ -203,7 +287,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
   NcContent,
   NcAppContent,
@@ -261,6 +345,20 @@ export default {
     const summary = ref({ responseCount: 0, questions: [] });
     const responses = ref([]);
     const chartTypes = ref({}); // Store chart type per question
+
+    // Pagination
+    const currentPage = ref(1);
+    const pageSize = ref(50);
+
+    const totalPages = computed(() => {
+      return Math.max(1, Math.ceil(responses.value.length / pageSize.value));
+    });
+
+    const paginatedResponses = computed(() => {
+      const start = (currentPage.value - 1) * pageSize.value;
+      const end = start + pageSize.value;
+      return responses.value.slice(start, end);
+    });
 
     const getChartType = (questionId) => {
       return chartTypes.value[questionId] || 'bar';
@@ -425,6 +523,12 @@ export default {
       summary,
       responses,
       chartTypes,
+      // Pagination
+      currentPage,
+      pageSize,
+      totalPages,
+      paginatedResponses,
+      // Methods
       getChartType,
       setChartType,
       isChoiceType,
@@ -598,6 +702,56 @@ export default {
   .text-count {
     color: var(--color-text-maxcontrast);
     margin: 0;
+  }
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 0;
+  gap: 20px;
+  flex-wrap: wrap;
+
+  &.bottom {
+    justify-content: center;
+    border-top: 1px solid var(--color-border);
+    margin-top: 20px;
+  }
+
+  .pagination-info {
+    color: var(--color-text-maxcontrast);
+    font-size: 14px;
+  }
+
+  .pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    .page-indicator {
+      padding: 0 15px;
+      font-weight: 500;
+    }
+  }
+
+  .page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+
+    label {
+      color: var(--color-text-maxcontrast);
+    }
+
+    select {
+      padding: 6px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      background: var(--color-main-background);
+      font-size: 14px;
+    }
   }
 }
 
