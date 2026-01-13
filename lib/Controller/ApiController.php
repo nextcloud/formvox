@@ -259,6 +259,34 @@ class ApiController extends Controller
     }
 
     /**
+     * Delete all responses
+     */
+    #[NoAdminRequired]
+    public function deleteAllResponses(int $fileId): DataResponse
+    {
+        try {
+            $form = $this->formService->load($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRole($form, $userId);
+
+            if (!$this->permissionService->canDeleteResponses($role)) {
+                return new DataResponse(
+                    ['error' => 'Permission denied'],
+                    Http::STATUS_FORBIDDEN
+                );
+            }
+
+            $this->formService->deleteAllResponses($fileId);
+            return new DataResponse(['success' => true]);
+        } catch (\Exception $e) {
+            return new DataResponse(
+                ['error' => $e->getMessage()],
+                Http::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
      * Delete a response
      */
     #[NoAdminRequired]

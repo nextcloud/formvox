@@ -142,6 +142,15 @@ class FormService
             }
         }
 
+        // Handle public_token being cleared - also clear related share settings
+        if (isset($form['settings']) && array_key_exists('public_token', $form['settings'])) {
+            if (empty($form['settings']['public_token'])) {
+                // Public link was deleted, also clear password hash and expiration
+                unset($form['settings']['share_password_hash']);
+                $form['settings']['share_expires_at'] = null;
+            }
+        }
+
         // Hash the share password if provided (store hash, never plaintext)
         // Use array_key_exists because isset() returns false for null values
         if (isset($form['settings']) && array_key_exists('share_password', $form['settings'])) {
@@ -293,6 +302,26 @@ class FormService
         }
 
         // Rebuild index after deletion
+        $this->indexService->rebuildIndex($form);
+
+        $form['modified_at'] = date('c');
+
+        // Save - Nextcloud handles locking internally
+        $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Delete all responses from a form
+     */
+    public function deleteAllResponses(int $fileId): void
+    {
+        $file = $this->getFileById($fileId);
+        $form = json_decode($file->getContent(), true);
+
+        // Clear all responses
+        $form['responses'] = [];
+
+        // Rebuild index (will be empty)
         $this->indexService->rebuildIndex($form);
 
         $form['modified_at'] = date('c');

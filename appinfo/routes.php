@@ -24,6 +24,7 @@ return [
 
         // API routes - Responses
         ['name' => 'api#getResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'GET'],
+        ['name' => 'api#deleteAllResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'DELETE'],
         ['name' => 'api#deleteResponse', 'url' => '/api/form/{fileId}/responses/{responseId}', 'verb' => 'DELETE'],
 
         // API routes - Export

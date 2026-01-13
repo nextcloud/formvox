@@ -69,6 +69,23 @@
           type="datetime"
           @update:value="linkSettings.expiresAt = $event"
         />
+
+        <div class="danger-zone">
+          <h4>{{ t('Danger zone') }}</h4>
+          <NcButton type="error" @click="deleteShareLink">
+            {{ t('Delete public link') }}
+          </NcButton>
+        </div>
+      </div>
+
+      <div v-if="responseCount > 0" class="responses-section">
+        <h3>{{ t('Responses') }}</h3>
+        <p class="response-count">
+          {{ t('{count} responses collected', { count: responseCount }) }}
+        </p>
+        <NcButton type="error" @click="confirmDeleteResponses">
+          {{ t('Delete all responses') }}
+        </NcButton>
       </div>
 
       <div class="actions">
@@ -115,13 +132,14 @@ export default {
       required: true,
     },
   },
-  emits: ['close'],
+  emits: ['close', 'responsesDeleted'],
   setup(props, { emit }) {
     const shareLink = ref(null);
     const shareToken = ref(null);
     const copied = ref(false);
     const creatingLink = ref(false);
     const linkInput = ref(null);
+    const responseCount = ref(props.form._index?.response_count || 0);
 
     const linkSettings = reactive({
       passwordProtected: false,
@@ -278,6 +296,64 @@ export default {
       }
     };
 
+    const deleteShareLink = async () => {
+      if (!confirm(t('Are you sure you want to delete the public link? Anyone with this link will no longer be able to access the form.'))) {
+        return;
+      }
+
+      try {
+        const settings = {
+          ...props.form.settings,
+          public_token: null,
+          share_password: null,
+          share_expires_at: null,
+        };
+
+        await axios.put(
+          generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
+          { settings }
+        );
+
+        // Update local state
+        shareLink.value = null;
+        shareToken.value = null;
+        linkSettings.passwordProtected = false;
+        linkSettings.password = '';
+        linkSettings.expires = false;
+        linkSettings.expiresAt = null;
+
+        // Update local form object
+        props.form.settings.public_token = null;
+        delete props.form.settings.share_password_hash;
+        props.form.settings.share_expires_at = null;
+
+        showSuccess(t('Public link deleted'));
+      } catch (error) {
+        showError(t('Failed to delete public link'));
+        console.error(error);
+      }
+    };
+
+    const confirmDeleteResponses = async () => {
+      if (!confirm(t('Are you sure you want to delete ALL responses? This action cannot be undone.'))) {
+        return;
+      }
+
+      try {
+        await axios.delete(
+          generateUrl('/apps/formvox/api/form/{fileId}/responses', { fileId: props.fileId })
+        );
+
+        responseCount.value = 0;
+        emit('responsesDeleted');
+
+        showSuccess(t('All responses deleted'));
+      } catch (error) {
+        showError(t('Failed to delete responses'));
+        console.error(error);
+      }
+    };
+
     onMounted(() => {
       loadExistingShare();
     });
@@ -288,11 +364,14 @@ export default {
       creatingLink,
       linkInput,
       linkSettings,
+      responseCount,
       createShareLink,
       copyLink,
       togglePassword,
       toggleLinkExpiration,
       savePassword,
+      deleteShareLink,
+      confirmDeleteResponses,
       t,
     };
   },
@@ -362,6 +441,35 @@ export default {
     align-items: flex-end;
     margin-top: 8px;
     margin-bottom: 16px;
+  }
+
+  .danger-zone {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+
+    h4 {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-error);
+    }
+  }
+}
+
+.responses-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+
+  h3 {
+    margin: 0 0 8px;
+  }
+
+  .response-count {
+    margin: 0 0 12px;
+    color: var(--color-text-maxcontrast);
   }
 }
 
