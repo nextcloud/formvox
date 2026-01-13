@@ -94,19 +94,8 @@ class PublicController extends Controller
                 }
             }
 
-            // Check if form is password protected
-            if (!empty($form['settings']['share_password_hash'])) {
-                $providedPassword = $this->request->getParam('password');
-                if (empty($providedPassword)) {
-                    // Show password form
-                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form');
-                }
-                if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
-                }
-            }
-
-            // Check if form requires login
+            // Check if form requires login FIRST (before password check)
+            // If require_login is set, user must be logged in regardless of password
             if ($form['settings']['require_login'] ?? false) {
                 $user = $this->userSession->getUser();
                 if ($user === null) {
@@ -117,6 +106,18 @@ class PublicController extends Controller
                     ]);
                     $loginUrl = $this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $currentUrl]);
                     return new RedirectResponse($loginUrl);
+                }
+            }
+
+            // Check if form is password protected (only check after login requirement is satisfied)
+            if (!empty($form['settings']['share_password_hash'])) {
+                $providedPassword = $this->request->getParam('password');
+                if (empty($providedPassword)) {
+                    // Show password form
+                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form');
+                }
+                if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
+                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
                 }
             }
 

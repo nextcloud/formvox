@@ -143,7 +143,8 @@ class FormService
         }
 
         // Hash the share password if provided (store hash, never plaintext)
-        if (isset($form['settings']['share_password'])) {
+        // Use array_key_exists because isset() returns false for null values
+        if (isset($form['settings']) && array_key_exists('share_password', $form['settings'])) {
             $password = $form['settings']['share_password'];
             if (!empty($password)) {
                 // Only hash if it's not already hashed (new password)
@@ -152,7 +153,7 @@ class FormService
                     $form['settings']['share_password_hash'] = password_hash($password, PASSWORD_DEFAULT);
                 }
             } else {
-                // Password was cleared
+                // Password was cleared (null or empty string)
                 unset($form['settings']['share_password_hash']);
             }
             // Never store plaintext password
