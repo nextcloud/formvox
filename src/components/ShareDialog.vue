@@ -8,7 +8,7 @@
       </p>
 
       <div class="share-link-section">
-        <h3>{{ t('Public link') }}</h3>
+        <h3>{{ t('Response link') }}</h3>
 
         <div v-if="shareLink" class="share-link-display">
           <input
@@ -27,9 +27,9 @@
         </div>
 
         <div v-else class="create-link">
-          <p>{{ t('No public link yet. Create one to share your form.') }}</p>
+          <p>{{ t('No link yet. Create one to start collecting responses.') }}</p>
           <NcButton type="primary" :disabled="creatingLink" @click="createShareLink">
-            {{ creatingLink ? t('Creating...') : t('Create public link') }}
+            {{ creatingLink ? t('Creating...') : t('Create response link') }}
           </NcButton>
         </div>
       </div>
@@ -70,10 +70,9 @@
           @update:value="linkSettings.expiresAt = $event"
         />
 
-        <div class="danger-zone">
-          <h4>{{ t('Danger zone') }}</h4>
-          <NcButton type="error" @click="deleteShareLink">
-            {{ t('Delete public link') }}
+        <div class="delete-link-section">
+          <NcButton type="tertiary" @click="deleteShareLink">
+            {{ t('Delete response link') }}
           </NcButton>
         </div>
       </div>
@@ -196,9 +195,9 @@ export default {
         // Update local form object
         props.form.settings.public_token = token;
 
-        showSuccess(t('Public link created'));
+        showSuccess(t('Response link created'));
       } catch (error) {
-        showError(t('Failed to create share link'));
+        showError(t('Failed to create response link'));
         console.error(error);
       } finally {
         creatingLink.value = false;
@@ -297,7 +296,7 @@ export default {
     };
 
     const deleteShareLink = async () => {
-      if (!confirm(t('Are you sure you want to delete the public link? Anyone with this link will no longer be able to access the form.'))) {
+      if (!confirm(t('Are you sure you want to delete this link? Anyone with this link will no longer be able to submit responses.'))) {
         return;
       }
 
@@ -327,9 +326,9 @@ export default {
         delete props.form.settings.share_password_hash;
         props.form.settings.share_expires_at = null;
 
-        showSuccess(t('Public link deleted'));
+        showSuccess(t('Response link deleted'));
       } catch (error) {
-        showError(t('Failed to delete public link'));
+        showError(t('Failed to delete response link'));
         console.error(error);
       }
     };
@@ -443,17 +442,10 @@ export default {
     margin-bottom: 16px;
   }
 
-  .danger-zone {
-    margin-top: 20px;
+  .delete-link-section {
+    margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
-
-    h4 {
-      margin: 0 0 12px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--color-error);
-    }
   }
 }
 

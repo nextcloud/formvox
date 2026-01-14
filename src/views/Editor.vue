@@ -2,6 +2,15 @@
   <NcContent app-name="formvox">
     <NcAppContent>
       <div class="editor-container">
+        <div class="editor-back">
+          <NcButton type="tertiary" @click="goBack">
+            <template #icon>
+              <ArrowLeftIcon :size="20" />
+            </template>
+            {{ t('All forms') }}
+          </NcButton>
+        </div>
+
         <div class="editor-header">
           <NcTextField
             v-model="form.title"
@@ -130,9 +139,12 @@
                   :question="element"
                   :index="getQuestionIndex(element.id)"
                   :questions="form.questions"
+                  :pages="form.pages"
+                  :current-page-index="currentPageIndex"
                   @update="updateQuestionById(element.id, $event)"
                   @delete="deleteQuestionById(element.id)"
                   @duplicate="duplicateQuestionById(element.id)"
+                  @move="moveQuestionToPage(element.id, $event)"
                 />
               </template>
             </draggable>
@@ -227,6 +239,7 @@ import ShareIcon from '../components/icons/ShareIcon.vue';
 import ChartIcon from '../components/icons/ChartIcon.vue';
 import PagesIcon from '../components/icons/PagesIcon.vue';
 import PaletteIcon from '../components/icons/PaletteIcon.vue';
+import ArrowLeftIcon from '../components/icons/ArrowLeftIcon.vue';
 
 export default {
   name: 'Editor',
@@ -249,6 +262,7 @@ export default {
     ChartIcon,
     PagesIcon,
     PaletteIcon,
+    ArrowLeftIcon,
   },
   props: {
     fileId: {
@@ -487,6 +501,25 @@ export default {
       debouncedSave();
     };
 
+    const moveQuestionToPage = (questionId, targetPageIndex) => {
+      if (!hasPages.value) return;
+
+      // Remove from current page
+      const currentPage = form.pages[currentPageIndex.value];
+      const qIndex = currentPage.questions.indexOf(questionId);
+      if (qIndex !== -1) {
+        currentPage.questions.splice(qIndex, 1);
+      }
+
+      // Add to target page
+      const targetPage = form.pages[targetPageIndex];
+      if (targetPage) {
+        targetPage.questions.push(questionId);
+      }
+
+      debouncedSave();
+    };
+
     const updateSettings = (newSettings) => {
       Object.assign(form.settings, newSettings);
       debouncedSave();
@@ -504,6 +537,10 @@ export default {
 
     const viewResults = () => {
       window.location.href = generateUrl('/apps/formvox/results/{fileId}', { fileId: props.fileId });
+    };
+
+    const goBack = () => {
+      window.location.href = generateUrl('/apps/formvox');
     };
 
     return {
@@ -531,10 +568,12 @@ export default {
       deleteQuestionById,
       duplicateQuestionById,
       onQuestionDragEnd,
+      moveQuestionToPage,
       updateSettings,
       updatePermissions,
       updateBranding,
       viewResults,
+      goBack,
       t,
     };
   },
@@ -546,6 +585,10 @@ export default {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.editor-back {
+  margin-bottom: 16px;
 }
 
 .editor-header {

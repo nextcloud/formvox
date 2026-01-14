@@ -2,7 +2,7 @@
   <NcModal :show="true" size="large" @close="$emit('close')">
     <div class="form-branding-editor">
       <div class="modal-header">
-        <h2>{{ t('Form Branding') }}</h2>
+        <h2>{{ t('Form Theme') }}</h2>
         <p class="description">{{ t('Customize the look and feel of this form. Leave disabled to use the admin defaults.') }}</p>
       </div>
 
@@ -11,7 +11,7 @@
           :model-value="useCustomBranding"
           @update:model-value="toggleCustomBranding"
         >
-          {{ t('Use custom branding for this form') }}
+          {{ t('Use custom theme for this form') }}
         </NcCheckboxRadioSwitch>
       </div>
 
@@ -26,7 +26,7 @@
       <div v-else class="using-defaults">
         <div class="info-box">
           <InfoIcon :size="20" />
-          <span>{{ t('This form uses the admin default branding. Enable custom branding above to customize.') }}</span>
+          <span>{{ t('This form uses the default theme. Enable custom theme above to customize.') }}</span>
         </div>
       </div>
 

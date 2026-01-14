@@ -11,6 +11,19 @@
         autofocus
       />
 
+      <div class="location-section">
+        <label class="location-label">{{ t('Save location') }}</label>
+        <div class="location-picker">
+          <div class="location-display">
+            <FolderIcon :size="20" />
+            <span class="location-path">{{ selectedPath || '/' }}</span>
+          </div>
+          <NcButton type="secondary" @click="pickFolder">
+            {{ t('Choose folder') }}
+          </NcButton>
+        </div>
+      </div>
+
       <div class="template-section">
         <h3>{{ t('Start from a template') }}</h3>
         <div class="templates">
@@ -46,13 +59,14 @@ import { ref } from 'vue';
 import { NcModal, NcButton, NcTextField } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
-import { showError } from '@nextcloud/dialogs';
+import { showError, getFilePickerBuilder, FilePickerType } from '@nextcloud/dialogs';
 import { t } from '@/utils/l10n';
 import FormIcon from './icons/FormIcon.vue';
 import PollIcon from './icons/PollIcon.vue';
 import SurveyIcon from './icons/SurveyIcon.vue';
 import RegistrationIcon from './icons/RegistrationIcon.vue';
 import DemoIcon from './icons/DemoIcon.vue';
+import FolderIcon from './icons/FolderIcon.vue';
 
 export default {
   name: 'NewFormModal',
@@ -65,12 +79,14 @@ export default {
     SurveyIcon,
     RegistrationIcon,
     DemoIcon,
+    FolderIcon,
   },
   emits: ['close', 'created'],
-  setup(props, { emit }) {
+  setup(_, { emit }) {
     const title = ref('');
     const selectedTemplate = ref('blank');
     const creating = ref(false);
+    const selectedPath = ref('');
 
     const templates = [
       {
@@ -105,6 +121,25 @@ export default {
       },
     ];
 
+    const pickFolder = async () => {
+      try {
+        const picker = getFilePickerBuilder(t('Choose save location'))
+          .setMultiSelect(false)
+          .setType(FilePickerType.Choose)
+          .allowDirectories(true)
+          .build();
+
+        const path = await picker.pick();
+        if (path && path.length > 0) {
+          // picker.pick() returns array of paths
+          selectedPath.value = Array.isArray(path) ? path[0] : path;
+        }
+      } catch (error) {
+        // User cancelled or error
+        console.error('Folder picker error:', error);
+      }
+    };
+
     const create = async () => {
       if (!title.value) return;
 
@@ -112,6 +147,7 @@ export default {
       try {
         const response = await axios.post(generateUrl('/apps/formvox/api/forms'), {
           title: title.value,
+          path: selectedPath.value || '',
           template: selectedTemplate.value === 'blank' ? null : selectedTemplate.value,
         });
 
@@ -127,8 +163,10 @@ export default {
     return {
       title,
       selectedTemplate,
+      selectedPath,
       creating,
       templates,
+      pickFolder,
       create,
       t,
     };
@@ -146,7 +184,43 @@ export default {
   }
 
   .title-input {
+    margin-bottom: 16px;
+  }
+
+  .location-section {
     margin-bottom: 24px;
+
+    .location-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .location-picker {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .location-display {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--color-background-hover);
+      border-radius: var(--border-radius);
+      font-size: 14px;
+      color: var(--color-text-maxcontrast);
+      overflow: hidden;
+
+      .location-path {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
   }
 
   .template-section {
