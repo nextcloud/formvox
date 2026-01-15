@@ -172,7 +172,7 @@ class PublicController extends Controller
      */
     #[PublicPage]
     #[NoCSRFRequired]
-    #[AnonRateLimit(limit: 1000, period: 3600)]
+    #[AnonRateLimit(limit: 100, period: 3600)]
     #[BruteForceProtection(action: 'formvox_submit')]
     public function submit(int $fileId, string $token, array $answers): DataResponse
     {

@@ -140,7 +140,7 @@ For typical usage scenarios (users submitting forms seconds apart), all response
 
 ### Rate Limiting
 
-Public form submissions are rate-limited to 1000 requests per hour per IP address to prevent abuse while allowing legitimate high-volume usage.
+Public form submissions are rate-limited to 100 requests per hour per IP address to prevent abuse.
 
 ## License
 
