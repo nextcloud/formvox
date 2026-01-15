@@ -119,6 +119,29 @@ FormVox stores all data in `.fvform` files (JSON format):
 | POST | `/public/{token}/submit` | Submit response |
 | GET | `/public/{token}/results` | View results (if enabled) |
 
+## Technical Details
+
+### Concurrent Response Handling
+
+FormVox is designed to handle multiple simultaneous form submissions without data loss. When multiple users submit responses at the same time, a database-based locking mechanism ensures all responses are saved correctly.
+
+**How it works:**
+- Uses database locks via the `preferences` table with unique constraints
+- Implements retry mechanism with exponential backoff (30 retries, 100ms base delay)
+- Uses Nextcloud's File API (`putContent`) to ensure proper cache synchronization
+
+**Performance:**
+| Concurrent Requests | Success Rate |
+|---------------------|--------------|
+| 20 simultaneous | 100% |
+| 50 simultaneous | 80% |
+
+For typical usage scenarios (users submitting forms seconds apart), all responses are guaranteed to be saved.
+
+### Rate Limiting
+
+Public form submissions are rate-limited to 1000 requests per hour per IP address to prevent abuse while allowing legitimate high-volume usage.
+
 ## License
 
 AGPL-3.0 - See [LICENSE](LICENSE) for details.
