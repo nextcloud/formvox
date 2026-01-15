@@ -44,91 +44,56 @@ The editor consists of three parts:
 ### Text
 Single-line text input for short answers like names, email addresses, or short responses.
 
-**Settings:**
-- Placeholder text
-- Validation type (none, email, URL, phone)
-- Minimum/maximum length
-
 ### Textarea
 Multi-line text field for longer responses such as comments, descriptions, or explanations.
-
-**Settings:**
-- Placeholder text
-- Number of rows (height)
-- Minimum/maximum length
 
 ### Choice (Single Select)
 Radio buttons where users can select exactly one option from a list.
 
 **Settings:**
-- Options (add/remove/reorder)
-- "Other" option with free text
-- Display as buttons or list
+- Options (add/remove/reorder via drag & drop)
+- Quiz mode with scores per option
 
 ### Multiple (Multi Select)
 Checkboxes where users can select multiple options from a list.
 
 **Settings:**
-- Options (add/remove/reorder)
-- Minimum/maximum number of selections
-- "Other" option with free text
+- Options (add/remove/reorder via drag & drop)
+- Quiz mode with scores per option
 
 ### Dropdown
 Single selection from a dropdown menu. Ideal for long lists of options.
 
 **Settings:**
-- Options (add/remove/reorder)
-- Placeholder text
-- Searchable (for long lists)
+- Options (add/remove/reorder via drag & drop)
+- Quiz mode with scores per option
 
 ### Date
 Date picker for selecting a date without time.
 
-**Settings:**
-- Minimum date
-- Maximum date
-- Default value (today, empty, or specific date)
-
 ### DateTime
 Combined date and time picker for selecting both a date and time.
-
-**Settings:**
-- Minimum datetime
-- Maximum datetime
-- Time interval (15 min, 30 min, 1 hour)
 
 ### Time
 Time picker for selecting only a time without a date.
 
-**Settings:**
-- Minimum time
-- Maximum time
-- Time interval
-
 ### Number
 Numeric input for quantities, ages, amounts, etc.
 
-**Settings:**
-- Minimum value
-- Maximum value
-- Step size (e.g., 0.01 for cents)
-- Prefix/suffix (e.g., "$" or "kg")
-
 ### Scale (Linear Scale)
-Slider or number scale for ratings or opinions (e.g., 1-10).
+Number scale for ratings or opinions (e.g., 1-5 or 1-10).
 
 **Settings:**
 - Minimum value (default: 1)
-- Maximum value (default: 10)
+- Maximum value (default: 5)
 - Start label (e.g., "Disagree")
 - End label (e.g., "Agree")
 
 ### Rating (Stars)
-Star rating from 1 to 5 stars.
+Star rating for quick feedback.
 
 **Settings:**
 - Maximum stars (default: 5)
-- Icon type (stars, hearts, thumbs)
 
 ### Matrix (Grid)
 Table format with questions in rows and answer options in columns. Useful for comparing multiple items using the same scale.
@@ -136,7 +101,9 @@ Table format with questions in rows and answer options in columns. Useful for co
 **Settings:**
 - Rows (sub-questions)
 - Columns (answer options)
-- Single or multiple selection per row
+
+### File Upload
+Allow respondents to upload files with their response.
 
 ---
 
@@ -386,7 +353,6 @@ All exports include:
 - Be specific and unambiguous
 - Avoid leading questions
 - Provide all necessary answer options
-- Use "Other" sparingly
 
 ### Testing
 - Always test your form before sharing
