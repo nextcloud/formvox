@@ -121,8 +121,6 @@ class FormService
 
     /**
      * Update a form
-     * Note: We don't use explicit locking here - Nextcloud's file system
-     * handles locking internally during putContent()
      */
     public function update(int $fileId, array $data): array
     {
@@ -171,7 +169,6 @@ class FormService
 
         $form['modified_at'] = date('c');
 
-        // Save - Nextcloud handles locking internally
         $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         return $form;
@@ -251,36 +248,100 @@ class FormService
     }
 
     /**
-     * Append a response to a form
-     * Note: We don't use explicit locking - Nextcloud handles it internally
+     * Append a response to a form with proper file locking
+     * Uses exclusive lock to prevent race conditions during concurrent submissions
      */
     public function appendResponse(int $fileId, array $response): array
     {
         $file = $this->getFileById($fileId);
-        $form = json_decode($file->getContent(), true);
 
-        // Initialize responses array if not exists
-        if (!isset($form['responses'])) {
-            $form['responses'] = [];
+        return $this->appendResponseWithLock($file, $response);
+    }
+
+    /**
+     * Append response with database-based locking to prevent race conditions
+     * Uses Nextcloud's File API (putContent) to ensure proper cache updates
+     */
+    private function appendResponseWithLock(File $file, array $response): array
+    {
+        $lockKey = 'formvox_response_' . $file->getId();
+        $maxRetries = 30;
+        $retryDelay = 100000; // 100ms in microseconds
+
+        for ($retry = 0; $retry < $maxRetries; $retry++) {
+            // Try to acquire lock via database using unique constraint
+            $qb = $this->db->getQueryBuilder();
+            $qb->insert('preferences')
+                ->values([
+                    'userid' => $qb->createNamedParameter('__formvox_lock__'),
+                    'appid' => $qb->createNamedParameter('formvox'),
+                    'configkey' => $qb->createNamedParameter($lockKey),
+                    'configvalue' => $qb->createNamedParameter((string)time()),
+                ]);
+
+            try {
+                $qb->executeStatement();
+
+                try {
+                    // We have the lock, do the work using Nextcloud's File API
+                    $content = $file->getContent();
+                    $form = json_decode($content, true);
+
+                    if ($form === null) {
+                        throw new \RuntimeException('Invalid form file format');
+                    }
+
+                    if (!isset($form['responses'])) {
+                        $form['responses'] = [];
+                    }
+
+                    $form['responses'][] = $response;
+                    $this->indexService->updateIndex($form, $response, \count($form['responses']) - 1);
+                    $form['modified_at'] = date('c');
+
+                    // Use Nextcloud's putContent to properly update the file cache
+                    $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+                    return $response;
+                } finally {
+                    // Always release lock
+                    $this->releaseLock($lockKey);
+                }
+            } catch (\Exception $e) {
+                // Lock acquisition failed (duplicate key), retry
+                $msg = $e->getMessage();
+                if (strpos($msg, 'Duplicate') !== false ||
+                    strpos($msg, 'UNIQUE constraint') !== false ||
+                    strpos($msg, 'duplicate key') !== false) {
+                    usleep($retryDelay * ($retry + 1));
+                    continue;
+                }
+                throw $e;
+            }
         }
 
-        // Add response
-        $form['responses'][] = $response;
+        throw new \RuntimeException('Could not acquire lock after ' . $maxRetries . ' retries');
+    }
 
-        // Update index
-        $this->indexService->updateIndex($form, $response, count($form['responses']) - 1);
-
-        $form['modified_at'] = date('c');
-
-        // Save - Nextcloud handles locking internally
-        $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-        return $response;
+    /**
+     * Release a database lock
+     */
+    private function releaseLock(string $lockKey): void
+    {
+        try {
+            $qb = $this->db->getQueryBuilder();
+            $qb->delete('preferences')
+                ->where($qb->expr()->eq('userid', $qb->createNamedParameter('__formvox_lock__')))
+                ->andWhere($qb->expr()->eq('appid', $qb->createNamedParameter('formvox')))
+                ->andWhere($qb->expr()->eq('configkey', $qb->createNamedParameter($lockKey)));
+            $qb->executeStatement();
+        } catch (\Exception $e) {
+            // Log but don't throw - lock will expire anyway
+        }
     }
 
     /**
      * Delete a response from a form
-     * Note: We don't use explicit locking - Nextcloud handles it internally
      */
     public function deleteResponse(int $fileId, string $responseId): void
     {
@@ -306,7 +367,6 @@ class FormService
 
         $form['modified_at'] = date('c');
 
-        // Save - Nextcloud handles locking internally
         $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
@@ -326,7 +386,6 @@ class FormService
 
         $form['modified_at'] = date('c');
 
-        // Save - Nextcloud handles locking internally
         $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
@@ -474,29 +533,13 @@ class FormService
 
     /**
      * Append a response to a form (public access - no user context needed)
+     * Uses same locking mechanism as appendResponse to prevent race conditions
      */
     public function appendResponsePublic(int $fileId, array $response): array
     {
         $file = $this->getFileByIdPublic($fileId);
-        $form = json_decode($file->getContent(), true);
 
-        // Initialize responses array if not exists
-        if (!isset($form['responses'])) {
-            $form['responses'] = [];
-        }
-
-        // Add response
-        $form['responses'][] = $response;
-
-        // Update index
-        $this->indexService->updateIndex($form, $response, count($form['responses']) - 1);
-
-        $form['modified_at'] = date('c');
-
-        // Save
-        $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-        return $response;
+        return $this->appendResponseWithLock($file, $response);
     }
 
     /**
