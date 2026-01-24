@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build artifacts (keep js/ for deployment)
+# js/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+
+# Certificates (NEVER push to public GitHub!)
+certificates/
+*.key
+*.crt
+*.pem
+
+# Deploy script (contains server info)
+deploy.sh
