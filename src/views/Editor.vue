@@ -592,7 +592,7 @@ export default {
   margin-bottom: 20px;
 
   .title-input {
-    margin-bottom: 20px;
+    margin-bottom: 32px;
 
     :deep(input) {
       font-size: 24px !important;
