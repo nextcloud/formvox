@@ -564,6 +564,37 @@ export default {
     display: flex;
     align-items: center;
     gap: 4px;
+
+    :deep(.action-item__menutoggle) {
+      svg {
+        display: block;
+      }
+    }
+  }
+}
+
+/* Fix NcActionButton icon alignment */
+:deep(.action-item) {
+  .action-button {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+
+    .action-button__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      svg {
+        display: block;
+      }
+    }
+
+    .action-button__text {
+      flex: 1;
+      text-align: left;
+    }
   }
 }
 
@@ -572,7 +603,7 @@ export default {
 }
 
 .question-input {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .description-input {
