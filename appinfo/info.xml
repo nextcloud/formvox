@@ -4,32 +4,45 @@
     <id>formvox</id>
     <name>FormVox</name>
     <summary>File-based forms and polls for Nextcloud</summary>
-    <description><![CDATA[
-FormVox is a Nextcloud app for creating and managing forms and polls.
+    <description><![CDATA[**⚠️ EVALUATION VERSION - NOT FOR PRODUCTION USE**
 
-**Key Features:**
-- 100% file-based - no database tables
-- All data stored in .fvform files
-- Native Nextcloud sharing
-- Conditional logic (branching)
-- Multiple question types
-- Quiz mode with scoring
-- Export to CSV, JSON, Excel
+This is an evaluation version intended for testing and demonstration purposes only. Do not use in production environments.
 
-**Question Types:**
-- Text and textarea
-- Single and multiple choice
-- Dropdown, date, time
-- Number, scale, rating
-- File upload, matrix
+---
+
+FormVox is a file-based forms and polls app for Nextcloud. Unlike traditional form apps, FormVox stores everything in .fvform files - no database tables needed.
+
+**📋 Requirements:**
+* PHP 8.1 or higher
+* Nextcloud 28-32
+
+**Features:**
+* 100% file-based storage (.fvform files)
+* Multiple question types: text, textarea, single/multiple choice, dropdown, date, time, number, scale, rating, file upload, matrix
+* Conditional logic (branching)
+* Quiz mode with scoring
+* Export to CSV, JSON, Excel
+* Per-form branding with visual page builder
+* Answer piping (use previous answers in later questions)
+* Charts and visualizations in Results view
+* Password protection and expiration for public links
 
 **Unique Benefits:**
-- One file contains everything (definition + responses)
-- Works with Nextcloud's versioning
-- End-to-end encryption compatible
-- No database migrations needed
+* One file contains everything (definition + responses)
+* Works with Nextcloud's versioning
+* End-to-end encryption compatible
+* No database migrations needed
+* Native Nextcloud sharing integration
+
+**Perfect for:**
+* Surveys and feedback forms
+* Quizzes and assessments
+* Event registrations
+* Data collection with privacy requirements
+
+Built with Vue 3 and modern web technologies for a smooth, secure experience.
     ]]></description>
-    <version>1.0.8</version>
+    <version>0.2.1</version>
     <licence>agpl</licence>
     <author mail="info@formvox.app">FormVox</author>
     <namespace>FormVox</namespace>
@@ -45,9 +58,8 @@ FormVox is a Nextcloud app for creating and managing forms and polls.
 
     <navigations>
         <navigation>
-            <name>Forms</name>
+            <name>FormVox</name>
             <route>formvox.page.index</route>
-            <icon>app.svg</icon>
             <order>10</order>
         </navigation>
     </navigations>
@@ -60,4 +72,8 @@ FormVox is a Nextcloud app for creating and managing forms and polls.
         <admin>OCA\FormVox\Settings\AdminSettings</admin>
         <admin-section>OCA\FormVox\Settings\AdminSection</admin-section>
     </settings>
+
+    <background-jobs>
+        <job>OCA\FormVox\BackgroundJob\TelemetryJob</job>
+    </background-jobs>
 </info>

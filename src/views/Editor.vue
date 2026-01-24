@@ -180,9 +180,6 @@
           </template>
         </div>
 
-        <div class="save-status" :class="{ saving: saving }">
-          {{ saving ? t('Saving...') : t('All changes saved') }}
-        </div>
       </div>
     </NcAppContent>
 
@@ -224,7 +221,7 @@ import {
 } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
-import { showError } from '@nextcloud/dialogs';
+import { showError, showSuccess } from '@nextcloud/dialogs';
 import { t } from '@/utils/l10n';
 import { v4 as uuidv4 } from 'uuid';
 import draggable from 'vuedraggable';
@@ -343,6 +340,7 @@ export default {
             branding: form.branding,
           }
         );
+        showSuccess(t('All changes saved'));
       } catch (error) {
         showError(t('Failed to save form'));
         console.error(error);
@@ -545,7 +543,6 @@ export default {
 
     return {
       form,
-      saving,
       showSettings,
       showShare,
       showBranding,
@@ -595,14 +592,30 @@ export default {
   margin-bottom: 20px;
 
   .title-input {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
+
+    :deep(input) {
+      font-size: 24px !important;
+      font-weight: bold !important;
+      height: auto !important;
+      padding: 8px 12px !important;
+    }
+
+    :deep(label) {
+      font-size: 14px;
+    }
   }
 
   .description-input {
-    font-size: 16px;
-    color: var(--color-text-maxcontrast);
+    :deep(input) {
+      font-size: 16px !important;
+      height: auto !important;
+      padding: 8px 12px !important;
+    }
+
+    :deep(label) {
+      font-size: 14px;
+    }
   }
 }
 
@@ -706,19 +719,4 @@ export default {
   }
 }
 
-.save-status {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  padding: 8px 16px;
-  background: var(--color-success);
-  color: white;
-  border-radius: var(--border-radius);
-  font-size: 14px;
-  transition: opacity 0.3s;
-
-  &.saving {
-    background: var(--color-warning);
-  }
-}
 </style>

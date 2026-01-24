@@ -42,5 +42,11 @@ return [
         ['name' => 'branding#uploadBlockImage', 'url' => '/api/branding/image/{blockId}', 'verb' => 'POST'],
         ['name' => 'branding#deleteBlockImage', 'url' => '/api/branding/image/{blockId}', 'verb' => 'DELETE'],
         ['name' => 'branding#blockImage', 'url' => '/branding/image/{blockId}', 'verb' => 'GET'],
+
+        // Statistics routes (admin only)
+        ['name' => 'statistics#getStatistics', 'url' => '/api/statistics', 'verb' => 'GET'],
+        ['name' => 'statistics#getTelemetry', 'url' => '/api/statistics/telemetry', 'verb' => 'GET'],
+        ['name' => 'statistics#setTelemetry', 'url' => '/api/statistics/telemetry', 'verb' => 'POST'],
+        ['name' => 'statistics#sendTelemetry', 'url' => '/api/statistics/telemetry/send', 'verb' => 'POST'],
     ],
 ];
