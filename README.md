@@ -2,6 +2,14 @@
 
 A file-based forms and polls app for Nextcloud. All form data is stored as `.fvform` files in your Nextcloud file system - no database tables required.
 
+## Languages
+
+FormVox is available in:
+- 🇬🇧 English
+- 🇳🇱 Nederlands (Dutch)
+- 🇩🇪 Deutsch (German)
+- 🇫🇷 Français (French)
+
 ## Features
 
 ### Question Types
@@ -34,6 +42,11 @@ A file-based forms and polls app for Nextcloud. All form data is stored as `.fvf
 - Survey
 - Registration
 - Demo Form (showcases all features)
+
+### Admin Settings
+- **Branding** - Customize app appearance
+- **Statistics** - View total forms, responses, and active users
+- **Telemetry** - Optional anonymous usage statistics (opt-out available)
 
 ## Installation
 
@@ -141,6 +154,22 @@ For typical usage scenarios (users submitting forms seconds apart), all response
 ### Rate Limiting
 
 Public form submissions are rate-limited to 100 requests per hour per IP address to prevent abuse.
+
+## Privacy
+
+FormVox includes optional anonymous telemetry to help improve the app. This can be disabled in Admin Settings.
+
+**What we collect (when enabled):**
+- Number of forms and responses
+- Number of active users
+- FormVox, Nextcloud, and PHP version numbers
+- A unique hash of your instance URL (privacy-friendly identifier)
+
+**What we never collect:**
+- Form content or titles
+- Response data or answers
+- User names or email addresses
+- Your actual server URL
 
 ## License
 

@@ -136,6 +136,7 @@ class TelemetryService
             'stats' => [
                 'totalForms' => $stats['totalForms'],
                 'totalResponses' => $stats['totalResponses'],
+                'totalUsers' => $stats['totalUsers'],
                 'activeUsers30d' => $stats['activeUsers30d'],
             ],
         ];

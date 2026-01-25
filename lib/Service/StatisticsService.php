@@ -40,6 +40,7 @@ class StatisticsService
         return [
             'totalForms' => $this->getFormCount(),
             'totalResponses' => $this->getTotalResponseCount(),
+            'totalUsers' => $this->getUserCount(),
             'activeUsers30d' => $this->getActiveUserCount(30),
         ];
     }
@@ -145,5 +146,17 @@ class StatisticsService
             ]);
             return 0;
         }
+    }
+
+    /**
+     * Get total user count
+     */
+    public function getUserCount(): int
+    {
+        $count = 0;
+        $this->userManager->callForAllUsers(function ($user) use (&$count) {
+            $count++;
+        });
+        return $count;
     }
 }

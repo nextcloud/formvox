@@ -10,6 +10,7 @@ use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\IUserSession;
 use OCP\IDBConnection;
+use OCP\IL10N;
 use OCA\FormVox\AppInfo\Application;
 
 class FormService
@@ -18,17 +19,20 @@ class FormService
     private IUserSession $userSession;
     private IndexService $indexService;
     private IDBConnection $db;
+    private IL10N $l;
 
     public function __construct(
         IRootFolder $rootFolder,
         IUserSession $userSession,
         IndexService $indexService,
-        IDBConnection $db
+        IDBConnection $db,
+        IL10N $l
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->indexService = $indexService;
         $this->db = $db;
+        $this->l = $l;
     }
 
     /**
@@ -599,20 +603,20 @@ class FormService
                     [
                         'id' => 'q1',
                         'type' => 'choice',
-                        'question' => 'How would you rate your overall experience?',
+                        'question' => $this->l->t('How would you rate your overall experience?'),
                         'required' => true,
                         'options' => [
-                            ['id' => 'opt1', 'label' => 'Excellent', 'value' => '5'],
-                            ['id' => 'opt2', 'label' => 'Good', 'value' => '4'],
-                            ['id' => 'opt3', 'label' => 'Average', 'value' => '3'],
-                            ['id' => 'opt4', 'label' => 'Poor', 'value' => '2'],
-                            ['id' => 'opt5', 'label' => 'Very Poor', 'value' => '1'],
+                            ['id' => 'opt1', 'label' => $this->l->t('Excellent'), 'value' => '5'],
+                            ['id' => 'opt2', 'label' => $this->l->t('Good'), 'value' => '4'],
+                            ['id' => 'opt3', 'label' => $this->l->t('Average'), 'value' => '3'],
+                            ['id' => 'opt4', 'label' => $this->l->t('Poor'), 'value' => '2'],
+                            ['id' => 'opt5', 'label' => $this->l->t('Very Poor'), 'value' => '1'],
                         ],
                     ],
                     [
                         'id' => 'q2',
                         'type' => 'textarea',
-                        'question' => 'Do you have any additional comments?',
+                        'question' => $this->l->t('Do you have any additional comments?'),
                         'required' => false,
                     ],
                 ],
@@ -622,12 +626,12 @@ class FormService
                     [
                         'id' => 'q1',
                         'type' => 'choice',
-                        'question' => 'What is your preferred option?',
+                        'question' => $this->l->t('What is your preferred option?'),
                         'required' => true,
                         'options' => [
-                            ['id' => 'opt1', 'label' => 'Option A', 'value' => 'a'],
-                            ['id' => 'opt2', 'label' => 'Option B', 'value' => 'b'],
-                            ['id' => 'opt3', 'label' => 'Option C', 'value' => 'c'],
+                            ['id' => 'opt1', 'label' => $this->l->t('Option A'), 'value' => 'a'],
+                            ['id' => 'opt2', 'label' => $this->l->t('Option B'), 'value' => 'b'],
+                            ['id' => 'opt3', 'label' => $this->l->t('Option C'), 'value' => 'c'],
                         ],
                     ],
                 ],
@@ -640,20 +644,20 @@ class FormService
                     [
                         'id' => 'q1',
                         'type' => 'text',
-                        'question' => 'Full name',
+                        'question' => $this->l->t('Full name'),
                         'required' => true,
                     ],
                     [
                         'id' => 'q2',
                         'type' => 'text',
-                        'question' => 'Email address',
+                        'question' => $this->l->t('Email address'),
                         'required' => true,
                         'validation' => ['type' => 'email'],
                     ],
                     [
                         'id' => 'q3',
                         'type' => 'text',
-                        'question' => 'Phone number',
+                        'question' => $this->l->t('Phone number'),
                         'required' => false,
                     ],
                 ],
@@ -663,52 +667,52 @@ class FormService
                 ],
             ],
             'demo' => [
-                'description' => 'This demo form showcases all FormVox features including different question types, conditional logic (branching), quiz mode with scoring, and various input validations.',
+                'description' => $this->l->t('This demo form showcases all FormVox features including different question types, conditional logic (branching), quiz mode with scoring, and various input validations.'),
                 'questions' => [
                     // Section 1: Basic Info
                     [
                         'id' => 'demo_name',
                         'type' => 'text',
-                        'question' => 'What is your name?',
-                        'description' => 'This is a simple text field',
+                        'question' => $this->l->t('What is your name?'),
+                        'description' => $this->l->t('This is a simple text field'),
                         'required' => true,
-                        'placeholder' => 'Enter your full name',
+                        'placeholder' => $this->l->t('Enter your full name'),
                     ],
                     [
                         'id' => 'demo_email',
                         'type' => 'text',
-                        'question' => 'What is your email address?',
-                        'description' => 'Text field with email validation',
+                        'question' => $this->l->t('What is your email address?'),
+                        'description' => $this->l->t('Text field with email validation'),
                         'required' => true,
                         'validation' => ['type' => 'email'],
                     ],
                     [
                         'id' => 'demo_bio',
                         'type' => 'textarea',
-                        'question' => 'Tell us about yourself',
-                        'description' => 'Multi-line text area for longer responses',
+                        'question' => $this->l->t('Tell us about yourself'),
+                        'description' => $this->l->t('Multi-line text area for longer responses'),
                         'required' => false,
-                        'placeholder' => 'Write a short bio...',
+                        'placeholder' => $this->l->t('Write a short bio...'),
                     ],
                     // Section 2: Choice Questions
                     [
                         'id' => 'demo_experience',
                         'type' => 'choice',
-                        'question' => 'How much experience do you have with forms?',
-                        'description' => 'Single choice (radio buttons)',
+                        'question' => $this->l->t('How much experience do you have with forms?'),
+                        'description' => $this->l->t('Single choice (radio buttons)'),
                         'required' => true,
                         'options' => [
-                            ['id' => 'exp1', 'label' => 'Beginner - Just getting started', 'value' => 'beginner'],
-                            ['id' => 'exp2', 'label' => 'Intermediate - Some experience', 'value' => 'intermediate'],
-                            ['id' => 'exp3', 'label' => 'Expert - I create forms daily', 'value' => 'expert'],
+                            ['id' => 'exp1', 'label' => $this->l->t('Beginner - Just getting started'), 'value' => 'beginner'],
+                            ['id' => 'exp2', 'label' => $this->l->t('Intermediate - Some experience'), 'value' => 'intermediate'],
+                            ['id' => 'exp3', 'label' => $this->l->t('Expert - I create forms daily'), 'value' => 'expert'],
                         ],
                     ],
                     // Conditional question - only shown for experts
                     [
                         'id' => 'demo_expert_tools',
                         'type' => 'multiple',
-                        'question' => 'Which form tools have you used before?',
-                        'description' => 'This question only appears if you selected "Expert" above (conditional logic)',
+                        'question' => $this->l->t('Which form tools have you used before?'),
+                        'description' => $this->l->t('This question only appears if you selected "Expert" above (conditional logic)'),
                         'required' => false,
                         'options' => [
                             ['id' => 'tool1', 'label' => 'Google Forms', 'value' => 'google'],
@@ -726,59 +730,59 @@ class FormService
                     [
                         'id' => 'demo_features',
                         'type' => 'multiple',
-                        'question' => 'Which features are most important to you?',
-                        'description' => 'Multiple choice (checkboxes) - select all that apply',
+                        'question' => $this->l->t('Which features are most important to you?'),
+                        'description' => $this->l->t('Multiple choice (checkboxes) - select all that apply'),
                         'required' => true,
                         'options' => [
-                            ['id' => 'feat1', 'label' => 'Easy to use interface', 'value' => 'easy'],
-                            ['id' => 'feat2', 'label' => 'Conditional logic / Branching', 'value' => 'branching'],
-                            ['id' => 'feat3', 'label' => 'File-based storage', 'value' => 'files'],
-                            ['id' => 'feat4', 'label' => 'Privacy / Self-hosted', 'value' => 'privacy'],
-                            ['id' => 'feat5', 'label' => 'Export options', 'value' => 'export'],
+                            ['id' => 'feat1', 'label' => $this->l->t('Easy to use interface'), 'value' => 'easy'],
+                            ['id' => 'feat2', 'label' => $this->l->t('Conditional logic / Branching'), 'value' => 'branching'],
+                            ['id' => 'feat3', 'label' => $this->l->t('File-based storage'), 'value' => 'files'],
+                            ['id' => 'feat4', 'label' => $this->l->t('Privacy / Self-hosted'), 'value' => 'privacy'],
+                            ['id' => 'feat5', 'label' => $this->l->t('Export options'), 'value' => 'export'],
                         ],
                     ],
                     [
                         'id' => 'demo_priority',
                         'type' => 'dropdown',
-                        'question' => 'What is your top priority?',
-                        'description' => 'Dropdown select for longer option lists',
+                        'question' => $this->l->t('What is your top priority?'),
+                        'description' => $this->l->t('Dropdown select for longer option lists'),
                         'required' => true,
                         'options' => [
-                            ['id' => 'pri1', 'label' => 'Speed', 'value' => 'speed'],
-                            ['id' => 'pri2', 'label' => 'Security', 'value' => 'security'],
-                            ['id' => 'pri3', 'label' => 'Flexibility', 'value' => 'flexibility'],
-                            ['id' => 'pri4', 'label' => 'Integration', 'value' => 'integration'],
-                            ['id' => 'pri5', 'label' => 'Cost', 'value' => 'cost'],
+                            ['id' => 'pri1', 'label' => $this->l->t('Speed'), 'value' => 'speed'],
+                            ['id' => 'pri2', 'label' => $this->l->t('Security'), 'value' => 'security'],
+                            ['id' => 'pri3', 'label' => $this->l->t('Flexibility'), 'value' => 'flexibility'],
+                            ['id' => 'pri4', 'label' => $this->l->t('Integration'), 'value' => 'integration'],
+                            ['id' => 'pri5', 'label' => $this->l->t('Cost'), 'value' => 'cost'],
                         ],
                     ],
                     // Section 3: Date & Time
                     [
                         'id' => 'demo_date',
                         'type' => 'date',
-                        'question' => 'When did you start using Nextcloud?',
-                        'description' => 'Date picker',
+                        'question' => $this->l->t('When did you start using Nextcloud?'),
+                        'description' => $this->l->t('Date picker'),
                         'required' => false,
                     ],
                     [
                         'id' => 'demo_datetime',
                         'type' => 'datetime',
-                        'question' => 'When would you like a demo call?',
-                        'description' => 'Date and time picker',
+                        'question' => $this->l->t('When would you like a demo call?'),
+                        'description' => $this->l->t('Date and time picker'),
                         'required' => false,
                     ],
                     [
                         'id' => 'demo_time',
                         'type' => 'time',
-                        'question' => 'What time works best for you?',
-                        'description' => 'Time picker only',
+                        'question' => $this->l->t('What time works best for you?'),
+                        'description' => $this->l->t('Time picker only'),
                         'required' => false,
                     ],
                     // Section 4: Numbers & Ratings
                     [
                         'id' => 'demo_number',
                         'type' => 'number',
-                        'question' => 'How many forms do you create per month?',
-                        'description' => 'Numeric input',
+                        'question' => $this->l->t('How many forms do you create per month?'),
+                        'description' => $this->l->t('Numeric input'),
                         'required' => false,
                         'min' => 0,
                         'max' => 1000,
@@ -786,19 +790,19 @@ class FormService
                     [
                         'id' => 'demo_scale',
                         'type' => 'scale',
-                        'question' => 'How likely are you to recommend FormVox?',
-                        'description' => 'Linear scale (1-10)',
+                        'question' => $this->l->t('How likely are you to recommend FormVox?'),
+                        'description' => $this->l->t('Linear scale (1-10)'),
                         'required' => true,
                         'min' => 1,
                         'max' => 10,
-                        'minLabel' => 'Not likely',
-                        'maxLabel' => 'Very likely',
+                        'minLabel' => $this->l->t('Not likely'),
+                        'maxLabel' => $this->l->t('Very likely'),
                     ],
                     [
                         'id' => 'demo_rating',
                         'type' => 'rating',
-                        'question' => 'Rate this demo form',
-                        'description' => 'Star rating (1-5 stars)',
+                        'question' => $this->l->t('Rate this demo form'),
+                        'description' => $this->l->t('Star rating (1-5 stars)'),
                         'required' => true,
                         'max' => 5,
                     ],
@@ -806,8 +810,8 @@ class FormService
                     [
                         'id' => 'demo_quiz1',
                         'type' => 'choice',
-                        'question' => 'Quiz: What file extension does FormVox use?',
-                        'description' => 'This is a quiz question with scoring - correct answer: .fvform',
+                        'question' => $this->l->t('Quiz: What file extension does FormVox use?'),
+                        'description' => $this->l->t('This is a quiz question with scoring - correct answer: .fvform'),
                         'required' => true,
                         'options' => [
                             ['id' => 'quiz1a', 'label' => '.docx', 'value' => 'docx', 'score' => 0],
@@ -819,58 +823,58 @@ class FormService
                     [
                         'id' => 'demo_quiz2',
                         'type' => 'choice',
-                        'question' => 'Quiz: Where does FormVox store form data?',
-                        'description' => 'Another quiz question - correct answer: In Nextcloud files',
+                        'question' => $this->l->t('Quiz: Where does FormVox store form data?'),
+                        'description' => $this->l->t('Another quiz question - correct answer: In Nextcloud files'),
                         'required' => true,
                         'options' => [
-                            ['id' => 'quiz2a', 'label' => 'In a separate database', 'value' => 'database', 'score' => 0],
-                            ['id' => 'quiz2b', 'label' => 'In the cloud', 'value' => 'cloud', 'score' => 0],
-                            ['id' => 'quiz2c', 'label' => 'In Nextcloud files', 'value' => 'files', 'score' => 10],
-                            ['id' => 'quiz2d', 'label' => 'On external servers', 'value' => 'external', 'score' => 0],
+                            ['id' => 'quiz2a', 'label' => $this->l->t('In a separate database'), 'value' => 'database', 'score' => 0],
+                            ['id' => 'quiz2b', 'label' => $this->l->t('In the cloud'), 'value' => 'cloud', 'score' => 0],
+                            ['id' => 'quiz2c', 'label' => $this->l->t('In Nextcloud files'), 'value' => 'files', 'score' => 10],
+                            ['id' => 'quiz2d', 'label' => $this->l->t('On external servers'), 'value' => 'external', 'score' => 0],
                         ],
                     ],
                     // Section 6: Matrix Question
                     [
                         'id' => 'demo_matrix',
                         'type' => 'matrix',
-                        'question' => 'Rate these aspects of FormVox',
-                        'description' => 'Matrix/grid question with multiple rows and columns',
+                        'question' => $this->l->t('Rate these aspects of FormVox'),
+                        'description' => $this->l->t('Matrix/grid question with multiple rows and columns'),
                         'required' => false,
                         'rows' => [
-                            ['id' => 'row1', 'label' => 'Ease of use'],
-                            ['id' => 'row2', 'label' => 'Feature set'],
-                            ['id' => 'row3', 'label' => 'Design'],
-                            ['id' => 'row4', 'label' => 'Performance'],
+                            ['id' => 'row1', 'label' => $this->l->t('Ease of use')],
+                            ['id' => 'row2', 'label' => $this->l->t('Feature set')],
+                            ['id' => 'row3', 'label' => $this->l->t('Design')],
+                            ['id' => 'row4', 'label' => $this->l->t('Performance')],
                         ],
                         'columns' => [
-                            ['id' => 'col1', 'label' => 'Poor', 'value' => '1'],
-                            ['id' => 'col2', 'label' => 'Fair', 'value' => '2'],
-                            ['id' => 'col3', 'label' => 'Good', 'value' => '3'],
-                            ['id' => 'col4', 'label' => 'Excellent', 'value' => '4'],
+                            ['id' => 'col1', 'label' => $this->l->t('Poor'), 'value' => '1'],
+                            ['id' => 'col2', 'label' => $this->l->t('Fair'), 'value' => '2'],
+                            ['id' => 'col3', 'label' => $this->l->t('Good'), 'value' => '3'],
+                            ['id' => 'col4', 'label' => $this->l->t('Excellent'), 'value' => '4'],
                         ],
                     ],
                     // Section 7: Conditional Branching Demo
                     [
                         'id' => 'demo_want_contact',
                         'type' => 'choice',
-                        'question' => 'Would you like us to contact you?',
-                        'description' => 'This controls whether the next question is shown',
+                        'question' => $this->l->t('Would you like us to contact you?'),
+                        'description' => $this->l->t('This controls whether the next question is shown'),
                         'required' => true,
                         'options' => [
-                            ['id' => 'contact_yes', 'label' => 'Yes, please contact me', 'value' => 'yes'],
-                            ['id' => 'contact_no', 'label' => 'No, thanks', 'value' => 'no'],
+                            ['id' => 'contact_yes', 'label' => $this->l->t('Yes, please contact me'), 'value' => 'yes'],
+                            ['id' => 'contact_no', 'label' => $this->l->t('No, thanks'), 'value' => 'no'],
                         ],
                     ],
                     [
                         'id' => 'demo_contact_method',
                         'type' => 'choice',
-                        'question' => 'How would you prefer to be contacted?',
-                        'description' => 'This question only appears if you selected "Yes" above',
+                        'question' => $this->l->t('How would you prefer to be contacted?'),
+                        'description' => $this->l->t('This question only appears if you selected "Yes" above'),
                         'required' => false,
                         'options' => [
-                            ['id' => 'method1', 'label' => 'Email', 'value' => 'email'],
-                            ['id' => 'method2', 'label' => 'Phone', 'value' => 'phone'],
-                            ['id' => 'method3', 'label' => 'Video call', 'value' => 'video'],
+                            ['id' => 'method1', 'label' => $this->l->t('Email'), 'value' => 'email'],
+                            ['id' => 'method2', 'label' => $this->l->t('Phone'), 'value' => 'phone'],
+                            ['id' => 'method3', 'label' => $this->l->t('Video call'), 'value' => 'video'],
                         ],
                         'showIf' => [
                             'questionId' => 'demo_want_contact',
@@ -882,10 +886,10 @@ class FormService
                     [
                         'id' => 'demo_feedback',
                         'type' => 'textarea',
-                        'question' => 'Any final thoughts or feedback?',
-                        'description' => 'Thank you for trying this demo form!',
+                        'question' => $this->l->t('Any final thoughts or feedback?'),
+                        'description' => $this->l->t('Thank you for trying this demo form!'),
                         'required' => false,
-                        'placeholder' => 'Share your thoughts...',
+                        'placeholder' => $this->l->t('Share your thoughts...'),
                     ],
                 ],
                 'settings' => [

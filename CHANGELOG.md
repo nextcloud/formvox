@@ -2,6 +2,17 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.2] - 2026-01-25
+
+### Added
+- Total users count in telemetry data (consistent with other VoxCloud apps)
+- Complete translations for Dutch (NL), German (DE), and French (FR)
+- 380 translation strings per language
+
+### Changed
+- Telemetry now includes `totalUsers` field alongside `activeUsers30d`
+- Demo form templates (survey, poll, registration, demo) are now fully translatable via IL10N
+
 ## [0.2.1] - 2026-01-24
 
 ### Added
