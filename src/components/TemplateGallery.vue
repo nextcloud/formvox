@@ -1,7 +1,7 @@
 <template>
 	<div class="template-gallery" :class="{ 'template-gallery--collapsed': isCollapsed }">
 		<div class="template-gallery__header">
-			<h3 class="template-gallery__title">{{ t('Explore templates') }}</h3>
+			<h3 class="template-gallery__title">{{ t('New form') }}</h3>
 			<NcButton
 				type="tertiary"
 				:aria-label="isCollapsed ? t('Show templates') : t('Hide templates')"
