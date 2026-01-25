@@ -52,7 +52,6 @@
 						:form="form"
 						@click="openForm(form)"
 						@delete="deleteForm(form)"
-						@toggle-favorite="toggleFavorite(form)"
 					/>
 				</div>
 
@@ -87,7 +86,6 @@ import FormCard from '../components/FormCard.vue'
 import NewFormModal from '../components/NewFormModal.vue'
 import TemplateGallery from '../components/TemplateGallery.vue'
 import FormIcon from '../components/icons/FormIcon.vue'
-import StarIcon from '../components/icons/StarIcon.vue'
 import PlusIcon from '../components/icons/PlusIcon.vue'
 
 const TAB_STORAGE_KEY = 'formvox-active-tab'
@@ -103,7 +101,6 @@ export default {
 		NewFormModal,
 		TemplateGallery,
 		FormIcon,
-		StarIcon,
 		PlusIcon,
 	},
 	setup() {
@@ -127,12 +124,6 @@ export default {
 				icon: FormIcon,
 				count: forms.value.length,
 			},
-			{
-				id: 'favorites',
-				label: t('Favorites'),
-				icon: StarIcon,
-				count: favoriteForms.value.length,
-			},
 		])
 
 		// Filtered form lists
@@ -142,30 +133,19 @@ export default {
 				.slice(0, 10)
 		})
 
-		const favoriteForms = computed(() => {
-			return forms.value.filter(form => form.favorite)
-		})
-
 		const filteredForms = computed(() => {
 			switch (activeTab.value) {
 			case 'recent':
 				return recentForms.value
 			case 'myforms':
 				return forms.value
-			case 'favorites':
-				return favoriteForms.value
 			default:
 				return forms.value
 			}
 		})
 
 		const emptyTabMessage = computed(() => {
-			switch (activeTab.value) {
-			case 'favorites':
-				return t('No favorite forms yet. Click the star on a form to add it to favorites.')
-			default:
-				return t('No forms found.')
-			}
+			return t('No forms found.')
 		})
 
 		const loadForms = async () => {
@@ -200,23 +180,6 @@ export default {
 				showSuccess(t('Form deleted'))
 			} catch (error) {
 				showError(t('Failed to delete form'))
-				console.error(error)
-			}
-		}
-
-		const toggleFavorite = async (form) => {
-			const newValue = !form.favorite
-			try {
-				await axios.post(
-					generateUrl(`/apps/formvox/api/form/${form.fileId}/favorite`),
-					{ favorite: newValue },
-				)
-				form.favorite = newValue
-				if (newValue) {
-					showSuccess(t('Added to favorites'))
-				}
-			} catch (error) {
-				showError(t('Failed to update favorite'))
 				console.error(error)
 			}
 		}
@@ -261,7 +224,7 @@ export default {
 			// Restore active tab from localStorage
 			try {
 				const storedTab = localStorage.getItem(TAB_STORAGE_KEY)
-				if (storedTab && ['recent', 'myforms', 'favorites'].includes(storedTab)) {
+				if (storedTab && ['recent', 'myforms'].includes(storedTab)) {
 					activeTab.value = storedTab
 				}
 			} catch (e) {
@@ -290,7 +253,6 @@ export default {
 			getFormUrl,
 			openForm,
 			deleteForm,
-			toggleFavorite,
 			createFormDirectly,
 			closeNewFormModal,
 			onFormCreated,
