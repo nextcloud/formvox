@@ -8,19 +8,7 @@
 			<span v-if="formType" class="form-card__badge">{{ formType }}</span>
 		</div>
 		<div class="form-card__body">
-			<div class="form-card__title-row">
-				<h3 class="form-card__title">{{ form.title }}</h3>
-				<button
-					type="button"
-					class="form-card__favorite"
-					:class="{ 'form-card__favorite--active': form.favorite }"
-					:aria-label="form.favorite ? t('Remove from favorites') : t('Add to favorites')"
-					:title="form.favorite ? t('Remove from favorites') : t('Add to favorites')"
-					@click.stop="$emit('toggle-favorite')"
-				>
-					<StarIcon :size="18" />
-				</button>
-			</div>
+			<h3 class="form-card__title">{{ form.title }}</h3>
 			<p v-if="form.description" class="form-card__description">
 				{{ truncate(form.description, 60) }}
 			</p>
@@ -51,7 +39,6 @@
 import { computed } from 'vue'
 import { NcActions, NcActionButton } from '@nextcloud/vue'
 import { t } from '@/utils/l10n'
-import StarIcon from './icons/StarIcon.vue'
 import DeleteIcon from './icons/DeleteIcon.vue'
 import ChatIcon from './icons/ChatIcon.vue'
 
@@ -77,7 +64,6 @@ export default {
 	components: {
 		NcActions,
 		NcActionButton,
-		StarIcon,
 		DeleteIcon,
 		ChatIcon,
 	},
@@ -87,7 +73,7 @@ export default {
 			required: true,
 		},
 	},
-	emits: ['click', 'delete', 'toggle-favorite'],
+	emits: ['click', 'delete'],
 	setup(props) {
 		const cardColor = computed(() => {
 			const template = props.form.template || 'default'
@@ -168,16 +154,8 @@ export default {
 		padding: 16px;
 	}
 
-	&__title-row {
-		display: flex;
-		align-items: flex-start;
-		gap: 8px;
-		margin-bottom: 8px;
-	}
-
 	&__title {
-		flex: 1;
-		margin: 0;
+		margin: 0 0 8px;
 		font-size: 16px;
 		font-weight: 600;
 		color: var(--color-main-text);
@@ -186,40 +164,6 @@ export default {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
-	}
-
-	&__favorite {
-		flex-shrink: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 32px;
-		height: 32px;
-		padding: 0;
-		border: none;
-		border-radius: 50%;
-		background: transparent;
-		color: var(--color-text-maxcontrast);
-		cursor: pointer;
-		transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
-
-		&:hover {
-			background: var(--color-background-hover);
-			color: #f39c12;
-		}
-
-		&:focus-visible {
-			outline: 2px solid var(--color-primary-element);
-			outline-offset: 2px;
-		}
-
-		&--active {
-			color: #f39c12;
-
-			svg {
-				fill: #f39c12;
-			}
-		}
 	}
 
 	&__description {
@@ -277,7 +221,6 @@ export default {
 			transform: none;
 		}
 
-		&__favorite,
 		&__actions {
 			transition: none;
 		}
