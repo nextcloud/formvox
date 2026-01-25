@@ -137,7 +137,7 @@ class FormService
 
         // Update allowed fields
         // Use array_key_exists instead of isset to allow null values (e.g., branding: null)
-        $allowedFields = ['title', 'description', 'settings', 'questions', 'pages', 'permissions', '_index', 'branding'];
+        $allowedFields = ['title', 'description', 'settings', 'questions', 'pages', 'permissions', '_index', 'branding', 'favorite'];
         foreach ($allowedFields as $field) {
             if (array_key_exists($field, $data)) {
                 $form[$field] = $data[$field];

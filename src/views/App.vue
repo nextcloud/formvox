@@ -229,8 +229,8 @@ export default {
 		const toggleFavorite = async (form) => {
 			const newValue = !form.favorite
 			try {
-				await axios.patch(
-					generateUrl('/apps/formvox/api/form/{fileId}/favorite', { fileId: form.fileId }),
+				await axios.post(
+					generateUrl(`/apps/formvox/api/form/${form.fileId}/favorite`),
 					{ favorite: newValue },
 				)
 				form.favorite = newValue
