@@ -377,5 +377,19 @@ OC.L10N.register("formvox", {
   "Video call": "Videogesprek",
   "Any final thoughts or feedback?": "Nog laatste gedachten of feedback?",
   "Thank you for trying this demo form!": "Bedankt voor het uitproberen van dit demoformulier!",
-  "Share your thoughts...": "Deel je gedachten..."
+  "Share your thoughts...": "Deel je gedachten...",
+  "Explore templates": "Verken sjablonen",
+  "Show templates": "Toon sjablonen",
+  "Hide templates": "Verberg sjablonen",
+  "Recent": "Recent",
+  "My forms": "Mijn formulieren",
+  "Favorites": "Favorieten",
+  "No favorite forms yet. Click the star on a form to add it to favorites.": "Nog geen favoriete formulieren. Klik op de ster van een formulier om het toe te voegen aan favorieten.",
+  "No forms found.": "Geen formulieren gevonden.",
+  "Add to favorites": "Toevoegen aan favorieten",
+  "Remove from favorites": "Verwijderen uit favorieten",
+  "Added to favorites": "Toegevoegd aan favorieten",
+  "Failed to update favorite": "Bijwerken van favoriet mislukt",
+  "All features showcase": "Alle functies demonstratie",
+  "Demo Form": "Demoformulier"
 }, "nplurals=2; plural=(n != 1);");

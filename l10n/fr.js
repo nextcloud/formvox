@@ -377,5 +377,19 @@ OC.L10N.register("formvox", {
   "Video call": "Appel vidéo",
   "Any final thoughts or feedback?": "Des dernières réflexions ou commentaires ?",
   "Thank you for trying this demo form!": "Merci d'avoir essayé ce formulaire de démonstration !",
-  "Share your thoughts...": "Partagez vos réflexions..."
+  "Share your thoughts...": "Partagez vos réflexions...",
+  "Explore templates": "Explorer les modèles",
+  "Show templates": "Afficher les modèles",
+  "Hide templates": "Masquer les modèles",
+  "Recent": "Récents",
+  "My forms": "Mes formulaires",
+  "Favorites": "Favoris",
+  "No favorite forms yet. Click the star on a form to add it to favorites.": "Aucun formulaire favori pour le moment. Cliquez sur l'étoile d'un formulaire pour l'ajouter aux favoris.",
+  "No forms found.": "Aucun formulaire trouvé.",
+  "Add to favorites": "Ajouter aux favoris",
+  "Remove from favorites": "Retirer des favoris",
+  "Added to favorites": "Ajouté aux favoris",
+  "Failed to update favorite": "Échec de la mise à jour du favori",
+  "All features showcase": "Démonstration de toutes les fonctionnalités",
+  "Demo Form": "Formulaire de démonstration"
 }, "nplurals=2; plural=(n > 1);");

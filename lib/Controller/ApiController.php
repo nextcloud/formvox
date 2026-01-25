@@ -193,6 +193,40 @@ class ApiController extends Controller
     }
 
     /**
+     * Set favorite status for a form
+     */
+    #[NoAdminRequired]
+    public function setFavorite(int $fileId, bool $favorite): DataResponse
+    {
+        try {
+            $form = $this->formService->load($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRole($form, $userId);
+
+            // Any user with at least view permission can favorite a form
+            if ($role === 'none') {
+                return new DataResponse(
+                    ['error' => 'Permission denied'],
+                    Http::STATUS_FORBIDDEN
+                );
+            }
+
+            $this->formService->update($fileId, ['favorite' => $favorite]);
+            return new DataResponse(['success' => true, 'favorite' => $favorite]);
+        } catch (\OCP\Files\NotFoundException $e) {
+            return new DataResponse(
+                ['error' => 'Form not found'],
+                Http::STATUS_NOT_FOUND
+            );
+        } catch (\Exception $e) {
+            return new DataResponse(
+                ['error' => $e->getMessage()],
+                Http::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
      * Delete a form
      */
     #[NoAdminRequired]
