@@ -377,5 +377,19 @@ OC.L10N.register("formvox", {
   "Video call": "Video call",
   "Any final thoughts or feedback?": "Any final thoughts or feedback?",
   "Thank you for trying this demo form!": "Thank you for trying this demo form!",
-  "Share your thoughts...": "Share your thoughts..."
+  "Share your thoughts...": "Share your thoughts...",
+  "Explore templates": "Explore templates",
+  "Show templates": "Show templates",
+  "Hide templates": "Hide templates",
+  "Recent": "Recent",
+  "My forms": "My forms",
+  "Favorites": "Favorites",
+  "No favorite forms yet. Click the star on a form to add it to favorites.": "No favorite forms yet. Click the star on a form to add it to favorites.",
+  "No forms found.": "No forms found.",
+  "Add to favorites": "Add to favorites",
+  "Remove from favorites": "Remove from favorites",
+  "Added to favorites": "Added to favorites",
+  "Failed to update favorite": "Failed to update favorite",
+  "All features showcase": "All features showcase",
+  "Demo Form": "Demo Form"
 }, "nplurals=2; plural=(n != 1);");

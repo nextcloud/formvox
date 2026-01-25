@@ -1,12 +1,50 @@
 /**
  * FormVox - Main styles
+ * Based on VoxCloud Branding Guide
  */
+
+/* === VoxCloud Design System Variables === */
+:root {
+	/* App-specific accent */
+	--vox-accent-formvox: #e67e22;
+
+	/* Spacing (4px basis) */
+	--vox-space-1: 4px;
+	--vox-space-2: 8px;
+	--vox-space-3: 12px;
+	--vox-space-4: 16px;
+	--vox-space-5: 20px;
+	--vox-space-6: 24px;
+	--vox-space-7: 32px;
+	--vox-space-8: 40px;
+
+	/* Shadows */
+	--vox-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+	--vox-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+	--vox-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+	/* Transitions */
+	--vox-transition-fast: 0.1s ease-in-out;
+	--vox-transition-normal: 0.2s ease-in-out;
+	--vox-transition-slow: 0.3s ease-in-out;
+}
+
+/* Reduced motion support (WCAG 2.1 AA) */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
 
 /* Base styles */
 #formvox-app {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
 }
 
 /* App navigation */
@@ -120,5 +158,25 @@ svg[width][height] {
 
 /* Modal icons */
 .new-form-modal .template-card svg {
-  color: var(--color-primary);
+	color: var(--color-primary);
+}
+
+/* === Focus states (WCAG 2.1 AA) === */
+:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+	outline: none;
+}
+
+/* === Touch targets (min 44x44px) === */
+@media (pointer: coarse) {
+	.form-card__favorite,
+	.forms-tabs__tab,
+	.template-card {
+		min-height: 44px;
+		min-width: 44px;
+	}
 }

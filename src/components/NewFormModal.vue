@@ -69,24 +69,30 @@ import DemoIcon from './icons/DemoIcon.vue';
 import FolderIcon from './icons/FolderIcon.vue';
 
 export default {
-  name: 'NewFormModal',
-  components: {
-    NcModal,
-    NcButton,
-    NcTextField,
-    FormIcon,
-    PollIcon,
-    SurveyIcon,
-    RegistrationIcon,
-    DemoIcon,
-    FolderIcon,
-  },
-  emits: ['close', 'created'],
-  setup(_, { emit }) {
-    const title = ref('');
-    const selectedTemplate = ref('blank');
-    const creating = ref(false);
-    const selectedPath = ref('');
+	name: 'NewFormModal',
+	components: {
+		NcModal,
+		NcButton,
+		NcTextField,
+		FormIcon,
+		PollIcon,
+		SurveyIcon,
+		RegistrationIcon,
+		DemoIcon,
+		FolderIcon,
+	},
+	props: {
+		initialTemplate: {
+			type: String,
+			default: null,
+		},
+	},
+	emits: ['close', 'created'],
+	setup(props, { emit }) {
+		const title = ref('')
+		const selectedTemplate = ref(props.initialTemplate || 'blank')
+		const creating = ref(false)
+		const selectedPath = ref('')
 
     const templates = [
       {
