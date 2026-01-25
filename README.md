@@ -36,6 +36,12 @@ FormVox is available in:
 - **Duplicate Prevention** - Fingerprint-based detection to prevent multiple submissions
 - **Export** - Export responses to CSV or JSON
 
+### Homepage
+- **Template Gallery** - Quick access to create forms from colorful template cards
+- **Tabs Navigation** - Switch between "Recent" and "My forms" views
+- **Form Cards** - Visual cards with colored headers based on template type
+- **Collapsible Templates** - Hide/show template gallery with state persistence
+
 ### Templates
 - Blank Form
 - Poll

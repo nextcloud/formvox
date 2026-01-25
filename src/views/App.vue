@@ -6,7 +6,7 @@
 			</div>
 
 			<div v-else-if="forms.length === 0" class="empty-state">
-				<TemplateGallery @select-template="createFormDirectly" />
+				<TemplateGallery @select-template="openNewFormWithTemplate" />
 				<div class="empty-state__content">
 					<FormIcon :size="64" />
 					<h2>{{ t('No forms yet') }}</h2>
@@ -18,7 +18,7 @@
 			</div>
 
 			<div v-else class="forms-container">
-				<TemplateGallery @select-template="createFormDirectly" />
+				<TemplateGallery @select-template="openNewFormWithTemplate" />
 
 				<div class="forms-header">
 					<div class="forms-tabs">
@@ -215,27 +215,9 @@ export default {
 			}
 		}
 
-		const createFormDirectly = async (templateId) => {
-			const templateNames = {
-				survey: 'New Survey',
-				poll: 'New Poll',
-				registration: 'New Registration',
-				demo: 'Demo Form',
-				blank: 'Untitled Form',
-			}
-
-			try {
-				const response = await axios.post(generateUrl('/apps/formvox/api/forms'), {
-					title: t(templateNames[templateId] || 'Untitled Form'),
-					path: '',
-					template: templateId === 'blank' ? null : templateId,
-				})
-
-				window.location.href = generateUrl(`/apps/formvox/edit/${response.data.fileId}`)
-			} catch (error) {
-				showError(t('Failed to create form'))
-				console.error(error)
-			}
+		const openNewFormWithTemplate = (templateId) => {
+			selectedTemplate.value = templateId
+			showNewFormModal.value = true
 		}
 
 		const closeNewFormModal = () => {
@@ -284,7 +266,7 @@ export default {
 			getFormUrl,
 			openForm,
 			deleteForm,
-			createFormDirectly,
+			openNewFormWithTemplate,
 			closeNewFormModal,
 			onFormCreated,
 			saveActiveTab,
