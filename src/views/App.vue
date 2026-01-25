@@ -67,6 +67,22 @@
 			@close="closeNewFormModal"
 			@created="onFormCreated"
 		/>
+
+		<NcDialog
+			v-if="showDeleteDialog"
+			:name="t('Delete form')"
+			@closing="cancelDelete"
+		>
+			<p>{{ t('Are you sure you want to delete this form? This action cannot be undone.') }}</p>
+			<template #actions>
+				<NcButton @click="cancelDelete">
+					{{ t('Cancel') }}
+				</NcButton>
+				<NcButton type="error" @click="confirmDelete">
+					{{ t('Delete') }}
+				</NcButton>
+			</template>
+		</NcDialog>
 	</NcContent>
 </template>
 
@@ -77,6 +93,7 @@ import {
 	NcAppContent,
 	NcButton,
 	NcLoadingIcon,
+	NcDialog,
 } from '@nextcloud/vue'
 import { generateUrl } from '@nextcloud/router'
 import axios from '@nextcloud/axios'
@@ -97,6 +114,7 @@ export default {
 		NcAppContent,
 		NcButton,
 		NcLoadingIcon,
+		NcDialog,
 		FormCard,
 		NewFormModal,
 		TemplateGallery,
@@ -109,6 +127,8 @@ export default {
 		const showNewFormModal = ref(false)
 		const selectedTemplate = ref(null)
 		const activeTab = ref('recent')
+		const showDeleteDialog = ref(false)
+		const formToDelete = ref(null)
 
 		// Tab definitions
 		const tabs = computed(() => [
@@ -169,18 +189,29 @@ export default {
 			window.location.href = getFormUrl(form)
 		}
 
-		const deleteForm = async (form) => {
-			if (!confirm(t('Are you sure you want to delete this form?'))) {
-				return
-			}
+		const deleteForm = (form) => {
+			formToDelete.value = form
+			showDeleteDialog.value = true
+		}
+
+		const cancelDelete = () => {
+			showDeleteDialog.value = false
+			formToDelete.value = null
+		}
+
+		const confirmDelete = async () => {
+			if (!formToDelete.value) return
 
 			try {
-				await axios.delete(generateUrl('/apps/formvox/api/form/{fileId}', { fileId: form.fileId }))
-				forms.value = forms.value.filter(f => f.fileId !== form.fileId)
+				await axios.delete(generateUrl('/apps/formvox/api/form/{fileId}', { fileId: formToDelete.value.fileId }))
+				forms.value = forms.value.filter(f => f.fileId !== formToDelete.value.fileId)
 				showSuccess(t('Form deleted'))
 			} catch (error) {
 				showError(t('Failed to delete form'))
 				console.error(error)
+			} finally {
+				showDeleteDialog.value = false
+				formToDelete.value = null
 			}
 		}
 
@@ -257,6 +288,9 @@ export default {
 			closeNewFormModal,
 			onFormCreated,
 			saveActiveTab,
+			showDeleteDialog,
+			cancelDelete,
+			confirmDelete,
 			t,
 		}
 	},
