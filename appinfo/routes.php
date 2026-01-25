@@ -21,7 +21,7 @@ return [
         ['name' => 'api#get', 'url' => '/api/form/{fileId}', 'verb' => 'GET'],
         ['name' => 'api#update', 'url' => '/api/form/{fileId}', 'verb' => 'PUT'],
         ['name' => 'api#delete', 'url' => '/api/form/{fileId}', 'verb' => 'DELETE'],
-        ['name' => 'api#setFavorite', 'url' => '/api/form/{fileId}/favorite', 'verb' => 'PATCH'],
+        ['name' => 'api#setFavorite', 'url' => '/api/form/{fileId}/favorite', 'verb' => 'POST'],
 
         // API routes - Responses
         ['name' => 'api#getResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'GET'],
