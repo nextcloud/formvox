@@ -1,28 +1,6 @@
 <template>
 	<NcContent app-name="formvox">
-		<NcAppNavigation>
-			<template #list>
-				<NcAppNavigationNew
-					:text="t('New form')"
-					@click="showNewFormModal = true"
-				/>
-				<NcAppNavigationItem
-					v-for="form in forms"
-					:key="form.fileId"
-					:name="form.title"
-					:to="getFormUrl(form)"
-				>
-					<template #icon>
-						<FormIcon :size="20" />
-					</template>
-					<template #counter>
-						<NcCounterBubble>{{ form.responseCount }}</NcCounterBubble>
-					</template>
-				</NcAppNavigationItem>
-			</template>
-		</NcAppNavigation>
-
-		<NcAppContent>
+		<NcAppContent :show-details="false">
 			<div v-if="loading" class="loading-container">
 				<NcLoadingIcon :size="64" />
 			</div>
@@ -42,21 +20,29 @@
 			<div v-else class="forms-container">
 				<TemplateGallery @select-template="openNewFormWithTemplate" />
 
-				<div class="forms-tabs">
-					<button
-						v-for="tab in tabs"
-						:key="tab.id"
-						type="button"
-						class="forms-tabs__tab"
-						:class="{ 'forms-tabs__tab--active': activeTab === tab.id }"
-						@click="activeTab = tab.id"
-					>
-						<component :is="tab.icon" :size="16" />
-						{{ tab.label }}
-						<span v-if="tab.count !== undefined" class="forms-tabs__count">
-							{{ tab.count }}
-						</span>
-					</button>
+				<div class="forms-header">
+					<div class="forms-tabs">
+						<button
+							v-for="tab in tabs"
+							:key="tab.id"
+							type="button"
+							class="forms-tabs__tab"
+							:class="{ 'forms-tabs__tab--active': activeTab === tab.id }"
+							@click="activeTab = tab.id"
+						>
+							<component :is="tab.icon" :size="16" />
+							{{ tab.label }}
+							<span v-if="tab.count !== undefined" class="forms-tabs__count">
+								{{ tab.count }}
+							</span>
+						</button>
+					</div>
+					<NcButton type="primary" @click="showNewFormModal = true">
+						<template #icon>
+							<PlusIcon :size="20" />
+						</template>
+						{{ t('New form') }}
+					</NcButton>
 				</div>
 
 				<div class="forms-grid">
@@ -89,12 +75,8 @@
 import { ref, computed, onMounted } from 'vue'
 import {
 	NcContent,
-	NcAppNavigation,
-	NcAppNavigationNew,
-	NcAppNavigationItem,
 	NcAppContent,
 	NcButton,
-	NcCounterBubble,
 	NcLoadingIcon,
 } from '@nextcloud/vue'
 import { generateUrl } from '@nextcloud/router'
@@ -106,7 +88,7 @@ import NewFormModal from '../components/NewFormModal.vue'
 import TemplateGallery from '../components/TemplateGallery.vue'
 import FormIcon from '../components/icons/FormIcon.vue'
 import StarIcon from '../components/icons/StarIcon.vue'
-import ShareIcon from '../components/icons/ShareIcon.vue'
+import PlusIcon from '../components/icons/PlusIcon.vue'
 
 const TAB_STORAGE_KEY = 'formvox-active-tab'
 
@@ -114,19 +96,15 @@ export default {
 	name: 'App',
 	components: {
 		NcContent,
-		NcAppNavigation,
-		NcAppNavigationNew,
-		NcAppNavigationItem,
 		NcAppContent,
 		NcButton,
-		NcCounterBubble,
 		NcLoadingIcon,
 		FormCard,
 		NewFormModal,
 		TemplateGallery,
 		FormIcon,
 		StarIcon,
-		ShareIcon,
+		PlusIcon,
 	},
 	setup() {
 		const forms = ref([])
@@ -350,12 +328,19 @@ export default {
 	overflow-y: auto;
 }
 
+.forms-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin: 0 20px 16px 44px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--color-border);
+}
+
 .forms-tabs {
 	display: flex;
 	gap: 4px;
-	margin: 0 20px 16px;
-	padding-bottom: 12px;
-	border-bottom: 1px solid var(--color-border);
 
 	&__tab {
 		display: flex;
@@ -409,7 +394,7 @@ export default {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 	gap: 20px;
-	padding: 0 20px 20px;
+	padding: 0 20px 20px 44px;
 }
 
 .empty-tab {
@@ -428,9 +413,15 @@ export default {
 }
 
 @media (max-width: 768px) {
+	.forms-header {
+		flex-direction: column;
+		align-items: stretch;
+		margin: 0 16px 16px;
+		gap: 12px;
+	}
+
 	.forms-tabs {
 		overflow-x: auto;
-		margin: 0 16px 16px;
 		scrollbar-width: none;
 
 		&::-webkit-scrollbar {
