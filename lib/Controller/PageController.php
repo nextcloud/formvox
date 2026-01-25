@@ -62,27 +62,20 @@ class PageController extends Controller
 
     /**
      * Form editor page
-     * @return TemplateResponse|RedirectResponse
+     * Users with read access can view the form in read-only mode
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    public function editor(int $fileId)
+    public function editor(int $fileId): TemplateResponse
     {
+        $file = $this->formService->getFileById($fileId);
         $form = $this->formService->load($fileId);
-        $role = $this->permissionService->getRole($form, $this->userId ?? '');
-        $permissions = $this->permissionService->getPermissionsForRole($role);
+        $role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
+        $canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');
+        $permissions = $this->permissionService->getPermissionsForRole($role, $canShare);
 
-        if (!$permissions['editQuestions']) {
-            // Redirect to public form URL if user can't edit
-            $token = $form['settings']['public_token'] ?? null;
-            if ($token) {
-                $publicUrl = $this->urlGenerator->linkToRoute('formvox.public.showForm', [
-                    'fileId' => $fileId,
-                    'token' => $token,
-                ]);
-                return new RedirectResponse($publicUrl);
-            }
-            // No public token - show error
+        // User needs at least read access (viewer role or higher)
+        if ($role === PermissionService::ROLE_NONE) {
             throw new \OCP\AppFramework\Http\NotFoundResponse();
         }
 
@@ -111,9 +104,11 @@ class PageController extends Controller
     #[NoCSRFRequired]
     public function results(int $fileId): TemplateResponse
     {
+        $file = $this->formService->getFileById($fileId);
         $form = $this->formService->load($fileId);
-        $role = $this->permissionService->getRole($form, $this->userId ?? '');
-        $permissions = $this->permissionService->getPermissionsForRole($role);
+        $role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
+        $canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');
+        $permissions = $this->permissionService->getPermissionsForRole($role, $canShare);
 
         if (!$permissions['viewResponses']) {
             throw new \OCP\AppFramework\Http\NotFoundResponse();

@@ -7,7 +7,7 @@
 
       <div class="question-number">{{ index + 1 }}</div>
 
-      <select v-model="localQuestion.type" class="type-select" @change="onTypeChange">
+      <select v-model="localQuestion.type" class="type-select" :disabled="readonly" @change="onTypeChange">
         <optgroup :label="t('Text')">
           <option value="text">{{ t('Short text') }}</option>
           <option value="textarea">{{ t('Long text') }}</option>
@@ -43,7 +43,7 @@
           </template>
         </NcButton>
 
-        <NcActions>
+        <NcActions v-if="!readonly">
           <NcActionButton @click="$emit('duplicate')">
             <template #icon>
               <CopyIcon :size="20" />
@@ -82,6 +82,7 @@
       <NcTextField
         v-model="localQuestion.question"
         :label="t('Question')"
+        :disabled="readonly"
         class="question-input"
         @update:model-value="emitUpdate"
       />
@@ -89,6 +90,7 @@
       <NcTextField
         v-model="localQuestion.description"
         :label="t('Description (optional)')"
+        :disabled="readonly"
         class="description-input"
         @update:model-value="emitUpdate"
       />
@@ -328,6 +330,10 @@ export default {
     currentPageIndex: {
       type: Number,
       default: 0,
+    },
+    readonly: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ['update', 'delete', 'duplicate', 'move'],

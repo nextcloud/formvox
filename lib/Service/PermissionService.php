@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
-use OCP\IGroupManager;
+use OCP\Files\File;
+use OCP\Constants;
 
 class PermissionService
 {
@@ -15,47 +16,53 @@ class PermissionService
     public const ROLE_ADMIN = 'admin';
     public const ROLE_OWNER = 'owner';
 
-    private IGroupManager $groupManager;
-
-    public function __construct(IGroupManager $groupManager)
-    {
-        $this->groupManager = $groupManager;
-    }
-
     /**
-     * Get user's role for a form
+     * Get user's role based on Nextcloud file permissions
+     * This is the primary method for determining access rights
+     *
+     * Mapping:
+     * - Owner = OWNER (full control)
+     * - Read + Edit = EDITOR (full form control, share permission controls public link)
+     * - Read only = VIEWER (view only)
      */
-    public function getRole(array $form, string $userId): string
+    public function getRoleFromFile(File $file, string $userId): string
     {
-        $permissions = $form['permissions'] ?? [];
-
-        // Check owner
-        if (($permissions['owner'] ?? '') === $userId) {
+        // Check if user is file owner
+        if ($file->getOwner()?->getUID() === $userId) {
             return self::ROLE_OWNER;
         }
 
-        // Check explicit user roles
-        foreach ($permissions['roles'] ?? [] as $role) {
-            if (isset($role['user']) && $role['user'] === $userId) {
-                return $role['role'];
-            }
+        $perms = $file->getPermissions();
 
-            // Check group membership
-            if (isset($role['group'])) {
-                if ($this->groupManager->isInGroup($userId, $role['group'])) {
-                    return $role['role'];
-                }
-            }
+        // NC Constants: READ=1, UPDATE=2, CREATE=4, DELETE=8, SHARE=16
+        $canRead = ($perms & Constants::PERMISSION_READ) !== 0;
+        $canEdit = ($perms & Constants::PERMISSION_UPDATE) !== 0;
+
+        if (!$canRead) {
+            return self::ROLE_NONE;
         }
 
-        // Check public access
-        foreach ($permissions['roles'] ?? [] as $role) {
-            if (isset($role['type']) && $role['type'] === 'public') {
-                return $role['role'];
-            }
+        // Editor gets full form control (settings, branding, responses)
+        // Share permission is checked separately for public link creation
+        if ($canEdit) {
+            return self::ROLE_EDITOR;
         }
 
-        return self::ROLE_NONE;
+        return self::ROLE_VIEWER;
+    }
+
+    /**
+     * Check if user can share (create public response link)
+     * Based on NC SHARE permission
+     */
+    public function canShareFromFile(File $file, string $userId): bool
+    {
+        if ($file->getOwner()?->getUID() === $userId) {
+            return true;
+        }
+
+        $perms = $file->getPermissions();
+        return ($perms & Constants::PERMISSION_SHARE) !== 0;
     }
 
     /**
@@ -99,10 +106,12 @@ class PermissionService
 
     /**
      * Check if user can modify settings
+     * Editor and above can modify settings
      */
     public function canEditSettings(string $role): bool
     {
         return in_array($role, [
+            self::ROLE_EDITOR,
             self::ROLE_ADMIN,
             self::ROLE_OWNER,
         ]);
@@ -110,10 +119,12 @@ class PermissionService
 
     /**
      * Check if user can delete responses
+     * Editor and above can delete responses
      */
     public function canDeleteResponses(string $role): bool
     {
         return in_array($role, [
+            self::ROLE_EDITOR,
             self::ROLE_ADMIN,
             self::ROLE_OWNER,
         ]);
@@ -128,11 +139,13 @@ class PermissionService
     }
 
     /**
-     * Check if user can manage permissions
+     * Check if user can manage permissions (open NC share dialog)
+     * Editor and above can manage permissions
      */
     public function canManagePermissions(string $role): bool
     {
         return in_array($role, [
+            self::ROLE_EDITOR,
             self::ROLE_ADMIN,
             self::ROLE_OWNER,
         ]);
@@ -140,8 +153,9 @@ class PermissionService
 
     /**
      * Get all permissions for a role as array
+     * Note: canShare must be set separately using canShareFromFile()
      */
-    public function getPermissionsForRole(string $role): array
+    public function getPermissionsForRole(string $role, bool $canShare = false): array
     {
         return [
             'respond' => $this->canRespond($role),
@@ -151,96 +165,7 @@ class PermissionService
             'deleteResponses' => $this->canDeleteResponses($role),
             'deleteForm' => $this->canDeleteForm($role),
             'managePermissions' => $this->canManagePermissions($role),
+            'canShare' => $canShare,
         ];
-    }
-
-    /**
-     * Add a user role to the form
-     */
-    public function addUserRole(array &$form, string $userId, string $role): void
-    {
-        if (!isset($form['permissions']['roles'])) {
-            $form['permissions']['roles'] = [];
-        }
-
-        // Remove existing role for this user
-        $form['permissions']['roles'] = array_filter(
-            $form['permissions']['roles'],
-            fn($r) => !isset($r['user']) || $r['user'] !== $userId
-        );
-
-        // Add new role
-        $form['permissions']['roles'][] = [
-            'user' => $userId,
-            'role' => $role,
-        ];
-    }
-
-    /**
-     * Add a group role to the form
-     */
-    public function addGroupRole(array &$form, string $groupId, string $role): void
-    {
-        if (!isset($form['permissions']['roles'])) {
-            $form['permissions']['roles'] = [];
-        }
-
-        // Remove existing role for this group
-        $form['permissions']['roles'] = array_filter(
-            $form['permissions']['roles'],
-            fn($r) => !isset($r['group']) || $r['group'] !== $groupId
-        );
-
-        // Add new role
-        $form['permissions']['roles'][] = [
-            'group' => $groupId,
-            'role' => $role,
-        ];
-    }
-
-    /**
-     * Set public access role
-     */
-    public function setPublicRole(array &$form, ?string $role): void
-    {
-        if (!isset($form['permissions']['roles'])) {
-            $form['permissions']['roles'] = [];
-        }
-
-        // Remove existing public role
-        $form['permissions']['roles'] = array_filter(
-            $form['permissions']['roles'],
-            fn($r) => !isset($r['type']) || $r['type'] !== 'public'
-        );
-
-        // Add new public role if specified
-        if ($role !== null) {
-            $form['permissions']['roles'][] = [
-                'type' => 'public',
-                'role' => $role,
-            ];
-        }
-    }
-
-    /**
-     * Remove a user's role from the form
-     */
-    public function removeUserRole(array &$form, string $userId): void
-    {
-        $form['permissions']['roles'] = array_filter(
-            $form['permissions']['roles'] ?? [],
-            fn($r) => !isset($r['user']) || $r['user'] !== $userId
-        );
-    }
-
-    /**
-     * Remove a group's role from the form
-     */
-    public function removeGroupRole(array &$form, string $groupId): void
-    {
-        $form['permissions']['roles'] = array_filter(
-            $form['permissions']['roles'] ?? [],
-            fn($r) => !isset($r['group']) || $r['group'] !== $groupId
-        );
     }
 }

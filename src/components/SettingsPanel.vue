@@ -101,56 +101,24 @@
       <div class="permissions-section">
         <h3>{{ t('Access control') }}</h3>
         <p class="section-description">
-          {{ t('Control who can do what with this form.') }}
+          {{ t('Control who can edit this form using Nextcloud\'s native sharing.') }}
         </p>
 
-        <div class="permission-list">
-          <div v-for="role in localPermissions.roles" :key="getRoleKey(role)" class="permission-item">
-            <div class="role-info">
-              <span v-if="role.user" class="role-name">
-                <UserIcon :size="16" />
-                {{ role.user }}
-              </span>
-              <span v-else-if="role.group" class="role-name">
-                <GroupIcon :size="16" />
-                {{ role.group }}
-              </span>
-              <span v-else-if="role.type === 'public'" class="role-name">
-                <GlobeIcon :size="16" />
-                {{ t('Public') }}
-              </span>
-            </div>
-
-            <select
-              :value="role.role"
-              :disabled="!canEditSettings"
-              @change="updateRole(role, $event.target.value)"
-            >
-              <option value="respondent">{{ t('Respondent') }}</option>
-              <option value="viewer">{{ t('Viewer') }}</option>
-              <option value="editor">{{ t('Editor') }}</option>
-              <option value="admin">{{ t('Admin') }}</option>
-            </select>
-
-            <NcButton type="tertiary" :disabled="!canEditSettings" @click="removeRole(role)">
-              <template #icon>
-                <CloseIcon :size="16" />
-              </template>
-            </NcButton>
-          </div>
+        <div class="native-share-info">
+          <p>{{ t('Use Nextcloud sharing to control access:') }}</p>
+          <ul>
+            <li><strong>{{ t('Can view') }}</strong> - {{ t('Can fill in and view the form') }}</li>
+            <li><strong>{{ t('Can edit') }}</strong> - {{ t('Can modify questions and settings') }}</li>
+            <li><strong>{{ t('Can delete') }}</strong> - {{ t('Full admin access') }}</li>
+          </ul>
         </div>
 
-        <div class="add-permission">
-          <NcSelect
-            v-model="newRoleUser"
-            :placeholder="t('Add user or group...')"
-            :options="[]"
-            :disabled="!canEditSettings"
-          />
-          <NcButton :disabled="!canEditSettings" @click="addRole">
-            {{ t('Add') }}
-          </NcButton>
-        </div>
+        <NcButton type="primary" @click="openNativeShareDialog">
+          <template #icon>
+            <ShareIcon :size="20" />
+          </template>
+          {{ t('Manage sharing') }}
+        </NcButton>
       </div>
     </NcAppSidebarTab>
   </NcAppSidebar>
@@ -158,21 +126,19 @@
 
 <script>
 import { t } from '@/utils/l10n';
-import { ref, reactive, computed } from 'vue';
+import { reactive, computed } from 'vue';
+import { generateUrl } from '@nextcloud/router';
+import axios from '@nextcloud/axios';
 import {
   NcAppSidebar,
   NcAppSidebarTab,
   NcButton,
   NcCheckboxRadioSwitch,
   NcDateTimePicker,
-  NcSelect,
 } from '@nextcloud/vue';
 import CogIcon from './icons/CogIcon.vue';
 import UsersIcon from './icons/UsersIcon.vue';
-import UserIcon from './icons/UserIcon.vue';
-import GroupIcon from './icons/GroupIcon.vue';
-import GlobeIcon from './icons/GlobeIcon.vue';
-import CloseIcon from './icons/CloseIcon.vue';
+import ShareIcon from './icons/ShareIcon.vue';
 
 export default {
   name: 'SettingsPanel',
@@ -182,15 +148,15 @@ export default {
     NcButton,
     NcCheckboxRadioSwitch,
     NcDateTimePicker,
-    NcSelect,
     CogIcon,
     UsersIcon,
-    UserIcon,
-    GroupIcon,
-    GlobeIcon,
-    CloseIcon,
+    ShareIcon,
   },
   props: {
+    fileId: {
+      type: Number,
+      required: true,
+    },
     settings: {
       type: Object,
       required: true,
@@ -207,8 +173,6 @@ export default {
   emits: ['update:settings', 'update:permissions', 'close'],
   setup(props, { emit }) {
     const localSettings = reactive({ ...props.settings });
-    const localPermissions = reactive({ ...props.permissions });
-    const newRoleUser = ref(null);
 
     const hasExpiration = computed(() => {
       return localSettings.expires_at !== null;
@@ -221,7 +185,6 @@ export default {
 
     const toggleExpiration = (enabled) => {
       if (enabled) {
-        // Set default expiration to 30 days from now
         const date = new Date();
         date.setDate(date.getDate() + 30);
         localSettings.expires_at = date.toISOString();
@@ -236,49 +199,36 @@ export default {
       emit('update:settings', { ...localSettings });
     };
 
-    const getRoleKey = (role) => {
-      return role.user || role.group || role.type || 'unknown';
-    };
+    const openNativeShareDialog = async () => {
+      // Try legacy API (NC < 33) - works when Files app is loaded
+      if (window.OCA?.Files?.Sidebar) {
+        try {
+          const response = await axios.get(
+            generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId })
+          );
+          const filePath = response.data.path;
 
-    const updateRole = (role, newRole) => {
-      const index = localPermissions.roles.indexOf(role);
-      if (index > -1) {
-        localPermissions.roles[index].role = newRole;
-        emit('update:permissions', { ...localPermissions });
+          window.OCA.Files.Sidebar.open(filePath);
+          window.OCA.Files.Sidebar.setActiveTab('sharing');
+          return;
+        } catch (e) {
+          console.error('Failed to open sidebar:', e);
+        }
       }
-    };
 
-    const removeRole = (role) => {
-      const index = localPermissions.roles.indexOf(role);
-      if (index > -1) {
-        localPermissions.roles.splice(index, 1);
-        emit('update:permissions', { ...localPermissions });
-      }
-    };
-
-    const addRole = () => {
-      if (newRoleUser.value) {
-        localPermissions.roles.push({
-          user: newRoleUser.value,
-          role: 'respondent',
-        });
-        newRoleUser.value = null;
-        emit('update:permissions', { ...localPermissions });
-      }
+      // Fallback: redirect to Files app with the file selected and sharing tab open
+      window.location.href = generateUrl('/apps/files/?fileid={fileId}&openfile=true', {
+        fileId: props.fileId
+      });
     };
 
     return {
       localSettings,
-      localPermissions,
-      newRoleUser,
       hasExpiration,
       updateSetting,
       toggleExpiration,
       updateExpiration,
-      getRoleKey,
-      updateRole,
-      removeRole,
-      addRole,
+      openNativeShareDialog,
       t,
     };
   },
@@ -309,37 +259,25 @@ export default {
   gap: 8px;
 }
 
-.permission-list {
+.native-share-info {
+  background: var(--color-background-dark);
+  border-radius: var(--border-radius);
+  padding: 16px;
   margin-bottom: 16px;
 
-  .permission-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border-bottom: 1px solid var(--color-border);
+  p {
+    margin: 0 0 8px;
+    font-weight: 500;
+  }
 
-    .role-info {
-      flex: 1;
+  ul {
+    margin: 0;
+    padding-left: 20px;
 
-      .role-name {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-    }
-
-    select {
-      padding: 4px 8px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--border-radius);
-      background: var(--color-main-background);
+    li {
+      margin-bottom: 4px;
+      font-size: 13px;
     }
   }
-}
-
-.add-permission {
-  display: flex;
-  gap: 8px;
 }
 </style>

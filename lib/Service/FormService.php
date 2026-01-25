@@ -175,6 +175,21 @@ class FormService
 
         $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
+        // Rename file if title changed
+        if (array_key_exists('title', $data)) {
+            $newFilename = $this->sanitizeFilename($data['title']) . '.' . Application::FILE_EXTENSION;
+            $currentFilename = $file->getName();
+
+            if ($newFilename !== $currentFilename) {
+                $parent = $file->getParent();
+                // Check if file with new name already exists
+                if (!$parent->nodeExists($newFilename)) {
+                    $file->move($parent->getPath() . '/' . $newFilename);
+                }
+                // If file exists, keep original name (avoid overwriting)
+            }
+        }
+
         return $form;
     }
 

@@ -207,7 +207,11 @@ export default {
 				forms.value = forms.value.filter(f => f.fileId !== formToDelete.value.fileId)
 				showSuccess(t('Form deleted'))
 			} catch (error) {
-				showError(t('Failed to delete form'))
+				if (error.response?.status === 403) {
+					showError(t('You do not have permission to delete this form'))
+				} else {
+					showError(t('Failed to delete form'))
+				}
 				console.error(error)
 			} finally {
 				showDeleteDialog.value = false
