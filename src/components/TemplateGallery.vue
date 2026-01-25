@@ -128,7 +128,7 @@ export default {
 <style scoped lang="scss">
 .template-gallery {
 	margin-bottom: 24px;
-	padding: 0 20px;
+	padding: 0 20px 0 44px;
 
 	&__header {
 		display: flex;
