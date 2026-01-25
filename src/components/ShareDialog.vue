@@ -27,8 +27,9 @@
         </div>
 
         <div v-else class="create-link">
-          <p>{{ t('No link yet. Create one to start collecting responses.') }}</p>
-          <NcButton type="primary" :disabled="creatingLink" @click="createShareLink">
+          <p v-if="canShare">{{ t('No link yet. Create one to start collecting responses.') }}</p>
+          <p v-else>{{ t('You do not have permission to create a response link.') }}</p>
+          <NcButton type="primary" :disabled="creatingLink || !canShare" @click="createShareLink">
             {{ creatingLink ? t('Creating...') : t('Create response link') }}
           </NcButton>
         </div>
@@ -129,6 +130,10 @@ export default {
     form: {
       type: Object,
       required: true,
+    },
+    canShare: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ['close', 'responsesDeleted'],

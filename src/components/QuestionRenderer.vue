@@ -68,17 +68,17 @@
     <!-- Date -->
     <NcDateTimePicker
       v-else-if="question.type === 'date'"
-      :value="value ? new Date(value) : null"
+      :model-value="value ? new Date(value) : null"
       type="date"
-      @update:value="$emit('update:value', formatDate($event))"
+      @update:model-value="$emit('update:value', formatDate($event))"
     />
 
     <!-- DateTime -->
     <NcDateTimePicker
       v-else-if="question.type === 'datetime'"
-      :value="value ? new Date(value) : null"
+      :model-value="value ? new Date(value) : null"
       type="datetime"
-      @update:value="$emit('update:value', formatDateTime($event))"
+      @update:model-value="$emit('update:value', formatDateTime($event))"
     />
 
     <!-- Time -->
@@ -342,11 +342,15 @@ export default {
 
 <style scoped lang="scss">
 .question-renderer {
+  max-width: 100%;
+
   .question-label {
     display: block;
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 8px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 
     .required {
       color: var(--color-error);
@@ -357,18 +361,30 @@ export default {
     font-size: 14px;
     color: var(--color-text-maxcontrast);
     margin: 0 0 12px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   // NcTextArea styling
   :deep(.textarea) {
     width: 100%;
+    max-width: 100%;
     min-height: 100px;
   }
 
   :deep(textarea) {
     width: 100%;
+    max-width: 100%;
     min-height: 100px;
     resize: vertical;
+  }
+
+  // Fix NcTextField and NcDateTimePicker overflow
+  :deep(.input-field),
+  :deep(.input-field__main-wrapper),
+  :deep(.mx-datepicker) {
+    max-width: 100%;
+    width: 100%;
   }
 }
 
@@ -423,12 +439,14 @@ export default {
 .dropdown-select {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: auto;
   min-height: 48px;
   padding: 14px 12px;
   border: 2px solid var(--color-border-dark);
   border-radius: var(--border-radius-large);
   background-color: var(--color-main-background);
+  color: var(--color-main-text);
   font-family: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -441,6 +459,11 @@ export default {
 
   &:hover:not(:focus) {
     border-color: var(--color-primary-element-light);
+  }
+
+  option {
+    background-color: var(--color-main-background);
+    color: var(--color-main-text);
   }
 }
 
@@ -455,6 +478,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 
   .scale-label {
     font-size: 14px;
@@ -464,6 +488,8 @@ export default {
   .scale-options {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .scale-option {
@@ -485,6 +511,23 @@ export default {
       background: var(--color-primary);
       border-color: var(--color-primary);
       color: white;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .scale-input {
+    flex-direction: column;
+    align-items: stretch;
+
+    .scale-label {
+      text-align: center;
+    }
+
+    .scale-option {
+      width: 36px;
+      height: 36px;
+      font-size: 13px;
     }
   }
 }

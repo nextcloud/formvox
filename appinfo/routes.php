@@ -36,6 +36,9 @@ return [
         // API routes - Index management
         ['name' => 'api#rebuildIndex', 'url' => '/api/form/{fileId}/rebuild-index', 'verb' => 'POST'],
 
+        // API routes - File permissions
+        ['name' => 'file_permission#getPermissions', 'url' => '/api/permissions/{fileId}', 'verb' => 'GET'],
+
         // Branding routes (admin only, except images which are public)
         ['name' => 'branding#get', 'url' => '/api/branding', 'verb' => 'GET'],
         ['name' => 'branding#saveLayout', 'url' => '/api/branding/layout', 'verb' => 'PUT'],

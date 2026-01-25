@@ -87,9 +87,19 @@ class ApiController extends Controller
     public function get(int $fileId): DataResponse
     {
         try {
+            $file = $this->formService->getFileById($fileId);
             $form = $this->formService->load($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
+
+            // Deny access if user has no permissions
+            if ($role === PermissionService::ROLE_NONE) {
+                return new DataResponse(
+                    ['error' => 'Access denied'],
+                    Http::STATUS_FORBIDDEN
+                );
+            }
+
             $permissions = $this->permissionService->getPermissionsForRole($role);
 
             // Remove responses if user can't view them
@@ -155,9 +165,9 @@ class ApiController extends Controller
             );
         }
         try {
-            $form = $this->formService->load($fileId);
+            $file = $this->formService->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
 
             if (!$this->permissionService->canEditQuestions($role)) {
                 return new DataResponse(
@@ -199,12 +209,12 @@ class ApiController extends Controller
     public function setFavorite(int $fileId, bool $favorite): DataResponse
     {
         try {
-            $form = $this->formService->load($fileId);
+            $file = $this->formService->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
 
             // Any user with at least view permission can favorite a form
-            if ($role === 'none') {
+            if ($role === PermissionService::ROLE_NONE) {
                 return new DataResponse(
                     ['error' => 'Permission denied'],
                     Http::STATUS_FORBIDDEN
@@ -233,9 +243,9 @@ class ApiController extends Controller
     public function delete(int $fileId): DataResponse
     {
         try {
-            $form = $this->formService->load($fileId);
+            $file = $this->formService->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
 
             if (!$this->permissionService->canDeleteForm($role)) {
                 return new DataResponse(
@@ -266,9 +276,9 @@ class ApiController extends Controller
     public function getResponses(int $fileId, ?string $date = null): DataResponse
     {
         try {
-            $form = $this->formService->load($fileId);
+            $file = $this->formService->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
 
             if (!$this->permissionService->canViewResponses($role)) {
                 return new DataResponse(
@@ -299,9 +309,9 @@ class ApiController extends Controller
     public function deleteAllResponses(int $fileId): DataResponse
     {
         try {
-            $form = $this->formService->load($fileId);
+            $file = $this->formService->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
 
             if (!$this->permissionService->canDeleteResponses($role)) {
                 return new DataResponse(
@@ -327,9 +337,9 @@ class ApiController extends Controller
     public function deleteResponse(int $fileId, string $responseId): DataResponse
     {
         try {
-            $form = $this->formService->load($fileId);
+            $file = $this->formService->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
 
             if (!$this->permissionService->canDeleteResponses($role)) {
                 return new DataResponse(
@@ -360,9 +370,10 @@ class ApiController extends Controller
     #[NoCSRFRequired]
     public function exportCsv(int $fileId): DataDownloadResponse
     {
+        $file = $this->formService->getFileById($fileId);
         $form = $this->formService->load($fileId);
         $userId = $this->userSession->getUser()?->getUID() ?? '';
-        $role = $this->permissionService->getRole($form, $userId);
+        $role = $this->permissionService->getRoleFromFile($file, $userId);
 
         if (!$this->permissionService->canViewResponses($role)) {
             throw new \Exception('Permission denied');
@@ -381,9 +392,10 @@ class ApiController extends Controller
     #[NoCSRFRequired]
     public function exportJson(int $fileId): DataDownloadResponse
     {
+        $file = $this->formService->getFileById($fileId);
         $form = $this->formService->load($fileId);
         $userId = $this->userSession->getUser()?->getUID() ?? '';
-        $role = $this->permissionService->getRole($form, $userId);
+        $role = $this->permissionService->getRoleFromFile($file, $userId);
 
         if (!$this->permissionService->canViewResponses($role)) {
             throw new \Exception('Permission denied');
@@ -402,9 +414,10 @@ class ApiController extends Controller
     public function rebuildIndex(int $fileId): DataResponse
     {
         try {
+            $file = $this->formService->getFileById($fileId);
             $form = $this->formService->load($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRole($form, $userId);
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
 
             if (!$this->permissionService->canEditSettings($role)) {
                 return new DataResponse(

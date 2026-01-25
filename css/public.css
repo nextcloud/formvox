@@ -2,12 +2,47 @@
  * FormVox - Public (anonymous) styles
  */
 
-/* Fix scroll issues */
-html, body, #body-public {
-  height: auto !important;
-  min-height: 100vh;
-  overflow-x: hidden;
-  overflow-y: auto !important;
+/* CSS Variables for theming */
+:root {
+  --formvox-bg-primary: #ffffff;
+  --formvox-bg-secondary: #f8f8f8;
+  --formvox-bg-hover: #f0f0f0;
+  --formvox-text-primary: #1a1a1a;
+  --formvox-text-secondary: #555;
+  --formvox-text-muted: #666;
+  --formvox-border: #e0e0e0;
+  --formvox-border-dark: #d0d0d0;
+  --formvox-page-bg: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --formvox-bg-primary: #2c2c2c;
+    --formvox-bg-secondary: #3a3a3a;
+    --formvox-bg-hover: #444444;
+    --formvox-text-primary: #e0e0e0;
+    --formvox-text-secondary: #b0b0b0;
+    --formvox-text-muted: #999999;
+    --formvox-border: #555555;
+    --formvox-border-dark: #666666;
+    --formvox-page-bg: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  }
+}
+
+/* Nextcloud dark mode class support */
+[data-themes*="dark"],
+.theme--dark,
+body.theme--dark {
+  --formvox-bg-primary: #2c2c2c;
+  --formvox-bg-secondary: #3a3a3a;
+  --formvox-bg-hover: #444444;
+  --formvox-text-primary: #e0e0e0;
+  --formvox-text-secondary: #b0b0b0;
+  --formvox-text-muted: #999999;
+  --formvox-border: #555555;
+  --formvox-border-dark: #666666;
+  --formvox-page-bg: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
 }
 
 /* Reset for public pages */
@@ -15,26 +50,44 @@ html, body, #body-public {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  background: var(--formvox-page-bg);
   min-height: 100vh;
-}
-
-#body-public #content {
-  overflow: visible !important;
-  height: auto !important;
 }
 
 /* Public container */
 #formvox-public {
-  max-width: 700px;
+  max-width: min(700px, 100vw);
   margin: 0 auto;
   padding: 40px 20px;
   padding-bottom: 80px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* Respond container within public */
 #formvox-public .respond-container {
   max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Force all children to respect container width */
+#formvox-public * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Exception for scale buttons which need fixed size */
+#formvox-public .scale-option {
+  max-width: none;
+}
+
+/* Exception for datepicker input wrapper inside formvox */
+#formvox-public .mx-datepicker,
+#formvox-public .mx-datepicker *,
+#formvox-public .mx-input-wrapper,
+#formvox-public .mx-input-wrapper * {
+  max-width: none;
 }
 
 /* Public form header */
@@ -42,21 +95,22 @@ html, body, #body-public {
   text-align: center;
   margin-bottom: 40px;
   padding: 30px;
-  background: white;
+  background: var(--formvox-bg-primary);
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
 }
 
 #formvox-public .form-header h1 {
   margin: 0 0 12px;
   font-size: 28px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--formvox-text-primary);
 }
 
 #formvox-public .form-header .form-description {
   font-size: 16px;
-  color: #555;
+  color: var(--formvox-text-secondary);
   margin: 0;
   line-height: 1.6;
 }
@@ -76,11 +130,12 @@ html, body, #body-public {
 #formvox-public .question-container {
   margin-bottom: 20px;
   padding: 24px;
-  background: white;
+  background: var(--formvox-bg-primary);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--formvox-border);
   transition: box-shadow 0.2s ease;
+  box-sizing: border-box;
 }
 
 #formvox-public .question-container:hover {
@@ -95,14 +150,20 @@ html, body, #body-public {
 #formvox-public .question-label {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--formvox-text-primary);
   margin-bottom: 8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 #formvox-public .question-description {
   font-size: 15px;
-  color: #666;
+  color: var(--formvox-text-muted);
   margin-bottom: 16px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 /* Public inputs */
@@ -113,13 +174,24 @@ html, body, #body-public {
 #formvox-public input[type="time"],
 #formvox-public textarea,
 #formvox-public select {
-  width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   padding: 12px 16px;
   font-size: 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--formvox-border);
   border-radius: 8px;
   transition: border-color 0.2s;
   box-sizing: border-box;
+  background-color: var(--formvox-bg-primary);
+  color: var(--formvox-text-primary);
+}
+
+/* Dropdown select text overflow */
+#formvox-public select,
+#formvox-public .dropdown-select {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 #formvox-public input:focus,
@@ -127,6 +199,17 @@ html, body, #body-public {
 #formvox-public select:focus {
   outline: none;
   border-color: #0082c9;
+}
+
+/* Fix Nextcloud Vue components width */
+#formvox-public .input-field,
+#formvox-public .input-field__main-wrapper,
+#formvox-public .mx-datepicker,
+#formvox-public .mx-input-wrapper,
+#formvox-public [class*="NcTextField"],
+#formvox-public [class*="NcDateTimePicker"] {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 /* Public choice options */
@@ -141,14 +224,14 @@ html, body, #body-public {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #f8f8f8;
+  background: var(--formvox-bg-secondary);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 #formvox-public .choice-options label:hover {
-  background: #f0f0f0;
+  background: var(--formvox-bg-hover);
 }
 
 #formvox-public .choice-options input[type="radio"],
@@ -162,17 +245,19 @@ html, body, #body-public {
 #formvox-public .scale-options {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 #formvox-public .scale-option {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   font-size: 16px;
   font-weight: bold;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--formvox-border);
   border-radius: 50%;
-  background: white;
+  background: var(--formvox-bg-primary);
+  color: var(--formvox-text-primary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -192,6 +277,7 @@ html, body, #body-public {
   display: flex;
   justify-content: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 #formvox-public .star-button {
@@ -199,7 +285,7 @@ html, body, #body-public {
   border: none;
   cursor: pointer;
   font-size: 32px;
-  color: #ddd;
+  color: var(--formvox-border-dark);
   transition: color 0.2s, transform 0.1s;
   padding: 0;
 }
@@ -216,23 +302,25 @@ html, body, #body-public {
 #formvox-public .matrix-input {
   overflow-x: auto;
   margin-top: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
 #formvox-public .matrix-table {
   width: 100%;
+  min-width: max-content;
   border-collapse: separate;
   border-spacing: 0;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--formvox-border);
 }
 
 #formvox-public .matrix-table th,
 #formvox-public .matrix-table td {
   padding: 12px 16px;
   text-align: center;
-  border-bottom: 1px solid #e0e0e0;
-  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--formvox-border);
+  border-right: 1px solid var(--formvox-border);
 }
 
 #formvox-public .matrix-table th:last-child,
@@ -245,15 +333,16 @@ html, body, #body-public {
 }
 
 #formvox-public .matrix-table th {
-  background: #f5f5f5;
+  background: var(--formvox-bg-secondary);
   font-weight: 600;
-  color: #333;
+  color: var(--formvox-text-primary);
 }
 
 #formvox-public .matrix-table .row-label {
   text-align: left;
   font-weight: 500;
-  background: #fafafa;
+  background: var(--formvox-bg-secondary);
+  color: var(--formvox-text-primary);
 }
 
 /* Public form actions */
@@ -303,7 +392,7 @@ html, body, #body-public {
 #formvox-public .success-message {
   text-align: center;
   padding: 60px 40px;
-  background: white;
+  background: var(--formvox-bg-primary);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -314,13 +403,13 @@ html, body, #body-public {
 
 #formvox-public .success-message h2 {
   font-size: 28px;
-  color: #333;
+  color: var(--formvox-text-primary);
   margin: 20px 0 10px;
 }
 
 #formvox-public .success-message p {
   font-size: 16px;
-  color: #666;
+  color: var(--formvox-text-muted);
 }
 
 /* Public error */
@@ -337,20 +426,20 @@ html, body, #body-public {
 #formvox-public .score-display {
   margin: 30px 0;
   padding: 30px;
-  background: #f8f8f8;
+  background: var(--formvox-bg-secondary);
   border-radius: 12px;
 }
 
 #formvox-public .score-display h3 {
   font-size: 20px;
-  color: #333;
+  color: var(--formvox-text-primary);
   margin: 0 0 15px;
 }
 
 #formvox-public .score-value {
   font-size: 48px;
   font-weight: bold;
-  color: #333;
+  color: var(--formvox-text-primary);
 }
 
 #formvox-public .score-percentage {
@@ -361,20 +450,255 @@ html, body, #body-public {
 /* Responsive */
 @media (max-width: 600px) {
   #formvox-public {
+    padding: 20px 12px;
+    padding-bottom: 60px;
+  }
+
+  #formvox-public .form-header {
     padding: 20px 16px;
+    margin-bottom: 24px;
   }
 
   #formvox-public .form-header h1 {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   #formvox-public .question-container {
     padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  #formvox-public .question-label {
+    font-size: 16px;
+  }
+
+  #formvox-public .scale-input {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  #formvox-public .scale-input .scale-label {
+    text-align: center;
+  }
+
+  #formvox-public .scale-options {
+    justify-content: center;
   }
 
   #formvox-public .scale-option {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
+    width: 36px;
+    height: 36px;
+    font-size: 13px;
   }
+
+  #formvox-public .form-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  #formvox-public .form-actions button,
+  #formvox-public .form-actions .button-vue {
+    width: 100%;
+    min-width: unset;
+  }
+
+  /* Fix Nextcloud vue components overflow */
+  #formvox-public .input-field,
+  #formvox-public .input-field__main-wrapper,
+  #formvox-public .v-select,
+  #formvox-public [class*="NcTextField"],
+  #formvox-public [class*="NcDateTimePicker"] {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  #formvox-public {
+    padding: 16px 8px;
+  }
+
+  #formvox-public .form-header {
+    padding: 16px 12px;
+  }
+
+  #formvox-public .question-container {
+    padding: 12px;
+  }
+
+  #formvox-public .scale-option {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+}
+
+/* =====================================================
+   GLOBAL DATEPICKER POPUP STYLES
+   These are placed outside #formvox-public because the
+   popup is rendered in <body>, not inside our container
+   ===================================================== */
+
+/* Ensure datepicker popup is visible and clickable */
+.mx-datepicker-popup {
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Force calendar content to be visible in light mode */
+.mx-datepicker-popup .mx-calendar,
+.mx-datepicker-popup .mx-calendar-header,
+.mx-datepicker-popup .mx-calendar-content {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+}
+
+.mx-datepicker-popup .mx-table th {
+  color: #666666 !important;
+}
+
+.mx-datepicker-popup .mx-table td {
+  color: #333333 !important;
+}
+
+.mx-datepicker-popup .mx-table td:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.mx-datepicker-popup .mx-btn {
+  color: #333333 !important;
+}
+
+.mx-datepicker-popup .mx-btn:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.mx-datepicker-popup .mx-time {
+  background-color: #ffffff !important;
+}
+
+.mx-datepicker-popup .mx-time-column {
+  background-color: #ffffff !important;
+}
+
+.mx-datepicker-popup .mx-time-item {
+  color: #333333 !important;
+}
+
+.mx-datepicker-popup .mx-time-item:hover {
+  background-color: #f0f0f0 !important;
+}
+
+/* Dark mode for datepicker popup */
+@media (prefers-color-scheme: dark) {
+  .mx-datepicker-popup {
+    background-color: #2c2c2c !important;
+    border-color: #555555 !important;
+  }
+
+  .mx-datepicker-popup .mx-calendar,
+  .mx-datepicker-popup .mx-calendar-header,
+  .mx-datepicker-popup .mx-calendar-content {
+    background-color: #2c2c2c !important;
+    color: #e0e0e0 !important;
+  }
+
+  .mx-datepicker-popup .mx-table th,
+  .mx-datepicker-popup .mx-table td {
+    color: #e0e0e0 !important;
+  }
+
+  .mx-datepicker-popup .mx-table td:hover {
+    background-color: #444444 !important;
+  }
+
+  .mx-datepicker-popup .mx-btn {
+    color: #e0e0e0 !important;
+  }
+
+  .mx-datepicker-popup .mx-btn:hover {
+    background-color: #444444 !important;
+  }
+
+  .mx-datepicker-popup .mx-time {
+    background-color: #2c2c2c !important;
+  }
+
+  .mx-datepicker-popup .mx-time-column {
+    background-color: #2c2c2c !important;
+  }
+
+  .mx-datepicker-popup .mx-time-item {
+    color: #e0e0e0 !important;
+  }
+
+  .mx-datepicker-popup .mx-time-item:hover {
+    background-color: #444444 !important;
+  }
+
+  .mx-datepicker-popup .mx-input {
+    background-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+    border-color: #555555 !important;
+  }
+}
+
+/* Nextcloud dark theme class support for datepicker */
+[data-themes*="dark"] .mx-datepicker-popup,
+.theme--dark .mx-datepicker-popup,
+body.theme--dark .mx-datepicker-popup {
+  background-color: #2c2c2c !important;
+  border-color: #555555 !important;
+}
+
+[data-themes*="dark"] .mx-datepicker-popup .mx-calendar,
+[data-themes*="dark"] .mx-datepicker-popup .mx-calendar-header,
+[data-themes*="dark"] .mx-datepicker-popup .mx-calendar-content,
+.theme--dark .mx-datepicker-popup .mx-calendar,
+.theme--dark .mx-datepicker-popup .mx-calendar-header,
+.theme--dark .mx-datepicker-popup .mx-calendar-content,
+body.theme--dark .mx-datepicker-popup .mx-calendar,
+body.theme--dark .mx-datepicker-popup .mx-calendar-header,
+body.theme--dark .mx-datepicker-popup .mx-calendar-content {
+  background-color: #2c2c2c !important;
+  color: #e0e0e0 !important;
+}
+
+[data-themes*="dark"] .mx-datepicker-popup .mx-table th,
+[data-themes*="dark"] .mx-datepicker-popup .mx-table td,
+.theme--dark .mx-datepicker-popup .mx-table th,
+.theme--dark .mx-datepicker-popup .mx-table td,
+body.theme--dark .mx-datepicker-popup .mx-table th,
+body.theme--dark .mx-datepicker-popup .mx-table td {
+  color: #e0e0e0 !important;
+}
+
+[data-themes*="dark"] .mx-datepicker-popup .mx-time,
+[data-themes*="dark"] .mx-datepicker-popup .mx-time-column,
+[data-themes*="dark"] .mx-datepicker-popup .mx-time-item,
+.theme--dark .mx-datepicker-popup .mx-time,
+.theme--dark .mx-datepicker-popup .mx-time-column,
+.theme--dark .mx-datepicker-popup .mx-time-item,
+body.theme--dark .mx-datepicker-popup .mx-time,
+body.theme--dark .mx-datepicker-popup .mx-time-column,
+body.theme--dark .mx-datepicker-popup .mx-time-item {
+  background-color: #2c2c2c !important;
+  color: #e0e0e0 !important;
+}
+
+/* Time input - dark mode icon fix */
+@media (prefers-color-scheme: dark) {
+  #formvox-public input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+
+[data-themes*="dark"] #formvox-public input[type="time"]::-webkit-calendar-picker-indicator,
+.theme--dark #formvox-public input[type="time"]::-webkit-calendar-picker-indicator,
+body.theme--dark #formvox-public input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }

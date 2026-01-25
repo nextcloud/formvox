@@ -11,23 +11,35 @@
           </NcButton>
         </div>
 
+        <!-- Permission banner for read-only users -->
+        <div v-if="!canEdit" class="permission-banner">
+          <span class="permission-icon">🔒</span>
+          <span>{{ t('You have read-only access to this form. Contact the owner to request edit permissions.') }}</span>
+        </div>
+
         <div class="editor-header">
           <NcTextField
             v-model="form.title"
             :label="t('Form title')"
+            :disabled="!canEdit"
             class="title-input"
             @update:model-value="debouncedSave"
           />
           <NcTextField
             v-model="form.description"
             :label="t('Description')"
+            :disabled="!canEdit"
             class="description-input"
             @update:model-value="debouncedSave"
           />
         </div>
 
         <div class="editor-toolbar">
-          <NcButton @click="addQuestion">
+          <NcButton
+            :disabled="!canEdit"
+            :title="!canEdit ? t('You do not have permission to edit this form') : ''"
+            @click="addQuestion"
+          >
             <template #icon>
               <PlusIcon :size="20" />
             </template>
@@ -37,6 +49,7 @@
           <NcButton
             v-if="hasPages"
             type="secondary"
+            :disabled="!canEdit"
             @click="addPage"
           >
             <template #icon>
@@ -53,31 +66,31 @@
           </NcButton>
 
           <NcActions>
-            <NcActionButton @click="togglePages">
+            <NcActionButton :disabled="!canEdit" @click="togglePages">
               <template #icon>
                 <PagesIcon :size="20" />
               </template>
               {{ hasPages ? t('Disable pages') : t('Enable pages') }}
             </NcActionButton>
-            <NcActionButton @click="showSettings = true">
+            <NcActionButton :disabled="!canEditSettings" @click="showSettings = true">
               <template #icon>
                 <CogIcon :size="20" />
               </template>
               {{ t('Settings') }}
             </NcActionButton>
-            <NcActionButton @click="showBranding = true">
+            <NcActionButton :disabled="!canEditSettings" @click="showBranding = true">
               <template #icon>
                 <PaletteIcon :size="20" />
               </template>
               {{ t('Branding') }}
             </NcActionButton>
-            <NcActionButton @click="showShare = true">
+            <NcActionButton :disabled="!canShare" @click="showShare = true">
               <template #icon>
                 <ShareIcon :size="20" />
               </template>
-              {{ t('Share') }}
+              {{ t('Collect responses') }}
             </NcActionButton>
-            <NcActionButton @click="viewResults">
+            <NcActionButton v-if="canViewResponses" @click="viewResults">
               <template #icon>
                 <ChartIcon :size="20" />
               </template>
@@ -141,6 +154,7 @@
                   :questions="form.questions"
                   :pages="form.pages"
                   :current-page-index="currentPageIndex"
+                  :readonly="!canEdit"
                   @update="updateQuestionById(element.id, $event)"
                   @delete="deleteQuestionById(element.id)"
                   @duplicate="duplicateQuestionById(element.id)"
@@ -167,6 +181,7 @@
                   :question="element"
                   :index="index"
                   :questions="form.questions"
+                  :readonly="!canEdit"
                   @update="updateQuestion(index, $event)"
                   @delete="deleteQuestion(index)"
                   @duplicate="duplicateQuestion(index)"
@@ -185,6 +200,7 @@
 
     <SettingsPanel
       v-if="showSettings"
+      :file-id="fileId"
       :settings="form.settings"
       :permissions="form.permissions"
       :can-edit-settings="permissions.editSettings"
@@ -197,6 +213,7 @@
       v-if="showShare"
       :file-id="fileId"
       :form="form"
+      :can-share="canShare"
       @close="showShare = false"
     />
 
@@ -210,7 +227,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import {
   NcContent,
   NcAppContent,
@@ -294,6 +311,12 @@ export default {
 
     let saveTimeout = null;
 
+    // Permission checks
+    const canEdit = computed(() => props.permissions?.editQuestions ?? false);
+    const canEditSettings = computed(() => props.permissions?.editSettings ?? false);
+    const canViewResponses = computed(() => props.permissions?.viewResponses ?? false);
+    const canShare = computed(() => props.permissions?.canShare ?? false);
+
     // Computed: get public preview URL (if public token exists)
     const publicPreviewUrl = computed(() => {
       const token = form.settings?.public_token;
@@ -327,6 +350,10 @@ export default {
     });
 
     const save = async () => {
+      if (!canEdit.value) {
+        showError(t('You do not have permission to edit this form'));
+        return;
+      }
       saving.value = true;
       try {
         await axios.put(
@@ -342,7 +369,11 @@ export default {
         );
         showSuccess(t('All changes saved'));
       } catch (error) {
-        showError(t('Failed to save form'));
+        if (error.response?.status === 403) {
+          showError(t('You do not have permission to edit this form'));
+        } else {
+          showError(t('Failed to save form'));
+        }
         console.error(error);
       } finally {
         saving.value = false;
@@ -551,6 +582,10 @@ export default {
       hasPages,
       currentPageQuestions,
       publicPreviewUrl,
+      canEdit,
+      canEditSettings,
+      canViewResponses,
+      canShare,
       debouncedSave,
       addQuestion,
       updateQuestion,
@@ -586,6 +621,22 @@ export default {
 
 .editor-back {
   margin-bottom: 16px;
+}
+
+.permission-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: var(--color-warning-light, #fff3cd);
+  border: 1px solid var(--color-warning, #ffc107);
+  border-radius: var(--border-radius-large);
+  color: var(--color-warning-text, #856404);
+
+  .permission-icon {
+    font-size: 20px;
+  }
 }
 
 .editor-header {

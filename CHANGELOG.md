@@ -13,6 +13,8 @@ All notable changes to FormVox will be documented in this file.
 - Form cards with colored headers based on template type
 - Tabs navigation (Recent, My forms) with counts
 - Delete confirmation dialog using Nextcloud Vue NcDialog
+- File-based permission system using Nextcloud's native file permissions
+- New FilePermissionController for permission checks via `/api/permissions/{fileId}`
 
 ### Changed
 - Telemetry now includes `totalUsers` field alongside `activeUsers30d`
@@ -21,6 +23,14 @@ All notable changes to FormVox will be documented in this file.
 - Template gallery title changed from "Explore templates" to "New form"
 - Clicking template card now opens modal with pre-selected template and location picker
 - Modal no longer shows template selection (template already chosen by card click)
+- Permission system now respects Nextcloud share permissions (read-only shares can't edit forms)
+- Form filename now automatically updates when form title is changed
+
+### Fixed
+- Public form mobile responsiveness (horizontal scroll issues)
+- Dark mode support on public forms (inputs now readable)
+- Date picker and DateTime picker popup visibility on public forms
+- Time input alignment on public forms
 
 ### Removed
 - Favorites functionality (temporarily removed due to API issues)
