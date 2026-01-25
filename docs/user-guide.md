@@ -19,16 +19,39 @@ A complete guide to creating and managing forms, polls, and quizzes in FormVox.
 
 ## Getting Started
 
+### The Homepage
+
+When you open FormVox, you see the homepage with:
+
+- **Template Gallery** - Colorful cards for quick form creation (Survey, Poll, Registration, Demo, Blank)
+- **Tabs** - Switch between "Recent" (last 10 modified) and "My forms" (all forms)
+- **Form Cards** - Your existing forms with colored headers matching their template type
+- **New Form button** - Opens a modal for creating a form with custom settings
+
+The template gallery can be collapsed by clicking "Hide templates" to save space.
+
 ### Creating a New Form
 
+**Quick method (via template cards):**
 1. Open the FormVox app from the Nextcloud menu
-2. Click **"New Form"**
-3. Choose a template:
-   - **Blank Form** - Start from scratch
-   - **Poll** - Simple voting with one question
-   - **Survey** - Multiple questions with different types
-   - **Registration** - Contact information collection
-   - **Demo Form** - Example showcasing all features
+2. Click on a template card (e.g., Survey, Poll, Registration)
+3. A modal opens with:
+   - Pre-filled title based on the template
+   - The selected template shown (e.g., "Template: Survey")
+   - Option to choose a save location (default: root folder)
+4. Click **"Create"** to open the form editor
+
+**Via New Form button:**
+1. Click **"New form"** button in the header
+2. Choose your settings in the modal
+3. Click **"Create"**
+
+**Available templates:**
+- **Blank Form** - Start from scratch
+- **Poll** - Quick voting form
+- **Survey** - Feedback and opinions
+- **Registration** - Collect contact info
+- **Demo Form** - All features showcase
 
 ### The Form Editor
 

@@ -3,6 +3,10 @@
     <div class="new-form-modal">
       <h2>{{ t('Create new form') }}</h2>
 
+      <p class="template-info">
+        {{ t('Template') }}: <strong>{{ templateLabel }}</strong>
+      </p>
+
       <NcTextField
         v-model="title"
         :label="t('Form title')"
@@ -24,24 +28,6 @@
         </div>
       </div>
 
-      <div class="template-section">
-        <h3>{{ t('Start from a template') }}</h3>
-        <div class="templates">
-          <button
-            v-for="tmpl in templates"
-            :key="tmpl.id"
-            type="button"
-            class="template-card"
-            :class="{ selected: selectedTemplate === tmpl.id }"
-            @click="selectedTemplate = tmpl.id"
-          >
-            <component :is="tmpl.icon" :size="24" />
-            <span class="template-name">{{ tmpl.name }}</span>
-            <span class="template-description">{{ tmpl.description }}</span>
-          </button>
-        </div>
-      </div>
-
       <div class="actions">
         <NcButton @click="$emit('close')">
           {{ t('Cancel') }}
@@ -55,18 +41,29 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { NcModal, NcButton, NcTextField } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { showError, getFilePickerBuilder, FilePickerType } from '@nextcloud/dialogs';
 import { t } from '@/utils/l10n';
-import FormIcon from './icons/FormIcon.vue';
-import PollIcon from './icons/PollIcon.vue';
-import SurveyIcon from './icons/SurveyIcon.vue';
-import RegistrationIcon from './icons/RegistrationIcon.vue';
-import DemoIcon from './icons/DemoIcon.vue';
 import FolderIcon from './icons/FolderIcon.vue';
+
+const TEMPLATE_NAMES = {
+	blank: 'Blank form',
+	survey: 'Survey',
+	poll: 'Poll',
+	registration: 'Registration',
+	demo: 'Demo Form',
+};
+
+const TEMPLATE_TITLES = {
+	blank: 'Untitled Form',
+	survey: 'New Survey',
+	poll: 'New Poll',
+	registration: 'New Registration',
+	demo: 'Demo Form',
+};
 
 export default {
 	name: 'NewFormModal',
@@ -74,58 +71,28 @@ export default {
 		NcModal,
 		NcButton,
 		NcTextField,
-		FormIcon,
-		PollIcon,
-		SurveyIcon,
-		RegistrationIcon,
-		DemoIcon,
 		FolderIcon,
 	},
 	props: {
 		initialTemplate: {
 			type: String,
-			default: null,
+			default: 'blank',
 		},
 	},
 	emits: ['close', 'created'],
 	setup(props, { emit }) {
 		const title = ref('')
-		const selectedTemplate = ref(props.initialTemplate || 'blank')
 		const creating = ref(false)
 		const selectedPath = ref('')
 
-    const templates = [
-      {
-        id: 'blank',
-        name: t('Blank form'),
-        description: t('Start from scratch'),
-        icon: FormIcon,
-      },
-      {
-        id: 'poll',
-        name: t('Poll'),
-        description: t('Quick voting form'),
-        icon: PollIcon,
-      },
-      {
-        id: 'survey',
-        name: t('Survey'),
-        description: t('Feedback and opinions'),
-        icon: SurveyIcon,
-      },
-      {
-        id: 'registration',
-        name: t('Registration'),
-        description: t('Collect contact info'),
-        icon: RegistrationIcon,
-      },
-      {
-        id: 'demo',
-        name: t('Demo Form'),
-        description: t('All features showcase'),
-        icon: DemoIcon,
-      },
-    ];
+		const templateLabel = computed(() => {
+			return t(TEMPLATE_NAMES[props.initialTemplate] || TEMPLATE_NAMES.blank)
+		})
+
+		onMounted(() => {
+			// Set default title based on template
+			title.value = t(TEMPLATE_TITLES[props.initialTemplate] || TEMPLATE_TITLES.blank)
+		})
 
     const pickFolder = async () => {
       try {
@@ -154,7 +121,7 @@ export default {
         const response = await axios.post(generateUrl('/apps/formvox/api/forms'), {
           title: title.value,
           path: selectedPath.value || '',
-          template: selectedTemplate.value === 'blank' ? null : selectedTemplate.value,
+          template: props.initialTemplate === 'blank' ? null : props.initialTemplate,
         });
 
         emit('created', response.data);
@@ -168,10 +135,9 @@ export default {
 
     return {
       title,
-      selectedTemplate,
+      templateLabel,
       selectedPath,
       creating,
-      templates,
       pickFolder,
       create,
       t,
@@ -186,7 +152,17 @@ export default {
   min-width: 550px;
 
   h2 {
-    margin: 0 0 20px;
+    margin: 0 0 12px;
+  }
+
+  .template-info {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: var(--color-text-maxcontrast);
+
+    strong {
+      color: var(--color-main-text);
+    }
   }
 
   .title-input {
@@ -225,52 +201,6 @@ export default {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-    }
-  }
-
-  .template-section {
-    h3 {
-      margin: 0 0 12px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--color-text-maxcontrast);
-    }
-
-    .templates {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    .template-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px;
-      border: 2px solid var(--color-border);
-      border-radius: var(--border-radius-large);
-      background: var(--color-main-background);
-      cursor: pointer;
-      transition: border-color 0.2s;
-
-      &:hover {
-        border-color: var(--color-primary);
-      }
-
-      &.selected {
-        border-color: var(--color-primary);
-        background: var(--color-primary-element-light);
-      }
-
-      .template-name {
-        margin-top: 8px;
-        font-weight: 600;
-      }
-
-      .template-description {
-        font-size: 12px;
-        color: var(--color-text-maxcontrast);
       }
     }
   }

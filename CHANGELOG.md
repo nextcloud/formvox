@@ -8,10 +8,22 @@ All notable changes to FormVox will be documented in this file.
 - Total users count in telemetry data (consistent with other VoxCloud apps)
 - Complete translations for Dutch (NL), German (DE), and French (FR)
 - 380 translation strings per language
+- Template gallery on homepage with colored template cards (Survey, Poll, Registration, Demo, Blank)
+- Collapsible template section with state persistence in localStorage
+- Form cards with colored headers based on template type
+- Tabs navigation (Recent, My forms) with counts
+- Delete confirmation dialog using Nextcloud Vue NcDialog
 
 ### Changed
 - Telemetry now includes `totalUsers` field alongside `activeUsers30d`
 - Demo form templates (survey, poll, registration, demo) are now fully translatable via IL10N
+- Removed sidebar navigation, moved "New form" button to header
+- Template gallery title changed from "Explore templates" to "New form"
+- Clicking template card now opens modal with pre-selected template and location picker
+- Modal no longer shows template selection (template already chosen by card click)
+
+### Removed
+- Favorites functionality (temporarily removed due to API issues)
 
 ## [0.2.1] - 2026-01-24
 
