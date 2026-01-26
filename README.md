@@ -2,6 +2,14 @@
 
 A file-based forms and polls app for Nextcloud. All form data is stored as `.fvform` files in your Nextcloud file system - no database tables required.
 
+![FormVox Homepage](screenshots/Start.png)
+
+## Screenshots
+
+| Create Form | Edit Form | View Results |
+|-------------|-----------|--------------|
+| ![New form](screenshots/New%20form.png) | ![Edit form](screenshots/Edit%20form.png) | ![Results](screenshots/Result.png) |
+
 ## Languages
 
 FormVox is available in:
@@ -13,28 +21,34 @@ FormVox is available in:
 ## Features
 
 ### Question Types
-- **Text** - Single line text input with optional validation (email, URL, etc.)
-- **Textarea** - Multi-line text for longer responses
-- **Choice** - Single selection (radio buttons)
-- **Multiple** - Multiple selection (checkboxes)
-- **Dropdown** - Single selection from a dropdown menu
-- **Date** - Date picker
-- **DateTime** - Date and time picker
-- **Time** - Time picker only
-- **Number** - Numeric input with min/max validation
-- **Scale** - Linear scale (e.g., 1-10) with labels
-- **Rating** - Star rating (1-5 stars)
-- **Matrix** - Grid/table questions with rows and columns
+
+| Type | Description | Preview |
+|------|-------------|---------|
+| **Text** | Single line text input | ![Text](screenshots/Question%20-%20Text.png) |
+| **Email** | Email input with validation | ![Email](screenshots/Question%20-%20Email.png) |
+| **Textarea** | Multi-line text | ![Multi-line](screenshots/Question%20-%20Multi-line.png) |
+| **Single Choice** | Radio buttons | ![Single choice](screenshots/Question%20-%20Single%20choice.png) |
+| **Multiple Choice** | Checkboxes | ![Multiple choice](screenshots/Question%20-%20Multiple%20choice.png) |
+| **Dropdown** | Dropdown menu | ![Dropdown](screenshots/Question%20-%20Dropdown%20select.png) |
+| **Date** | Date picker | ![Date](screenshots/Question%20-%20Date%20picker.png) |
+| **DateTime** | Date and time picker | ![DateTime](screenshots/Question%20-%20Datetime%20picker.png) |
+| **Time** | Time picker | ![Time](screenshots/Question%20-%20Time%20picker.png) |
+| **Linear Scale** | Scale (e.g., 1-10) | ![Scale](screenshots/Question%20-%20Linear%20scale.png) |
+| **Star Rating** | 1-5 stars | ![Rating](screenshots/Question%20-%20Star%20rating.png) |
+| **Matrix** | Grid/table questions | ![Matrix](screenshots/Question%20-%20Matrix.png) |
 
 ### Advanced Features
-- **Conditional Logic (Branching)** - Show/hide questions based on previous answers
-- **Quiz Mode** - Assign scores to answers and show results
-- **Multi-page Forms** - Split long forms into multiple pages
-- **Piping** - Reference previous answers in question text using `{{question_id}}`
-- **Public Links** - Share forms with anonymous users
-- **Login Required** - Optionally require Nextcloud login to respond
-- **Duplicate Prevention** - Fingerprint-based detection to prevent multiple submissions
-- **Export** - Export responses to CSV or JSON
+
+| Feature | Description | Preview |
+|---------|-------------|---------|
+| **Conditional Logic** | Show/hide questions based on answers | ![Conditional](screenshots/Question%20-%20Conditional.png) |
+| **Quiz Mode** | Assign scores and show results | ![Quiz](screenshots/Question%20-%20Quiz.png) |
+| **Multi-page Forms** | Split long forms into pages | |
+| **Piping** | Reference answers using `{{question_id}}` | |
+| **Public Links** | Share with anonymous users | |
+| **Login Required** | Require Nextcloud login | |
+| **Duplicate Prevention** | Fingerprint-based detection | |
+| **Export** | CSV, JSON, Excel export | |
 
 ### Homepage
 - **Template Gallery** - Quick access to create forms from colorful template cards
@@ -54,25 +68,35 @@ FormVox is available in:
 - **Statistics** - View total forms, responses, and active users
 - **Telemetry** - Optional anonymous usage statistics (opt-out available)
 
+## Requirements
+
+- Nextcloud 28 - 32
+- PHP 8.1+
+
 ## Installation
 
-1. Download or clone this repository to your Nextcloud apps directory:
+### From Nextcloud App Store (Recommended)
+
+1. Go to **Apps** in your Nextcloud instance
+2. Search for "FormVox"
+3. Click **Download and enable**
+
+### Manual Installation
+
+1. Download the latest release from the [releases page](https://github.com/formvox/formvox/releases)
+2. Extract to your Nextcloud apps directory:
    ```bash
    cd /var/www/nextcloud/apps
-   git clone https://gitea.rikdekker.nl/sam/FormVox.git formvox
+   tar -xzf formvox-x.y.z.tar.gz
    ```
-
-2. Set correct permissions:
+3. Set correct permissions:
    ```bash
    sudo chown -R www-data:www-data formvox
    ```
-
-3. Enable the app in Nextcloud:
+4. Enable the app:
    ```bash
    sudo -u www-data php /var/www/nextcloud/occ app:enable formvox
    ```
-
-   Or enable it via the Nextcloud web interface under Apps.
 
 ## Development
 
@@ -180,6 +204,13 @@ FormVox includes optional anonymous telemetry to help improve the app. This can 
 ## License
 
 AGPL-3.0 - See [LICENSE](LICENSE) for details.
+
+## Links
+
+- [Website](https://formvox.app)
+- [Documentation](docs/user-guide.md)
+- [Issue Tracker](https://github.com/formvox/formvox/issues)
+- [Nextcloud App Store](https://apps.nextcloud.com/apps/formvox)
 
 ## Author
 
