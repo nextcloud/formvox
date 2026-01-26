@@ -83,7 +83,7 @@ FormVox is available in:
 
 ### Manual Installation
 
-1. Download the latest release from the [releases page](https://github.com/formvox/formvox/releases)
+1. Download the latest release from the [releases page](https://github.com/nextcloud/formvox/releases)
 2. Extract to your Nextcloud apps directory:
    ```bash
    cd /var/www/nextcloud/apps
@@ -207,9 +207,9 @@ AGPL-3.0 - See [LICENSE](LICENSE) for details.
 
 ## Links
 
-- [Website](https://formvox.app)
+- [Website](https://formvox.voxcloud.nl/)
 - [Documentation](docs/user-guide.md)
-- [Issue Tracker](https://github.com/formvox/formvox/issues)
+- [Issue Tracker](https://github.com/nextcloud/formvox/issues)
 - [Nextcloud App Store](https://apps.nextcloud.com/apps/formvox)
 
 ## Author
