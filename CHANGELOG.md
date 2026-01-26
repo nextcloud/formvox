@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.4] - 2026-01-26
+
+### Changed
+- Added website and documentation links to App Store listing
+
 ## [0.2.3] - 2026-01-26
 
 ### Changed
