@@ -76,4 +76,13 @@ Built with Vue 3 and modern web technologies for a smooth, secure experience.
     <background-jobs>
         <job>OCA\FormVox\BackgroundJob\TelemetryJob</job>
     </background-jobs>
+
+    <repair-steps>
+        <install>
+            <step>OCA\FormVox\Migration\RegisterMimeType</step>
+        </install>
+        <post-migration>
+            <step>OCA\FormVox\Migration\RegisterMimeType</step>
+        </post-migration>
+    </repair-steps>
 </info>
