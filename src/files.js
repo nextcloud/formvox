@@ -50,7 +50,6 @@ function registerFvformFileAction() {
         });
 
         registerFileAction(openAction);
-        console.log('FormVox: File action registered for .fvform files');
     } catch (e) {
         console.error('FormVox: Failed to register file action', e);
     }
@@ -71,7 +70,6 @@ function registerNewFormVoxMenu() {
                 await createNewFvformFile(context.path || '/');
             },
         });
-        console.log('FormVox: New file menu entry registered');
     } catch (e) {
         console.error('FormVox: Failed to register new file menu entry', e);
         tryLegacyNewFileMenu();
@@ -93,7 +91,6 @@ function tryLegacyNewFileMenu() {
                 fileType: 'file',
                 handler: (context) => createNewFvformFile(context?.dir || '/'),
             });
-            console.log('FormVox: Legacy new file menu registered');
         }
     };
 
@@ -172,7 +169,6 @@ function setupFvformClickHandler() {
 
 // Initialize
 function init() {
-    console.log('FormVox: Initializing Files app integration...');
     registerFvformFileAction();
     registerNewFormVoxMenu();
     setupFvformClickHandler();
