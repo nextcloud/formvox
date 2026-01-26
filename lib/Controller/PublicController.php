@@ -17,6 +17,8 @@ use OCP\AppFramework\Services\IInitialState;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
+use OCP\IGroupManager;
+use OCP\IUser;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
@@ -27,6 +29,7 @@ class PublicController extends Controller
 {
     private IUserSession $userSession;
     private IURLGenerator $urlGenerator;
+    private IGroupManager $groupManager;
     private FormService $formService;
     private ResponseService $responseService;
     private BrandingService $brandingService;
@@ -36,6 +39,7 @@ class PublicController extends Controller
         IRequest $request,
         IUserSession $userSession,
         IURLGenerator $urlGenerator,
+        IGroupManager $groupManager,
         FormService $formService,
         ResponseService $responseService,
         BrandingService $brandingService,
@@ -44,10 +48,64 @@ class PublicController extends Controller
         parent::__construct(Application::APP_ID, $request);
         $this->userSession = $userSession;
         $this->urlGenerator = $urlGenerator;
+        $this->groupManager = $groupManager;
         $this->formService = $formService;
         $this->responseService = $responseService;
         $this->brandingService = $brandingService;
         $this->initialState = $initialState;
+    }
+
+    /**
+     * Check if user is allowed to access form based on user/group restrictions
+     */
+    private function isUserAllowed(array $form, ?IUser $user): bool
+    {
+        $allowedUsers = $form['settings']['allowed_users'] ?? [];
+        $allowedGroups = $form['settings']['allowed_groups'] ?? [];
+
+        // No restrictions = everyone allowed
+        if (empty($allowedUsers) && empty($allowedGroups)) {
+            return true;
+        }
+
+        // Restrictions exist but no user = not allowed
+        if ($user === null) {
+            return false;
+        }
+
+        $userId = $user->getUID();
+
+        // Check if user is directly allowed
+        if (in_array($userId, $allowedUsers, true)) {
+            return true;
+        }
+
+        // Check if user is in any allowed group
+        foreach ($allowedGroups as $groupId) {
+            if ($this->groupManager->isInGroup($userId, $groupId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Show unauthorized access page
+     */
+    private function showUnauthorized(string $title): TemplateResponse
+    {
+        $response = new TemplateResponse(
+            Application::APP_ID,
+            'public/unauthorized',
+            [
+                'appId' => Application::APP_ID,
+                'title' => $title,
+            ],
+            'public'
+        );
+        $response->setStatus(Http::STATUS_FORBIDDEN);
+        return $response;
     }
 
     /**
@@ -106,6 +164,29 @@ class PublicController extends Controller
                     ]);
                     $loginUrl = $this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $currentUrl]);
                     return new RedirectResponse($loginUrl);
+                }
+            }
+
+            // Check user/group access restrictions
+            $hasRestrictions = !empty($form['settings']['allowed_users'] ?? [])
+                            || !empty($form['settings']['allowed_groups'] ?? []);
+
+            if ($hasRestrictions) {
+                $user = $this->userSession->getUser();
+
+                // If restrictions exist, require login first
+                if ($user === null) {
+                    $currentUrl = $this->urlGenerator->linkToRoute('formvox.public.showForm', [
+                        'fileId' => $fileId,
+                        'token' => $token
+                    ]);
+                    $loginUrl = $this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $currentUrl]);
+                    return new RedirectResponse($loginUrl);
+                }
+
+                // Check if user is allowed
+                if (!$this->isUserAllowed($form, $user)) {
+                    return $this->showUnauthorized($form['title'] ?? 'Form');
                 }
             }
 
@@ -188,6 +269,20 @@ class PublicController extends Controller
                 return $response;
             }
 
+            // Check user/group access restrictions
+            $hasRestrictions = !empty($form['settings']['allowed_users'] ?? [])
+                            || !empty($form['settings']['allowed_groups'] ?? []);
+
+            if ($hasRestrictions) {
+                $user = $this->userSession->getUser();
+                if ($user === null || !$this->isUserAllowed($form, $user)) {
+                    return new DataResponse(
+                        ['error' => 'You do not have permission to submit this form'],
+                        Http::STATUS_FORBIDDEN
+                    );
+                }
+            }
+
             // Check if form requires login
             if ($form['settings']['require_login'] ?? false) {
                 $user = $this->userSession->getUser();
@@ -198,6 +293,15 @@ class PublicController extends Controller
                     );
                 }
                 // Submit as authenticated user
+                $response = $this->responseService->submitAuthenticated(
+                    $fileId,
+                    $answers,
+                    $user->getUID(),
+                    $user->getDisplayName()
+                );
+            } else if ($hasRestrictions) {
+                // User/group restrictions require authenticated submission
+                $user = $this->userSession->getUser();
                 $response = $this->responseService->submitAuthenticated(
                     $fileId,
                     $answers,
@@ -227,12 +331,6 @@ class PublicController extends Controller
             // Include score if quiz mode
             if (isset($response['score'])) {
                 $responseResult['score'] = $response['score'];
-            }
-
-            // Include redirect to results if enabled
-            $showResults = $form['settings']['show_results'] ?? 'never';
-            if ($showResults === 'after_submit' || $showResults === 'always') {
-                $responseResult['showResults'] = true;
             }
 
             return new DataResponse($responseResult, Http::STATUS_CREATED);
@@ -307,55 +405,6 @@ class PublicController extends Controller
             return new TemplateResponse(
                 Application::APP_ID,
                 'public/respond',
-                [
-                    'appId' => Application::APP_ID,
-                ],
-                'public'
-            );
-        } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage());
-        }
-    }
-
-    /**
-     * Show public results (if enabled)
-     */
-    #[PublicPage]
-    #[NoCSRFRequired]
-    public function showResults(int $fileId, string $token): TemplateResponse
-    {
-        try {
-            $form = $this->loadAndValidateForm($fileId, $token);
-
-            if ($form === null) {
-                return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
-            }
-
-            // Check if results are visible
-            $showResults = $form['settings']['show_results'] ?? 'never';
-            if ($showResults === 'never') {
-                return $this->errorResponse('Results are not available for this form', Http::STATUS_FORBIDDEN);
-            }
-
-            // Get summary (use public method - no user context)
-            $summary = $this->responseService->getSummaryPublic($fileId);
-
-            // Provide initial state to JavaScript
-            $this->initialState->provideInitialState('fileId', $fileId);
-            $this->initialState->provideInitialState('token', $token);
-            $this->initialState->provideInitialState('form', [
-                'title' => $form['title'],
-                'description' => $form['description'],
-                'questions' => $form['questions'],
-            ]);
-            $this->initialState->provideInitialState('summary', $summary);
-
-            Util::addScript(Application::APP_ID, 'formvox-results');
-            Util::addStyle(Application::APP_ID, 'results');
-
-            return new TemplateResponse(
-                Application::APP_ID,
-                'public/results',
                 [
                     'appId' => Application::APP_ID,
                 ],

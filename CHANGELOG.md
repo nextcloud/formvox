@@ -15,6 +15,7 @@ All notable changes to FormVox will be documented in this file.
 - Delete confirmation dialog using Nextcloud Vue NcDialog
 - File-based permission system using Nextcloud's native file permissions
 - New FilePermissionController for permission checks via `/api/permissions/{fileId}`
+- User/group access restrictions for public forms (restrict response access to specific Nextcloud users and/or groups)
 
 ### Changed
 - Telemetry now includes `totalUsers` field alongside `activeUsers30d`

@@ -76,7 +76,7 @@
               <template #icon>
                 <CogIcon :size="20" />
               </template>
-              {{ t('Settings') }}
+              {{ t('Work together') }}
             </NcActionButton>
             <NcActionButton :disabled="!canEditSettings" @click="showBranding = true">
               <template #icon>
