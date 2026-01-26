@@ -8,6 +8,7 @@ use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\Files\Events\Node\NodeCopiedEvent;
 use OCP\Files\File;
+use OCP\IDBConnection;
 use OCA\FormVox\AppInfo\Application;
 
 /**
@@ -18,6 +19,13 @@ use OCA\FormVox\AppInfo\Application;
  */
 class FormCopiedListener implements IEventListener
 {
+    private IDBConnection $db;
+
+    public function __construct(IDBConnection $db)
+    {
+        $this->db = $db;
+    }
+
     public function handle(Event $event): void
     {
         if (!($event instanceof NodeCopiedEvent)) {
@@ -87,10 +95,43 @@ class FormCopiedListener implements IEventListener
             // Touch the file to update mtime in cache
             $storage->touch($internalPath);
 
+            // Delete version history for this new file
+            $this->deleteVersionHistory($target);
+
         } catch (\Exception $e) {
             // Silently fail - don't break the copy operation
             \OCP\Server::get(\Psr\Log\LoggerInterface::class)->warning(
                 'FormVox: Failed to clean copied form: ' . $e->getMessage(),
+                ['app' => Application::APP_ID]
+            );
+        }
+    }
+
+    /**
+     * Delete version history for a file using the Versions backend
+     */
+    private function deleteVersionHistory(File $file): void
+    {
+        try {
+            // Use the Versions app backend to properly delete versions
+            $versionsBackend = \OCP\Server::get(\OCA\Files_Versions\Versions\IVersionManager::class);
+            $user = \OCP\Server::get(\OCP\IUserSession::class)->getUser();
+
+            if ($user === null) {
+                return;
+            }
+
+            // Get all versions for this file
+            $versions = $versionsBackend->getVersionsForFile($user, $file);
+
+            // Delete each version
+            foreach ($versions as $version) {
+                $versionsBackend->deleteVersion($version);
+            }
+        } catch (\Exception $e) {
+            // Versions app might not be available or other error, ignore
+            \OCP\Server::get(\Psr\Log\LoggerInterface::class)->debug(
+                'FormVox: Could not delete versions: ' . $e->getMessage(),
                 ['app' => Application::APP_ID]
             );
         }

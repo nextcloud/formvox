@@ -279,7 +279,7 @@ class FormService
 
     /**
      * Append response with database-based locking to prevent race conditions
-     * Uses Nextcloud's File API (putContent) to ensure proper cache updates
+     * Uses direct storage access to avoid creating new file versions for each response
      */
     private function appendResponseWithLock(File $file, array $response): array
     {
@@ -302,8 +302,12 @@ class FormService
                 $qb->executeStatement();
 
                 try {
-                    // We have the lock, do the work using Nextcloud's File API
-                    $content = $file->getContent();
+                    // Get storage for direct access (bypasses versioning)
+                    $storage = $file->getStorage();
+                    $internalPath = $file->getInternalPath();
+
+                    // Read content directly from storage
+                    $content = $storage->file_get_contents($internalPath);
                     $form = json_decode($content, true);
 
                     if ($form === null) {
@@ -318,8 +322,14 @@ class FormService
                     $this->indexService->updateIndex($form, $response, \count($form['responses']) - 1);
                     $form['modified_at'] = date('c');
 
-                    // Use Nextcloud's putContent to properly update the file cache
-                    $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                    // Write directly to storage (bypasses versioning)
+                    $storage->file_put_contents($internalPath, json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+                    // Touch the file to update mtime in cache
+                    $storage->touch($internalPath);
+
+                    // Delete any versions created during this write
+                    $this->deleteVersionsForFile($file);
 
                     return $response;
                 } finally {
@@ -360,12 +370,52 @@ class FormService
     }
 
     /**
+     * Delete all versions for a file to prevent version history from responses
+     * Uses IVersionManager to properly delete versions including physical files
+     */
+    private function deleteVersionsForFile(File $file): void
+    {
+        try {
+            $versionsBackend = \OCP\Server::get(\OCA\Files_Versions\Versions\IVersionManager::class);
+            $user = $this->userSession->getUser();
+
+            if ($user === null) {
+                // Try to get user from file owner for public submissions
+                $owner = $file->getOwner();
+                if ($owner === null) {
+                    return;
+                }
+                // Get IUser object from owner
+                $userManager = \OCP\Server::get(\OCP\IUserManager::class);
+                $user = $userManager->get($owner->getUID());
+                if ($user === null) {
+                    return;
+                }
+            }
+
+            // Get all versions for this file
+            $versions = $versionsBackend->getVersionsForFile($user, $file);
+
+            // Delete each version
+            foreach ($versions as $version) {
+                $versionsBackend->deleteVersion($version);
+            }
+        } catch (\Exception $e) {
+            // Versions app might not be available or other error, ignore
+        }
+    }
+
+    /**
      * Delete a response from a form
+     * Uses direct storage access to avoid creating new file versions
      */
     public function deleteResponse(int $fileId, string $responseId): void
     {
         $file = $this->getFileById($fileId);
-        $form = json_decode($file->getContent(), true);
+        $storage = $file->getStorage();
+        $internalPath = $file->getInternalPath();
+
+        $form = json_decode($storage->file_get_contents($internalPath), true);
 
         // Find and remove response
         $found = false;
@@ -386,16 +436,25 @@ class FormService
 
         $form['modified_at'] = date('c');
 
-        $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        // Write directly to storage (bypasses versioning)
+        $storage->file_put_contents($internalPath, json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $storage->touch($internalPath);
+
+        // Delete any versions created during this write
+        $this->deleteVersionsForFile($file);
     }
 
     /**
      * Delete all responses from a form
+     * Uses direct storage access to avoid creating new file versions
      */
     public function deleteAllResponses(int $fileId): void
     {
         $file = $this->getFileById($fileId);
-        $form = json_decode($file->getContent(), true);
+        $storage = $file->getStorage();
+        $internalPath = $file->getInternalPath();
+
+        $form = json_decode($storage->file_get_contents($internalPath), true);
 
         // Clear all responses
         $form['responses'] = [];
@@ -405,7 +464,12 @@ class FormService
 
         $form['modified_at'] = date('c');
 
-        $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        // Write directly to storage (bypasses versioning)
+        $storage->file_put_contents($internalPath, json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $storage->touch($internalPath);
+
+        // Delete any versions created during this write
+        $this->deleteVersionsForFile($file);
     }
 
     /**
