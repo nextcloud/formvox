@@ -292,15 +292,22 @@ class PublicController extends Controller
                         Http::STATUS_FORBIDDEN
                     );
                 }
-                // Submit as authenticated user
-                $response = $this->responseService->submitAuthenticated(
+            }
+
+            // Check if anonymous collection is enabled
+            $isAnonymous = $form['settings']['anonymous'] ?? true;
+
+            if ($isAnonymous) {
+                // Submit as anonymous (even if user is logged in)
+                $response = $this->responseService->submitAnonymousWithForm(
                     $fileId,
+                    $form,
                     $answers,
-                    $user->getUID(),
-                    $user->getDisplayName()
+                    $this->request,
+                    $token
                 );
-            } else if ($hasRestrictions) {
-                // User/group restrictions require authenticated submission
+            } else if ($hasRestrictions || ($form['settings']['require_login'] ?? false)) {
+                // User/group restrictions or require_login with non-anonymous = authenticated submission
                 $user = $this->userSession->getUser();
                 $response = $this->responseService->submitAuthenticated(
                     $fileId,
@@ -309,7 +316,7 @@ class PublicController extends Controller
                     $user->getDisplayName()
                 );
             } else {
-                // Submit as anonymous
+                // No login required and anonymous enabled (default)
                 $response = $this->responseService->submitAnonymousWithForm(
                     $fileId,
                     $form,
