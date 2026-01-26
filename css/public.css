@@ -54,6 +54,20 @@ body.theme--dark {
   min-height: 100vh;
 }
 
+/* Dark mode background for body - explicit rule for iOS Safari */
+@media (prefers-color-scheme: dark) {
+  #body-public {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+  }
+}
+
+/* Nextcloud dark theme class support for body */
+[data-themes*="dark"] #body-public,
+.theme--dark #body-public,
+body.theme--dark#body-public {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+}
+
 /* Public container */
 #formvox-public {
   max-width: min(700px, 100vw);
