@@ -2,6 +2,8 @@
 
 A complete guide to creating and managing forms, polls, and quizzes in FormVox.
 
+![FormVox Homepage](../screenshots/Start.png)
+
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
@@ -46,6 +48,8 @@ The template gallery can be collapsed by clicking "Hide templates" to save space
 2. Choose your settings in the modal
 3. Click **"Create"**
 
+![New form modal](../screenshots/New%20form.png)
+
 **Available templates:**
 - **Blank Form** - Start from scratch
 - **Poll** - Quick voting form
@@ -60,6 +64,8 @@ The editor consists of three parts:
 - **Center area** - Questions and preview
 - **Top bar** - Save, share, and view responses
 
+![Form Editor](../screenshots/Edit%20form.png)
+
 ---
 
 ## Question Types
@@ -67,11 +73,17 @@ The editor consists of three parts:
 ### Text
 Single-line text input for short answers like names, email addresses, or short responses.
 
+![Text question](../screenshots/Question%20-%20Text.png)
+
 ### Textarea
 Multi-line text field for longer responses such as comments, descriptions, or explanations.
 
+![Textarea question](../screenshots/Question%20-%20Multi-line.png)
+
 ### Choice (Single Select)
 Radio buttons where users can select exactly one option from a list.
+
+![Single choice question](../screenshots/Question%20-%20Single%20choice.png)
 
 **Settings:**
 - Options (add/remove/reorder via drag & drop)
@@ -80,12 +92,16 @@ Radio buttons where users can select exactly one option from a list.
 ### Multiple (Multi Select)
 Checkboxes where users can select multiple options from a list.
 
+![Multiple choice question](../screenshots/Question%20-%20Multiple%20choice.png)
+
 **Settings:**
 - Options (add/remove/reorder via drag & drop)
 - Quiz mode with scores per option
 
 ### Dropdown
 Single selection from a dropdown menu. Ideal for long lists of options.
+
+![Dropdown question](../screenshots/Question%20-%20Dropdown%20select.png)
 
 **Settings:**
 - Options (add/remove/reorder via drag & drop)
@@ -94,17 +110,25 @@ Single selection from a dropdown menu. Ideal for long lists of options.
 ### Date
 Date picker for selecting a date without time.
 
+![Date picker](../screenshots/Question%20-%20Date%20picker.png)
+
 ### DateTime
 Combined date and time picker for selecting both a date and time.
 
+![DateTime picker](../screenshots/Question%20-%20Datetime%20picker.png)
+
 ### Time
 Time picker for selecting only a time without a date.
+
+![Time picker](../screenshots/Question%20-%20Time%20picker.png)
 
 ### Number
 Numeric input for quantities, ages, amounts, etc.
 
 ### Scale (Linear Scale)
 Number scale for ratings or opinions (e.g., 1-5 or 1-10).
+
+![Linear scale](../screenshots/Question%20-%20Linear%20scale.png)
 
 **Settings:**
 - Minimum value (default: 1)
@@ -115,11 +139,15 @@ Number scale for ratings or opinions (e.g., 1-5 or 1-10).
 ### Rating (Stars)
 Star rating for quick feedback.
 
+![Star rating](../screenshots/Question%20-%20Star%20rating.png)
+
 **Settings:**
 - Maximum stars (default: 5)
 
 ### Matrix (Grid)
 Table format with questions in rows and answer options in columns. Useful for comparing multiple items using the same scale.
+
+![Matrix question](../screenshots/Question%20-%20Matrix.png)
 
 **Settings:**
 - Rows (sub-questions)
@@ -206,6 +234,8 @@ Use the public link in an iframe to embed the form on external websites:
 
 Show or hide questions based on previous answers.
 
+![Conditional logic](../screenshots/Question%20-%20Conditional.png)
+
 ### Setting Up Conditional Logic
 
 1. Click the gear icon on a question
@@ -250,6 +280,8 @@ Show a follow-up question only when the user selects "Other":
 ## Quiz Mode
 
 Create quizzes with scoring by assigning points to answer options.
+
+![Quiz mode](../screenshots/Question%20-%20Quiz.png)
 
 ### Enabling Quiz Mode
 
@@ -305,6 +337,8 @@ Users see:
 ### Results Dashboard
 
 Access results by clicking **"Responses"** in the form editor.
+
+![Results view](../screenshots/Result.png)
 
 **Summary View:**
 - Total number of responses
@@ -427,6 +461,7 @@ All exports include:
 
 ## Need Help?
 
-- Report issues: [GitHub Issues](https://github.com/anthropics/claude-code/issues)
-- Check the README for technical details
+- Website: [formvox.voxcloud.nl](https://formvox.voxcloud.nl/)
+- Report issues: [GitHub Issues](https://github.com/nextcloud/formvox/issues)
+- Check the [README](../README.md) for technical details
 - Contact your Nextcloud administrator
