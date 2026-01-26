@@ -8,8 +8,10 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\Files\Events\Node\NodeCopiedEvent;
 use OCA\Files\Event\LoadAdditionalScriptsEvent;
 use OCA\FormVox\Listener\LoadFilesPluginListener;
+use OCA\FormVox\Listener\FormCopiedListener;
 use OCA\FormVox\Preview\FormPreview;
 
 class Application extends App implements IBootstrap
@@ -30,6 +32,9 @@ class Application extends App implements IBootstrap
 
         // Register Files app integration listener
         $context->registerEventListener(LoadAdditionalScriptsEvent::class, LoadFilesPluginListener::class);
+
+        // Register listener to clean form data when copied
+        $context->registerEventListener(NodeCopiedEvent::class, FormCopiedListener::class);
     }
 
     public function boot(IBootContext $context): void
