@@ -2,6 +2,12 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.3] - 2026-01-26
+
+### Changed
+- Updated authors in App Store metadata (Sam Ditmeijer & Rik Dekker)
+- Added screenshots to App Store listing
+
 ## [0.2.2] - 2026-01-25
 
 ### Added

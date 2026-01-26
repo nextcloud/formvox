@@ -27,6 +27,15 @@ Follow this checklist for every release to the Nextcloud App Store.
 - Keep your `.key` file safe (backup in secure location, NOT in git!)
 - After certificate change: download the new certificate and store with the key
 
+### Certificate Location
+- Certificates are stored in `certificates/` directory (LOCAL ONLY)
+- This folder is **excluded from GitHub** (public) but included in Gitea (private)
+- If key is missing locally, restore from Gitea:
+  ```bash
+  git show gitea/main:certificates/formvox.key > certificates/formvox.key
+  chmod 600 certificates/formvox.key
+  ```
+
 ---
 
 ## 1. Code Quality & Security
@@ -123,6 +132,10 @@ Follow this checklist for every release to the Nextcloud App Store.
 - [ ] Branch is up-to-date with main/master
 - [ ] Merge conflicts are resolved
 - [ ] Check that sensitive files are not in git history
+- [ ] Verify all remotes are configured correctly: `git remote -v`
+- [ ] Push to GitHub (public): `git push github main && git push github vX.Y.Z`
+- [ ] Push to Gitea (private): `git push gitea main`
+- [ ] **Note:** GitHub should NOT contain `certificates/` folder
 
 ---
 
@@ -197,6 +210,23 @@ npm audit
 
 ---
 
+## First Time App Store Registration
+
+**Only needed once** when registering a new app for the first time.
+
+1. Go to https://apps.nextcloud.com/developer/apps/new
+2. **Public certificate:** Paste the full content of `certificates/formvox.crt`
+3. **Signature over app's ID:** Generate with:
+   ```bash
+   echo -n "formvox" | openssl dgst -sha512 -sign certificates/formvox.key | openssl base64 -A
+   ```
+4. Click "Register"
+
+After registration, you can upload releases at:
+https://apps.nextcloud.com/developer/apps/formvox/releases/new
+
+---
+
 ## Quick Release Flow
 
 ### 1. Preparation
@@ -208,13 +238,15 @@ npm run build
 ```bash
 git add -A
 git commit -m "Release vX.Y.Z - [Label]"
-git push origin main
+git push gitea main
+git push github main
 ```
 
 ### 3. Create Tag
 ```bash
 git tag -a vX.Y.Z -m "Release vX.Y.Z - [Label]"
-git push origin vX.Y.Z
+git push github vX.Y.Z
+git push gitea vX.Y.Z
 ```
 
 ### 4. Create Tarball
@@ -235,13 +267,13 @@ rm -rf "$TEMP_DIR"
 
 ### 5. GitHub Release
 ```bash
-gh release create vX.Y.Z --title "vX.Y.Z - [Label]" --notes "[notes]"
-gh release upload vX.Y.Z formvox-X.Y.Z.tar.gz
+gh release create vX.Y.Z --repo nextcloud/formvox --title "vX.Y.Z - [Label]" --notes "[notes]"
+gh release upload vX.Y.Z formvox-X.Y.Z.tar.gz --repo nextcloud/formvox
 ```
 
 ### 6. Generate Signature (for App Store)
 ```bash
-openssl dgst -sha512 -sign formvox.key formvox-X.Y.Z.tar.gz | openssl base64 -A
+openssl dgst -sha512 -sign certificates/formvox.key formvox-X.Y.Z.tar.gz | openssl base64 -A
 ```
 
 ### 7. App Store Upload
@@ -262,4 +294,4 @@ openssl dgst -sha512 -sign formvox.key formvox-X.Y.Z.tar.gz | openssl base64 -A
 
 ---
 
-*Last updated: January 2026*
+*Last updated: 26 January 2026*
