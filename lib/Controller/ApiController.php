@@ -13,6 +13,7 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\IUserManager;
+use OCP\IGroupManager;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
@@ -27,6 +28,7 @@ class ApiController extends Controller
     private IndexService $indexService;
     private IUserSession $userSession;
     private IUserManager $userManager;
+    private IGroupManager $groupManager;
 
     public function __construct(
         IRequest $request,
@@ -35,7 +37,8 @@ class ApiController extends Controller
         PermissionService $permissionService,
         IndexService $indexService,
         IUserSession $userSession,
-        IUserManager $userManager
+        IUserManager $userManager,
+        IGroupManager $groupManager
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
@@ -44,6 +47,7 @@ class ApiController extends Controller
         $this->indexService = $indexService;
         $this->userSession = $userSession;
         $this->userManager = $userManager;
+        $this->groupManager = $groupManager;
     }
 
     /**
@@ -450,5 +454,40 @@ class ApiController extends Controller
         $name = preg_replace('/\s+/', '-', $name);
         $name = strtolower($name);
         return substr($name, 0, 50);
+    }
+
+    /**
+     * Search users and groups for access restriction picker
+     */
+    #[NoAdminRequired]
+    public function searchSharees(string $search = '', int $limit = 10): DataResponse
+    {
+        try {
+            $users = [];
+            foreach ($this->userManager->search($search, $limit) as $user) {
+                $users[] = [
+                    'id' => $user->getUID(),
+                    'displayName' => $user->getDisplayName(),
+                ];
+            }
+
+            $groups = [];
+            foreach ($this->groupManager->search($search, $limit) as $group) {
+                $groups[] = [
+                    'id' => $group->getGID(),
+                    'displayName' => $group->getDisplayName(),
+                ];
+            }
+
+            return new DataResponse([
+                'users' => $users,
+                'groups' => $groups,
+            ]);
+        } catch (\Exception $e) {
+            return new DataResponse(
+                ['error' => $e->getMessage()],
+                Http::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
     }
 }

@@ -577,8 +577,9 @@ class FormService
                 'anonymous' => true,
                 'allow_multiple' => false,
                 'expires_at' => null,
-                'show_results' => 'after_submit',
                 'require_login' => false,
+                'allowed_users' => [],
+                'allowed_groups' => [],
             ],
             'permissions' => [
                 'owner' => $userId,
@@ -649,9 +650,6 @@ class FormService
                             ['id' => 'opt3', 'label' => $this->l->t('Option C'), 'value' => 'c'],
                         ],
                     ],
-                ],
-                'settings' => [
-                    'show_results' => 'always',
                 ],
             ],
             'registration' => [
@@ -910,7 +908,6 @@ class FormService
                 'settings' => [
                     'anonymous' => true,
                     'allow_multiple' => true,
-                    'show_results' => 'after_submit',
                 ],
             ],
         ];

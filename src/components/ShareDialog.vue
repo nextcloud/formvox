@@ -35,6 +35,31 @@
         </div>
       </div>
 
+      <div v-if="shareLink" class="response-settings">
+        <h3>{{ t('Response settings') }}</h3>
+
+        <NcCheckboxRadioSwitch
+          :model-value="responseSettings.allowAnonymous"
+          @update:model-value="updateResponseSetting('anonymous', $event)"
+        >
+          {{ t('Collect anonymously') }}
+        </NcCheckboxRadioSwitch>
+
+        <NcCheckboxRadioSwitch
+          :model-value="responseSettings.allowMultiple"
+          @update:model-value="updateResponseSetting('allow_multiple', $event)"
+        >
+          {{ t('Allow multiple submissions') }}
+        </NcCheckboxRadioSwitch>
+
+        <NcCheckboxRadioSwitch
+          :model-value="responseSettings.requireLogin"
+          @update:model-value="updateResponseSetting('require_login', $event)"
+        >
+          {{ t('Require login to respond') }}
+        </NcCheckboxRadioSwitch>
+      </div>
+
       <div v-if="shareLink" class="link-settings">
         <h3>{{ t('Link settings') }}</h3>
 
@@ -70,6 +95,86 @@
           type="datetime"
           @update:value="linkSettings.expiresAt = $event"
         />
+
+        <NcCheckboxRadioSwitch
+          :model-value="accessRestrictions.enabled"
+          @update:model-value="toggleAccessRestrictions"
+        >
+          {{ t('Restrict to specific users/groups') }}
+        </NcCheckboxRadioSwitch>
+
+        <div v-if="accessRestrictions.enabled" class="access-restrictions">
+          <p class="restriction-note">
+            {{ t('Only selected users and group members can access this form. They will need to log in.') }}
+          </p>
+
+          <div class="search-field">
+            <NcTextField
+              v-model="searchTerm"
+              :label="t('Search users and groups')"
+              :placeholder="t('Type to search...')"
+              @input="searchSharees"
+            />
+          </div>
+
+          <div v-if="searchResults.users.length || searchResults.groups.length" class="search-results">
+            <div v-if="searchResults.users.length" class="result-section">
+              <span class="section-label">{{ t('Users') }}</span>
+              <div
+                v-for="user in searchResults.users"
+                :key="'user-' + user.id"
+                class="result-item"
+                @click="addUser(user)"
+              >
+                <AccountIcon :size="16" />
+                <span>{{ user.displayName }}</span>
+              </div>
+            </div>
+
+            <div v-if="searchResults.groups.length" class="result-section">
+              <span class="section-label">{{ t('Groups') }}</span>
+              <div
+                v-for="group in searchResults.groups"
+                :key="'group-' + group.id"
+                class="result-item"
+                @click="addGroup(group)"
+              >
+                <AccountGroupIcon :size="16" />
+                <span>{{ group.displayName }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="accessRestrictions.users.length" class="selected-items">
+            <span class="section-label">{{ t('Allowed users') }}</span>
+            <div class="chips">
+              <div
+                v-for="user in accessRestrictions.users"
+                :key="'selected-user-' + user.id"
+                class="chip"
+              >
+                <AccountIcon :size="14" />
+                <span>{{ user.displayName }}</span>
+                <button type="button" class="remove-btn" @click="removeUser(user.id)">×</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="accessRestrictions.groups.length" class="selected-items">
+            <span class="section-label">{{ t('Allowed groups') }}</span>
+            <div class="chips">
+              <div
+                v-for="group in accessRestrictions.groups"
+                :key="'selected-group-' + group.id"
+                class="chip"
+              >
+                <AccountGroupIcon :size="14" />
+                <span>{{ group.displayName }}</span>
+                <button type="button" class="remove-btn" @click="removeGroup(group.id)">×</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="delete-link-section">
           <NcButton type="tertiary" @click="deleteShareLink">
@@ -111,6 +216,8 @@ import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { showError, showSuccess } from '@nextcloud/dialogs';
 import CopyIcon from './icons/CopyIcon.vue';
+import AccountIcon from 'vue-material-design-icons/Account.vue';
+import AccountGroupIcon from 'vue-material-design-icons/AccountGroup.vue';
 
 export default {
   name: 'ShareDialog',
@@ -121,6 +228,8 @@ export default {
     NcCheckboxRadioSwitch,
     NcDateTimePicker,
     CopyIcon,
+    AccountIcon,
+    AccountGroupIcon,
   },
   props: {
     fileId: {
@@ -151,6 +260,23 @@ export default {
       expires: false,
       expiresAt: null,
     });
+
+    // Response settings state
+    const responseSettings = reactive({
+      allowAnonymous: props.form.settings?.anonymous ?? true,
+      allowMultiple: props.form.settings?.allow_multiple ?? false,
+      requireLogin: props.form.settings?.require_login ?? false,
+    });
+
+    // Access restrictions state
+    const accessRestrictions = reactive({
+      enabled: false,
+      users: [],
+      groups: [],
+    });
+    const searchTerm = ref('');
+    const searchResults = reactive({ users: [], groups: [] });
+    let searchTimeout = null;
 
     const loadExistingShare = async () => {
       try {
@@ -358,8 +484,129 @@ export default {
       }
     };
 
+    // Access restrictions functions
+    const toggleAccessRestrictions = (enabled) => {
+      accessRestrictions.enabled = enabled;
+      if (!enabled) {
+        accessRestrictions.users = [];
+        accessRestrictions.groups = [];
+        saveAccessRestrictions();
+      }
+    };
+
+    const searchSharees = () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      searchTimeout = setTimeout(async () => {
+        const term = searchTerm.value;
+        if (!term || term.length < 2) {
+          searchResults.users = [];
+          searchResults.groups = [];
+          return;
+        }
+
+        try {
+          const response = await axios.get(
+            generateUrl('/apps/formvox/api/sharees'),
+            { params: { search: term, limit: 10 } }
+          );
+          searchResults.users = response.data.users || [];
+          searchResults.groups = response.data.groups || [];
+        } catch (error) {
+          console.error('Search failed:', error);
+        }
+      }, 300);
+    };
+
+    const addUser = (user) => {
+      if (!accessRestrictions.users.find(u => u.id === user.id)) {
+        accessRestrictions.users.push(user);
+        saveAccessRestrictions();
+      }
+      searchTerm.value = '';
+      searchResults.users = [];
+      searchResults.groups = [];
+    };
+
+    const addGroup = (group) => {
+      if (!accessRestrictions.groups.find(g => g.id === group.id)) {
+        accessRestrictions.groups.push(group);
+        saveAccessRestrictions();
+      }
+      searchTerm.value = '';
+      searchResults.users = [];
+      searchResults.groups = [];
+    };
+
+    const removeUser = (userId) => {
+      accessRestrictions.users = accessRestrictions.users.filter(u => u.id !== userId);
+      saveAccessRestrictions();
+    };
+
+    const removeGroup = (groupId) => {
+      accessRestrictions.groups = accessRestrictions.groups.filter(g => g.id !== groupId);
+      saveAccessRestrictions();
+    };
+
+    const saveAccessRestrictions = async () => {
+      try {
+        const settings = {
+          ...props.form.settings,
+          allowed_users: accessRestrictions.users.map(u => u.id),
+          allowed_groups: accessRestrictions.groups.map(g => g.id),
+        };
+
+        await axios.put(
+          generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
+          { settings }
+        );
+
+        props.form.settings.allowed_users = settings.allowed_users;
+        props.form.settings.allowed_groups = settings.allowed_groups;
+
+        showSuccess(t('Access restrictions saved'));
+      } catch (error) {
+        showError(t('Failed to save access restrictions'));
+        console.error(error);
+      }
+    };
+
+    const loadAccessRestrictions = () => {
+      const users = props.form.settings?.allowed_users || [];
+      const groups = props.form.settings?.allowed_groups || [];
+
+      accessRestrictions.enabled = users.length > 0 || groups.length > 0;
+      accessRestrictions.users = users.map(id => ({ id, displayName: id }));
+      accessRestrictions.groups = groups.map(id => ({ id, displayName: id }));
+    };
+
+    const updateResponseSetting = async (key, value) => {
+      responseSettings[key === 'anonymous' ? 'allowAnonymous' : key === 'allow_multiple' ? 'allowMultiple' : 'requireLogin'] = value;
+
+      try {
+        const settings = {
+          ...props.form.settings,
+          [key]: value,
+        };
+
+        await axios.put(
+          generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
+          { settings }
+        );
+
+        props.form.settings[key] = value;
+        showSuccess(t('Settings saved'));
+      } catch (error) {
+        showError(t('Failed to save settings'));
+        console.error(error);
+      }
+    };
+
     onMounted(() => {
       loadExistingShare();
+      loadAccessRestrictions();
     });
 
     return {
@@ -368,7 +615,11 @@ export default {
       creatingLink,
       linkInput,
       linkSettings,
+      responseSettings,
       responseCount,
+      accessRestrictions,
+      searchTerm,
+      searchResults,
       createShareLink,
       copyLink,
       togglePassword,
@@ -376,6 +627,13 @@ export default {
       savePassword,
       deleteShareLink,
       confirmDeleteResponses,
+      toggleAccessRestrictions,
+      searchSharees,
+      addUser,
+      addGroup,
+      removeUser,
+      removeGroup,
+      updateResponseSetting,
       t,
     };
   },
@@ -433,6 +691,13 @@ export default {
   }
 }
 
+.response-settings {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+}
+
 .link-settings {
   margin-bottom: 24px;
   padding: 16px;
@@ -475,5 +740,96 @@ export default {
   justify-content: flex-end;
   padding-top: 20px;
   border-top: 1px solid var(--color-border);
+}
+
+.access-restrictions {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--color-background-dark);
+  border-radius: var(--border-radius);
+
+  .restriction-note {
+    font-size: 13px;
+    color: var(--color-text-maxcontrast);
+    margin: 0 0 12px;
+  }
+
+  .search-field {
+    margin-bottom: 12px;
+  }
+
+  .search-results {
+    background: var(--color-main-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+
+  .result-section {
+    .section-label {
+      display: block;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-maxcontrast);
+      background: var(--color-background-hover);
+    }
+  }
+
+  .result-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-background-hover);
+    }
+  }
+
+  .selected-items {
+    margin-top: 12px;
+
+    .section-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--color-primary-element-light);
+    border-radius: var(--border-radius-pill);
+    font-size: 13px;
+
+    .remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      margin-left: 2px;
+      color: var(--color-text-maxcontrast);
+
+      &:hover {
+        color: var(--color-error);
+      }
+    }
+  }
 }
 </style>

@@ -31,10 +31,6 @@
         <div class="score-value">{{ score.total }} / {{ score.max }}</div>
         <div class="score-percentage" :style="{ color: globalStyles.primaryColor }">{{ score.percentage }}%</div>
       </div>
-
-      <NcButton v-if="showResultsLink" @click="viewResults">
-        {{ t('View results') }}
-      </NcButton>
     </div>
 
     <!-- Form -->
@@ -155,7 +151,6 @@ export default {
     const submitting = ref(false);
     const error = ref(null);
     const score = ref(null);
-    const showResultsLink = ref(false);
     const currentPageIndex = ref(0);
 
     const globalStyles = computed(() => props.branding?.globalStyles || {
@@ -365,22 +360,11 @@ export default {
         if (response.data.score) {
           score.value = response.data.score;
         }
-
-        if (response.data.showResults) {
-          showResultsLink.value = true;
-        }
       } catch (err) {
         error.value = err.response?.data?.error || t('Failed to submit response');
       } finally {
         submitting.value = false;
       }
-    };
-
-    const viewResults = () => {
-      window.location.href = generateUrl('/apps/formvox/public/{fileId}/{token}/results', {
-        fileId: props.fileId,
-        token: props.token
-      });
     };
 
     return {
@@ -389,7 +373,6 @@ export default {
       submitting,
       error,
       score,
-      showResultsLink,
       currentPageIndex,
       pages,
       currentPage,
@@ -406,7 +389,6 @@ export default {
       previousPage,
       nextPage,
       submit,
-      viewResults,
       t,
     };
   },
