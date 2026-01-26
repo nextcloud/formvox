@@ -54,6 +54,18 @@ body.theme--dark {
   min-height: 100vh;
 }
 
+/* Nextcloud-style header: blue background with white logo/text */
+#body-public #header {
+  background-color: #0082c9 !important;
+}
+
+#body-public #header,
+#body-public #header .header-appname,
+#body-public #header .header-appname-container,
+#body-public #header a {
+  color: #fff !important;
+}
+
 /* Dark mode background for body - explicit rule for iOS Safari */
 @media (prefers-color-scheme: dark) {
   #body-public {
