@@ -42,14 +42,20 @@ FormVox is a file-based forms and polls app for Nextcloud. Unlike traditional fo
 
 Built with Vue 3 and modern web technologies for a smooth, secure experience.
     ]]></description>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
     <licence>agpl</licence>
-    <author mail="info@formvox.app">FormVox</author>
+    <author mail="sam@mief.info">Sam Ditmeijer</author>
+    <author mail="rik@shalution.nl">Rik Dekker</author>
     <namespace>FormVox</namespace>
     <category>office</category>
     <category>organization</category>
     <bugs>https://github.com/nextcloud/formvox/issues</bugs>
     <repository type="git">https://github.com/nextcloud/formvox.git</repository>
+
+    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Start.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/New%20form.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Edit%20form.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Result.png</screenshot>
 
     <dependencies>
         <nextcloud min-version="28" max-version="32"/>
