@@ -25,3 +25,9 @@ npm-debug.log*
 # Temporary files
 *.tmp
 *.temp
+
+# Certificates and private keys (NEVER commit!)
+*.key
+*.pem
+certificates/*.key
+certificates/*.csr

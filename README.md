@@ -114,7 +114,7 @@ npm run build
 
 ### Build Commands
 - `npm run build` - Production build
-- `npm run dev` - Development build with watch mode
+- `npm run watch` - Development build with watch mode
 
 ## File Format
 
@@ -207,11 +207,12 @@ AGPL-3.0 - See [LICENSE](LICENSE) for details.
 
 ## Links
 
-- [Website](https://formvox.voxcloud.nl/)
-- [Documentation](docs/user-guide.md)
+- [Website](https://github.com/nextcloud/formvox)
+- [Documentation](docs/index.md)
+- [Comparison with Nextcloud Forms](docs/architecture/comparison.md)
 - [Issue Tracker](https://github.com/nextcloud/formvox/issues)
 - [Nextcloud App Store](https://apps.nextcloud.com/apps/formvox)
 
-## Author
+## Authors
 
-Developed by Sam Ditmeijer
+Developed by Sam Ditmeijer & Rik Dekker
