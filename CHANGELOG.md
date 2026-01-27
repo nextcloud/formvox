@@ -2,6 +2,24 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.5] - 2026-01-27
+
+### Added
+- Comprehensive documentation structure in `docs/` folder
+  - User guides (creating forms, question types, advanced features, sharing, results, exporting)
+  - Admin guides (installation, configuration, security)
+  - Architecture docs (overview, file format, API reference, comparison with Nextcloud Forms)
+- Pre-commit hook to prevent accidental commit of private keys
+- Security: Added `*.key` and `*.pem` to `.gitignore`
+
+### Changed
+- Updated README with correct build commands and documentation links
+- Updated authors in README (Sam Ditmeijer & Rik Dekker)
+
+### Removed
+- Deprecated monolithic `docs/user-guide.md` (replaced by structured docs)
+- Deprecated `docs/comparison-with-nextcloud-forms.md` (moved to `docs/architecture/`)
+
 ## [0.2.4] - 2026-01-26
 
 ### Changed
