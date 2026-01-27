@@ -2,7 +2,8 @@
   <div class="question-renderer">
     <label class="question-label">
       {{ renderedQuestion }}
-      <span v-if="question.required" class="required">*</span>
+      <span v-if="question.required" class="required-indicator" :title="t('Required')">*</span>
+      <span v-if="question.required" class="required-text">{{ t('(required)') }}</span>
     </label>
     <p v-if="question.description" class="question-description">
       {{ renderedDescription }}
@@ -351,10 +352,22 @@ export default {
     margin-bottom: 8px;
     word-wrap: break-word;
     overflow-wrap: break-word;
+  }
 
-    .required {
-      color: var(--color-error);
-    }
+  .required-indicator {
+    color: #e53935;
+    font-size: 18px;
+    font-weight: 700;
+    margin-left: 2px;
+    vertical-align: top;
+    line-height: 1;
+  }
+
+  .required-text {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-maxcontrast);
+    margin-left: 6px;
   }
 
   .question-description {

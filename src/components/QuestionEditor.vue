@@ -79,21 +79,29 @@
     </div>
 
     <div v-show="!collapsed" class="question-body">
-      <NcTextField
-        v-model="localQuestion.question"
-        :label="t('Question')"
-        :disabled="readonly"
-        class="question-input"
-        @update:model-value="emitUpdate"
-      />
+      <div class="form-field">
+        <label class="form-label">{{ t('Question') }}</label>
+        <NcTextField
+          v-model="localQuestion.question"
+          :disabled="readonly"
+          :placeholder="t('Enter your question')"
+          class="question-input"
+          @update:model-value="emitUpdate"
+        />
+      </div>
 
-      <NcTextField
-        v-model="localQuestion.description"
-        :label="t('Description (optional)')"
-        :disabled="readonly"
-        class="description-input"
-        @update:model-value="emitUpdate"
-      />
+      <div class="form-field">
+        <label class="form-label">{{ t('Description (optional)') }}</label>
+        <NcTextArea
+          v-model="localQuestion.description"
+          :disabled="readonly"
+          :placeholder="t('Add a description or instructions')"
+          :resize="false"
+          :rows="2"
+          class="description-input"
+          @update:model-value="emitUpdate"
+        />
+      </div>
 
       <!-- Options for choice-based questions -->
       <div v-if="hasOptions" class="options-editor">
@@ -276,6 +284,7 @@ import {
   NcActions,
   NcActionButton,
   NcTextField,
+  NcTextArea,
   NcCheckboxRadioSwitch,
 } from '@nextcloud/vue';
 import { v4 as uuidv4 } from 'uuid';
@@ -298,6 +307,7 @@ export default {
     NcActions,
     NcActionButton,
     NcTextField,
+    NcTextArea,
     NcCheckboxRadioSwitch,
     draggable,
     ConditionEditor,
@@ -503,6 +513,15 @@ export default {
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-large);
   margin-bottom: 16px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &:focus-within {
+    border-color: var(--color-primary-element);
+  }
 
   &.collapsed {
     .question-body {
@@ -533,7 +552,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-primary);
+    background: var(--color-primary-element);
     color: white;
     border-radius: 50%;
     font-size: 12px;
@@ -608,12 +627,33 @@ export default {
   padding: 16px;
 }
 
+.form-field {
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-main-text);
+  // Uitlijnen met input padding (12px is Nextcloud standaard input padding)
+  padding-left: 12px;
+}
+
 .question-input {
-  margin-bottom: 20px;
+  // Standaard NcTextField styling
 }
 
 .description-input {
-  margin-bottom: 16px;
+  :deep(textarea) {
+    resize: none;
+    min-height: 52px;
+  }
 }
 
 .options-editor {
@@ -695,5 +735,13 @@ export default {
 
 .rotated {
   transform: rotate(-90deg);
+}
+
+/* Fix icon vertical alignment in NcActionButton and NcButton */
+:deep(.action-button__icon),
+:deep(.button-vue__icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

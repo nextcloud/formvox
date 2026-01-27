@@ -2,6 +2,21 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.6] - 2026-01-27
+
+### Changed
+- Editor toolbar redesign: Preview, Share, Results buttons now prominent; less-used options in dropdown
+- Editor header redesign: cleaner look with underline focus states
+- Question cards redesign: hover effects, focus states, modernere look
+- Description fields now use multi-line textarea instead of single-line input
+- Improved spacing and visual hierarchy throughout editor
+- Required questions now clearly marked with red asterisk and "(required)" label on public forms
+
+### Fixed
+- Hide .fvform files from all WebDAV clients, not just sync clients
+- Icon vertical alignment in dropdown menus
+- Suppress @nextcloud/vue appName/appVersion warnings in console
+
 ## [0.2.5] - 2026-01-27
 
 ### Added

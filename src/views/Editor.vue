@@ -18,85 +18,109 @@
         </div>
 
         <div class="editor-header">
-          <NcTextField
-            v-model="form.title"
-            :label="t('Form title')"
-            :disabled="!canEdit"
-            class="title-input"
-            @update:model-value="debouncedSave"
-          />
-          <NcTextField
-            v-model="form.description"
-            :label="t('Description')"
-            :disabled="!canEdit"
-            class="description-input"
-            @update:model-value="debouncedSave"
-          />
+          <div class="form-field">
+            <label class="form-label">{{ t('Form title') }}</label>
+            <NcTextField
+              v-model="form.title"
+              :disabled="!canEdit"
+              :placeholder="t('Enter form title')"
+              class="title-input"
+              @update:model-value="debouncedSave"
+            />
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t('Description') }}</label>
+            <NcTextArea
+              v-model="form.description"
+              :disabled="!canEdit"
+              :placeholder="t('Enter description (optional)')"
+              :resize="false"
+              :rows="2"
+              class="description-input"
+              @update:model-value="debouncedSave"
+            />
+          </div>
         </div>
 
         <div class="editor-toolbar">
-          <NcButton
-            :disabled="!canEdit"
-            :title="!canEdit ? t('You do not have permission to edit this form') : ''"
-            @click="addQuestion"
-          >
-            <template #icon>
-              <PlusIcon :size="20" />
-            </template>
-            {{ t('Add question') }}
-          </NcButton>
+          <!-- Left: Content editing actions -->
+          <div class="toolbar-section toolbar-section--start">
+            <NcButton
+              :disabled="!canEdit"
+              :title="!canEdit ? t('You do not have permission to edit this form') : ''"
+              @click="addQuestion"
+            >
+              <template #icon>
+                <PlusIcon :size="20" />
+              </template>
+              {{ t('Add question') }}
+            </NcButton>
 
-          <NcButton
-            v-if="hasPages"
-            type="secondary"
-            :disabled="!canEdit"
-            @click="addPage"
-          >
-            <template #icon>
-              <PagesIcon :size="20" />
-            </template>
-            {{ t('Add page') }}
-          </NcButton>
-
-          <NcButton @click="showPreview = !showPreview">
-            <template #icon>
-              <EyeIcon :size="20" />
-            </template>
-            {{ showPreview ? t('Edit') : t('Preview') }}
-          </NcButton>
-
-          <NcActions>
-            <NcActionButton :disabled="!canEdit" @click="togglePages">
+            <NcButton
+              v-if="hasPages"
+              type="secondary"
+              :disabled="!canEdit"
+              @click="addPage"
+            >
               <template #icon>
                 <PagesIcon :size="20" />
               </template>
-              {{ hasPages ? t('Disable pages') : t('Enable pages') }}
-            </NcActionButton>
-            <NcActionButton :disabled="!canEditSettings" @click="showSettings = true">
+              {{ t('Add page') }}
+            </NcButton>
+          </div>
+
+          <!-- Right: View & Share actions -->
+          <div class="toolbar-section toolbar-section--end">
+            <NcButton type="secondary" @click="showPreview = !showPreview">
               <template #icon>
-                <CogIcon :size="20" />
+                <EyeIcon :size="20" />
               </template>
-              {{ t('Work together') }}
-            </NcActionButton>
-            <NcActionButton :disabled="!canEditSettings" @click="showBranding = true">
-              <template #icon>
-                <PaletteIcon :size="20" />
-              </template>
-              {{ t('Branding') }}
-            </NcActionButton>
-            <NcActionButton :disabled="!canShare" @click="showShare = true">
+              {{ showPreview ? t('Edit') : t('Preview') }}
+            </NcButton>
+
+            <NcButton
+              type="secondary"
+              :disabled="!canShare"
+              @click="showShare = true"
+            >
               <template #icon>
                 <ShareIcon :size="20" />
               </template>
-              {{ t('Collect responses') }}
-            </NcActionButton>
-            <NcActionButton v-if="canViewResponses" @click="viewResults">
+              {{ t('Share') }}
+            </NcButton>
+
+            <NcButton
+              v-if="canViewResponses"
+              type="primary"
+              @click="viewResults"
+            >
               <template #icon>
                 <ChartIcon :size="20" />
               </template>
-              {{ t('View results') }}
-            </NcActionButton>
-          </NcActions>
+              {{ t('Results') }}
+            </NcButton>
+
+            <NcActions>
+              <NcActionButton :disabled="!canEdit" @click="togglePages">
+                <template #icon>
+                  <PagesIcon :size="20" />
+                </template>
+                {{ hasPages ? t('Disable pages') : t('Enable pages') }}
+              </NcActionButton>
+              <NcActionButton :disabled="!canEditSettings" @click="showBranding = true">
+                <template #icon>
+                  <PaletteIcon :size="20" />
+                </template>
+                {{ t('Branding') }}
+              </NcActionButton>
+              <NcActionButton :disabled="!canEditSettings" @click="showSettings = true">
+                <template #icon>
+                  <CogIcon :size="20" />
+                </template>
+                {{ t('Work together') }}
+              </NcActionButton>
+            </NcActions>
+          </div>
         </div>
 
         <!-- Page tabs when pages are enabled -->
@@ -235,6 +259,7 @@ import {
   NcActions,
   NcActionButton,
   NcTextField,
+  NcTextArea,
 } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
@@ -264,6 +289,7 @@ export default {
     NcActions,
     NcActionButton,
     NcTextField,
+    NcTextArea,
     draggable,
     QuestionEditor,
     SettingsPanel,
@@ -640,42 +666,72 @@ export default {
 }
 
 .editor-header {
+  margin-bottom: 24px;
+}
+
+.form-field {
   margin-bottom: 20px;
 
-  .title-input {
-    margin-bottom: 32px;
-
-    :deep(input) {
-      font-size: 24px !important;
-      font-weight: bold !important;
-      height: auto !important;
-      padding: 8px 12px !important;
-    }
-
-    :deep(label) {
-      font-size: 14px;
-    }
+  &:last-child {
+    margin-bottom: 0;
   }
+}
 
-  .description-input {
-    :deep(input) {
-      font-size: 16px !important;
-      height: auto !important;
-      padding: 8px 12px !important;
-    }
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-main-text);
+}
 
-    :deep(label) {
-      font-size: 14px;
-    }
+.title-input {
+  :deep(.input-field__input) {
+    font-size: 24px;
+    font-weight: 600;
+    padding: 10px;
   }
+}
+
+.description-input {
+  // Standaard NcTextArea styling
 }
 
 .editor-toolbar {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-section--start {
+  flex: 0 1 auto;
+}
+
+.toolbar-section--end {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+}
+
+/* Responsive: wrap on small screens */
+@media (max-width: 768px) {
+  .editor-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .toolbar-section {
+    flex-wrap: wrap;
+  }
 }
 
 .page-tabs {
@@ -768,6 +824,14 @@ export default {
   p {
     margin-bottom: 16px;
   }
+}
+
+/* Fix icon vertical alignment in NcActionButton and NcButton */
+:deep(.action-button__icon),
+:deep(.button-vue__icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 </style>

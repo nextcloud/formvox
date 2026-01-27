@@ -89,6 +89,7 @@ OC.L10N.register("formvox", {
   "Column {n}": "Spalte {n}",
   "Add column": "Spalte hinzufügen",
   "Required": "Erforderlich",
+  "(required)": "(erforderlich)",
   "Quiz mode (with scores)": "Quiz-Modus (mit Punkten)",
   "This question has conditions": "Diese Frage hat Bedingungen",
   "Share form": "Formular teilen",

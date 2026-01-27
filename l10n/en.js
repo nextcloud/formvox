@@ -89,6 +89,7 @@ OC.L10N.register("formvox", {
   "Column {n}": "Column {n}",
   "Add column": "Add column",
   "Required": "Required",
+  "(required)": "(required)",
   "Quiz mode (with scores)": "Quiz mode (with scores)",
   "This question has conditions": "This question has conditions",
   "Share form": "Share form",

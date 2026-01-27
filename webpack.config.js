@@ -41,9 +41,18 @@ module.exports = {
         loader: 'string-replace-loader',
         include: path.resolve(__dirname, 'node_modules/@nextcloud/vue'),
         options: {
-          search: '"appName"',
-          replace: '"formvox"',
-          flags: 'g',
+          multiple: [
+            {
+              search: '"appName"',
+              replace: '"formvox"',
+              flags: 'g',
+            },
+            {
+              search: '"appVersion"',
+              replace: '"0.2.6"',
+              flags: 'g',
+            },
+          ],
         },
       },
     ],

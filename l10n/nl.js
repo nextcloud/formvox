@@ -89,6 +89,7 @@ OC.L10N.register("formvox", {
   "Column {n}": "Kolom {n}",
   "Add column": "Kolom toevoegen",
   "Required": "Verplicht",
+  "(required)": "(verplicht)",
   "Quiz mode (with scores)": "Quizmodus (met scores)",
   "This question has conditions": "Deze vraag heeft voorwaarden",
   "Share form": "Formulier delen",
