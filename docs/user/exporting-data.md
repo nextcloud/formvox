@@ -54,6 +54,26 @@ Features:
 - Multiple sheets (summary + raw data)
 - Charts (optional)
 
+### ZIP (File Uploads)
+
+For forms with file upload questions, download all uploaded files:
+
+1. Open the **Results** view
+2. Click **Download uploads** or the ZIP icon
+3. All uploaded files are downloaded as a ZIP archive
+
+The ZIP file structure:
+```
+uploads/
+├── response_1/
+│   ├── document.pdf
+│   └── photo.jpg
+├── response_2/
+│   └── attachment.docx
+```
+
+**Note:** This option only appears for forms that have file upload questions with submitted files.
+
 ## How to Export
 
 ### From the Results View

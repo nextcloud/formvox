@@ -107,6 +107,24 @@ Visual star-based rating.
 **Use for:** Product reviews, experience ratings
 **Settings:** Number of stars (typically 5)
 
+## File Questions
+
+### File Upload
+Allow respondents to upload files with their response.
+
+**Use for:** Document submissions, photo uploads, attachments
+**Settings:**
+- Allowed file types (e.g., PDF, images, documents)
+- Maximum file size limit
+- Maximum number of files
+
+**Security:**
+- Uploaded files are stored securely in Nextcloud
+- Files are accessible only to form owner
+- Files are deleted when the response is deleted
+
+**Note:** File uploads count toward the form owner's storage quota.
+
 ## Advanced Questions
 
 ### Matrix
@@ -153,6 +171,7 @@ Assign points to correct answers for quiz mode. See [Quiz Mode](advanced-feature
 | Rate multiple items | Matrix |
 | Detailed feedback | Multi-line Text |
 | Schedule appointments | DateTime Picker |
+| Collect documents/files | File Upload |
 
 ## Next Steps
 

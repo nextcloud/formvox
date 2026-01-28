@@ -57,9 +57,20 @@ This is useful for:
 
 ## Embedding Forms
 
-Embed your form in a website or intranet:
+Embed your form in external websites, SharePoint, intranets, or other platforms.
 
-### iframe Embed
+### Using the Embed Code Generator
+
+1. Open your form
+2. Click **Share** in the toolbar
+3. Click the **Embed** tab
+4. Configure options:
+   - **Width** - Fixed pixels or responsive (100%)
+   - **Height** - Frame height in pixels
+5. Copy the generated embed code
+6. Paste into your website's HTML
+
+### Manual iframe Embed
 
 ```html
 <iframe
@@ -83,6 +94,12 @@ For mobile-friendly embedding:
   </iframe>
 </div>
 ```
+
+### Domain Restrictions
+
+Administrators can restrict which domains are allowed to embed forms. If embedding doesn't work, contact your Nextcloud administrator to allow your domain.
+
+See [Admin Configuration](../admin/configuration.md) for details.
 
 ## File-Based Sharing
 

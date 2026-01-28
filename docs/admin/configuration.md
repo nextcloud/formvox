@@ -36,6 +36,31 @@ View usage statistics across your Nextcloud instance.
 #### Statistics Refresh
 Statistics are calculated in real-time when viewing the admin panel.
 
+### Embedding Tab
+
+Control how forms can be embedded in external websites.
+
+#### Allowed Domains
+
+Restrict which external domains can embed FormVox forms:
+
+1. Go to **FormVox** admin settings
+2. Click the **Embedding** tab (or **Settings** tab)
+3. Add allowed domains (one per line):
+   ```
+   sharepoint.company.com
+   intranet.company.com
+   *.trusted-domain.com
+   ```
+4. Save settings
+
+**Options:**
+- Leave empty to allow all domains (default)
+- Use `*` as wildcard for subdomains
+- Specify exact domains for strict control
+
+**Security note:** Restricting embed domains prevents your forms from being embedded on unauthorized websites, reducing the risk of phishing attacks.
+
 ### Telemetry Tab
 
 Configure anonymous telemetry reporting.
