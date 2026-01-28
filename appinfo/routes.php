@@ -15,6 +15,10 @@ return [
         ['name' => 'public#submit', 'url' => '/public/{fileId}/{token}/submit', 'verb' => 'POST'],
         ['name' => 'public#uploadFile', 'url' => '/public/{fileId}/{token}/upload', 'verb' => 'POST'],
 
+        // Embed routes (frameable version for iframes)
+        ['name' => 'public#embedForm', 'url' => '/embed/{fileId}/{token}', 'verb' => 'GET'],
+        ['name' => 'public#embedAuthenticate', 'url' => '/embed/{fileId}/{token}', 'verb' => 'POST'],
+
         // API routes - Forms
         ['name' => 'api#list', 'url' => '/api/forms', 'verb' => 'GET'],
         ['name' => 'api#create', 'url' => '/api/forms', 'verb' => 'POST'],
@@ -59,5 +63,8 @@ return [
         ['name' => 'statistics#getTelemetry', 'url' => '/api/statistics/telemetry', 'verb' => 'GET'],
         ['name' => 'statistics#setTelemetry', 'url' => '/api/statistics/telemetry', 'verb' => 'POST'],
         ['name' => 'statistics#sendTelemetry', 'url' => '/api/statistics/telemetry/send', 'verb' => 'POST'],
+
+        // Settings routes (admin only)
+        ['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
     ],
 ];

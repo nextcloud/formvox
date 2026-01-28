@@ -45,6 +45,11 @@ class AdminSettings implements ISettings
         $this->initialState->provideInitialState('statistics', $this->statisticsService->getStatistics());
         $this->initialState->provideInitialState('telemetry', $this->telemetryService->getStatus());
 
+        // Provide embed settings
+        $this->initialState->provideInitialState('embedSettings', [
+            'allowedDomains' => $this->config->getAppValue(Application::APP_ID, 'embed_allowed_domains', '*'),
+        ]);
+
         Util::addScript(Application::APP_ID, 'formvox-admin');
         Util::addStyle(Application::APP_ID, 'admin');
 

@@ -35,6 +35,38 @@
         </div>
       </div>
 
+      <div v-if="shareLink" class="embed-section">
+        <h3>{{ t('Embed code') }}</h3>
+        <p class="embed-description">
+          {{ t('Copy this code to embed the form in your website, SharePoint, or intranet.') }}
+        </p>
+
+        <div class="embed-options">
+          <label class="embed-option">
+            <input type="checkbox" v-model="embedOptions.responsive">
+            {{ t('Responsive width') }}
+          </label>
+          <label v-if="!embedOptions.responsive" class="embed-option">
+            {{ t('Width') }}:
+            <input type="number" v-model.number="embedOptions.width" min="300" max="1200" class="size-input"> px
+          </label>
+          <label class="embed-option">
+            {{ t('Height') }}:
+            <input type="number" v-model.number="embedOptions.height" min="400" max="2000" class="size-input"> px
+          </label>
+        </div>
+
+        <div class="embed-code-container">
+          <code class="embed-code">{{ embedCode }}</code>
+          <NcButton type="tertiary" @click="copyEmbedCode">
+            <template #icon>
+              <CopyIcon :size="20" />
+            </template>
+            {{ embedCopied ? t('Copied!') : t('Copy') }}
+          </NcButton>
+        </div>
+      </div>
+
       <div v-if="shareLink" class="response-settings">
         <h3>{{ t('Response settings') }}</h3>
 
@@ -261,6 +293,14 @@ export default {
       expiresAt: null,
     });
 
+    // Embed options
+    const embedOptions = reactive({
+      responsive: true,
+      width: 600,
+      height: 800,
+    });
+    const embedCopied = ref(false);
+
     // Response settings state
     const responseSettings = reactive({
       allowAnonymous: props.form.settings?.anonymous ?? true,
@@ -361,6 +401,34 @@ export default {
             copied.value = false;
           }, 2000);
         }
+      }
+    };
+
+    // Embed code generation
+    const embedUrl = () => {
+      if (!shareToken.value) return '';
+      const baseUrl = window.location.origin;
+      return `${baseUrl}${generateUrl('/apps/formvox/embed/{fileId}/{token}', { fileId: props.fileId, token: shareToken.value })}`;
+    };
+
+    const embedCode = () => {
+      const url = embedUrl();
+      if (!url) return '';
+      const width = embedOptions.responsive ? '100%' : `${embedOptions.width}px`;
+      const height = `${embedOptions.height}px`;
+      return `<iframe src="${url}" width="${width}" height="${height}" frameborder="0" style="border: none;"></iframe>`;
+    };
+
+    const copyEmbedCode = async () => {
+      try {
+        await navigator.clipboard.writeText(embedCode());
+        embedCopied.value = true;
+        showSuccess(t('Embed code copied to clipboard'));
+        setTimeout(() => {
+          embedCopied.value = false;
+        }, 2000);
+      } catch (error) {
+        showError(t('Failed to copy embed code'));
       }
     };
 
@@ -620,8 +688,12 @@ export default {
       accessRestrictions,
       searchTerm,
       searchResults,
+      embedOptions,
+      embedCopied,
+      embedCode,
       createShareLink,
       copyLink,
+      copyEmbedCode,
       togglePassword,
       toggleLinkExpiration,
       savePassword,
@@ -687,6 +759,63 @@ export default {
     p {
       margin: 0 0 16px;
       color: var(--color-text-maxcontrast);
+    }
+  }
+}
+
+.embed-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+
+  .embed-description {
+    color: var(--color-text-maxcontrast);
+    font-size: 13px;
+    margin: 0 0 12px;
+  }
+
+  .embed-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 12px;
+
+    .embed-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+
+      input[type="checkbox"] {
+        margin: 0;
+      }
+
+      .size-input {
+        width: 70px;
+        padding: 4px 8px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius);
+        font-size: 14px;
+      }
+    }
+  }
+
+  .embed-code-container {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+
+    .embed-code {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--color-background-dark);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      font-family: monospace;
+      font-size: 12px;
+      word-break: break-all;
+      white-space: pre-wrap;
     }
   }
 }

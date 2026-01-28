@@ -14,6 +14,7 @@ use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Services\IInitialState;
+use OCP\IConfig;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
@@ -27,6 +28,7 @@ use OCA\FormVox\Service\BrandingService;
 
 class PublicController extends Controller
 {
+    private IConfig $config;
     private IUserSession $userSession;
     private IURLGenerator $urlGenerator;
     private IGroupManager $groupManager;
@@ -37,6 +39,7 @@ class PublicController extends Controller
 
     public function __construct(
         IRequest $request,
+        IConfig $config,
         IUserSession $userSession,
         IURLGenerator $urlGenerator,
         IGroupManager $groupManager,
@@ -46,6 +49,7 @@ class PublicController extends Controller
         IInitialState $initialState
     ) {
         parent::__construct(Application::APP_ID, $request);
+        $this->config = $config;
         $this->userSession = $userSession;
         $this->urlGenerator = $urlGenerator;
         $this->groupManager = $groupManager;
@@ -351,6 +355,96 @@ class PublicController extends Controller
                 ['error' => $e->getMessage()],
                 Http::STATUS_INTERNAL_SERVER_ERROR
             );
+        }
+    }
+
+    /**
+     * Show embeddable form (allows framing in iframes)
+     * @return TemplateResponse|RedirectResponse
+     */
+    #[PublicPage]
+    #[NoCSRFRequired]
+    public function embedForm(int $fileId, string $token)
+    {
+        // Use the same logic as showForm, but return with X-Frame-Options disabled
+        $response = $this->showForm($fileId, $token);
+
+        // Set embed headers based on allowed domains
+        $this->setEmbedHeaders($response);
+
+        return $response;
+    }
+
+    /**
+     * Authenticate password-protected form in embed mode (POST handler)
+     * @return TemplateResponse|RedirectResponse
+     */
+    #[PublicPage]
+    #[NoCSRFRequired]
+    #[BruteForceProtection(action: 'formvox_password')]
+    public function embedAuthenticate(int $fileId, string $token)
+    {
+        // Use the same logic as authenticate, but return with X-Frame-Options disabled
+        $response = $this->authenticate($fileId, $token);
+
+        // Set embed headers based on allowed domains
+        $this->setEmbedHeaders($response);
+
+        return $response;
+    }
+
+    /**
+     * Set appropriate headers for embed responses based on allowed domains setting
+     */
+    private function setEmbedHeaders($response): void
+    {
+        if (!($response instanceof TemplateResponse)) {
+            return;
+        }
+
+        // Get allowed domains from config
+        $allowedDomains = $this->config->getAppValue(Application::APP_ID, 'embed_allowed_domains', '*');
+        $allowedDomains = trim($allowedDomains);
+
+        // Build frame-ancestors CSP value
+        if ($allowedDomains === '' || $allowedDomains === '*') {
+            // Allow all domains
+            $response->addHeader('X-Frame-Options', 'ALLOWALL');
+            $response->addHeader('Content-Security-Policy', "frame-ancestors *");
+        } else {
+            // Parse domain list (comma, space, or newline separated)
+            $domains = preg_split('/[\s,]+/', $allowedDomains, -1, PREG_SPLIT_NO_EMPTY);
+
+            if (empty($domains)) {
+                // No valid domains = allow all (fallback)
+                $response->addHeader('X-Frame-Options', 'ALLOWALL');
+                $response->addHeader('Content-Security-Policy', "frame-ancestors *");
+            } else {
+                // Build frame-ancestors with specific domains
+                // Always include 'self' for same-origin embedding
+                $frameAncestors = "'self'";
+
+                foreach ($domains as $domain) {
+                    $domain = trim($domain);
+                    if (empty($domain)) {
+                        continue;
+                    }
+
+                    // Normalize domain format for CSP
+                    // Support: example.com, *.example.com, https://example.com
+                    if (!str_starts_with($domain, 'http://') && !str_starts_with($domain, 'https://')) {
+                        // Add both http and https variants, or use wildcard scheme
+                        $frameAncestors .= " https://{$domain}";
+                    } else {
+                        $frameAncestors .= " {$domain}";
+                    }
+                }
+
+                // X-Frame-Options doesn't support multiple domains, so we remove it
+                // and rely solely on Content-Security-Policy frame-ancestors
+                $response->addHeader('X-Frame-Options', 'SAMEORIGIN');
+                $response->addHeader('Content-Security-Policy', "frame-ancestors {$frameAncestors}");
+            }
         }
     }
 

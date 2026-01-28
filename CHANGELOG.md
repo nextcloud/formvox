@@ -8,6 +8,9 @@ All notable changes to FormVox will be documented in this file.
 - File upload question type with configurable allowed file types and size limits
 - Download all uploads as ZIP from Results view
 - DAV plugin to strip sensitive data from .fvform files on download (responses, settings, tokens)
+- Form embedding: embed forms in external websites (SharePoint, intranets, etc.) via iframe
+- Embed code generator in Share dialog with responsive width and height options
+- Admin setting to restrict embedding to specific domains (Settings tab)
 
 ### Changed
 - Editor toolbar redesign: Preview, Share, Results buttons now prominent; less-used options in dropdown

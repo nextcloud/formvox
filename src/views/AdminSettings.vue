@@ -14,6 +14,12 @@
         <ChartBox :size="16" />
         {{ t('formvox', 'Statistics') }}
       </button>
+      <button
+        :class="['tab-button', { active: activeTab === 'settings' }]"
+        @click="activeTab = 'settings'">
+        <Cog :size="16" />
+        {{ t('formvox', 'Settings') }}
+      </button>
     </div>
 
     <!-- Branding Tab -->
@@ -110,26 +116,59 @@
         </div>
       </div>
     </div>
+
+    <!-- Settings Tab -->
+    <div v-if="activeTab === 'settings'" class="tab-content">
+      <div class="settings-section">
+        <h2>{{ t('formvox', 'Embed Settings') }}</h2>
+        <p class="settings-section-desc">
+          {{ t('formvox', 'Configure which external websites can embed FormVox forms.') }}
+        </p>
+
+        <div class="setting-row">
+          <label class="setting-label">{{ t('formvox', 'Allowed domains for embedding') }}</label>
+          <p class="setting-help">
+            {{ t('formvox', 'Enter * to allow all domains, or a comma-separated list of domains (e.g., sharepoint.com, intranet.company.nl). Forms can only be embedded on these domains.') }}
+          </p>
+          <div class="setting-input-row">
+            <input
+              type="text"
+              v-model="embedSettings.allowedDomains"
+              class="setting-input"
+              :placeholder="t('formvox', '* (all domains)')"
+            />
+            <NcButton type="primary" @click="saveEmbedSettings" :disabled="savingEmbedSettings">
+              {{ savingEmbedSettings ? t('formvox', 'Saving...') : t('formvox', 'Save') }}
+            </NcButton>
+          </div>
+        </div>
+
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref, reactive } from 'vue';
-import { NcCheckboxRadioSwitch, NcNoteCard } from '@nextcloud/vue';
+import { NcCheckboxRadioSwitch, NcNoteCard, NcButton } from '@nextcloud/vue';
 import axios from '@nextcloud/axios';
 import { generateUrl } from '@nextcloud/router';
+import { showSuccess, showError } from '@nextcloud/dialogs';
 import PageBuilder from '../components/pagebuilder/PageBuilder.vue';
 import Palette from 'vue-material-design-icons/Palette.vue';
 import ChartBox from 'vue-material-design-icons/ChartBox.vue';
+import Cog from 'vue-material-design-icons/Cog.vue';
 
 export default {
   name: 'AdminSettings',
   components: {
     NcCheckboxRadioSwitch,
     NcNoteCard,
+    NcButton,
     PageBuilder,
     Palette,
     ChartBox,
+    Cog,
   },
   props: {
     initialBranding: {
@@ -143,6 +182,10 @@ export default {
     initialTelemetry: {
       type: Object,
       default: () => ({ enabled: true, lastReport: null }),
+    },
+    initialEmbedSettings: {
+      type: Object,
+      default: () => ({ allowedDomains: '*' }),
     },
   },
   setup(props) {
@@ -160,6 +203,12 @@ export default {
       lastReport: props.initialTelemetry.lastReport || null,
     });
 
+    // Embed settings
+    const embedSettings = reactive({
+      allowedDomains: props.initialEmbedSettings?.allowedDomains || '*',
+    });
+    const savingEmbedSettings = ref(false);
+
     const toggleTelemetry = async (enabled) => {
       try {
         const response = await axios.post(
@@ -171,6 +220,22 @@ export default {
         console.error('Failed to toggle telemetry:', error);
         // Revert on error
         telemetryEnabled.value = !enabled;
+      }
+    };
+
+    const saveEmbedSettings = async () => {
+      savingEmbedSettings.value = true;
+      try {
+        await axios.post(
+          generateUrl('/apps/formvox/api/settings/embed'),
+          { allowedDomains: embedSettings.allowedDomains }
+        );
+        showSuccess(t('formvox', 'Embed settings saved'));
+      } catch (error) {
+        console.error('Failed to save embed settings:', error);
+        showError(t('formvox', 'Failed to save embed settings'));
+      } finally {
+        savingEmbedSettings.value = false;
       }
     };
 
@@ -199,7 +264,10 @@ export default {
       stats,
       telemetryEnabled,
       telemetryStatus,
+      embedSettings,
+      savingEmbedSettings,
       toggleTelemetry,
+      saveEmbedSettings,
       formatDate,
       t,
     };
@@ -428,5 +496,45 @@ export default {
 
 .telemetry-details ul.not-collected li::marker {
   content: '';
+}
+
+/* Settings tab */
+.setting-row {
+  margin-bottom: 24px;
+}
+
+.setting-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-main-text);
+}
+
+.setting-help {
+  font-size: 13px;
+  color: var(--color-text-maxcontrast);
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.setting-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.setting-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  background: var(--color-main-background);
+  color: var(--color-main-text);
+}
+
+.setting-input:focus {
+  border-color: var(--color-primary-element);
+  outline: none;
 }
 </style>
