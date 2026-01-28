@@ -2,7 +2,7 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [0.2.6] - 2026-01-27
+## [0.2.6] - 2026-01-28
 
 ### Added
 - File upload question type with configurable allowed file types and size limits

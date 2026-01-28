@@ -26,8 +26,10 @@ npm-debug.log*
 *.tmp
 *.temp
 
-# Certificates and private keys (NEVER commit!)
+# Certificates and private keys (NEVER commit to GitHub!)
 *.key
 *.pem
 certificates/*.key
 certificates/*.csr
+certificates/*.crt
+certificates/

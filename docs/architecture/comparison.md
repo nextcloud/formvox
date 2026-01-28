@@ -8,7 +8,7 @@ This document compares FormVox with Nextcloud Forms to help you choose the right
 |--------|---------|-----------------|
 | **Storage** | File-based (.fvform) | Database |
 | **Architecture** | Single file per form | Database tables |
-| **First Release** | 2024 | 2020 |
+| **First Release** | 2026 | 2020 |
 | **Status** | Active development | Mature, stable |
 
 ## Feature Comparison
