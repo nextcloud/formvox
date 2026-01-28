@@ -455,4 +455,208 @@ class PublicController extends Controller
         $response->setStatus($status);
         return $response;
     }
+
+    /**
+     * Upload a file for a form response
+     */
+    #[PublicPage]
+    #[NoCSRFRequired]
+    #[AnonRateLimit(limit: 50, period: 3600)]
+    public function uploadFile(int $fileId, string $token): DataResponse
+    {
+        try {
+            $form = $this->loadAndValidateForm($fileId, $token);
+
+            if ($form === null) {
+                return new DataResponse(
+                    ['error' => 'Form not found'],
+                    Http::STATUS_NOT_FOUND
+                );
+            }
+
+            // Check if form has expired
+            if (!empty($form['settings']['share_expires_at'])) {
+                $expiresAt = new \DateTime($form['settings']['share_expires_at']);
+                if ($expiresAt < new \DateTime()) {
+                    return new DataResponse(
+                        ['error' => 'This form has expired'],
+                        Http::STATUS_GONE
+                    );
+                }
+            }
+
+            // Check user/group access restrictions
+            $hasRestrictions = !empty($form['settings']['allowed_users'] ?? [])
+                            || !empty($form['settings']['allowed_groups'] ?? []);
+
+            if ($hasRestrictions) {
+                $user = $this->userSession->getUser();
+                if ($user === null || !$this->isUserAllowed($form, $user)) {
+                    return new DataResponse(
+                        ['error' => 'You do not have permission to upload files to this form'],
+                        Http::STATUS_FORBIDDEN
+                    );
+                }
+            }
+
+            // Check if form requires login
+            if ($form['settings']['require_login'] ?? false) {
+                $user = $this->userSession->getUser();
+                if ($user === null) {
+                    return new DataResponse(
+                        ['error' => 'This form requires you to be logged in'],
+                        Http::STATUS_FORBIDDEN
+                    );
+                }
+            }
+
+            // Get question ID from request
+            $questionId = $this->request->getParam('questionId');
+            if (empty($questionId)) {
+                return new DataResponse(
+                    ['error' => 'Question ID is required'],
+                    Http::STATUS_BAD_REQUEST
+                );
+            }
+
+            // Find the question
+            $question = $this->findQuestion($form, $questionId);
+            if ($question === null || $question['type'] !== 'file') {
+                return new DataResponse(
+                    ['error' => 'Invalid question'],
+                    Http::STATUS_BAD_REQUEST
+                );
+            }
+
+            // Get uploaded file
+            $uploadedFile = $this->request->getUploadedFile('file');
+            if ($uploadedFile === null || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
+                $errorMessage = $this->getUploadErrorMessage($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE);
+                return new DataResponse(
+                    ['error' => $errorMessage],
+                    Http::STATUS_BAD_REQUEST
+                );
+            }
+
+            // Validate file size
+            $maxSizeMB = $question['maxFileSize'] ?? 10;
+            $maxSizeBytes = $maxSizeMB * 1024 * 1024;
+            if ($uploadedFile['size'] > $maxSizeBytes) {
+                return new DataResponse(
+                    ['error' => "File is too large. Maximum size is {$maxSizeMB} MB"],
+                    Http::STATUS_BAD_REQUEST
+                );
+            }
+
+            // Validate file type
+            if (!$this->isAllowedFileType($uploadedFile, $question)) {
+                return new DataResponse(
+                    ['error' => 'This file type is not allowed'],
+                    Http::STATUS_BAD_REQUEST
+                );
+            }
+
+            // Generate temporary response ID for grouping files
+            $tempResponseId = $this->request->getParam('tempResponseId');
+            if (empty($tempResponseId)) {
+                $tempResponseId = bin2hex(random_bytes(16));
+            }
+
+            // Store the file
+            $fileMetadata = $this->formService->storeUpload($fileId, $tempResponseId, $uploadedFile);
+            $fileMetadata['tempResponseId'] = $tempResponseId;
+
+            return new DataResponse($fileMetadata, Http::STATUS_CREATED);
+        } catch (\Exception $e) {
+            return new DataResponse(
+                ['error' => $e->getMessage()],
+                Http::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Find a question in the form by ID
+     */
+    private function findQuestion(array $form, string $questionId): ?array
+    {
+        foreach ($form['questions'] ?? [] as $question) {
+            if (($question['id'] ?? '') === $questionId) {
+                return $question;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if uploaded file type is allowed for the question
+     */
+    private function isAllowedFileType(array $uploadedFile, array $question): bool
+    {
+        $allowedTypes = $question['allowedTypes'] ?? [];
+
+        // If no restrictions, allow all (except dangerous types)
+        if (empty($allowedTypes) || in_array('*/*', $allowedTypes)) {
+            // Block dangerous file types
+            $dangerousTypes = [
+                'application/x-executable',
+                'application/x-msdownload',
+                'application/x-msdos-program',
+                'application/x-sh',
+                'application/x-php',
+            ];
+            $dangerousExtensions = ['exe', 'bat', 'cmd', 'sh', 'php', 'phar', 'ps1', 'vbs', 'js'];
+
+            $mimeType = $uploadedFile['type'] ?? '';
+            $extension = strtolower(pathinfo($uploadedFile['name'], PATHINFO_EXTENSION));
+
+            if (in_array($mimeType, $dangerousTypes) || in_array($extension, $dangerousExtensions)) {
+                return false;
+            }
+            return true;
+        }
+
+        $mimeType = $uploadedFile['type'] ?? '';
+        $extension = '.' . strtolower(pathinfo($uploadedFile['name'], PATHINFO_EXTENSION));
+
+        foreach ($allowedTypes as $allowed) {
+            // Check exact MIME type match
+            if ($mimeType === $allowed) {
+                return true;
+            }
+
+            // Check wildcard MIME type (e.g., image/*)
+            if (str_ends_with($allowed, '/*')) {
+                $prefix = substr($allowed, 0, -1);
+                if (str_starts_with($mimeType, $prefix)) {
+                    return true;
+                }
+            }
+
+            // Check extension (e.g., .pdf)
+            if (str_starts_with($allowed, '.') && $extension === strtolower($allowed)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get human-readable upload error message
+     */
+    private function getUploadErrorMessage(int $errorCode): string
+    {
+        $messages = [
+            UPLOAD_ERR_INI_SIZE => 'The file exceeds the maximum upload size',
+            UPLOAD_ERR_FORM_SIZE => 'The file exceeds the maximum size allowed',
+            UPLOAD_ERR_PARTIAL => 'The file was only partially uploaded',
+            UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Server configuration error: missing temp folder',
+            UPLOAD_ERR_CANT_WRITE => 'Server error: failed to write file',
+            UPLOAD_ERR_EXTENSION => 'Upload blocked by server extension',
+        ];
+
+        return $messages[$errorCode] ?? 'Unknown upload error';
+    }
 }

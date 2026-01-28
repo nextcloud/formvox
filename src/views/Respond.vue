@@ -56,6 +56,7 @@
             :all-answers="answers"
             :all-questions="form.questions"
             @update:value="updateAnswer(question.id, $event)"
+            @update:files="updatePendingFiles(question.id, $event)"
           />
         </div>
       </div>
@@ -83,7 +84,7 @@
           :disabled="submitting || isPreview"
           :style="submitButtonStyles"
         >
-          {{ submitting ? t('Submitting...') : t('Submit') }}
+          {{ uploadProgress || (submitting ? t('Submitting...') : t('Submit')) }}
         </NcButton>
       </div>
 
@@ -147,8 +148,11 @@ export default {
   emits: ['submit'],
   setup(props, { emit }) {
     const answers = reactive({});
+    const pendingFiles = reactive({});  // questionId -> File[]
+    const tempResponseId = ref(null);   // Shared ID for all file uploads in this response
     const submitted = ref(false);
     const submitting = ref(false);
+    const uploadProgress = ref('');
     const error = ref(null);
     const score = ref(null);
     const currentPageIndex = ref(0);
@@ -308,6 +312,10 @@ export default {
       answers[questionId] = value;
     };
 
+    const updatePendingFiles = (questionId, files) => {
+      pendingFiles[questionId] = files;
+    };
+
     const validateCurrentPage = () => {
       for (const question of visibleQuestions.value) {
         if (question.required) {
@@ -334,6 +342,59 @@ export default {
       }
     };
 
+    const uploadFiles = async () => {
+      const fileQuestionIds = Object.keys(pendingFiles).filter(qId =>
+        pendingFiles[qId] && pendingFiles[qId].length > 0
+      );
+
+      if (fileQuestionIds.length === 0) {
+        return {}; // No files to upload
+      }
+
+      // Generate a temp response ID if we don't have one yet
+      if (!tempResponseId.value) {
+        tempResponseId.value = crypto.randomUUID ? crypto.randomUUID() :
+          'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+          });
+      }
+
+      const fileAnswers = {};
+
+      for (const questionId of fileQuestionIds) {
+        const files = pendingFiles[questionId];
+        const uploadedFiles = [];
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          uploadProgress.value = t('Uploading {name}...', { name: file.name });
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('questionId', questionId);
+          formData.append('tempResponseId', tempResponseId.value);
+
+          const uploadUrl = generateUrl('/apps/formvox/public/{fileId}/{token}/upload', {
+            fileId: props.fileId,
+            token: props.token
+          });
+
+          const response = await axios.post(uploadUrl, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+
+          uploadedFiles.push(response.data);
+        }
+
+        // Store file metadata as the answer
+        fileAnswers[questionId] = uploadedFiles.length === 1 ? uploadedFiles[0] : uploadedFiles;
+      }
+
+      uploadProgress.value = '';
+      return fileAnswers;
+    };
+
     const submit = async () => {
       if (!validateCurrentPage()) {
         return;
@@ -348,12 +409,19 @@ export default {
       error.value = null;
 
       try {
+        // Step 1: Upload any pending files
+        const fileAnswers = await uploadFiles();
+
+        // Step 2: Merge file metadata into answers
+        const finalAnswers = { ...answers, ...fileAnswers };
+
+        // Step 3: Submit the response
         const url = generateUrl('/apps/formvox/public/{fileId}/{token}/submit', {
           fileId: props.fileId,
           token: props.token
         });
 
-        const response = await axios.post(url, { answers });
+        const response = await axios.post(url, { answers: finalAnswers });
 
         submitted.value = true;
 
@@ -364,6 +432,7 @@ export default {
         error.value = err.response?.data?.error || t('Failed to submit response');
       } finally {
         submitting.value = false;
+        uploadProgress.value = '';
       }
     };
 
@@ -371,6 +440,7 @@ export default {
       answers,
       submitted,
       submitting,
+      uploadProgress,
       error,
       score,
       currentPageIndex,
@@ -386,6 +456,7 @@ export default {
       containerStyles,
       submitButtonStyles,
       updateAnswer,
+      updatePendingFiles,
       previousPage,
       nextPage,
       submit,

@@ -191,6 +191,61 @@
         />
       </div>
 
+      <!-- File upload settings -->
+      <div v-if="localQuestion.type === 'file'" class="file-settings">
+        <div class="form-field">
+          <label class="form-label">{{ t('Allowed file types') }}</label>
+          <select v-model="localQuestion.allowedTypePreset" class="type-select" @change="onFileTypePresetChange">
+            <option value="images">{{ t('Images only') }}</option>
+            <option value="documents">{{ t('Documents (PDF, Word, Excel)') }}</option>
+            <option value="pdf">{{ t('PDF only') }}</option>
+            <option value="all">{{ t('All files') }}</option>
+            <option value="custom">{{ t('Custom') }}</option>
+          </select>
+        </div>
+
+        <div v-if="localQuestion.allowedTypePreset === 'custom'" class="form-field">
+          <label class="form-label">{{ t('Custom MIME types or extensions') }}</label>
+          <NcTextField
+            v-model="customTypesString"
+            :placeholder="t('e.g. .pdf, .docx, image/*')"
+            @update:model-value="onCustomTypesChange"
+          />
+          <small class="hint">{{ t('Comma-separated list of extensions (.pdf) or MIME types (image/*)') }}</small>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">{{ t('Maximum file size (MB)') }}</label>
+          <NcTextField
+            v-model.number="localQuestion.maxFileSize"
+            type="number"
+            :min="1"
+            :max="100"
+            @update:model-value="emitUpdate"
+          />
+        </div>
+
+        <div class="form-field">
+          <NcCheckboxRadioSwitch
+            :model-value="localQuestion.maxFiles > 1"
+            @update:model-value="localQuestion.maxFiles = $event ? 5 : 1; emitUpdate()"
+          >
+            {{ t('Allow multiple files') }}
+          </NcCheckboxRadioSwitch>
+        </div>
+
+        <div v-if="localQuestion.maxFiles > 1" class="form-field">
+          <label class="form-label">{{ t('Maximum number of files') }}</label>
+          <NcTextField
+            v-model.number="localQuestion.maxFiles"
+            type="number"
+            :min="2"
+            :max="20"
+            @update:model-value="emitUpdate"
+          />
+        </div>
+      </div>
+
       <!-- Matrix settings -->
       <div v-if="localQuestion.type === 'matrix'" class="matrix-settings">
         <div class="matrix-section">
@@ -351,6 +406,15 @@ export default {
     const collapsed = ref(false);
     const showConditions = ref(false);
     const localQuestion = reactive({ ...props.question });
+    const customTypesString = ref('');
+
+    // File type presets
+    const fileTypePresets = {
+      images: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
+      documents: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+      pdf: ['application/pdf'],
+      all: ['*/*'],
+    };
 
     watch(() => props.question, (newVal) => {
       Object.assign(localQuestion, newVal);
@@ -410,6 +474,31 @@ export default {
         ];
       }
 
+      if (localQuestion.type === 'file') {
+        localQuestion.allowedTypePreset = localQuestion.allowedTypePreset ?? 'all';
+        localQuestion.allowedTypes = localQuestion.allowedTypes ?? fileTypePresets.all;
+        localQuestion.maxFileSize = localQuestion.maxFileSize ?? 10;
+        localQuestion.maxFiles = localQuestion.maxFiles ?? 1;
+      }
+
+      emitUpdate();
+    };
+
+    const onFileTypePresetChange = () => {
+      const preset = localQuestion.allowedTypePreset;
+      if (preset && preset !== 'custom') {
+        localQuestion.allowedTypes = fileTypePresets[preset] || fileTypePresets.all;
+      }
+      emitUpdate();
+    };
+
+    const onCustomTypesChange = (value) => {
+      customTypesString.value = value;
+      // Parse comma-separated values
+      localQuestion.allowedTypes = value
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
       emitUpdate();
     };
 
@@ -487,11 +576,14 @@ export default {
       collapsed,
       showConditions,
       localQuestion,
+      customTypesString,
       hasOptions,
       isQuizMode,
       otherPages,
       emitUpdate,
       onTypeChange,
+      onFileTypePresetChange,
+      onCustomTypesChange,
       addOption,
       removeOption,
       toggleQuizMode,
@@ -711,6 +803,18 @@ export default {
       gap: 8px;
       margin-bottom: 8px;
     }
+  }
+}
+
+.file-settings {
+  margin-bottom: 16px;
+
+  .hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-text-maxcontrast);
+    padding-left: 12px;
   }
 }
 

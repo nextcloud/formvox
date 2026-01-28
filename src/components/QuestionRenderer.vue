@@ -133,11 +133,50 @@
 
     <!-- File -->
     <div v-else-if="question.type === 'file'" class="file-input">
-      <input
-        type="file"
-        @change="handleFileChange"
+      <div
+        class="file-upload-zone"
+        :class="{ 'drag-over': isDragging, 'has-files': selectedFiles.length > 0 }"
+        @dragover.prevent="isDragging = true"
+        @dragleave="isDragging = false"
+        @drop.prevent="handleDrop"
+        @click="triggerFileInput"
       >
-      <p v-if="value" class="file-name">{{ value }}</p>
+        <input
+          ref="fileInput"
+          type="file"
+          :accept="acceptString"
+          :multiple="question.maxFiles > 1"
+          hidden
+          @change="handleFileSelect"
+        >
+
+        <div v-if="selectedFiles.length === 0" class="upload-prompt">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <p>{{ t('Drop files here or click to upload') }}</p>
+          <small>{{ allowedTypesText }} &bull; {{ t('Max {size} MB', { size: question.maxFileSize || 10 }) }}</small>
+        </div>
+
+        <div v-else class="uploaded-files">
+          <div v-for="(file, index) in selectedFiles" :key="index" class="file-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+              <polyline points="13 2 13 9 20 9"/>
+            </svg>
+            <span class="file-name">{{ file.name }}</span>
+            <span class="file-size">{{ formatFileSize(file.size) }}</span>
+            <button type="button" class="remove-file" @click.stop="removeFile(index)">×</button>
+          </div>
+          <button v-if="canAddMore" type="button" class="add-more-btn" @click.stop="triggerFileInput">
+            + {{ t('Add more') }}
+          </button>
+        </div>
+      </div>
+
+      <p v-if="fileError" class="file-error">{{ fileError }}</p>
     </div>
 
     <!-- Matrix -->
@@ -169,7 +208,7 @@
 
 <script>
 import { t } from '@/utils/l10n';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   NcTextField,
   NcTextArea,
@@ -205,8 +244,13 @@ export default {
       default: () => [],
     },
   },
-  emits: ['update:value'],
+  emits: ['update:value', 'update:files'],
   setup(props, { emit }) {
+    // File upload state
+    const fileInput = ref(null);
+    const isDragging = ref(false);
+    const selectedFiles = ref([]);
+    const fileError = ref('');
     // Helper function to format answer for display
     const formatAnswerForDisplay = (answer) => {
       if (answer === undefined || answer === null || answer === '') {
@@ -312,11 +356,140 @@ export default {
       return date.toISOString();
     };
 
+    // Computed properties for file upload
+    const acceptString = computed(() => {
+      const types = props.question.allowedTypes || [];
+      if (types.length === 0 || types.includes('*/*')) {
+        return '';
+      }
+      return types.join(',');
+    });
+
+    const allowedTypesText = computed(() => {
+      const preset = props.question.allowedTypePreset;
+      const presetLabels = {
+        images: t('Images'),
+        documents: t('Documents'),
+        pdf: t('PDF'),
+        all: t('All files'),
+      };
+      return presetLabels[preset] || t('All files');
+    });
+
+    const canAddMore = computed(() => {
+      const maxFiles = props.question.maxFiles || 1;
+      return selectedFiles.value.length < maxFiles;
+    });
+
+    // File upload methods
+    const triggerFileInput = () => {
+      if (fileInput.value) {
+        fileInput.value.click();
+      }
+    };
+
+    const handleFileSelect = (event) => {
+      const files = Array.from(event.target.files || []);
+      addFiles(files);
+      // Reset input so same file can be selected again
+      if (fileInput.value) {
+        fileInput.value.value = '';
+      }
+    };
+
+    const handleDrop = (event) => {
+      isDragging.value = false;
+      const files = Array.from(event.dataTransfer?.files || []);
+      addFiles(files);
+    };
+
+    const addFiles = (files) => {
+      fileError.value = '';
+      const maxFiles = props.question.maxFiles || 1;
+      const maxSizeMB = props.question.maxFileSize || 10;
+      const maxSizeBytes = maxSizeMB * 1024 * 1024;
+      const allowedTypes = props.question.allowedTypes || [];
+
+      for (const file of files) {
+        // Check if we can add more
+        if (selectedFiles.value.length >= maxFiles) {
+          fileError.value = t('Maximum {n} files allowed', { n: maxFiles });
+          break;
+        }
+
+        // Validate size
+        if (file.size > maxSizeBytes) {
+          fileError.value = t('File "{name}" is too large. Maximum size is {size} MB', {
+            name: file.name,
+            size: maxSizeMB
+          });
+          continue;
+        }
+
+        // Validate type
+        if (!isFileTypeAllowed(file, allowedTypes)) {
+          fileError.value = t('File "{name}" is not an allowed file type', { name: file.name });
+          continue;
+        }
+
+        selectedFiles.value.push(file);
+      }
+
+      // Emit the files for the parent component to handle upload
+      emit('update:files', selectedFiles.value);
+      // Also emit filenames for backwards compatibility
+      if (selectedFiles.value.length === 1) {
+        emit('update:value', selectedFiles.value[0].name);
+      } else {
+        emit('update:value', selectedFiles.value.map(f => f.name));
+      }
+    };
+
+    const isFileTypeAllowed = (file, allowedTypes) => {
+      if (allowedTypes.length === 0 || allowedTypes.includes('*/*')) {
+        // Block dangerous types even when "all" is allowed
+        const dangerousExtensions = ['exe', 'bat', 'cmd', 'sh', 'php', 'phar', 'ps1', 'vbs'];
+        const extension = file.name.split('.').pop()?.toLowerCase() || '';
+        return !dangerousExtensions.includes(extension);
+      }
+
+      const mimeType = file.type;
+      const extension = '.' + (file.name.split('.').pop()?.toLowerCase() || '');
+
+      for (const allowed of allowedTypes) {
+        // Exact MIME match
+        if (mimeType === allowed) return true;
+        // Wildcard MIME (e.g., image/*)
+        if (allowed.endsWith('/*') && mimeType.startsWith(allowed.slice(0, -1))) return true;
+        // Extension match
+        if (allowed.startsWith('.') && extension === allowed.toLowerCase()) return true;
+      }
+      return false;
+    };
+
+    const removeFile = (index) => {
+      selectedFiles.value.splice(index, 1);
+      fileError.value = '';
+      emit('update:files', selectedFiles.value);
+      if (selectedFiles.value.length === 0) {
+        emit('update:value', '');
+      } else if (selectedFiles.value.length === 1) {
+        emit('update:value', selectedFiles.value[0].name);
+      } else {
+        emit('update:value', selectedFiles.value.map(f => f.name));
+      }
+    };
+
+    const formatFileSize = (bytes) => {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    };
+
     const handleFileChange = (event) => {
+      // Legacy handler - kept for backwards compatibility
       const file = event.target.files[0];
       if (file) {
-        // For now, just store the filename
-        // Full file upload would require additional backend support
         emit('update:value', file.name);
       }
     };
@@ -335,6 +508,19 @@ export default {
       formatDate,
       formatDateTime,
       handleFileChange,
+      // File upload
+      fileInput,
+      isDragging,
+      selectedFiles,
+      fileError,
+      acceptString,
+      allowedTypesText,
+      canAddMore,
+      triggerFileInput,
+      handleFileSelect,
+      handleDrop,
+      removeFile,
+      formatFileSize,
       t,
     };
   },
@@ -564,14 +750,121 @@ export default {
 }
 
 .file-input {
-  input {
-    padding: 10px;
+  .file-upload-zone {
+    border: 2px dashed var(--color-border-dark);
+    border-radius: var(--border-radius-large);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--color-background-hover);
+
+    &:hover {
+      border-color: var(--color-primary-element);
+      background: var(--color-primary-element-light);
+    }
+
+    &.drag-over {
+      border-color: var(--color-primary-element);
+      background: var(--color-primary-element-light);
+      border-style: solid;
+    }
+
+    &.has-files {
+      padding: 16px;
+      text-align: left;
+    }
   }
 
-  .file-name {
-    margin-top: 8px;
-    font-size: 14px;
+  .upload-prompt {
     color: var(--color-text-maxcontrast);
+
+    svg {
+      margin-bottom: 12px;
+      color: var(--color-primary-element);
+    }
+
+    p {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--color-main-text);
+    }
+
+    small {
+      font-size: 13px;
+    }
+  }
+
+  .uploaded-files {
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--color-main-background);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      margin-bottom: 8px;
+
+      svg {
+        flex-shrink: 0;
+        color: var(--color-primary-element);
+      }
+
+      .file-name {
+        flex: 1;
+        font-size: 14px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .file-size {
+        font-size: 12px;
+        color: var(--color-text-maxcontrast);
+        flex-shrink: 0;
+      }
+
+      .remove-file {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: var(--color-text-maxcontrast);
+        padding: 0 4px;
+        line-height: 1;
+
+        &:hover {
+          color: var(--color-error);
+        }
+      }
+    }
+
+    .add-more-btn {
+      background: none;
+      border: 1px dashed var(--color-border);
+      border-radius: var(--border-radius);
+      padding: 8px 16px;
+      cursor: pointer;
+      color: var(--color-primary-element);
+      font-size: 14px;
+      width: 100%;
+
+      &:hover {
+        background: var(--color-background-hover);
+        border-color: var(--color-primary-element);
+      }
+    }
+  }
+
+  .file-error {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--color-error);
+    color: white;
+    border-radius: var(--border-radius);
+    font-size: 13px;
   }
 }
 

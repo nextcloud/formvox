@@ -151,6 +151,40 @@
               </table>
             </div>
 
+            <div v-else-if="isFileType(question.type)" class="file-responses">
+              <div class="file-header">
+                <p class="file-count">
+                  {{ question.answerCounts['[file]'] || 0 }} {{ t('files uploaded') }}
+                </p>
+                <NcButton
+                  v-if="(question.answerCounts['[file]'] || 0) > 0"
+                  type="secondary"
+                  @click="downloadAllUploads"
+                >
+                  <template #icon>
+                    <DownloadIcon :size="20" />
+                  </template>
+                  {{ t('Download all') }}
+                </NcButton>
+              </div>
+              <div class="file-list">
+                <div
+                  v-for="file in getFilesForQuestion(question.id)"
+                  :key="file.responseId + file.filename"
+                  class="file-item"
+                >
+                  <a
+                    :href="getFileDownloadUrl(file.responseId, file.filename)"
+                    target="_blank"
+                    class="file-link"
+                  >
+                    <FileIcon :size="16" />
+                    {{ file.originalName || file.filename }}
+                  </a>
+                </div>
+              </div>
+            </div>
+
             <div v-else class="text-responses">
               <p class="text-count">
                 {{ Object.keys(question.answerCounts).length }} {{ t('unique answers') }}
@@ -231,7 +265,23 @@
                   <span v-else class="anonymous">{{ t('Anonymous') }}</span>
                 </td>
                 <td v-for="question in form.questions" :key="question.id">
-                  {{ formatAnswer(response.answers[question.id], question) }}
+                  <template v-if="isFileAnswer(response.answers[question.id])">
+                    <div class="file-answer">
+                      <a
+                        v-for="file in normalizeFileAnswer(response.answers[question.id])"
+                        :key="file.filename"
+                        :href="getFileDownloadUrl(file.responseId, file.filename)"
+                        target="_blank"
+                        class="file-link"
+                      >
+                        <FileIcon :size="16" />
+                        {{ file.originalName || file.filename }}
+                      </a>
+                    </div>
+                  </template>
+                  <template v-else>
+                    {{ formatAnswer(response.answers[question.id], question) }}
+                  </template>
                 </td>
                 <td v-if="permissions.deleteResponses">
                   <NcButton
@@ -302,6 +352,8 @@ import axios from '@nextcloud/axios';
 import { showError, showSuccess } from '@nextcloud/dialogs';
 import EditIcon from '../components/icons/EditIcon.vue';
 import DeleteIcon from '../components/icons/DeleteIcon.vue';
+import FileIcon from '../components/icons/FileIcon.vue';
+import DownloadIcon from '../components/icons/DownloadIcon.vue';
 import PieChart from '../components/charts/PieChart.vue';
 import BarChart from '../components/charts/BarChart.vue';
 import DoughnutChart from '../components/charts/DoughnutChart.vue';
@@ -317,6 +369,8 @@ export default {
     NcLoadingIcon,
     EditIcon,
     DeleteIcon,
+    FileIcon,
+    DownloadIcon,
     PieChart,
     BarChart,
     DoughnutChart,
@@ -394,6 +448,48 @@ export default {
 
     const isMatrixType = (type) => {
       return type === 'matrix';
+    };
+
+    const isFileType = (type) => {
+      return type === 'file';
+    };
+
+    // Get all files for a specific question from all responses
+    const getFilesForQuestion = (questionId) => {
+      const files = [];
+      for (const response of responses.value) {
+        const answer = response.answers[questionId];
+        if (answer) {
+          const normalized = normalizeFileAnswer(answer);
+          files.push(...normalized);
+        }
+      }
+      return files;
+    };
+
+    // Check if answer is a file upload (has fileId and filename properties)
+    const isFileAnswer = (answer) => {
+      if (!answer) return false;
+      if (Array.isArray(answer)) {
+        return answer.length > 0 && answer[0]?.filename && answer[0]?.responseId;
+      }
+      return answer?.filename && answer?.responseId;
+    };
+
+    // Normalize file answer to always be an array
+    const normalizeFileAnswer = (answer) => {
+      if (!answer) return [];
+      if (Array.isArray(answer)) return answer;
+      return [answer];
+    };
+
+    // Generate download URL for uploaded file
+    const getFileDownloadUrl = (responseId, filename) => {
+      return generateUrl('/apps/formvox/api/form/{fileId}/uploads/{responseId}/{filename}', {
+        fileId: props.fileId,
+        responseId,
+        filename,
+      });
     };
 
     // Get matrix rows from form question definition
@@ -492,6 +588,10 @@ export default {
       window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/export/json', { fileId: props.fileId });
     };
 
+    const downloadAllUploads = () => {
+      window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/uploads', { fileId: props.fileId });
+    };
+
     const deleteResponse = async (responseId) => {
       if (!confirm(t('Are you sure you want to delete this response?'))) {
         return;
@@ -534,6 +634,11 @@ export default {
       isChoiceType,
       isNumericType,
       isMatrixType,
+      isFileType,
+      isFileAnswer,
+      normalizeFileAnswer,
+      getFileDownloadUrl,
+      getFilesForQuestion,
       getMatrixRows,
       getMatrixColumns,
       getMatrixCount,
@@ -546,6 +651,7 @@ export default {
       goToEditor,
       exportCsv,
       exportJson,
+      downloadAllUploads,
       deleteResponse,
       t,
     };
@@ -705,6 +811,52 @@ export default {
   }
 }
 
+.file-responses {
+  .file-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    gap: 15px;
+  }
+
+  .file-count {
+    color: var(--color-text-maxcontrast);
+    margin: 0;
+  }
+
+  .file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .file-item {
+      .file-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: var(--color-main-background);
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius);
+        color: var(--color-primary-element);
+        text-decoration: none;
+        font-size: 13px;
+        transition: all 0.15s ease;
+
+        &:hover {
+          background: var(--color-primary-element-light);
+          border-color: var(--color-primary-element);
+        }
+
+        svg {
+          flex-shrink: 0;
+        }
+      }
+    }
+  }
+}
+
 .pagination-controls {
   display: flex;
   align-items: center;
@@ -773,6 +925,29 @@ export default {
   .anonymous {
     color: var(--color-text-maxcontrast);
     font-style: italic;
+  }
+
+  .file-answer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .file-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-primary-element);
+      text-decoration: none;
+      font-size: 13px;
+
+      &:hover {
+        text-decoration: underline;
+      }
+
+      svg {
+        flex-shrink: 0;
+      }
+    }
   }
 }
 </style>

@@ -490,4 +490,64 @@ class ApiController extends Controller
             );
         }
     }
+
+    /**
+     * Download an uploaded file from a form response
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function downloadUpload(int $fileId, string $responseId, string $filename): DataDownloadResponse
+    {
+        try {
+            $formFile = $this->formService->getFileById($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRoleFromFile($formFile, $userId);
+
+            if (!$this->permissionService->canViewResponses($role)) {
+                throw new \Exception('Permission denied');
+            }
+
+            $uploadedFile = $this->formService->getUpload($fileId, $responseId, $filename);
+
+            return new DataDownloadResponse(
+                $uploadedFile->getContent(),
+                $uploadedFile->getName(),
+                $uploadedFile->getMimeType()
+            );
+        } catch (\OCP\Files\NotFoundException $e) {
+            throw new \Exception('File not found');
+        }
+    }
+
+    /**
+     * Download all uploads for a form as a ZIP file
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function downloadAllUploads(int $fileId): DataDownloadResponse
+    {
+        try {
+            $formFile = $this->formService->getFileById($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRoleFromFile($formFile, $userId);
+
+            if (!$this->permissionService->canViewResponses($role)) {
+                throw new \Exception('Permission denied');
+            }
+
+            $form = $this->formService->load($fileId);
+            $formTitle = preg_replace('/[^a-zA-Z0-9_-]/', '_', $form['title'] ?? 'form');
+
+            // Create ZIP file
+            $zipContent = $this->formService->createUploadsZip($fileId);
+
+            return new DataDownloadResponse(
+                $zipContent,
+                $formTitle . '-uploads.zip',
+                'application/zip'
+            );
+        } catch (\OCP\Files\NotFoundException $e) {
+            throw new \Exception('No uploads found');
+        }
+    }
 }

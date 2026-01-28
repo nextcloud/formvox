@@ -13,6 +13,7 @@ return [
         ['name' => 'public#showForm', 'url' => '/public/{fileId}/{token}', 'verb' => 'GET'],
         ['name' => 'public#authenticate', 'url' => '/public/{fileId}/{token}', 'verb' => 'POST'],
         ['name' => 'public#submit', 'url' => '/public/{fileId}/{token}/submit', 'verb' => 'POST'],
+        ['name' => 'public#uploadFile', 'url' => '/public/{fileId}/{token}/upload', 'verb' => 'POST'],
 
         // API routes - Forms
         ['name' => 'api#list', 'url' => '/api/forms', 'verb' => 'GET'],
@@ -40,6 +41,10 @@ return [
 
         // API routes - User/Group search for access restrictions
         ['name' => 'api#searchSharees', 'url' => '/api/sharees', 'verb' => 'GET'],
+
+        // API routes - File uploads
+        ['name' => 'api#downloadUpload', 'url' => '/api/form/{fileId}/uploads/{responseId}/{filename}', 'verb' => 'GET'],
+        ['name' => 'api#downloadAllUploads', 'url' => '/api/form/{fileId}/uploads', 'verb' => 'GET'],
 
         // Branding routes (admin only, except images which are public)
         ['name' => 'branding#get', 'url' => '/api/branding', 'verb' => 'GET'],

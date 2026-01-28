@@ -38,10 +38,29 @@ class HideFormFilesPlugin extends ServerPlugin
     }
 
     /**
+     * Check if this request comes from the Nextcloud web interface.
+     * The web interface sends a requesttoken header for CSRF protection.
+     */
+    private function isWebInterfaceRequest(RequestInterface $request): bool
+    {
+        // The Nextcloud web interface sends these headers for AJAX requests
+        // External clients (sync, Sendent, other DAV clients) don't have these
+        $requestToken = $request->getHeader('requesttoken');
+        $ocsToken = $request->getHeader('OCS-APIREQUEST-TOKEN');
+
+        return !empty($requestToken) || !empty($ocsToken);
+    }
+
+    /**
      * Filter the PROPFIND response to remove .fvform files
      */
     public function filterPropfindResponse(RequestInterface $request, ResponseInterface $response): void
     {
+        // Allow Nextcloud web interface to see all files
+        if ($this->isWebInterfaceRequest($request)) {
+            return;
+        }
+
         // Only process successful PROPFIND responses (207 Multi-Status)
         if ($response->getStatus() !== 207) {
             return;

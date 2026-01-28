@@ -47,7 +47,10 @@ class IndexService
                     $idx['answer_counts'][$questionId] = [];
                 }
 
-                if (is_array($answer)) {
+                // Skip file upload answers (they have responseId property)
+                if ($this->isFileAnswer($answer)) {
+                    $idx['answer_counts'][$questionId]['[file]'] = ($idx['answer_counts'][$questionId]['[file]'] ?? 0) + 1;
+                } elseif (is_array($answer)) {
                     // Multiple choice
                     foreach ($answer as $val) {
                         $val = (string)$val;
@@ -113,7 +116,11 @@ class IndexService
                         $form['_index']['answer_counts'][$questionId] = [];
                     }
 
-                    if (is_array($answer)) {
+                    // Skip file upload answers (they have responseId property)
+                    if ($this->isFileAnswer($answer)) {
+                        $form['_index']['answer_counts'][$questionId]['[file]'] =
+                            ($form['_index']['answer_counts'][$questionId]['[file]'] ?? 0) + 1;
+                    } elseif (is_array($answer)) {
                         foreach ($answer as $val) {
                             $val = (string)$val;
                             $form['_index']['answer_counts'][$questionId][$val] =
@@ -200,5 +207,27 @@ class IndexService
     private function calculateChecksum(array $responses): string
     {
         return hash('sha256', json_encode($responses));
+    }
+
+    /**
+     * Check if an answer is a file upload (has responseId and filename properties)
+     */
+    private function isFileAnswer($answer): bool
+    {
+        if (!is_array($answer)) {
+            return false;
+        }
+
+        // Single file upload
+        if (isset($answer['responseId']) && isset($answer['filename'])) {
+            return true;
+        }
+
+        // Multiple file uploads (array of file objects)
+        if (isset($answer[0]) && is_array($answer[0]) && isset($answer[0]['responseId']) && isset($answer[0]['filename'])) {
+            return true;
+        }
+
+        return false;
     }
 }

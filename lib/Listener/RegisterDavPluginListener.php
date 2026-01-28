@@ -6,12 +6,15 @@ namespace OCA\FormVox\Listener;
 
 use OCA\DAV\Events\SabrePluginAuthInitEvent;
 use OCA\FormVox\DAV\HideFormFilesPlugin;
+use OCA\FormVox\DAV\StripFormDataPlugin;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use Psr\Log\LoggerInterface;
 
 /**
- * Listener that registers the HideFormFilesPlugin with the Sabre DAV server.
+ * Listener that registers DAV plugins with the Sabre DAV server.
+ * - HideFormFilesPlugin: Hides .fvform files from sync clients
+ * - StripFormDataPlugin: Strips responses and sensitive data on download
  *
  * @template-implements IEventListener<SabrePluginAuthInitEvent>
  */
@@ -32,5 +35,6 @@ class RegisterDavPluginListener implements IEventListener
 
         $server = $event->getServer();
         $server->addPlugin(new HideFormFilesPlugin($this->logger));
+        $server->addPlugin(new StripFormDataPlugin());
     }
 }

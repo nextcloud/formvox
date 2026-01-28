@@ -4,6 +4,11 @@ All notable changes to FormVox will be documented in this file.
 
 ## [0.2.6] - 2026-01-27
 
+### Added
+- File upload question type with configurable allowed file types and size limits
+- Download all uploads as ZIP from Results view
+- DAV plugin to strip sensitive data from .fvform files on download (responses, settings, tokens)
+
 ### Changed
 - Editor toolbar redesign: Preview, Share, Results buttons now prominent; less-used options in dropdown
 - Editor header redesign: cleaner look with underline focus states
@@ -13,7 +18,8 @@ All notable changes to FormVox will be documented in this file.
 - Required questions now clearly marked with red asterisk and "(required)" label on public forms
 
 ### Fixed
-- Hide .fvform files from all WebDAV clients, not just sync clients
+- Hide .fvform files now properly hidden from sync clients while remaining visible in web interface
+- Uploaded files are now deleted when their response is deleted
 - Icon vertical alignment in dropdown menus
 - Suppress @nextcloud/vue appName/appVersion warnings in console
 

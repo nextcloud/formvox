@@ -419,8 +419,18 @@ class FormService
 
         // Find and remove response
         $found = false;
+        $fileUploadResponseIds = [];
         foreach ($form['responses'] as $index => $response) {
             if ($response['id'] === $responseId) {
+                // Collect file upload responseIds from answers before deleting
+                if (isset($response['answers'])) {
+                    foreach ($response['answers'] as $answer) {
+                        $fileUploadResponseIds = array_merge(
+                            $fileUploadResponseIds,
+                            $this->extractFileResponseIds($answer)
+                        );
+                    }
+                }
                 array_splice($form['responses'], $index, 1);
                 $found = true;
                 break;
@@ -442,6 +452,11 @@ class FormService
 
         // Delete any versions created during this write
         $this->deleteVersionsForFile($file);
+
+        // Delete uploaded files for this response
+        foreach (array_unique($fileUploadResponseIds) as $uploadResponseId) {
+            $this->deleteResponseUploads($fileId, $uploadResponseId);
+        }
     }
 
     /**
@@ -470,6 +485,9 @@ class FormService
 
         // Delete any versions created during this write
         $this->deleteVersionsForFile($file);
+
+        // Delete all uploaded files for this form
+        $this->deleteAllUploads($fileId);
     }
 
     /**
@@ -1072,5 +1090,280 @@ class FormService
         }
 
         return $filename;
+    }
+
+    /**
+     * Get the uploads folder for a form
+     * Creates it if it doesn't exist
+     * Uses file ID in the folder name so renaming the form doesn't break uploads
+     */
+    public function getUploadsFolder(int $fileId): Folder
+    {
+        $formFile = $this->getFileByIdPublic($fileId);
+        $formFolder = $formFile->getParent();
+
+        // Hidden folder with file ID - never changes even if form is renamed
+        $uploadsFolderName = ".formvox-uploads-{$fileId}";
+
+        try {
+            $uploadsFolder = $formFolder->get($uploadsFolderName);
+            if (!($uploadsFolder instanceof Folder)) {
+                throw new \RuntimeException('Uploads path is not a folder');
+            }
+            return $uploadsFolder;
+        } catch (NotFoundException $e) {
+            return $formFolder->newFolder($uploadsFolderName);
+        }
+    }
+
+    /**
+     * Store an uploaded file for a form response
+     *
+     * @param int $fileId The form file ID
+     * @param string $responseId The response ID (temporary or final)
+     * @param array $uploadedFile The uploaded file from $_FILES
+     * @return array File metadata
+     */
+    public function storeUpload(int $fileId, string $responseId, array $uploadedFile): array
+    {
+        $uploadsFolder = $this->getUploadsFolder($fileId);
+
+        // Create response subfolder
+        try {
+            $responseFolder = $uploadsFolder->get($responseId);
+            if (!($responseFolder instanceof Folder)) {
+                throw new \RuntimeException('Response path is not a folder');
+            }
+        } catch (NotFoundException $e) {
+            $responseFolder = $uploadsFolder->newFolder($responseId);
+        }
+
+        // Sanitize filename but keep original for display
+        $originalName = $uploadedFile['name'];
+        $safeName = $this->sanitizeUploadFilename($originalName);
+
+        // Ensure unique filename in folder
+        $safeName = $this->getUniqueFilename($responseFolder, $safeName);
+
+        // Create the file
+        $newFile = $responseFolder->newFile($safeName);
+        $newFile->putContent(file_get_contents($uploadedFile['tmp_name']));
+
+        return [
+            'fileId' => $newFile->getId(),
+            'filename' => $safeName,
+            'originalName' => $originalName,
+            'size' => $uploadedFile['size'],
+            'mimeType' => $uploadedFile['type'],
+            'responseId' => $responseId,
+        ];
+    }
+
+    /**
+     * Get an uploaded file
+     *
+     * @param int $formFileId The form file ID
+     * @param string $responseId The response ID
+     * @param string $filename The filename
+     * @return File The file
+     */
+    public function getUpload(int $formFileId, string $responseId, string $filename): File
+    {
+        $uploadsFolder = $this->getUploadsFolder($formFileId);
+
+        try {
+            $responseFolder = $uploadsFolder->get($responseId);
+            if (!($responseFolder instanceof Folder)) {
+                throw new NotFoundException('Response folder not found');
+            }
+
+            $file = $responseFolder->get($filename);
+            if (!($file instanceof File)) {
+                throw new NotFoundException('File not found');
+            }
+
+            return $file;
+        } catch (NotFoundException $e) {
+            throw new NotFoundException('Upload not found');
+        }
+    }
+
+    /**
+     * Extract file upload responseIds from an answer
+     * Handles both single file and multiple file uploads
+     *
+     * @param mixed $answer The answer value
+     * @return array Array of responseId strings
+     */
+    private function extractFileResponseIds($answer): array
+    {
+        if (!is_array($answer)) {
+            return [];
+        }
+
+        // Single file upload (has responseId directly)
+        if (isset($answer['responseId'])) {
+            return [$answer['responseId']];
+        }
+
+        // Multiple file uploads (array of file objects)
+        $responseIds = [];
+        foreach ($answer as $item) {
+            if (is_array($item) && isset($item['responseId'])) {
+                $responseIds[] = $item['responseId'];
+            }
+        }
+
+        return $responseIds;
+    }
+
+    /**
+     * Delete all uploads for a response
+     *
+     * @param int $formFileId The form file ID
+     * @param string $responseId The response ID
+     */
+    public function deleteResponseUploads(int $formFileId, string $responseId): void
+    {
+        try {
+            $uploadsFolder = $this->getUploadsFolder($formFileId);
+            $responseFolder = $uploadsFolder->get($responseId);
+            if ($responseFolder instanceof Folder) {
+                $responseFolder->delete();
+            }
+        } catch (NotFoundException $e) {
+            // No uploads to delete
+        }
+    }
+
+    /**
+     * Delete the entire uploads folder for a form
+     *
+     * @param int $fileId The form file ID
+     */
+    public function deleteAllUploads(int $fileId): void
+    {
+        try {
+            $formFile = $this->getFileByIdPublic($fileId);
+            $formFolder = $formFile->getParent();
+
+            // Use file ID based folder name
+            $uploadsFolderName = ".formvox-uploads-{$fileId}";
+
+            try {
+                $uploadsFolder = $formFolder->get($uploadsFolderName);
+                if ($uploadsFolder instanceof Folder) {
+                    $uploadsFolder->delete();
+                }
+            } catch (NotFoundException $e) {
+                // No uploads folder
+            }
+        } catch (\Exception $e) {
+            // Form file not found or other error
+        }
+    }
+
+    /**
+     * Create a ZIP file containing all uploads for a form
+     *
+     * @param int $fileId The form file ID
+     * @return string The ZIP file content
+     * @throws NotFoundException If no uploads exist
+     */
+    public function createUploadsZip(int $fileId): string
+    {
+        $formFile = $this->getFileByIdPublic($fileId);
+        $formFolder = $formFile->getParent();
+
+        // Get uploads folder
+        $uploadsFolderName = ".formvox-uploads-{$fileId}";
+        try {
+            $uploadsFolder = $formFolder->get($uploadsFolderName);
+            if (!($uploadsFolder instanceof Folder)) {
+                throw new NotFoundException('No uploads found');
+            }
+        } catch (NotFoundException $e) {
+            throw new NotFoundException('No uploads found');
+        }
+
+        // Create temporary ZIP file
+        $tempFile = tempnam(sys_get_temp_dir(), 'formvox_uploads_');
+        $zip = new \ZipArchive();
+
+        if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Failed to create ZIP file');
+        }
+
+        // Add all files from uploads folder
+        $this->addFolderToZip($zip, $uploadsFolder, '');
+
+        $zip->close();
+
+        // Read ZIP content
+        $content = file_get_contents($tempFile);
+
+        // Clean up temp file
+        unlink($tempFile);
+
+        if ($content === false || strlen($content) === 0) {
+            throw new NotFoundException('No uploads found');
+        }
+
+        return $content;
+    }
+
+    /**
+     * Recursively add a folder's contents to a ZIP archive
+     *
+     * @param \ZipArchive $zip The ZIP archive
+     * @param Folder $folder The folder to add
+     * @param string $basePath The base path in the ZIP
+     */
+    private function addFolderToZip(\ZipArchive $zip, Folder $folder, string $basePath): void
+    {
+        foreach ($folder->getDirectoryListing() as $node) {
+            $nodePath = $basePath === '' ? $node->getName() : $basePath . '/' . $node->getName();
+
+            if ($node instanceof File) {
+                $zip->addFromString($nodePath, $node->getContent());
+            } elseif ($node instanceof Folder) {
+                $this->addFolderToZip($zip, $node, $nodePath);
+            }
+        }
+    }
+
+    /**
+     * Sanitize upload filename
+     * Keeps extension, removes unsafe characters
+     */
+    private function sanitizeUploadFilename(string $filename): string
+    {
+        $info = pathinfo($filename);
+        $extension = $info['extension'] ?? 'bin';
+
+        // Clean the base name - allow more characters than form filenames
+        $name = $info['filename'];
+        // Remove path traversal characters and null bytes
+        $name = str_replace(['..', "\0", '/', '\\'], '', $name);
+        // Replace problematic characters with underscores
+        $name = preg_replace('/[<>:"|?*]/', '_', $name);
+        // Collapse multiple underscores/spaces
+        $name = preg_replace('/[_\s]+/', '_', $name);
+        // Trim
+        $name = trim($name, '._');
+        // Limit length
+        $name = substr($name, 0, 100);
+        // Default if empty
+        if (empty($name)) {
+            $name = 'upload';
+        }
+
+        // Clean extension
+        $extension = preg_replace('/[^a-zA-Z0-9]/', '', $extension);
+        if (empty($extension)) {
+            $extension = 'bin';
+        }
+
+        return $name . '.' . $extension;
     }
 }
