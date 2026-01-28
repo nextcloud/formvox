@@ -57,9 +57,24 @@ This is useful for:
 
 ## Embedding Forms
 
-Embed your form in external websites, SharePoint, intranets, or other platforms.
+One of FormVox's most flexible features is the ability to embed forms directly into any website or platform that supports HTML. This means your forms can live exactly where your users already are — no need to redirect them to a separate page.
+
+FormVox forms can be embedded in:
+- **Microsoft SharePoint** sites and pages
+- **Company intranets** and portals
+- **WordPress**, **Drupal**, or any CMS
+- **Static websites** and landing pages
+- **Learning management systems** (LMS)
+- Any platform that supports iframe embedding
+
+![FormVox form embedded in a SharePoint page](../../screenshots/SharePoint-embedding.png)
+*A FormVox form running seamlessly inside a SharePoint site — fully interactive, including all question types, conditional logic, and file uploads.*
+
+Because FormVox uses standard iframe embedding, it works anywhere HTML is supported. The embedded form is fully functional: respondents can fill in all question types, navigate conditional logic, upload files, and submit — all without leaving the host page.
 
 ### Using the Embed Code Generator
+
+The easiest way to embed a form:
 
 1. Open your form
 2. Click **Share** in the toolbar
@@ -70,7 +85,11 @@ Embed your form in external websites, SharePoint, intranets, or other platforms.
 5. Copy the generated embed code
 6. Paste into your website's HTML
 
+The generator produces ready-to-use code — no manual editing needed.
+
 ### Manual iframe Embed
+
+If you prefer to write the embed code yourself:
 
 ```html
 <iframe
@@ -83,7 +102,7 @@ Embed your form in external websites, SharePoint, intranets, or other platforms.
 
 ### Responsive Embed
 
-For mobile-friendly embedding:
+For mobile-friendly embedding that adapts to any screen size:
 
 ```html
 <div style="position: relative; padding-bottom: 75%; height: 0; overflow: hidden;">
@@ -94,6 +113,18 @@ For mobile-friendly embedding:
   </iframe>
 </div>
 ```
+
+### SharePoint Embedding
+
+To embed a FormVox form in SharePoint:
+
+1. Generate the embed code using the **Embed** tab in the Share dialog
+2. In SharePoint, edit your page
+3. Add an **Embed** web part (or **Script Editor**)
+4. Paste the iframe code
+5. Save and publish the page
+
+The form will appear inline on your SharePoint page, fully styled and interactive.
 
 ### Domain Restrictions
 
