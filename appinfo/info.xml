@@ -42,7 +42,7 @@ FormVox is a file-based forms and polls app for Nextcloud. Unlike traditional fo
 
 Built with Vue 3 and modern web technologies for a smooth, secure experience.
     ]]></description>
-    <version>0.2.6</version>
+    <version>0.2.7</version>
     <licence>agpl</licence>
     <author mail="sam@mief.info">Sam Ditmeijer</author>
     <author mail="rik@shalution.nl">Rik Dekker</author>

@@ -66,5 +66,25 @@ return [
 
         // Settings routes (admin only)
         ['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
+
+        // API key management (authenticated users)
+        ['name' => 'integration#createApiKey', 'url' => '/api/form/{fileId}/api-keys', 'verb' => 'POST'],
+        ['name' => 'integration#deleteApiKey', 'url' => '/api/form/{fileId}/api-keys/{keyId}', 'verb' => 'DELETE'],
+        ['name' => 'integration#getApiPermissions', 'url' => '/api/integration/permissions', 'verb' => 'GET'],
+
+        // Webhook management (authenticated users)
+        ['name' => 'integration#createWebhook', 'url' => '/api/form/{fileId}/webhooks', 'verb' => 'POST'],
+        ['name' => 'integration#updateWebhook', 'url' => '/api/form/{fileId}/webhooks/{webhookId}', 'verb' => 'PUT'],
+        ['name' => 'integration#deleteWebhook', 'url' => '/api/form/{fileId}/webhooks/{webhookId}', 'verb' => 'DELETE'],
+        ['name' => 'integration#getWebhookEvents', 'url' => '/api/integration/webhook-events', 'verb' => 'GET'],
+
+        // External API v1 (API key authenticated)
+        ['name' => 'external_api#getForm', 'url' => '/api/v1/external/forms/{fileId}', 'verb' => 'GET'],
+        ['name' => 'external_api#getSchema', 'url' => '/api/v1/external/forms/{fileId}/schema', 'verb' => 'GET'],
+        ['name' => 'external_api#getResponses', 'url' => '/api/v1/external/forms/{fileId}/responses', 'verb' => 'GET'],
+        ['name' => 'external_api#getResponse', 'url' => '/api/v1/external/forms/{fileId}/responses/{responseId}', 'verb' => 'GET'],
+        ['name' => 'external_api#createResponse', 'url' => '/api/v1/external/forms/{fileId}/responses', 'verb' => 'POST'],
+        ['name' => 'external_api#updateResponse', 'url' => '/api/v1/external/forms/{fileId}/responses/{responseId}', 'verb' => 'PUT'],
+        ['name' => 'external_api#deleteResponse', 'url' => '/api/v1/external/forms/{fileId}/responses/{responseId}', 'verb' => 'DELETE'],
     ],
 ];

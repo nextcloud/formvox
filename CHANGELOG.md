@@ -2,6 +2,21 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.7] - 2026-01-29
+
+### Added
+- **External API** for programmatic access from third-party systems
+  - API key authentication with bcrypt-hashed storage
+  - Configurable permissions per key (read_form, read_responses, write_responses, delete_responses)
+  - CRUD operations on form responses
+  - API keys automatically stripped when downloading .fvform via WebDAV
+- **Webhooks** for real-time notifications
+  - Events: response.created, response.updated, response.deleted
+  - HMAC-SHA256 signed payloads for security
+  - Configurable per-form with enable/disable toggle
+- New "API & Integrations" section in Share dialog for managing API keys and webhooks
+- Comprehensive External API & Webhooks documentation in `docs/architecture/external-api.md`
+
 ## [0.2.6] - 2026-01-28
 
 ### Added

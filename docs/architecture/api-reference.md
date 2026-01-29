@@ -366,12 +366,18 @@ X-RateLimit-Remaining: 45
 X-RateLimit-Reset: 1705329600
 ```
 
-## Webhooks (Planned)
+## External API & Webhooks
 
-Future releases will support webhooks for:
-- New submission
-- Form updated
-- Responses exported
+FormVox now supports an External API with API key authentication and webhooks for real-time notifications.
+
+See the dedicated documentation: **[External API & Webhooks](external-api.md)**
+
+Features:
+- API key authentication (bcrypt-hashed storage)
+- Configurable permissions per key
+- CRUD operations on responses
+- Webhook events: `response.created`, `response.updated`, `response.deleted`
+- HMAC-SHA256 signed webhook payloads
 
 ## Code Examples
 
@@ -447,5 +453,6 @@ curl -X POST \
 
 ## Next Steps
 
+- [External API & Webhooks](external-api.md) - API keys and webhooks for integrations
 - [File Format](file-format.md) - Understanding the data structure
 - [Architecture Overview](overview.md) - System design

@@ -10,13 +10,16 @@ class ResponseService
 {
     private FormService $formService;
     private IndexService $indexService;
+    private WebhookService $webhookService;
 
     public function __construct(
         FormService $formService,
-        IndexService $indexService
+        IndexService $indexService,
+        WebhookService $webhookService
     ) {
         $this->formService = $formService;
         $this->indexService = $indexService;
+        $this->webhookService = $webhookService;
     }
 
     /**
@@ -66,7 +69,12 @@ class ResponseService
         }
 
         // Append response (use public method since no user is logged in)
-        return $this->formService->appendResponsePublic($fileId, $response);
+        $result = $this->formService->appendResponsePublic($fileId, $response);
+
+        // Trigger webhook
+        $this->webhookService->trigger($form, 'response.created', $response);
+
+        return $result;
     }
 
     /**
@@ -107,7 +115,12 @@ class ResponseService
         }
 
         // Append response
-        return $this->formService->appendResponse($fileId, $response);
+        $result = $this->formService->appendResponse($fileId, $response);
+
+        // Trigger webhook
+        $this->webhookService->trigger($form, 'response.created', $response);
+
+        return $result;
     }
 
     /**

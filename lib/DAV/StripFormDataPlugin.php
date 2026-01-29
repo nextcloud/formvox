@@ -111,18 +111,20 @@ class StripFormDataPlugin extends ServerPlugin
         ];
 
         // Reset settings but keep form behavior settings
+        // Note: This explicitly excludes sensitive data like api_keys, webhooks,
+        // share tokens, passwords, and access restrictions
         $form['settings'] = [
             // Keep these settings (form behavior)
             'anonymous' => $form['settings']['anonymous'] ?? true,
             'allow_multiple' => $form['settings']['allow_multiple'] ?? false,
             'require_login' => $form['settings']['require_login'] ?? false,
-            // Reset share-related settings
-            'public_token' => null,
-            'share_password_hash' => null,
-            'share_expires_at' => null,
-            // Reset access restrictions
-            'allowed_users' => [],
-            'allowed_groups' => [],
+            // Everything else is stripped:
+            // - public_token (share links)
+            // - share_password_hash (passwords)
+            // - share_expires_at (expiration)
+            // - allowed_users, allowed_groups (access restrictions)
+            // - api_keys (API credentials)
+            // - webhooks (webhook configurations)
         ];
 
         // Remove form-specific branding (use admin defaults)

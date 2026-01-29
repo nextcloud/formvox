@@ -35,65 +35,84 @@
         </div>
       </div>
 
-      <div v-if="shareLink" class="embed-section">
-        <h3>{{ t('Embed code') }}</h3>
-        <p class="embed-description">
-          {{ t('Copy this code to embed the form in your website, SharePoint, or intranet.') }}
-        </p>
+      <!-- Embed Code Section (collapsible) -->
+      <div v-if="shareLink" class="collapsible-section">
+        <button type="button" class="section-toggle" @click="showEmbed = !showEmbed">
+          <CodeIcon :size="18" />
+          <span>{{ t('Embed code') }}</span>
+          <ChevronDownIcon :size="20" :class="{ rotated: showEmbed }" />
+        </button>
+        <div v-if="showEmbed" class="section-content">
+          <p class="embed-description">
+            {{ t('Copy this code to embed the form in your website, SharePoint, or intranet.') }}
+          </p>
 
-        <div class="embed-options">
-          <label class="embed-option">
-            <input type="checkbox" v-model="embedOptions.responsive">
-            {{ t('Responsive width') }}
-          </label>
-          <label v-if="!embedOptions.responsive" class="embed-option">
-            {{ t('Width') }}:
-            <input type="number" v-model.number="embedOptions.width" min="300" max="1200" class="size-input"> px
-          </label>
-          <label class="embed-option">
-            {{ t('Height') }}:
-            <input type="number" v-model.number="embedOptions.height" min="400" max="2000" class="size-input"> px
-          </label>
-        </div>
+          <div class="embed-options">
+            <label class="embed-option">
+              <input type="checkbox" v-model="embedOptions.responsive">
+              {{ t('Responsive width') }}
+            </label>
+            <label v-if="!embedOptions.responsive" class="embed-option">
+              {{ t('Width') }}:
+              <input type="number" v-model.number="embedOptions.width" min="300" max="1200" class="size-input"> px
+            </label>
+            <label class="embed-option">
+              {{ t('Height') }}:
+              <input type="number" v-model.number="embedOptions.height" min="400" max="2000" class="size-input"> px
+            </label>
+          </div>
 
-        <div class="embed-code-container">
-          <code class="embed-code">{{ embedCode }}</code>
-          <NcButton type="tertiary" @click="copyEmbedCode">
-            <template #icon>
-              <CopyIcon :size="20" />
-            </template>
-            {{ embedCopied ? t('Copied!') : t('Copy') }}
-          </NcButton>
+          <div class="embed-code-container">
+            <code class="embed-code">{{ embedCode }}</code>
+            <NcButton type="tertiary" @click="copyEmbedCode">
+              <template #icon>
+                <CopyIcon :size="20" />
+              </template>
+              {{ embedCopied ? t('Copied!') : t('Copy') }}
+            </NcButton>
+          </div>
         </div>
       </div>
 
-      <div v-if="shareLink" class="response-settings">
-        <h3>{{ t('Response settings') }}</h3>
+      <!-- Response Settings Section (collapsible) -->
+      <div v-if="shareLink" class="collapsible-section">
+        <button type="button" class="section-toggle" @click="showResponseSettings = !showResponseSettings">
+          <CogIcon :size="18" />
+          <span>{{ t('Response settings') }}</span>
+          <ChevronDownIcon :size="20" :class="{ rotated: showResponseSettings }" />
+        </button>
+        <div v-if="showResponseSettings" class="section-content">
+          <NcCheckboxRadioSwitch
+            :model-value="responseSettings.allowAnonymous"
+            @update:model-value="updateResponseSetting('anonymous', $event)"
+          >
+            {{ t('Collect anonymously') }}
+          </NcCheckboxRadioSwitch>
 
-        <NcCheckboxRadioSwitch
-          :model-value="responseSettings.allowAnonymous"
-          @update:model-value="updateResponseSetting('anonymous', $event)"
-        >
-          {{ t('Collect anonymously') }}
-        </NcCheckboxRadioSwitch>
+          <NcCheckboxRadioSwitch
+            :model-value="responseSettings.allowMultiple"
+            @update:model-value="updateResponseSetting('allow_multiple', $event)"
+          >
+            {{ t('Allow multiple submissions') }}
+          </NcCheckboxRadioSwitch>
 
-        <NcCheckboxRadioSwitch
-          :model-value="responseSettings.allowMultiple"
-          @update:model-value="updateResponseSetting('allow_multiple', $event)"
-        >
-          {{ t('Allow multiple submissions') }}
-        </NcCheckboxRadioSwitch>
-
-        <NcCheckboxRadioSwitch
-          :model-value="responseSettings.requireLogin"
-          @update:model-value="updateResponseSetting('require_login', $event)"
-        >
-          {{ t('Require login to respond') }}
-        </NcCheckboxRadioSwitch>
+          <NcCheckboxRadioSwitch
+            :model-value="responseSettings.requireLogin"
+            @update:model-value="updateResponseSetting('require_login', $event)"
+          >
+            {{ t('Require login to respond') }}
+          </NcCheckboxRadioSwitch>
+        </div>
       </div>
 
-      <div v-if="shareLink" class="link-settings">
-        <h3>{{ t('Link settings') }}</h3>
+      <!-- Link Settings Section (collapsible) -->
+      <div v-if="shareLink" class="collapsible-section">
+        <button type="button" class="section-toggle" @click="showLinkSettings = !showLinkSettings">
+          <LinkIcon :size="18" />
+          <span>{{ t('Link settings') }}</span>
+          <ChevronDownIcon :size="20" :class="{ rotated: showLinkSettings }" />
+        </button>
+        <div v-if="showLinkSettings" class="section-content">
 
         <NcCheckboxRadioSwitch
           :model-value="linkSettings.passwordProtected"
@@ -208,21 +227,41 @@
           </div>
         </div>
 
-        <div class="delete-link-section">
-          <NcButton type="tertiary" @click="deleteShareLink">
-            {{ t('Delete response link') }}
-          </NcButton>
+          <div class="delete-link-section">
+            <NcButton type="tertiary" @click="deleteShareLink">
+              {{ t('Delete response link') }}
+            </NcButton>
+          </div>
         </div>
       </div>
 
-      <div v-if="responseCount > 0" class="responses-section">
-        <h3>{{ t('Responses') }}</h3>
-        <p class="response-count">
-          {{ t('{count} responses collected', { count: responseCount }) }}
-        </p>
-        <NcButton type="error" @click="confirmDeleteResponses">
-          {{ t('Delete all responses') }}
-        </NcButton>
+      <!-- Integration Settings (API Keys & Webhooks) - collapsible -->
+      <div v-if="shareLink" class="collapsible-section">
+        <button type="button" class="section-toggle" @click="showIntegration = !showIntegration">
+          <ApiIcon :size="18" />
+          <span>{{ t('API & Webhooks') }}</span>
+          <ChevronDownIcon :size="20" :class="{ rotated: showIntegration }" />
+        </button>
+        <div v-if="showIntegration" class="section-content">
+          <IntegrationSettings :file-id="fileId" :form="form" />
+        </div>
+      </div>
+
+      <!-- Responses Section (collapsible) -->
+      <div v-if="responseCount > 0" class="collapsible-section">
+        <button type="button" class="section-toggle" @click="showResponses = !showResponses">
+          <ChartIcon :size="18" />
+          <span>{{ t('Responses') }} ({{ responseCount }})</span>
+          <ChevronDownIcon :size="20" :class="{ rotated: showResponses }" />
+        </button>
+        <div v-if="showResponses" class="section-content">
+          <p class="response-count">
+            {{ t('{count} responses collected', { count: responseCount }) }}
+          </p>
+          <NcButton type="error" @click="confirmDeleteResponses">
+            {{ t('Delete all responses') }}
+          </NcButton>
+        </div>
       </div>
 
       <div class="actions">
@@ -248,8 +287,15 @@ import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { showError, showSuccess } from '@nextcloud/dialogs';
 import CopyIcon from './icons/CopyIcon.vue';
+import CogIcon from './icons/CogIcon.vue';
+import ChartIcon from './icons/ChartIcon.vue';
+import ApiIcon from 'vue-material-design-icons/Api.vue';
+import ChevronDownIcon from 'vue-material-design-icons/ChevronDown.vue';
+import CodeIcon from 'vue-material-design-icons/CodeTags.vue';
+import LinkIcon from 'vue-material-design-icons/Link.vue';
 import AccountIcon from 'vue-material-design-icons/Account.vue';
 import AccountGroupIcon from 'vue-material-design-icons/AccountGroup.vue';
+import IntegrationSettings from './IntegrationSettings.vue';
 
 export default {
   name: 'ShareDialog',
@@ -260,8 +306,15 @@ export default {
     NcCheckboxRadioSwitch,
     NcDateTimePicker,
     CopyIcon,
+    CogIcon,
+    ChartIcon,
+    ApiIcon,
+    ChevronDownIcon,
+    CodeIcon,
+    LinkIcon,
     AccountIcon,
     AccountGroupIcon,
+    IntegrationSettings,
   },
   props: {
     fileId: {
@@ -292,6 +345,13 @@ export default {
       expires: false,
       expiresAt: null,
     });
+
+    // Collapsible section toggles
+    const showEmbed = ref(false);
+    const showResponseSettings = ref(false);
+    const showLinkSettings = ref(false);
+    const showIntegration = ref(false);
+    const showResponses = ref(false);
 
     // Embed options
     const embedOptions = reactive({
@@ -687,10 +747,15 @@ export default {
       responseCount,
       accessRestrictions,
       searchTerm,
+      showEmbed,
+      showResponseSettings,
+      showLinkSettings,
+      showResponses,
       searchResults,
       embedOptions,
       embedCopied,
       embedCode,
+      showIntegration,
       createShareLink,
       copyLink,
       copyEmbedCode,
@@ -763,75 +828,101 @@ export default {
   }
 }
 
-.embed-section {
-  margin-bottom: 24px;
-  padding: 16px;
-  background: var(--color-background-hover);
-  border-radius: var(--border-radius-large);
+// Embed styles (used inside collapsible-section)
+.embed-description {
+  color: var(--color-text-maxcontrast);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
 
-  .embed-description {
-    color: var(--color-text-maxcontrast);
-    font-size: 13px;
-    margin: 0 0 12px;
-  }
+.embed-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
 
-  .embed-options {
+  .embed-option {
     display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 12px;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
 
-    .embed-option {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-
-      input[type="checkbox"] {
-        margin: 0;
-      }
-
-      .size-input {
-        width: 70px;
-        padding: 4px 8px;
-        border: 1px solid var(--color-border);
-        border-radius: var(--border-radius);
-        font-size: 14px;
-      }
+    input[type="checkbox"] {
+      margin: 0;
     }
-  }
 
-  .embed-code-container {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-
-    .embed-code {
-      flex: 1;
-      padding: 10px 12px;
-      background: var(--color-background-dark);
+    .size-input {
+      width: 70px;
+      padding: 4px 8px;
       border: 1px solid var(--color-border);
       border-radius: var(--border-radius);
-      font-family: monospace;
-      font-size: 12px;
-      word-break: break-all;
-      white-space: pre-wrap;
+      font-size: 14px;
     }
   }
 }
 
-.response-settings {
-  margin-bottom: 24px;
-  padding: 16px;
-  background: var(--color-background-hover);
-  border-radius: var(--border-radius-large);
+.embed-code-container {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+
+  .embed-code {
+    flex: 1;
+    padding: 10px 12px;
+    background: var(--color-background-dark);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
 }
 
-.link-settings {
-  margin-bottom: 24px;
+.collapsible-section {
+  margin-bottom: 16px;
   padding: 16px;
   background: var(--color-background-hover);
   border-radius: var(--border-radius-large);
+
+  .section-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-main-text);
+
+    &:hover {
+      color: var(--color-primary);
+    }
+
+    :deep(svg) {
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+
+      &.rotated {
+        transform: rotate(180deg);
+      }
+
+      &:last-child {
+        margin-left: auto;
+      }
+    }
+
+    span {
+      flex-shrink: 0;
+    }
+  }
+
+  .section-content {
+    margin-top: 16px;
+  }
 
   .password-field {
     display: flex;
@@ -846,17 +937,6 @@ export default {
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
   }
-}
-
-.responses-section {
-  margin-bottom: 24px;
-  padding: 16px;
-  background: var(--color-background-hover);
-  border-radius: var(--border-radius-large);
-
-  h3 {
-    margin: 0 0 8px;
-  }
 
   .response-count {
     margin: 0 0 12px;
@@ -870,6 +950,7 @@ export default {
   padding-top: 20px;
   border-top: 1px solid var(--color-border);
 }
+
 
 .access-restrictions {
   margin-top: 12px;
