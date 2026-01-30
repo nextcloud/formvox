@@ -2,7 +2,7 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [0.2.7] - 2026-01-29
+## [0.2.7] - 2026-01-30
 
 ### Added
 - **External API** for programmatic access from third-party systems
@@ -16,6 +16,10 @@ All notable changes to FormVox will be documented in this file.
   - Configurable per-form with enable/disable toggle
 - New "API & Integrations" section in Share dialog for managing API keys and webhooks
 - Comprehensive External API & Webhooks documentation in `docs/architecture/external-api.md`
+
+### Fixed
+- Admin settings page no longer blocks on statistics loading (statistics are now fetched async)
+- Consistent app icon (`app-dark.svg` now matches `app.svg` structure)
 
 ## [0.2.6] - 2026-01-28
 

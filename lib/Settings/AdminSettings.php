@@ -41,8 +41,7 @@ class AdminSettings implements ISettings
         $branding = $this->brandingService->getBranding();
         $this->initialState->provideInitialState('branding', $branding);
 
-        // Provide statistics data
-        $this->initialState->provideInitialState('statistics', $this->statisticsService->getStatistics());
+        // Statistics are loaded async from the frontend to avoid blocking page load
         $this->initialState->provideInitialState('telemetry', $this->telemetryService->getStatus());
 
         // Provide embed settings

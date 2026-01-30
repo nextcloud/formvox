@@ -36,7 +36,11 @@
           {{ t('formvox', 'Overview of forms and responses in your FormVox installation.') }}
         </p>
 
-        <div class="stats-overview">
+        <div v-if="loadingStatistics" class="stats-loading">
+          <NcLoadingIcon :size="32" />
+          <span>{{ t('formvox', 'Loading statistics...') }}</span>
+        </div>
+        <div v-else class="stats-overview">
           <div class="stat-row">
             <div class="stat-info">
               <span class="stat-icon">📋</span>
@@ -149,8 +153,8 @@
 </template>
 
 <script>
-import { ref, reactive } from 'vue';
-import { NcCheckboxRadioSwitch, NcNoteCard, NcButton } from '@nextcloud/vue';
+import { ref, reactive, onMounted } from 'vue';
+import { NcCheckboxRadioSwitch, NcNoteCard, NcButton, NcLoadingIcon } from '@nextcloud/vue';
 import axios from '@nextcloud/axios';
 import { generateUrl } from '@nextcloud/router';
 import { showSuccess, showError } from '@nextcloud/dialogs';
@@ -165,6 +169,7 @@ export default {
     NcCheckboxRadioSwitch,
     NcNoteCard,
     NcButton,
+    NcLoadingIcon,
     PageBuilder,
     Palette,
     ChartBox,
@@ -174,10 +179,6 @@ export default {
     initialBranding: {
       type: Object,
       required: true,
-    },
-    initialStatistics: {
-      type: Object,
-      default: () => ({ totalForms: 0, totalResponses: 0, activeUsers30d: 0 }),
     },
     initialTelemetry: {
       type: Object,
@@ -192,10 +193,11 @@ export default {
     const activeTab = ref('branding');
     const branding = props.initialBranding;
 
+    const loadingStatistics = ref(true);
     const stats = reactive({
-      totalForms: props.initialStatistics.totalForms || 0,
-      totalResponses: props.initialStatistics.totalResponses || 0,
-      activeUsers30d: props.initialStatistics.activeUsers30d || 0,
+      totalForms: 0,
+      totalResponses: 0,
+      activeUsers30d: 0,
     });
 
     const telemetryEnabled = ref(props.initialTelemetry.enabled !== false);
@@ -258,9 +260,23 @@ export default {
       return text;
     };
 
+    onMounted(async () => {
+      try {
+        const response = await axios.get(generateUrl('/apps/formvox/api/statistics'));
+        stats.totalForms = response.data.totalForms || 0;
+        stats.totalResponses = response.data.totalResponses || 0;
+        stats.activeUsers30d = response.data.activeUsers30d || 0;
+      } catch (error) {
+        console.error('Failed to load statistics:', error);
+      } finally {
+        loadingStatistics.value = false;
+      }
+    });
+
     return {
       activeTab,
       branding,
+      loadingStatistics,
       stats,
       telemetryEnabled,
       telemetryStatus,
@@ -336,6 +352,15 @@ export default {
 .settings-section-desc {
   color: var(--color-text-maxcontrast);
   margin-bottom: 20px;
+}
+
+/* Stats loading */
+.stats-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--color-text-maxcontrast);
 }
 
 /* Stats overview */

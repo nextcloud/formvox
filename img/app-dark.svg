@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <!-- Form/document icon - black version for app store/dark theme -->
-  <path d="M8 3C6.9 3 6 3.9 6 5v22c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H8zm0 2h16v22H8V5z" fill="#000"/>
+  <rect x="6" y="3" width="20" height="26" rx="2" fill="none" stroke="#000" stroke-width="2"/>
   <rect x="10" y="10" width="12" height="2" rx="1" fill="#000"/>
   <rect x="10" y="16" width="12" height="2" rx="1" fill="#000"/>
   <rect x="10" y="22" width="7" height="2" rx="1" fill="#000"/>

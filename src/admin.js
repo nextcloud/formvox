@@ -6,7 +6,6 @@ import { loadState } from '@nextcloud/initial-state';
 
 // Load initial state with fallback defaults
 let branding = {};
-let statistics = { totalForms: 0, totalResponses: 0, activeUsers30d: 0 };
 let telemetry = { enabled: true, lastReport: null };
 let embedSettings = { allowedDomains: '*' };
 
@@ -14,12 +13,6 @@ try {
   branding = loadState('formvox', 'branding');
 } catch (e) {
   console.warn('FormVox: Could not load branding state', e);
-}
-
-try {
-  statistics = loadState('formvox', 'statistics');
-} catch (e) {
-  console.warn('FormVox: Could not load statistics state', e);
 }
 
 try {
@@ -36,7 +29,6 @@ try {
 
 const app = createApp(AdminSettings, {
   initialBranding: branding,
-  initialStatistics: statistics,
   initialTelemetry: telemetry,
   initialEmbedSettings: embedSettings,
 });

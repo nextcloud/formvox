@@ -34,7 +34,7 @@ View usage statistics across your Nextcloud instance.
 - **Active users** - Users who created forms (last 30 days)
 
 #### Statistics Refresh
-Statistics are calculated in real-time when viewing the admin panel.
+Statistics are loaded asynchronously when you open the Statistics tab, so the admin settings page loads instantly without waiting for statistics to be calculated.
 
 ### Embedding Tab
 
@@ -196,9 +196,13 @@ FormVox supports integration via:
 - File system access (`.fvform` files are JSON)
 - Nextcloud's sharing API
 
-### Webhooks (Future)
+### External API & Webhooks
 
-Webhook support for external notifications is planned for future releases.
+FormVox supports an External API with API key authentication and webhooks for real-time notifications. See the [External API & Webhooks documentation](../architecture/external-api.md) for details on:
+- API key management (per-form, configurable permissions)
+- CRUD operations on responses
+- Webhook events (`response.created`, `response.updated`, `response.deleted`)
+- HMAC-SHA256 signed payloads
 
 ## Performance Tuning
 
