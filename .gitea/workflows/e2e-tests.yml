@@ -1,0 +1,52 @@
+# Gitea Actions: FormVox E2E Tests with Cypress
+# Runs against a test Nextcloud instance
+
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  cypress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Cypress
+        run: |
+          npm init -y
+          npm install cypress
+
+      - name: Run Cypress tests
+        env:
+          NC_URL: ${{ secrets.NC_URL }}
+          NC_USER: ${{ secrets.NC_USER }}
+          NC_PASSWORD: ${{ secrets.NC_PASSWORD }}
+        run: |
+          npx cypress run --browser chrome --headless
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          retention-days: 7
+
+      - name: Upload videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: cypress/videos
+          retention-days: 7
