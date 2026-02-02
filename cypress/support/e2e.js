@@ -15,16 +15,16 @@ Cypress.Commands.add('login', (user, password) => {
       if ($body.find('#user').length) {
         cy.get('#user').type(username)
         cy.get('#password').type(pass)
-        cy.get('#submit-form, button[type="submit"], .login-form button').click()
+        cy.get('#submit-form, button[type="submit"], .login-form button').first().click()
       } else if ($body.find('input[name="user"]').length) {
         cy.get('input[name="user"]').type(username)
         cy.get('input[name="password"]').type(pass)
-        cy.get('button[type="submit"], input[type="submit"]').click()
+        cy.get('button[type="submit"], input[type="submit"]').first().click()
       } else {
         // Fallback: find any login form
         cy.get('input[type="text"], input[type="email"]').first().type(username)
         cy.get('input[type="password"]').first().type(pass)
-        cy.get('button, input[type="submit"]').contains(/log|sign|submit/i).click()
+        cy.get('button[type="submit"], input[type="submit"]').first().click()
       }
     })
 
