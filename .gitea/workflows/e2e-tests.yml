@@ -32,18 +32,22 @@ jobs:
         run: |
           npx cypress run --browser chrome
 
-      - name: Upload screenshots on failure
+      - name: Save screenshots on failure
         if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-screenshots
-          path: cypress/screenshots
-          retention-days: 7
+        run: |
+          echo "=== Test Screenshots ==="
+          if [ -d "cypress/screenshots" ]; then
+            find cypress/screenshots -type f -name "*.png" | while read f; do
+              echo "Screenshot: $f"
+              base64 "$f" | head -c 1000
+              echo "..."
+            done
+          else
+            echo "No screenshots found"
+          fi
 
-      - name: Upload videos
+      - name: Test Summary
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-videos
-          path: cypress/videos
-          retention-days: 7
+        run: |
+          echo "=== Cypress Test Run Complete ==="
+          echo "Check the logs above for test results"
