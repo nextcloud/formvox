@@ -32,7 +32,8 @@ class Application extends App implements IBootstrap
     public function register(IRegistrationContext $context): void
     {
         // Register preview provider for .fvform files
-        $context->registerPreviewProvider(FormPreview::class, self::MIME_TYPE);
+        // Note: registerPreviewProvider expects a regex pattern, not a plain MIME type
+        $context->registerPreviewProvider(FormPreview::class, '/application\/x-fvform/');
 
         // Register Files app integration listener
         $context->registerEventListener(LoadAdditionalScriptsEvent::class, LoadFilesPluginListener::class);
