@@ -13,14 +13,11 @@ on:
 jobs:
   cypress:
     runs-on: ubuntu-latest
+    container:
+      image: cypress/browsers:node-20.18.0-chrome-130.0.6723.69-1-ff-131.0.3-edge-130.0.2849.52-1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Install Cypress
         run: |
@@ -33,7 +30,7 @@ jobs:
           NC_USER: ${{ secrets.NC_USER }}
           NC_PASSWORD: ${{ secrets.NC_PASSWORD }}
         run: |
-          npx cypress run --browser chrome --headless
+          npx cypress run --browser chrome
 
       - name: Upload screenshots on failure
         if: failure()
