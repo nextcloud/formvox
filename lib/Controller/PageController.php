@@ -17,12 +17,14 @@ use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\BrandingService;
+use OCA\FormVox\Service\MicrosoftFormsAuthService;
 
 class PageController extends Controller
 {
     private FormService $formService;
     private PermissionService $permissionService;
     private BrandingService $brandingService;
+    private MicrosoftFormsAuthService $msFormsAuthService;
     private IInitialState $initialState;
     private IURLGenerator $urlGenerator;
     private ?string $userId;
@@ -32,6 +34,7 @@ class PageController extends Controller
         FormService $formService,
         PermissionService $permissionService,
         BrandingService $brandingService,
+        MicrosoftFormsAuthService $msFormsAuthService,
         IInitialState $initialState,
         IURLGenerator $urlGenerator,
         ?string $userId
@@ -40,6 +43,7 @@ class PageController extends Controller
         $this->formService = $formService;
         $this->permissionService = $permissionService;
         $this->brandingService = $brandingService;
+        $this->msFormsAuthService = $msFormsAuthService;
         $this->initialState = $initialState;
         $this->urlGenerator = $urlGenerator;
         $this->userId = $userId;
@@ -52,6 +56,9 @@ class PageController extends Controller
     #[NoCSRFRequired]
     public function index(): TemplateResponse
     {
+        // Provide MS Forms import availability
+        $this->initialState->provideInitialState('msFormsConfigured', $this->msFormsAuthService->isConfigured());
+
         Util::addScript(Application::APP_ID, 'formvox-main');
         Util::addStyle(Application::APP_ID, 'main');
 

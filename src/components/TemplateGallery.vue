@@ -26,23 +26,43 @@
 						:color="template.color"
 						@select="$emit('select-template', template.id)"
 					/>
+					<!-- Import Card (only shown when MS Forms is configured) -->
+					<TemplateCard
+						v-if="msFormsConfigured"
+						key="import"
+						:name="t('Import')"
+						:description="t('From Microsoft Forms')"
+						:icon="ImportIcon"
+						color="#00A4EF"
+						@select="showImportModal = true"
+					/>
 				</div>
 			</div>
 		</Transition>
+
+		<!-- Import Modal -->
+		<ImportModal
+			:show="showImportModal"
+			@close="showImportModal = false"
+			@imported="onFormImported"
+		/>
 	</div>
 </template>
 
 <script>
 import { ref, onMounted } from 'vue'
 import { NcButton } from '@nextcloud/vue'
+import { useRouter } from 'vue-router'
 import { t } from '@/utils/l10n'
 import TemplateCard from './TemplateCard.vue'
+import ImportModal from './ImportModal.vue'
 import ChevronIcon from './icons/ChevronIcon.vue'
 import FormIcon from './icons/FormIcon.vue'
 import PollIcon from './icons/PollIcon.vue'
 import SurveyIcon from './icons/SurveyIcon.vue'
 import RegistrationIcon from './icons/RegistrationIcon.vue'
 import DemoIcon from './icons/DemoIcon.vue'
+import ImportIcon from './icons/ImportIcon.vue'
 
 const STORAGE_KEY = 'formvox-templates-collapsed'
 
@@ -51,11 +71,20 @@ export default {
 	components: {
 		NcButton,
 		TemplateCard,
+		ImportModal,
 		ChevronIcon,
 	},
+	props: {
+		msFormsConfigured: {
+			type: Boolean,
+			default: false,
+		},
+	},
 	emits: ['select-template'],
-	setup() {
+	setup(props, { emit }) {
+		const router = useRouter()
 		const isCollapsed = ref(false)
+		const showImportModal = ref(false)
 
 		const templates = [
 			{
@@ -104,6 +133,12 @@ export default {
 			}
 		}
 
+		const onFormImported = (result) => {
+			// Don't close modal automatically - let user see warnings first
+			// Modal will close when user clicks "Open Form" or "Close"
+			// Navigation happens via openImportedForm in ImportModal
+		}
+
 		onMounted(() => {
 			try {
 				const stored = localStorage.getItem(STORAGE_KEY)
@@ -117,8 +152,12 @@ export default {
 
 		return {
 			isCollapsed,
+			showImportModal,
 			templates,
 			toggleCollapsed,
+			onFormImported,
+			msFormsConfigured: props.msFormsConfigured,
+			ImportIcon,
 			t,
 		}
 	},

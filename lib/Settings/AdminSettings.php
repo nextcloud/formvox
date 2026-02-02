@@ -11,6 +11,7 @@ use OCP\Settings\ISettings;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\BrandingService;
+use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\StatisticsService;
 use OCA\FormVox\Service\TelemetryService;
 
@@ -21,19 +22,22 @@ class AdminSettings implements ISettings
     private BrandingService $brandingService;
     private StatisticsService $statisticsService;
     private TelemetryService $telemetryService;
+    private MicrosoftFormsAuthService $msFormsAuthService;
 
     public function __construct(
         IConfig $config,
         IInitialState $initialState,
         BrandingService $brandingService,
         StatisticsService $statisticsService,
-        TelemetryService $telemetryService
+        TelemetryService $telemetryService,
+        MicrosoftFormsAuthService $msFormsAuthService
     ) {
         $this->config = $config;
         $this->initialState = $initialState;
         $this->brandingService = $brandingService;
         $this->statisticsService = $statisticsService;
         $this->telemetryService = $telemetryService;
+        $this->msFormsAuthService = $msFormsAuthService;
     }
 
     public function getForm(): TemplateResponse
@@ -47,6 +51,14 @@ class AdminSettings implements ISettings
         // Provide embed settings
         $this->initialState->provideInitialState('embedSettings', [
             'allowedDomains' => $this->config->getAppValue(Application::APP_ID, 'embed_allowed_domains', '*'),
+        ]);
+
+        // Provide Microsoft Forms import settings
+        $this->initialState->provideInitialState('msFormsSettings', [
+            'clientId' => $this->msFormsAuthService->getClientId(),
+            'tenantId' => $this->msFormsAuthService->getTenantId(),
+            'isConfigured' => $this->msFormsAuthService->isConfigured(),
+            'redirectUri' => $this->msFormsAuthService->getRedirectUri(),
         ]);
 
         Util::addScript(Application::APP_ID, 'formvox-admin');

@@ -66,6 +66,7 @@ return [
 
         // Settings routes (admin only)
         ['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
+        ['name' => 'settings#saveMsForms', 'url' => '/api/settings/ms-forms', 'verb' => 'POST'],
 
         // API key management (authenticated users)
         ['name' => 'integration#createApiKey', 'url' => '/api/form/{fileId}/api-keys', 'verb' => 'POST'],
@@ -77,6 +78,15 @@ return [
         ['name' => 'integration#updateWebhook', 'url' => '/api/form/{fileId}/webhooks/{webhookId}', 'verb' => 'PUT'],
         ['name' => 'integration#deleteWebhook', 'url' => '/api/form/{fileId}/webhooks/{webhookId}', 'verb' => 'DELETE'],
         ['name' => 'integration#getWebhookEvents', 'url' => '/api/integration/webhook-events', 'verb' => 'GET'],
+
+        // Microsoft Forms Import
+        ['name' => 'import#getMsAuthUrl', 'url' => '/api/import/ms-forms/auth', 'verb' => 'GET'],
+        ['name' => 'import#msAuthCallback', 'url' => '/api/import/ms-forms/callback', 'verb' => 'GET'],
+        ['name' => 'import#checkMsConnection', 'url' => '/api/import/ms-forms/status', 'verb' => 'GET'],
+        ['name' => 'import#disconnectMs', 'url' => '/api/import/ms-forms/disconnect', 'verb' => 'POST'],
+        ['name' => 'import#listMsForms', 'url' => '/api/import/ms-forms/list', 'verb' => 'GET'],
+        ['name' => 'import#previewMsForm', 'url' => '/api/import/ms-forms/{msFormId}/preview', 'verb' => 'GET'],
+        ['name' => 'import#importMsForm', 'url' => '/api/import/ms-forms/{msFormId}', 'verb' => 'POST'],
 
         // External API v1 (API key authenticated)
         ['name' => 'external_api#getForm', 'url' => '/api/v1/external/forms/{fileId}', 'verb' => 'GET'],

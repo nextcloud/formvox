@@ -8,6 +8,7 @@ import { loadState } from '@nextcloud/initial-state';
 let branding = {};
 let telemetry = { enabled: true, lastReport: null };
 let embedSettings = { allowedDomains: '*' };
+let msFormsSettings = { clientId: '', tenantId: 'common', isConfigured: false, redirectUri: '' };
 
 try {
   branding = loadState('formvox', 'branding');
@@ -27,10 +28,17 @@ try {
   console.warn('FormVox: Could not load embed settings state', e);
 }
 
+try {
+  msFormsSettings = loadState('formvox', 'msFormsSettings');
+} catch (e) {
+  console.warn('FormVox: Could not load MS Forms settings state', e);
+}
+
 const app = createApp(AdminSettings, {
   initialBranding: branding,
   initialTelemetry: telemetry,
   initialEmbedSettings: embedSettings,
+  initialMsFormsSettings: msFormsSettings,
 });
 
 // Make translation functions globally available

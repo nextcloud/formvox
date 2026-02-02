@@ -2,6 +2,25 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.8] - 2026-01-30
+
+### Added
+- **Microsoft Forms Import** - Import forms directly from Microsoft Forms
+  - OAuth integration with Microsoft Entra ID (Azure AD)
+  - Import form structure including all question types
+  - Import existing responses
+  - Support for multi-page forms (sections)
+  - Support for Likert/Matrix questions
+  - Admin settings for Azure app registration configuration
+  - Per-user Microsoft account connection
+  - Question type mapping: Choice, Text, Rating, Date, Likert, Ranking, NPS, File upload
+- New "Import" card in template gallery (visible when MS Forms is configured)
+- Import wizard with form selection, preview, and progress tracking
+
+### Changed
+- Admin settings now include "Integrations" tab for Microsoft Forms configuration
+- Improved documentation for Azure app registration setup with required API permissions
+
 ## [0.2.7] - 2026-01-30
 
 ### Added

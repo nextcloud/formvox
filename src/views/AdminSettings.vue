@@ -20,6 +20,12 @@
         <Cog :size="16" />
         {{ t('formvox', 'Settings') }}
       </button>
+      <button
+        :class="['tab-button', { active: activeTab === 'integrations' }]"
+        @click="activeTab = 'integrations'">
+        <MicrosoftIcon :size="16" />
+        {{ t('formvox', 'Integrations') }}
+      </button>
     </div>
 
     <!-- Branding Tab -->
@@ -149,6 +155,79 @@
 
       </div>
     </div>
+
+    <!-- Integrations Tab -->
+    <div v-if="activeTab === 'integrations'" class="tab-content">
+      <div class="settings-section">
+        <h2>{{ t('formvox', 'Microsoft Forms Import') }}</h2>
+        <p class="settings-section-desc">
+          {{ t('formvox', 'Configure Microsoft Azure AD credentials to enable importing forms from Microsoft Forms.') }}
+        </p>
+
+        <NcNoteCard type="info">
+          <p>{{ t('formvox', 'To enable Microsoft Forms import, you need to register an application in Azure AD.') }}</p>
+          <ol class="azure-steps">
+            <li>{{ t('formvox', 'Go to Azure Portal > Microsoft Entra ID > App registrations') }}</li>
+            <li>{{ t('formvox', 'Create a new registration with a name like "FormVox Import"') }}</li>
+            <li>{{ t('formvox', 'Set the Redirect URI (Web) to:') }} <code>{{ msFormsSettings.redirectUri }}</code></li>
+            <li>{{ t('formvox', 'Go to "API permissions" and add the following:') }}
+              <ul class="api-permissions-list">
+                <li><strong>Microsoft Forms</strong> (forms.office.com) → <code>Forms.Read</code> (Delegated)</li>
+              </ul>
+              <em>{{ t('formvox', 'Note: Search for "Microsoft Forms" under "APIs my organization uses"') }}</em>
+            </li>
+            <li>{{ t('formvox', 'Click "Grant admin consent" for your organization') }}</li>
+            <li>{{ t('formvox', 'Go to "Certificates & secrets" and create a new client secret') }}</li>
+            <li>{{ t('formvox', 'Copy the Application (client) ID and the client secret value below') }}</li>
+          </ol>
+        </NcNoteCard>
+
+        <div class="setting-row">
+          <label class="setting-label">{{ t('formvox', 'Tenant ID') }}</label>
+          <p class="setting-help">
+            {{ t('formvox', 'Use "common" for multi-tenant, or your specific tenant ID for single-tenant.') }}
+          </p>
+          <input
+            type="text"
+            v-model="msFormsSettings.tenantId"
+            class="setting-input"
+            placeholder="common"
+          />
+        </div>
+
+        <div class="setting-row">
+          <label class="setting-label">{{ t('formvox', 'Client ID (Application ID)') }}</label>
+          <input
+            type="text"
+            v-model="msFormsSettings.clientId"
+            class="setting-input"
+            :placeholder="t('formvox', 'e.g., 12345678-1234-1234-1234-123456789012')"
+          />
+        </div>
+
+        <div class="setting-row">
+          <label class="setting-label">{{ t('formvox', 'Client Secret') }}</label>
+          <p class="setting-help">
+            {{ t('formvox', 'Leave empty to keep existing secret. Enter a new value to update.') }}
+          </p>
+          <input
+            type="password"
+            v-model="msFormsSettings.clientSecret"
+            class="setting-input"
+            :placeholder="msFormsSettings.isConfigured ? '••••••••' : t('formvox', 'Enter client secret')"
+          />
+        </div>
+
+        <div class="setting-actions">
+          <NcButton type="primary" @click="saveMsFormsSettings" :disabled="savingMsFormsSettings">
+            {{ savingMsFormsSettings ? t('formvox', 'Saving...') : t('formvox', 'Save') }}
+          </NcButton>
+          <span v-if="msFormsSettings.isConfigured" class="configured-badge">
+            {{ t('formvox', 'Configured') }}
+          </span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -162,6 +241,7 @@ import PageBuilder from '../components/pagebuilder/PageBuilder.vue';
 import Palette from 'vue-material-design-icons/Palette.vue';
 import ChartBox from 'vue-material-design-icons/ChartBox.vue';
 import Cog from 'vue-material-design-icons/Cog.vue';
+import MicrosoftIcon from 'vue-material-design-icons/Microsoft.vue';
 
 export default {
   name: 'AdminSettings',
@@ -174,6 +254,7 @@ export default {
     Palette,
     ChartBox,
     Cog,
+    MicrosoftIcon,
   },
   props: {
     initialBranding: {
@@ -187,6 +268,10 @@ export default {
     initialEmbedSettings: {
       type: Object,
       default: () => ({ allowedDomains: '*' }),
+    },
+    initialMsFormsSettings: {
+      type: Object,
+      default: () => ({ clientId: '', tenantId: 'common', isConfigured: false, redirectUri: '' }),
     },
   },
   setup(props) {
@@ -210,6 +295,16 @@ export default {
       allowedDomains: props.initialEmbedSettings?.allowedDomains || '*',
     });
     const savingEmbedSettings = ref(false);
+
+    // MS Forms settings
+    const msFormsSettings = reactive({
+      clientId: props.initialMsFormsSettings?.clientId || '',
+      tenantId: props.initialMsFormsSettings?.tenantId || 'common',
+      clientSecret: '',
+      isConfigured: props.initialMsFormsSettings?.isConfigured || false,
+      redirectUri: props.initialMsFormsSettings?.redirectUri || '',
+    });
+    const savingMsFormsSettings = ref(false);
 
     const toggleTelemetry = async (enabled) => {
       try {
@@ -238,6 +333,28 @@ export default {
         showError(t('formvox', 'Failed to save embed settings'));
       } finally {
         savingEmbedSettings.value = false;
+      }
+    };
+
+    const saveMsFormsSettings = async () => {
+      savingMsFormsSettings.value = true;
+      try {
+        await axios.post(
+          generateUrl('/apps/formvox/api/settings/ms-forms'),
+          {
+            clientId: msFormsSettings.clientId,
+            tenantId: msFormsSettings.tenantId,
+            clientSecret: msFormsSettings.clientSecret || undefined,
+          }
+        );
+        msFormsSettings.isConfigured = !!(msFormsSettings.clientId && (msFormsSettings.clientSecret || msFormsSettings.isConfigured));
+        msFormsSettings.clientSecret = '';
+        showSuccess(t('formvox', 'Microsoft Forms settings saved'));
+      } catch (error) {
+        console.error('Failed to save MS Forms settings:', error);
+        showError(t('formvox', 'Failed to save Microsoft Forms settings'));
+      } finally {
+        savingMsFormsSettings.value = false;
       }
     };
 
@@ -282,8 +399,11 @@ export default {
       telemetryStatus,
       embedSettings,
       savingEmbedSettings,
+      msFormsSettings,
+      savingMsFormsSettings,
       toggleTelemetry,
       saveEmbedSettings,
+      saveMsFormsSettings,
       formatDate,
       t,
     };
@@ -561,5 +681,71 @@ export default {
 .setting-input:focus {
   border-color: var(--color-primary-element);
   outline: none;
+}
+
+/* Integrations tab */
+.azure-steps {
+  margin: 12px 0 0 0;
+  padding-left: 24px;
+}
+
+.azure-steps li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.azure-steps code {
+  background: var(--color-background-dark);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.api-permissions-list {
+  margin: 8px 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.api-permissions-list li {
+  margin-bottom: 4px;
+}
+
+.api-permissions-list code {
+  background: var(--color-background-dark);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.azure-steps em {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-maxcontrast);
+}
+
+.setting-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.configured-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--color-success-hover);
+  color: var(--color-success-text, #2d7b43);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.configured-badge::before {
+  content: '\2713';
 }
 </style>

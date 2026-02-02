@@ -6,7 +6,7 @@
 			</div>
 
 			<div v-else-if="forms.length === 0" class="empty-state">
-				<TemplateGallery @select-template="openNewFormWithTemplate" />
+				<TemplateGallery :ms-forms-configured="msFormsConfigured" @select-template="openNewFormWithTemplate" />
 				<div class="empty-state__content">
 					<FormIcon :size="64" />
 					<h2>{{ t('No forms yet') }}</h2>
@@ -18,7 +18,7 @@
 			</div>
 
 			<div v-else class="forms-container">
-				<TemplateGallery @select-template="openNewFormWithTemplate" />
+				<TemplateGallery :ms-forms-configured="msFormsConfigured" @select-template="openNewFormWithTemplate" />
 
 				<div class="forms-header">
 					<div class="forms-tabs">
@@ -121,7 +121,13 @@ export default {
 		FormIcon,
 		PlusIcon,
 	},
-	setup() {
+	props: {
+		msFormsConfigured: {
+			type: Boolean,
+			default: false,
+		},
+	},
+	setup(props) {
 		const forms = ref([])
 		const loading = ref(true)
 		const showNewFormModal = ref(false)
@@ -277,6 +283,7 @@ export default {
 			showDeleteDialog,
 			cancelDelete,
 			confirmDelete,
+			msFormsConfigured: props.msFormsConfigured,
 			t,
 		}
 	},
