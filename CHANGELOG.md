@@ -2,7 +2,7 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [0.2.8] - 2026-01-30
+## [0.2.8] - 2026-02-02
 
 ### Added
 - **Microsoft Forms Import** - Import forms directly from Microsoft Forms
