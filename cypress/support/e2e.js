@@ -5,56 +5,22 @@ Cypress.Commands.add('login', (user, password) => {
   const username = user || Cypress.env('NC_USER')
   const pass = password || Cypress.env('NC_PASSWORD')
 
-  cy.log(`Attempting login with user: ${username}`)
-
   cy.session([username, pass], () => {
     cy.visit('/login')
-    cy.wait(3000) // Wait for JS to load
+    cy.wait(3000)
 
-    // Debug: log what we see on the page
-    cy.get('body').then(($body) => {
-      cy.log('Page HTML preview: ' + $body.html().substring(0, 500))
-      cy.log('Found #user: ' + $body.find('#user').length)
-      cy.log('Found input[name=user]: ' + $body.find('input[name="user"]').length)
-      cy.log('Found fieldset: ' + $body.find('fieldset').length)
-    })
-
-    // Take screenshot before login attempt
-    cy.screenshot('login-page-before')
-
-    // Nextcloud login - try the most common selector first
     cy.get('body').then(($body) => {
       if ($body.find('#user').length) {
-        cy.log('Using #user selector')
         cy.get('#user').clear().type(username)
         cy.get('#password').clear().type(pass)
         cy.get('form').submit()
       } else if ($body.find('input[name="user"]').length) {
-        cy.log('Using input[name=user] selector')
         cy.get('input[name="user"]').clear().type(username)
         cy.get('input[name="password"]').clear().type(pass)
         cy.get('form').submit()
-      } else {
-        cy.log('Using fallback selector')
-        cy.get('input').first().clear().type(username)
-        cy.get('input[type="password"]').clear().type(pass)
-        cy.get('form').submit()
       }
     })
 
-    // Take screenshot after login attempt
-    cy.wait(3000)
-    cy.screenshot('login-page-after')
-
-    // Check for error messages
-    cy.get('body').then(($body) => {
-      const bodyText = $body.text()
-      if (bodyText.includes('Wrong') || bodyText.includes('Invalid') || bodyText.includes('incorrect')) {
-        cy.log('LOGIN ERROR DETECTED: ' + bodyText.substring(0, 200))
-      }
-    })
-
-    // Wait for redirect after login
     cy.url({ timeout: 30000 }).should('not.include', '/login')
   }, {
     validate() {
@@ -67,30 +33,44 @@ Cypress.Commands.add('login', (user, password) => {
 // Custom command: Navigate to FormVox app
 Cypress.Commands.add('openFormVox', () => {
   cy.visit('/apps/formvox')
-  cy.get('#app-content, #content, .app-content, [data-app="formvox"]', { timeout: 30000 }).should('exist')
+  cy.get('#app-content, #content, .app-content', { timeout: 30000 }).should('exist')
+  cy.wait(2000) // Wait for Vue app to fully load
 })
 
 // Custom command: Create a new form
 Cypress.Commands.add('createForm', (title) => {
-  cy.get('body').then(($body) => {
-    const newFormBtn = $body.find('button:contains("New form"), button:contains("Nieuw formulier"), [data-cy="new-form"]')
-    if (newFormBtn.length) {
-      cy.wrap(newFormBtn).first().click()
-    } else {
-      cy.contains(/New form|Nieuw formulier/i).click()
-    }
+  // Click new form button - look for it within the app content area
+  cy.get('#app-content, #content').within(() => {
+    cy.contains(/New form|Nieuw formulier/i).click()
   })
 
-  cy.get('input[type="text"]', { timeout: 10000 }).first().clear().type(title)
-  cy.contains('button', /^Create$|^Maken$|^Aanmaken$/i).click()
+  cy.wait(1000) // Wait for modal
+
+  // Find the modal and fill in the title - be specific about the modal context
+  cy.get('.modal-container, .modal-wrapper, [role="dialog"]', { timeout: 10000 }).should('be.visible').within(() => {
+    // Find visible input that's for the title (not search)
+    cy.get('input:visible').not('#contactsmenu__menu__search').first().clear().type(title)
+    cy.contains('button', /^Create$|^Maken$|^Aanmaken$/i).click()
+  })
+
+  // Wait for form editor to load
   cy.url({ timeout: 15000 }).should('include', '/edit')
+  cy.wait(2000)
 })
 
 // Custom command: Add a question to the form
 Cypress.Commands.add('addQuestion', (type, questionText) => {
-  cy.contains(/Add question|Vraag toevoegen/i).click()
+  cy.get('#app-content, #content').within(() => {
+    cy.contains(/Add question|Vraag toevoegen/i).click()
+  })
+  cy.wait(500)
   cy.contains(new RegExp(type, 'i')).click()
-  cy.get('input, textarea').last().clear().type(questionText)
+  cy.wait(500)
+
+  // Find the question input within the last question card
+  cy.get('.question-card, .question-item, [class*="question"]').last().within(() => {
+    cy.get('input:visible, textarea:visible').first().clear().type(questionText)
+  })
 })
 
 // Custom command: Wait for autosave
@@ -102,4 +82,3 @@ Cypress.Commands.add('waitForSave', () => {
 Cypress.on('uncaught:exception', (err, runnable) => {
   return false
 })
-// trigger Mon Feb  2 12:16:27 CET 2026
