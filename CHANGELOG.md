@@ -21,6 +21,9 @@ All notable changes to FormVox will be documented in this file.
 - Admin settings now include "Integrations" tab for Microsoft Forms configuration
 - Improved documentation for Azure app registration setup with required API permissions
 
+### Fixed
+- PreviewProvider regex pattern fix (preg_match delimiter error)
+
 ## [0.2.7] - 2026-01-30
 
 ### Added
