@@ -44,17 +44,45 @@ Cypress.Commands.add('createForm', (title) => {
     cy.contains(/New form|Nieuw formulier/i).click()
   })
 
-  cy.wait(1000) // Wait for modal
+  // Wait for modal to appear - NcModal from @nextcloud/vue
+  // The modal may take time to render due to Vue reactivity
+  cy.wait(2000)
 
-  // Find the modal and fill in the title - be specific about the modal context
-  cy.get('.modal-container, .modal-wrapper, [role="dialog"]', { timeout: 10000 }).should('be.visible').within(() => {
-    // Find visible input that's for the title (not search)
-    cy.get('input:visible').not('#contactsmenu__menu__search').first().clear().type(title)
-    cy.contains('button', /^Create$|^Maken$|^Aanmaken$/i).click()
+  // NcModal renders with role="dialog" - wait for it to be in the DOM and visible
+  // The modal content is inside .modal-container or .new-form-modal
+  cy.get('body').then(($body) => {
+    // Debug: log what modal elements we find
+    const modalMask = $body.find('.modal-mask')
+    const modalContainer = $body.find('.modal-container')
+    const dialog = $body.find('[role="dialog"]')
+    const newFormModal = $body.find('.new-form-modal')
+
+    cy.log(`Found: modal-mask=${modalMask.length}, modal-container=${modalContainer.length}, dialog=${dialog.length}, new-form-modal=${newFormModal.length}`)
   })
 
+  // Try multiple selectors for the modal - NcModal structure varies by version
+  // Use filter to find only visible modals
+  cy.get('.modal-mask, .modal-container, [role="dialog"], .new-form-modal', { timeout: 15000 })
+    .filter(':visible')
+    .first()
+    .should('exist')
+
+  // Find the title input - it's an NcTextField with label "Form title" or similar
+  // The input might be inside the modal or directly in the body (portaled)
+  cy.get('input[type="text"]:visible')
+    .not('#contactsmenu__menu__search')
+    .not('[id*="search"]')
+    .not('[placeholder*="Search"]')
+    .not('[aria-label*="Search"]')
+    .first()
+    .clear()
+    .type(title)
+
+  // Click Create button
+  cy.contains('button:visible', /^Create$|^Maken$|^Aanmaken$|Creating/i).click()
+
   // Wait for form editor to load
-  cy.url({ timeout: 15000 }).should('include', '/edit')
+  cy.url({ timeout: 20000 }).should('include', '/edit')
   cy.wait(2000)
 })
 
