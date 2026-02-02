@@ -1,11 +1,11 @@
 {
-  "totalStrings": 408,
-  "newStrings": 0,
+  "totalStrings": 443,
+  "newStrings": 66,
   "sourceLocale": "en",
   "targetLocales": [
     "nl",
     "de",
     "fr"
   ],
-  "timestamp": "2026-02-02T11:04:58.437Z"
+  "timestamp": "2026-02-02T12:18:56.064Z"
 }

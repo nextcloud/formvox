@@ -18,9 +18,14 @@ const CONFIG = {
   targetLocales: ['nl', 'de', 'fr'],
   // Nextcloud translation patterns
   patterns: [
-    /\bt\(\s*['"]([^'"]+)['"]/g,           // t('key')
-    /\$t\(\s*['"]([^'"]+)['"]/g,           // $t('key') in Vue templates
-    /n\(\s*['"]([^'"]+)['"],\s*['"]([^'"]+)['"]/g,  // n('singular', 'plural', count)
+    // Nextcloud format: t('appname', 'text') - capture the second argument
+    /\bt\(\s*['"]formvox['"]\s*,\s*['"]([^'"]+)['"]/g,
+    // Also match t('text') for simple cases
+    /\bt\(\s*['"]([^'"]+)['"]\s*\)/g,
+    // $t('appname', 'text') in Vue templates
+    /\$t\(\s*['"]formvox['"]\s*,\s*['"]([^'"]+)['"]/g,
+    // n('appname', 'singular', 'plural', count)
+    /n\(\s*['"]formvox['"]\s*,\s*['"]([^'"]+)['"],\s*['"]([^'"]+)['"]/g,
   ],
   needsTranslationPrefix: '__NEEDS_TRANSLATION__',
 };
