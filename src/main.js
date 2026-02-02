@@ -22,3 +22,4 @@ app.config.globalProperties.n = (singular, plural, count, vars = {}) => translat
 
 app.mount('#formvox-app');
 // test trigger Mon Feb  2 11:55:35 CET 2026
+// trigger e2e tests Mon Feb  2 12:04:52 CET 2026
