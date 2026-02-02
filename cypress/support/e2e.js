@@ -5,26 +5,52 @@ Cypress.Commands.add('login', (user, password) => {
   const username = user || Cypress.env('NC_USER')
   const pass = password || Cypress.env('NC_PASSWORD')
 
+  cy.log(`Attempting login with user: ${username}`)
+
   cy.session([username, pass], () => {
     cy.visit('/login')
-    cy.wait(2000) // Wait for JS to load
+    cy.wait(3000) // Wait for JS to load
 
-    // Try different Nextcloud login form selectors
+    // Debug: log what we see on the page
     cy.get('body').then(($body) => {
-      // Nextcloud 28+ uses different selectors
+      cy.log('Page HTML preview: ' + $body.html().substring(0, 500))
+      cy.log('Found #user: ' + $body.find('#user').length)
+      cy.log('Found input[name=user]: ' + $body.find('input[name="user"]').length)
+      cy.log('Found fieldset: ' + $body.find('fieldset').length)
+    })
+
+    // Take screenshot before login attempt
+    cy.screenshot('login-page-before')
+
+    // Nextcloud login - try the most common selector first
+    cy.get('body').then(($body) => {
       if ($body.find('#user').length) {
-        cy.get('#user').type(username)
-        cy.get('#password').type(pass)
-        cy.get('#submit-form, button[type="submit"], .login-form button').first().click()
+        cy.log('Using #user selector')
+        cy.get('#user').clear().type(username)
+        cy.get('#password').clear().type(pass)
+        cy.get('form').submit()
       } else if ($body.find('input[name="user"]').length) {
-        cy.get('input[name="user"]').type(username)
-        cy.get('input[name="password"]').type(pass)
-        cy.get('button[type="submit"], input[type="submit"]').first().click()
+        cy.log('Using input[name=user] selector')
+        cy.get('input[name="user"]').clear().type(username)
+        cy.get('input[name="password"]').clear().type(pass)
+        cy.get('form').submit()
       } else {
-        // Fallback: find any login form
-        cy.get('input[type="text"], input[type="email"]').first().type(username)
-        cy.get('input[type="password"]').first().type(pass)
-        cy.get('button[type="submit"], input[type="submit"]').first().click()
+        cy.log('Using fallback selector')
+        cy.get('input').first().clear().type(username)
+        cy.get('input[type="password"]').clear().type(pass)
+        cy.get('form').submit()
+      }
+    })
+
+    // Take screenshot after login attempt
+    cy.wait(3000)
+    cy.screenshot('login-page-after')
+
+    // Check for error messages
+    cy.get('body').then(($body) => {
+      const bodyText = $body.text()
+      if (bodyText.includes('Wrong') || bodyText.includes('Invalid') || bodyText.includes('incorrect')) {
+        cy.log('LOGIN ERROR DETECTED: ' + bodyText.substring(0, 200))
       }
     })
 
@@ -32,7 +58,6 @@ Cypress.Commands.add('login', (user, password) => {
     cy.url({ timeout: 30000 }).should('not.include', '/login')
   }, {
     validate() {
-      // Validate session by checking we can access dashboard
       cy.visit('/apps/dashboard')
       cy.url().should('not.include', '/login')
     }
@@ -42,13 +67,11 @@ Cypress.Commands.add('login', (user, password) => {
 // Custom command: Navigate to FormVox app
 Cypress.Commands.add('openFormVox', () => {
   cy.visit('/apps/formvox')
-  // Wait for app to load - try multiple selectors
   cy.get('#app-content, #content, .app-content, [data-app="formvox"]', { timeout: 30000 }).should('exist')
 })
 
 // Custom command: Create a new form
 Cypress.Commands.add('createForm', (title) => {
-  // Click new form button
   cy.get('body').then(($body) => {
     const newFormBtn = $body.find('button:contains("New form"), button:contains("Nieuw formulier"), [data-cy="new-form"]')
     if (newFormBtn.length) {
@@ -58,13 +81,8 @@ Cypress.Commands.add('createForm', (title) => {
     }
   })
 
-  // Wait for modal and fill title
   cy.get('input[type="text"]', { timeout: 10000 }).first().clear().type(title)
-
-  // Click create button
   cy.contains('button', /^Create$|^Maken$|^Aanmaken$/i).click()
-
-  // Wait for form editor to load
   cy.url({ timeout: 15000 }).should('include', '/edit')
 })
 
@@ -77,7 +95,6 @@ Cypress.Commands.add('addQuestion', (type, questionText) => {
 
 // Custom command: Wait for autosave
 Cypress.Commands.add('waitForSave', () => {
-  // Wait a bit for autosave to trigger
   cy.wait(2000)
 })
 
@@ -85,4 +102,3 @@ Cypress.Commands.add('waitForSave', () => {
 Cypress.on('uncaught:exception', (err, runnable) => {
   return false
 })
-// test Mon Feb  2 12:14:30 CET 2026
