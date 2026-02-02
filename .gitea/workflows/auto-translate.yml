@@ -1,0 +1,65 @@
+# Gitea Actions: Auto-translate FormVox l10n strings
+# Triggers when Vue/JS files change, extracts new strings and translates with DeepL
+
+name: Auto Translate
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'src/**/*.vue'
+      - 'src/**/*.js'
+      - 'src/**/*.ts'
+      - 'js/**/*.js'
+  workflow_dispatch:
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITEA_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extract l10n strings
+        run: node scripts/extract-l10n.js
+
+      - name: Translate with DeepL
+        env:
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          L10N_DIR: l10n
+          SOURCE_LOCALE: en
+        run: node scripts/translate-deepl.js
+
+      - name: Regenerate l10n JS files
+        run: |
+          # Convert JSON to JS for Nextcloud
+          for file in l10n/*.json; do
+            locale=$(basename "$file" .json)
+            if [[ ! "$locale" =~ ^\. ]]; then
+              echo "OC.L10N.register('formvox', $(cat "$file" | jq '.translations'), '$(cat "$file" | jq -r '.pluralForm')');" > "l10n/${locale}.js"
+              echo "Generated l10n/${locale}.js"
+            fi
+          done
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet l10n/ || echo "has_changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit translations
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.email "actions@gitea.local"
+          git config user.name "Gitea Auto-Translate"
+          git add l10n/
+          git commit -m "chore(l10n): auto-translate new strings
+
+          Translated via DeepL API"
+          git push
