@@ -43,7 +43,11 @@ describe('FormVox - Translations', () => {
     cy.createForm(formTitle)
     cy.url().should('include', '/edit')
 
-    // The question type select should have options
+    // Add a question first - the select only appears after adding a question
+    cy.contains('button', /Add question|Vraag toevoegen/i).click()
+    cy.wait(1000)
+
+    // Now the question type select should exist
     cy.get('select.type-select, .question-editor select').should('exist')
 
     // Check that the select has multiple options
