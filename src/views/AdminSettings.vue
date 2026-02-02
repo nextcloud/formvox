@@ -1,6 +1,6 @@
 <template>
   <div class="formvox-admin-settings">
-    <!-- Tab Navigation - IntraVox style -->
+    <!-- Tab Navigation -->
     <div class="tab-navigation">
       <button
         :class="['tab-button', { active: activeTab === 'branding' }]"
