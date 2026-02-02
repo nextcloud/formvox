@@ -39,50 +39,56 @@ Cypress.Commands.add('openFormVox', () => {
 
 // Custom command: Create a new form
 Cypress.Commands.add('createForm', (title) => {
-  // Find and click the "New form" button with force to handle any overlays
-  cy.contains('button', /New form|Nieuw formulier/i, { timeout: 10000 })
-    .should('be.visible')
-    .click({ force: true })
+  // FormVox has two different buttons depending on state:
+  // - Empty state: "Create form" / "Formulier maken"
+  // - With forms: "New form" / "Nieuw formulier"
+  // Also the button might be NcButton which renders as <button> with nested content
 
-  // Wait for Vue to update the DOM
-  cy.wait(3000)
-
-  // Debug: Check what's in the DOM after clicking
   cy.get('body').then(($body) => {
-    const html = $body.html()
-    const hasModalMask = html.includes('modal-mask')
-    const hasNewFormModal = html.includes('new-form-modal')
-    const hasDialog = $body.find('[role="dialog"]').length > 0
+    // Try to find any button that creates a new form
+    const newFormBtn = $body.find('button').filter((i, el) => {
+      const text = el.innerText.toLowerCase()
+      return text.includes('new form') ||
+             text.includes('nieuw formulier') ||
+             text.includes('create form') ||
+             text.includes('formulier maken')
+    })
 
-    cy.log(`DOM check: modal-mask=${hasModalMask}, new-form-modal=${hasNewFormModal}, dialog=${hasDialog}`)
-
-    // Log the display style of modal-mask if it exists
-    const modalMask = $body.find('.modal-mask')
-    if (modalMask.length) {
-      cy.log(`modal-mask display: ${modalMask.css('display')}`)
+    if (newFormBtn.length > 0) {
+      cy.wrap(newFormBtn.first()).click({ force: true })
+    } else {
+      // Fallback: use contains with broader pattern
+      cy.contains(/New form|Nieuw formulier|Create form|Formulier maken/i).click({ force: true })
     }
   })
 
-  // NcModal in @nextcloud/vue uses .modal-mask with display toggle
-  // Wait for the modal to have display != none
-  cy.get('.modal-mask', { timeout: 15000 })
-    .should('exist')
-    .and('not.have.css', 'display', 'none')
+  // Wait for Vue to update the DOM and modal to appear
+  // The modal uses v-if so it won't be in DOM until showNewFormModal = true
+  cy.wait(2000)
 
-  // Now find the input inside the modal
-  cy.get('.modal-mask .modal-container, .new-form-modal', { timeout: 10000 })
+  // The NewFormModal component wraps NcModal
+  // Wait for the modal to appear in DOM (v-if renders it)
+  cy.get('.modal-mask, [role="dialog"]', { timeout: 15000 })
+    .should('exist')
+
+  // Wait for it to be visible (not display:none)
+  cy.get('.modal-mask', { timeout: 10000 })
     .should('be.visible')
-    .find('input[type="text"]')
+
+  // Find the title input inside the modal
+  // NcTextField renders an input inside the modal
+  cy.get('.modal-container input[type="text"], .new-form-modal input[type="text"]', { timeout: 10000 })
     .first()
+    .should('be.visible')
     .clear()
     .type(title)
 
-  // Click Create button inside the modal
-  cy.get('.modal-mask .modal-container, .new-form-modal')
+  // Click the Create button inside the modal
+  cy.get('.modal-container, .new-form-modal')
     .contains('button', /^Create$|^Maken$|^Aanmaken$/i)
     .click()
 
-  // Wait for navigation to editor
+  // Wait for navigation to the form editor
   cy.url({ timeout: 20000 }).should('include', '/edit')
   cy.wait(2000)
 })
