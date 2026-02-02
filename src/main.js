@@ -21,3 +21,4 @@ app.config.globalProperties.t = (text, vars = {}) => translate('formvox', text, 
 app.config.globalProperties.n = (singular, plural, count, vars = {}) => translatePlural('formvox', singular, plural, count, vars);
 
 app.mount('#formvox-app');
+// test trigger Mon Feb  2 11:55:35 CET 2026
