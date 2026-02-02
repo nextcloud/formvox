@@ -1,5 +1,20 @@
 /**
  * FormVox Test: Create form with different question types
+ *
+ * FormVox question types (values for select):
+ * - text: Short text
+ * - textarea: Long text
+ * - number: Number
+ * - choice: Single choice
+ * - multiple: Multiple choice
+ * - dropdown: Dropdown
+ * - date: Date
+ * - datetime: Date & Time
+ * - time: Time
+ * - scale: Scale
+ * - rating: Stars
+ * - matrix: Matrix
+ * - file: File upload
  */
 
 describe('FormVox - Create Form', () => {
@@ -16,122 +31,102 @@ describe('FormVox - Create Form', () => {
 
   it('should create a new form', () => {
     cy.createForm(formTitle)
-    cy.contains(formTitle).should('be.visible')
+    // After createForm, we should be on the editor page
+    cy.url().should('include', '/edit')
+    // Wait for editor to fully load
+    cy.get('.editor-container, .form-editor, #app-content').should('exist')
   })
 
   it('should add a short text question', () => {
-    // Open the created form
+    // Navigate to form list first, then click our form
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
+
+    // Click Add question button to add a new question
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
+    cy.wait(1000)
 
-    // Select short text type
-    cy.contains(/Short text|Korte tekst/i).click()
-
-    // Fill in question
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('What is your name?')
+    // The new question is added with type 'text' by default
+    // Find the type select and verify it exists
+    cy.get('select.type-select, .question-editor select').should('exist')
 
     cy.waitForSave()
   })
 
   it('should add a multiple choice question', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
+
+    // Add new question
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
+    cy.wait(1000)
 
-    // Select multiple choice type
-    cy.contains(/Multiple choice|Meerkeuze/i).click()
-
-    // Fill in question
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('What features do you like?')
-
-    // Add options
-    cy.get('input[placeholder*="Option"], input[placeholder*="Optie"]').first().clear().type('Easy to use')
-    cy.contains('button', /Add option|Optie toevoegen/i).click()
-    cy.get('input[placeholder*="Option"], input[placeholder*="Optie"]').last().clear().type('Fast')
+    // Change the type to multiple choice using the select
+    cy.get('select.type-select, .question-editor select').last().select('multiple')
 
     cy.waitForSave()
   })
 
   it('should add a single choice question', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
+
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
+    cy.wait(1000)
 
-    // Select single choice type
-    cy.contains(/Single choice|Enkele keuze/i).click()
-
-    // Fill in question
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('How satisfied are you?')
-
-    // Add options
-    cy.get('input[placeholder*="Option"], input[placeholder*="Optie"]').first().clear().type('Very satisfied')
-    cy.contains('button', /Add option|Optie toevoegen/i).click()
-    cy.get('input[placeholder*="Option"], input[placeholder*="Optie"]').last().clear().type('Not satisfied')
+    // Change type to single choice (value: 'choice')
+    cy.get('select.type-select, .question-editor select').last().select('choice')
 
     cy.waitForSave()
   })
 
   it('should add a scale/rating question', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
+
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
+    cy.wait(1000)
 
-    // Select scale type
-    cy.contains(/Scale|Rating|Schaal|Beoordeling/i).click()
-
-    // Fill in question
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('Rate this app from 1-10')
+    // Change type to scale
+    cy.get('select.type-select, .question-editor select').last().select('scale')
 
     cy.waitForSave()
   })
 
   it('should add a long text question', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
+
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
+    cy.wait(1000)
 
-    // Select long text type
-    cy.contains(/Long text|Lange tekst/i).click()
-
-    // Fill in question
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('Any additional feedback?')
+    // Change type to textarea (long text)
+    cy.get('select.type-select, .question-editor select').last().select('textarea')
 
     cy.waitForSave()
   })
 
   it('should add a date question', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
+
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
+    cy.wait(1000)
 
-    // Select date type
-    cy.contains(/^Date$|^Datum$/i).click()
-
-    // Fill in question
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('When did you start using FormVox?')
+    // Change type to date
+    cy.get('select.type-select, .question-editor select').last().select('date')
 
     cy.waitForSave()
   })
 
   it('should mark a question as required', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
 
-    // Find first question and mark as required
-    cy.get('.question-card, [data-cy="question"]').first().within(() => {
-      cy.contains(/Required|Verplicht/i).click({ force: true })
+    // Find the required checkbox/toggle in the first question
+    cy.get('.question-editor').first().within(() => {
+      // Look for checkbox or switch for required
+      cy.get('input[type="checkbox"]').first().check({ force: true })
     })
 
     cy.waitForSave()

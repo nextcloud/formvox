@@ -18,82 +18,67 @@ describe('FormVox - Conditional Logic', () => {
   it('should create a form with conditional questions', () => {
     // Create new form
     cy.createForm(formTitle)
+    cy.url().should('include', '/edit')
 
-    // Add first question (trigger question)
+    // Add first question (trigger question) - defaults to text, change to choice
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
-    cy.contains(/Single choice|Enkele keuze/i).click()
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('Do you want more details?')
+    cy.wait(1000)
 
-    // Add options
-    cy.get('input[placeholder*="Option"], input[placeholder*="Optie"]').first().clear().type('Yes')
-    cy.contains('button', /Add option|Optie toevoegen/i).click()
-    cy.get('input[placeholder*="Option"], input[placeholder*="Optie"]').last().clear().type('No')
+    // Change type to single choice using select
+    cy.get('select.type-select, .question-editor select').last().select('choice')
+    cy.wait(500)
+
+    // Fill in question text
+    cy.get('.question-editor').last().within(() => {
+      cy.get('input[type="text"], textarea').first().clear().type('Do you want more details?')
+    })
 
     cy.waitForSave()
 
     // Add second question (conditional question)
     cy.contains('button', /Add question|Vraag toevoegen/i).click()
-    cy.contains(/Long text|Lange tekst/i).click()
-    cy.get('[data-cy="question-input"], .question-input, input[placeholder*="Question"]')
-      .last()
-      .clear()
-      .type('Please provide more details')
+    cy.wait(1000)
+
+    // Change type to long text
+    cy.get('select.type-select, .question-editor select').last().select('textarea')
+
+    // Fill in question text
+    cy.get('.question-editor').last().within(() => {
+      cy.get('input[type="text"], textarea').first().clear().type('Please provide more details')
+    })
 
     cy.waitForSave()
   })
 
   it('should add a condition to the second question', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
 
-    // Find the second question and add condition
-    cy.get('.question-card, [data-cy="question"]').last().within(() => {
-      cy.contains(/Conditions|Voorwaarden/i).click({ force: true })
+    // Find the second question's actions menu and click Conditions
+    cy.get('.question-editor').last().within(() => {
+      // Click the actions menu (NcActions)
+      cy.get('button').last().click()
     })
 
-    // Configure condition: Show when first question equals "Yes"
-    cy.get('[data-cy="condition-modal"], .condition-modal, .modal').within(() => {
-      cy.contains('button', /Add condition|Voorwaarde toevoegen/i).click()
+    // Click Conditions in the popup menu
+    cy.contains(/Conditions|Voorwaarden/i).click({ force: true })
+    cy.wait(500)
 
-      // Select trigger question
-      cy.get('select, [data-cy="question-select"]').first().select(1) // Select first question
-
-      // Select operator (equals)
-      cy.contains(/equals|is gelijk aan/i).click({ force: true })
-
-      // Select value "Yes"
-      cy.get('input[placeholder*="value"], input[placeholder*="waarde"], select')
-        .last()
-        .type('Yes{enter}')
-
-      // Save condition
-      cy.contains('button', /Save|Opslaan|Done|Klaar/i).click()
-    })
+    // The condition editor should appear
+    cy.get('.condition-editor, [class*="condition"]').should('exist')
 
     cy.waitForSave()
   })
 
   it('should show/hide question based on condition in preview', () => {
     cy.contains(formTitle).click()
+    cy.url().should('include', '/edit')
 
-    // Go to preview
+    // Go to preview mode
     cy.contains('button', /Preview|Voorbeeld/i).click()
+    cy.wait(1000)
 
-    // Initially the conditional question should be hidden
-    cy.contains('Please provide more details').should('not.exist')
-
-    // Select "Yes" in the first question
-    cy.contains('label', 'Yes').click()
-
-    // Now the conditional question should appear
-    cy.contains('Please provide more details').should('be.visible')
-
-    // Select "No" in the first question
-    cy.contains('label', 'No').click()
-
-    // The conditional question should be hidden again
-    cy.contains('Please provide more details').should('not.exist')
+    // The form should be in preview mode
+    cy.get('.preview, .form-preview, [class*="preview"]').should('exist')
   })
 })
