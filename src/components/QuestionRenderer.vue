@@ -1,5 +1,9 @@
 <template>
-  <div class="question-renderer">
+  <div
+    class="question-renderer"
+    :class="{ 'has-color': question.color }"
+    :style="question.color ? { '--question-color': question.color } : {}"
+  >
     <label class="question-label">
       {{ renderedQuestion }}
       <span v-if="question.required" class="required-indicator" :title="t('Required')">*</span>
@@ -567,6 +571,11 @@ export default {
 <style scoped lang="scss">
 .question-renderer {
   max-width: 100%;
+
+  &.has-color {
+    padding-left: 16px;
+    border-left: 4px solid var(--question-color);
+  }
 
   .question-label {
     display: block;

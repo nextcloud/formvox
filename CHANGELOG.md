@@ -5,6 +5,10 @@ All notable changes to FormVox will be documented in this file.
 ## [0.2.9] - 2026-02-05
 
 ### Added
+- **Question color coding** - Assign colors to individual questions for visual organization
+  - 7 color options (blue, green, orange, red, purple, cyan, brown)
+  - Color indicator in question header with dropdown picker
+  - Colored left border on questions in editor and public forms
 - **Custom regex validation** per question with custom error messages
   - Define validation patterns (e.g., postal codes, license plates, phone numbers)
   - Custom error messages when validation fails

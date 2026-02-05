@@ -1,5 +1,9 @@
 <template>
-  <div class="question-editor" :class="{ collapsed }">
+  <div
+    class="question-editor"
+    :class="{ collapsed, 'has-color': localQuestion.color }"
+    :style="localQuestion.color ? { '--question-color': localQuestion.color } : {}"
+  >
     <div class="question-header">
       <span class="drag-handle">
         <DragIcon :size="20" />
@@ -34,6 +38,33 @@
       </select>
 
       <div class="question-actions">
+        <!-- Color picker -->
+        <NcActions v-if="!readonly" ref="colorPickerRef" class="color-picker-action">
+          <template #icon>
+            <span
+              class="color-indicator"
+              :style="localQuestion.color ? { backgroundColor: localQuestion.color } : {}"
+              :class="{ 'no-color': !localQuestion.color }"
+            />
+          </template>
+          <NcActionButton
+            v-for="color in colorOptions"
+            :key="color.value"
+            :close-after-click="true"
+            :class="{ 'color-selected': localQuestion.color === color.value }"
+            @click="localQuestion.color = color.value; emitUpdate()"
+          >
+            <template #icon>
+              <span
+                class="color-swatch"
+                :style="color.value ? { backgroundColor: color.value } : {}"
+                :class="{ 'no-color-swatch': !color.value }"
+              />
+            </template>
+            {{ color.label }}
+          </NcActionButton>
+        </NcActions>
+
         <NcButton
           type="tertiary"
           @click="collapsed = !collapsed"
@@ -309,6 +340,7 @@
         >
           {{ t('Quiz mode (with scores)') }}
         </NcCheckboxRadioSwitch>
+
       </div>
 
       <!-- Custom validation (text types only) -->
@@ -456,6 +488,18 @@ export default {
     // Deep copy to preserve nested objects like validation
     const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
     const customTypesString = ref('');
+
+    // Color options for question highlighting
+    const colorOptions = [
+      { value: '', label: t('No color') },
+      { value: '#0082c9', label: t('Blue') },
+      { value: '#00a86b', label: t('Green') },
+      { value: '#f4a100', label: t('Orange') },
+      { value: '#e53935', label: t('Red') },
+      { value: '#9c27b0', label: t('Purple') },
+      { value: '#00bcd4', label: t('Cyan') },
+      { value: '#795548', label: t('Brown') },
+    ];
 
     // File type presets
     const fileTypePresets = {
@@ -734,6 +778,7 @@ export default {
       showConditions,
       localQuestion,
       customTypesString,
+      colorOptions,
       hasOptions,
       isQuizMode,
       supportsValidation,
@@ -772,12 +817,20 @@ export default {
   margin-bottom: 16px;
   transition: box-shadow 0.2s, border-color 0.2s;
 
+  &.has-color {
+    border-left: 4px solid var(--question-color);
+  }
+
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   &:focus-within {
     border-color: var(--color-primary-element);
+
+    &.has-color {
+      border-left-color: var(--question-color);
+    }
   }
 
   &.collapsed {
@@ -985,9 +1038,43 @@ export default {
 
 .question-settings {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   padding-top: 16px;
   border-top: 1px solid var(--color-border);
+}
+
+/* Color picker in header */
+.color-picker-action {
+  .color-indicator {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+
+    &.no-color {
+      background: linear-gradient(135deg, transparent 45%, var(--color-error) 45%, var(--color-error) 55%, transparent 55%);
+      background-color: var(--color-background-hover);
+    }
+  }
+}
+
+.color-swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  &.no-color-swatch {
+    background: linear-gradient(135deg, transparent 45%, var(--color-error) 45%, var(--color-error) 55%, transparent 55%);
+    background-color: var(--color-background-hover);
+  }
+}
+
+.color-selected {
+  background: var(--color-primary-element-light);
 }
 
 .validation-settings {
