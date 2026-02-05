@@ -327,7 +327,8 @@ export default {
     },
   },
   setup(props) {
-    const form = reactive({ ...props.initialForm });
+    // Deep copy to preserve nested objects like question.validation
+    const form = reactive(JSON.parse(JSON.stringify(props.initialForm)));
     const saving = ref(false);
     const showSettings = ref(false);
     const showShare = ref(false);

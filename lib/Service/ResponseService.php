@@ -267,6 +267,19 @@ class ResponseService
                 throw new \RuntimeException('This form has expired');
             }
         }
+
+        // Check response limit
+        $maxResponses = $settings['max_responses'] ?? 0;
+        if ($maxResponses > 0) {
+            $currentCount = $this->indexService->getResponseCount($form);
+            if ($currentCount >= $maxResponses) {
+                $limitMessage = $settings['limit_message'] ?? '';
+                if (empty($limitMessage)) {
+                    $limitMessage = 'This form has reached its response limit';
+                }
+                throw new \RuntimeException($limitMessage);
+            }
+        }
     }
 
     /**
@@ -346,6 +359,25 @@ class ResponseService
                     throw new \RuntimeException("Invalid time format for question '{$question['question']}'");
                 }
                 break;
+        }
+
+        // Custom pattern validation (for text-based fields)
+        if (!empty($question['validation']['pattern'])) {
+            $pattern = $question['validation']['pattern'];
+            // Only validate non-empty answers
+            if ($answer !== '' && $answer !== null) {
+                // Escape delimiter and validate the pattern
+                $escapedPattern = '/' . str_replace('/', '\/', $pattern) . '/';
+                if (@preg_match($escapedPattern, '') === false) {
+                    // Invalid regex pattern - log and skip validation
+                    return;
+                }
+                if (!preg_match($escapedPattern, (string)$answer)) {
+                    $errorMsg = $question['validation']['errorMessage']
+                        ?? "Answer does not match the required format for question '{$question['question']}'";
+                    throw new \RuntimeException($errorMsg);
+                }
+            }
         }
     }
 

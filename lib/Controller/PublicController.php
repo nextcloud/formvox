@@ -209,6 +209,9 @@ class PublicController extends Controller
             // Get branding settings - use form-specific if set, otherwise admin defaults
             $branding = $this->getEffectiveBranding($form);
 
+            // Preserve response count for limit checking before removing _index
+            $responseCount = $form['_index']['response_count'] ?? 0;
+
             // Remove sensitive data for public view
             unset($form['responses']);
             unset($form['_index']);
@@ -216,6 +219,9 @@ class PublicController extends Controller
             unset($form['settings']['share_password_hash']);
             unset($form['settings']['share_password']);
             unset($form['branding']); // Don't expose branding in form data
+
+            // Add response count back for limit checking (without exposing full index)
+            $form['_index'] = ['response_count' => $responseCount];
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);
@@ -486,6 +492,9 @@ class PublicController extends Controller
             // Get branding settings - use form-specific if set, otherwise admin defaults
             $branding = $this->getEffectiveBranding($form);
 
+            // Preserve response count for limit checking before removing _index
+            $responseCount = $form['_index']['response_count'] ?? 0;
+
             // Remove sensitive data for public view
             unset($form['responses']);
             unset($form['_index']);
@@ -493,6 +502,9 @@ class PublicController extends Controller
             unset($form['settings']['share_password_hash']);
             unset($form['settings']['share_password']);
             unset($form['branding']); // Don't expose branding in form data
+
+            // Add response count back for limit checking (without exposing full index)
+            $form['_index'] = ['response_count' => $responseCount];
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);

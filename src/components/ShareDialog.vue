@@ -35,53 +35,13 @@
         </div>
       </div>
 
-      <!-- Embed Code Section (collapsible) -->
-      <div v-if="shareLink" class="collapsible-section">
-        <button type="button" class="section-toggle" @click="showEmbed = !showEmbed">
-          <CodeIcon :size="18" />
-          <span>{{ t('Embed code') }}</span>
-          <ChevronDownIcon :size="20" :class="{ rotated: showEmbed }" />
-        </button>
-        <div v-if="showEmbed" class="section-content">
-          <p class="embed-description">
-            {{ t('Copy this code to embed the form in your website, SharePoint, or intranet.') }}
-          </p>
-
-          <div class="embed-options">
-            <label class="embed-option">
-              <input type="checkbox" v-model="embedOptions.responsive">
-              {{ t('Responsive width') }}
-            </label>
-            <label v-if="!embedOptions.responsive" class="embed-option">
-              {{ t('Width') }}:
-              <input type="number" v-model.number="embedOptions.width" min="300" max="1200" class="size-input"> px
-            </label>
-            <label class="embed-option">
-              {{ t('Height') }}:
-              <input type="number" v-model.number="embedOptions.height" min="400" max="2000" class="size-input"> px
-            </label>
-          </div>
-
-          <div class="embed-code-container">
-            <code class="embed-code">{{ embedCode }}</code>
-            <NcButton type="tertiary" @click="copyEmbedCode">
-              <template #icon>
-                <CopyIcon :size="20" />
-              </template>
-              {{ embedCopied ? t('Copied!') : t('Copy') }}
-            </NcButton>
-          </div>
-        </div>
-      </div>
-
-      <!-- Response Settings Section (collapsible) -->
-      <div v-if="shareLink" class="collapsible-section">
-        <button type="button" class="section-toggle" @click="showResponseSettings = !showResponseSettings">
+      <!-- Response Settings Section (always visible) -->
+      <div v-if="shareLink" class="settings-section">
+        <h3>
           <CogIcon :size="18" />
-          <span>{{ t('Response settings') }}</span>
-          <ChevronDownIcon :size="20" :class="{ rotated: showResponseSettings }" />
-        </button>
-        <div v-if="showResponseSettings" class="section-content">
+          {{ t('Response settings') }}
+        </h3>
+        <div class="section-content">
           <NcCheckboxRadioSwitch
             :model-value="responseSettings.allowAnonymous"
             @update:model-value="updateResponseSetting('anonymous', $event)"
@@ -102,130 +62,160 @@
           >
             {{ t('Require login to respond') }}
           </NcCheckboxRadioSwitch>
+
+          <NcCheckboxRadioSwitch
+            :model-value="responseSettings.limitResponses"
+            @update:model-value="toggleResponseLimit"
+          >
+            {{ t('Limit total responses') }}
+          </NcCheckboxRadioSwitch>
+
+          <div v-if="responseSettings.limitResponses" class="response-limit-settings">
+            <div class="limit-input-row">
+              <label>{{ t('Maximum responses') }}:</label>
+              <input
+                type="number"
+                v-model.number="responseSettings.maxResponses"
+                min="1"
+                max="100000"
+                class="limit-input"
+                @change="saveResponseLimit"
+              >
+            </div>
+            <div class="limit-input-row">
+              <label>{{ t('Message when full') }}:</label>
+              <NcTextField
+                v-model="responseSettings.limitMessage"
+                :placeholder="t('This form has reached its response limit')"
+                @update:model-value="saveResponseLimit"
+              />
+            </div>
+            <p v-if="responseCount > 0" class="limit-status">
+              {{ t('Current responses: {current} / {max}', { current: responseCount, max: responseSettings.maxResponses }) }}
+            </p>
+          </div>
         </div>
       </div>
 
-      <!-- Link Settings Section (collapsible) -->
-      <div v-if="shareLink" class="collapsible-section">
-        <button type="button" class="section-toggle" @click="showLinkSettings = !showLinkSettings">
+      <!-- Link Settings Section (always visible) -->
+      <div v-if="shareLink" class="settings-section">
+        <h3>
           <LinkIcon :size="18" />
-          <span>{{ t('Link settings') }}</span>
-          <ChevronDownIcon :size="20" :class="{ rotated: showLinkSettings }" />
-        </button>
-        <div v-if="showLinkSettings" class="section-content">
+          {{ t('Link settings') }}
+        </h3>
+        <div class="section-content">
+          <NcCheckboxRadioSwitch
+            :model-value="linkSettings.passwordProtected"
+            @update:model-value="togglePassword"
+          >
+            {{ t('Password protect') }}
+          </NcCheckboxRadioSwitch>
 
-        <NcCheckboxRadioSwitch
-          :model-value="linkSettings.passwordProtected"
-          @update:model-value="togglePassword"
-        >
-          {{ t('Password protect') }}
-        </NcCheckboxRadioSwitch>
-
-        <div v-if="linkSettings.passwordProtected" class="password-field">
-          <NcTextField
-            v-model="linkSettings.password"
-            type="password"
-            :label="t('Password')"
-            :placeholder="t('Enter new password')"
-          />
-          <NcButton type="primary" @click="savePassword">
-            {{ t('Save') }}
-          </NcButton>
-        </div>
-
-        <NcCheckboxRadioSwitch
-          :model-value="linkSettings.expires"
-          @update:model-value="toggleLinkExpiration"
-        >
-          {{ t('Set expiration') }}
-        </NcCheckboxRadioSwitch>
-
-        <NcDateTimePicker
-          v-if="linkSettings.expires"
-          :value="linkSettings.expiresAt"
-          type="datetime"
-          @update:value="linkSettings.expiresAt = $event"
-        />
-
-        <NcCheckboxRadioSwitch
-          :model-value="accessRestrictions.enabled"
-          @update:model-value="toggleAccessRestrictions"
-        >
-          {{ t('Restrict to specific users/groups') }}
-        </NcCheckboxRadioSwitch>
-
-        <div v-if="accessRestrictions.enabled" class="access-restrictions">
-          <p class="restriction-note">
-            {{ t('Only selected users and group members can access this form. They will need to log in.') }}
-          </p>
-
-          <div class="search-field">
+          <div v-if="linkSettings.passwordProtected" class="password-field">
             <NcTextField
-              v-model="searchTerm"
-              :label="t('Search users and groups')"
-              :placeholder="t('Type to search...')"
-              @input="searchSharees"
+              v-model="linkSettings.password"
+              type="password"
+              :label="t('Password')"
+              :placeholder="t('Enter new password')"
             />
+            <NcButton type="primary" @click="savePassword">
+              {{ t('Save') }}
+            </NcButton>
           </div>
 
-          <div v-if="searchResults.users.length || searchResults.groups.length" class="search-results">
-            <div v-if="searchResults.users.length" class="result-section">
-              <span class="section-label">{{ t('Users') }}</span>
-              <div
-                v-for="user in searchResults.users"
-                :key="'user-' + user.id"
-                class="result-item"
-                @click="addUser(user)"
-              >
-                <AccountIcon :size="16" />
-                <span>{{ user.displayName }}</span>
+          <NcCheckboxRadioSwitch
+            :model-value="linkSettings.expires"
+            @update:model-value="toggleLinkExpiration"
+          >
+            {{ t('Set expiration') }}
+          </NcCheckboxRadioSwitch>
+
+          <NcDateTimePicker
+            v-if="linkSettings.expires"
+            :value="linkSettings.expiresAt"
+            type="datetime"
+            @update:value="linkSettings.expiresAt = $event"
+          />
+
+          <NcCheckboxRadioSwitch
+            :model-value="accessRestrictions.enabled"
+            @update:model-value="toggleAccessRestrictions"
+          >
+            {{ t('Restrict to specific users/groups') }}
+          </NcCheckboxRadioSwitch>
+
+          <div v-if="accessRestrictions.enabled" class="access-restrictions">
+            <p class="restriction-note">
+              {{ t('Only selected users and group members can access this form. They will need to log in.') }}
+            </p>
+
+            <div class="search-field">
+              <NcTextField
+                v-model="searchTerm"
+                :label="t('Search users and groups')"
+                :placeholder="t('Type to search...')"
+                @input="searchSharees"
+              />
+            </div>
+
+            <div v-if="searchResults.users.length || searchResults.groups.length" class="search-results">
+              <div v-if="searchResults.users.length" class="result-section">
+                <span class="section-label">{{ t('Users') }}</span>
+                <div
+                  v-for="user in searchResults.users"
+                  :key="'user-' + user.id"
+                  class="result-item"
+                  @click="addUser(user)"
+                >
+                  <AccountIcon :size="16" />
+                  <span>{{ user.displayName }}</span>
+                </div>
+              </div>
+
+              <div v-if="searchResults.groups.length" class="result-section">
+                <span class="section-label">{{ t('Groups') }}</span>
+                <div
+                  v-for="group in searchResults.groups"
+                  :key="'group-' + group.id"
+                  class="result-item"
+                  @click="addGroup(group)"
+                >
+                  <AccountGroupIcon :size="16" />
+                  <span>{{ group.displayName }}</span>
+                </div>
               </div>
             </div>
 
-            <div v-if="searchResults.groups.length" class="result-section">
-              <span class="section-label">{{ t('Groups') }}</span>
-              <div
-                v-for="group in searchResults.groups"
-                :key="'group-' + group.id"
-                class="result-item"
-                @click="addGroup(group)"
-              >
-                <AccountGroupIcon :size="16" />
-                <span>{{ group.displayName }}</span>
+            <div v-if="accessRestrictions.users.length" class="selected-items">
+              <span class="section-label">{{ t('Allowed users') }}</span>
+              <div class="chips">
+                <div
+                  v-for="user in accessRestrictions.users"
+                  :key="'selected-user-' + user.id"
+                  class="chip"
+                >
+                  <AccountIcon :size="14" />
+                  <span>{{ user.displayName }}</span>
+                  <button type="button" class="remove-btn" @click="removeUser(user.id)">×</button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div v-if="accessRestrictions.users.length" class="selected-items">
-            <span class="section-label">{{ t('Allowed users') }}</span>
-            <div class="chips">
-              <div
-                v-for="user in accessRestrictions.users"
-                :key="'selected-user-' + user.id"
-                class="chip"
-              >
-                <AccountIcon :size="14" />
-                <span>{{ user.displayName }}</span>
-                <button type="button" class="remove-btn" @click="removeUser(user.id)">×</button>
+            <div v-if="accessRestrictions.groups.length" class="selected-items">
+              <span class="section-label">{{ t('Allowed groups') }}</span>
+              <div class="chips">
+                <div
+                  v-for="group in accessRestrictions.groups"
+                  :key="'selected-group-' + group.id"
+                  class="chip"
+                >
+                  <AccountGroupIcon :size="14" />
+                  <span>{{ group.displayName }}</span>
+                  <button type="button" class="remove-btn" @click="removeGroup(group.id)">×</button>
+                </div>
               </div>
             </div>
           </div>
-
-          <div v-if="accessRestrictions.groups.length" class="selected-items">
-            <span class="section-label">{{ t('Allowed groups') }}</span>
-            <div class="chips">
-              <div
-                v-for="group in accessRestrictions.groups"
-                :key="'selected-group-' + group.id"
-                class="chip"
-              >
-                <AccountGroupIcon :size="14" />
-                <span>{{ group.displayName }}</span>
-                <button type="button" class="remove-btn" @click="removeGroup(group.id)">×</button>
-              </div>
-            </div>
-          </div>
-        </div>
 
           <div class="delete-link-section">
             <NcButton type="tertiary" @click="deleteShareLink">
@@ -235,32 +225,72 @@
         </div>
       </div>
 
-      <!-- Integration Settings (API Keys & Webhooks) - collapsible -->
+      <!-- Advanced Section (collapsible) -->
       <div v-if="shareLink" class="collapsible-section">
-        <button type="button" class="section-toggle" @click="showIntegration = !showIntegration">
-          <ApiIcon :size="18" />
-          <span>{{ t('API & Webhooks') }}</span>
-          <ChevronDownIcon :size="20" :class="{ rotated: showIntegration }" />
+        <button type="button" class="section-toggle" @click="showAdvanced = !showAdvanced">
+          <CogIcon :size="18" />
+          <span>{{ t('Advanced') }}</span>
+          <ChevronDownIcon :size="20" :class="{ rotated: showAdvanced }" />
         </button>
-        <div v-if="showIntegration" class="section-content">
-          <IntegrationSettings :file-id="fileId" :form="form" />
-        </div>
-      </div>
+        <div v-if="showAdvanced" class="section-content advanced-content">
+          <!-- Embed Code -->
+          <div class="advanced-subsection">
+            <h4>
+              <CodeIcon :size="16" />
+              {{ t('Embed code') }}
+            </h4>
+            <p class="embed-description">
+              {{ t('Copy this code to embed the form in your website, SharePoint, or intranet.') }}
+            </p>
 
-      <!-- Responses Section (collapsible) -->
-      <div v-if="responseCount > 0" class="collapsible-section">
-        <button type="button" class="section-toggle" @click="showResponses = !showResponses">
-          <ChartIcon :size="18" />
-          <span>{{ t('Responses') }} ({{ responseCount }})</span>
-          <ChevronDownIcon :size="20" :class="{ rotated: showResponses }" />
-        </button>
-        <div v-if="showResponses" class="section-content">
-          <p class="response-count">
-            {{ t('{count} responses collected', { count: responseCount }) }}
-          </p>
-          <NcButton type="error" @click="confirmDeleteResponses">
-            {{ t('Delete all responses') }}
-          </NcButton>
+            <div class="embed-options">
+              <label class="embed-option">
+                <input type="checkbox" v-model="embedOptions.responsive">
+                {{ t('Responsive width') }}
+              </label>
+              <label v-if="!embedOptions.responsive" class="embed-option">
+                {{ t('Width') }}:
+                <input type="number" v-model.number="embedOptions.width" min="300" max="1200" class="size-input"> px
+              </label>
+              <label class="embed-option">
+                {{ t('Height') }}:
+                <input type="number" v-model.number="embedOptions.height" min="400" max="2000" class="size-input"> px
+              </label>
+            </div>
+
+            <div class="embed-code-container">
+              <code class="embed-code">{{ embedCode }}</code>
+              <NcButton type="tertiary" @click="copyEmbedCode">
+                <template #icon>
+                  <CopyIcon :size="20" />
+                </template>
+                {{ embedCopied ? t('Copied!') : t('Copy') }}
+              </NcButton>
+            </div>
+          </div>
+
+          <!-- API & Webhooks -->
+          <div class="advanced-subsection">
+            <h4>
+              <ApiIcon :size="16" />
+              {{ t('API & Webhooks') }}
+            </h4>
+            <IntegrationSettings :file-id="fileId" :form="form" />
+          </div>
+
+          <!-- Responses -->
+          <div v-if="responseCount > 0" class="advanced-subsection">
+            <h4>
+              <ChartIcon :size="16" />
+              {{ t('Responses') }} ({{ responseCount }})
+            </h4>
+            <p class="response-count">
+              {{ t('{count} responses collected', { count: responseCount }) }}
+            </p>
+            <NcButton type="error" @click="confirmDeleteResponses">
+              {{ t('Delete all responses') }}
+            </NcButton>
+          </div>
         </div>
       </div>
 
@@ -347,11 +377,7 @@ export default {
     });
 
     // Collapsible section toggles
-    const showEmbed = ref(false);
-    const showResponseSettings = ref(false);
-    const showLinkSettings = ref(false);
-    const showIntegration = ref(false);
-    const showResponses = ref(false);
+    const showAdvanced = ref(false);
 
     // Embed options
     const embedOptions = reactive({
@@ -366,6 +392,9 @@ export default {
       allowAnonymous: props.form.settings?.anonymous ?? true,
       allowMultiple: props.form.settings?.allow_multiple ?? false,
       requireLogin: props.form.settings?.require_login ?? false,
+      limitResponses: props.form.settings?.max_responses > 0,
+      maxResponses: props.form.settings?.max_responses || 100,
+      limitMessage: props.form.settings?.limit_message || '',
     });
 
     // Access restrictions state
@@ -732,6 +761,33 @@ export default {
       }
     };
 
+    const toggleResponseLimit = async (enabled) => {
+      responseSettings.limitResponses = enabled;
+      await saveResponseLimit();
+    };
+
+    const saveResponseLimit = async () => {
+      try {
+        const settings = {
+          ...props.form.settings,
+          max_responses: responseSettings.limitResponses ? responseSettings.maxResponses : 0,
+          limit_message: responseSettings.limitMessage || '',
+        };
+
+        await axios.put(
+          generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
+          { settings }
+        );
+
+        props.form.settings.max_responses = settings.max_responses;
+        props.form.settings.limit_message = settings.limit_message;
+        showSuccess(t('Settings saved'));
+      } catch (error) {
+        showError(t('Failed to save settings'));
+        console.error(error);
+      }
+    };
+
     onMounted(() => {
       loadExistingShare();
       loadAccessRestrictions();
@@ -747,15 +803,11 @@ export default {
       responseCount,
       accessRestrictions,
       searchTerm,
-      showEmbed,
-      showResponseSettings,
-      showLinkSettings,
-      showResponses,
+      showAdvanced,
       searchResults,
       embedOptions,
       embedCopied,
       embedCode,
-      showIntegration,
       createShareLink,
       copyLink,
       copyEmbedCode,
@@ -771,6 +823,8 @@ export default {
       removeUser,
       removeGroup,
       updateResponseSetting,
+      toggleResponseLimit,
+      saveResponseLimit,
       t,
     };
   },
@@ -828,7 +882,46 @@ export default {
   }
 }
 
-// Embed styles (used inside collapsible-section)
+// Settings sections (always visible)
+.settings-section {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--color-background-hover);
+  border-radius: var(--border-radius-large);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+
+    :deep(svg) {
+      flex-shrink: 0;
+    }
+  }
+
+  .section-content {
+    // Content is always visible
+  }
+
+  .password-field {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+
+  .delete-link-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+// Embed styles (used inside advanced section)
 .embed-description {
   color: var(--color-text-maxcontrast);
   font-size: 13px;
@@ -942,6 +1035,34 @@ export default {
     margin: 0 0 12px;
     color: var(--color-text-maxcontrast);
   }
+
+  .advanced-content {
+    .advanced-subsection {
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--color-border);
+
+      &:last-child {
+        padding-bottom: 0;
+        margin-bottom: 0;
+        border-bottom: none;
+      }
+
+      h4 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-text-maxcontrast);
+
+        :deep(svg) {
+          flex-shrink: 0;
+        }
+      }
+    }
+  }
 }
 
 .actions {
@@ -951,6 +1072,45 @@ export default {
   border-top: 1px solid var(--color-border);
 }
 
+.response-limit-settings {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--color-background-dark);
+  border-radius: var(--border-radius);
+
+  .limit-input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    label {
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+
+    .limit-input {
+      width: 100px;
+      padding: 6px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      font-size: 14px;
+    }
+
+    :deep(.input-field) {
+      flex: 1;
+    }
+  }
+
+  .limit-status {
+    margin: 0;
+    padding: 8px 12px;
+    background: var(--color-primary-element-light);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
 
 .access-restrictions {
   margin-top: 12px;

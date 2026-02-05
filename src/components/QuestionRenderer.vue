@@ -13,8 +13,11 @@
     <NcTextField
       v-if="question.type === 'text'"
       :value="value"
-      @update:model-value="$emit('update:value', $event)"
+      :error="!!validationError"
+      @update:model-value="$emit('update:value', $event); clearValidationError()"
+      @blur="validatePattern"
     />
+    <p v-if="question.type === 'text' && validationError" class="validation-error">{{ validationError }}</p>
 
     <!-- Textarea -->
     <div v-else-if="question.type === 'textarea'" class="textarea-wrapper">
@@ -22,8 +25,11 @@
         :value="value"
         rows="4"
         class="nc-textarea"
-        @input="$emit('update:value', $event.target.value)"
+        :class="{ 'has-error': !!validationError }"
+        @input="$emit('update:value', $event.target.value); clearValidationError()"
+        @blur="validatePattern"
       />
+      <p v-if="validationError" class="validation-error">{{ validationError }}</p>
     </div>
 
     <!-- Single Choice (Radio) -->
@@ -96,8 +102,11 @@
       v-else-if="question.type === 'number'"
       type="number"
       :value="value"
-      @update:model-value="$emit('update:value', $event)"
+      :error="!!validationError"
+      @update:model-value="$emit('update:value', $event); clearValidationError()"
+      @blur="validatePattern"
     />
+    <p v-if="question.type === 'number' && validationError" class="validation-error">{{ validationError }}</p>
 
     <!-- Scale -->
     <div v-else-if="question.type === 'scale'" class="scale-input">
@@ -251,6 +260,30 @@ export default {
     const isDragging = ref(false);
     const selectedFiles = ref([]);
     const fileError = ref('');
+
+    // Validation state
+    const validationError = ref('');
+
+    const validatePattern = () => {
+      validationError.value = '';
+      if (!props.question.validation?.pattern || !props.value) return true;
+
+      try {
+        const regex = new RegExp(props.question.validation.pattern);
+        if (!regex.test(String(props.value))) {
+          validationError.value = props.question.validation.errorMessage
+            || t('This field does not match the required format');
+          return false;
+        }
+      } catch (e) {
+        // Invalid regex - skip validation
+      }
+      return true;
+    };
+
+    const clearValidationError = () => {
+      validationError.value = '';
+    };
     // Helper function to format answer for display
     const formatAnswerForDisplay = (answer) => {
       if (answer === undefined || answer === null || answer === '') {
@@ -521,6 +554,10 @@ export default {
       handleDrop,
       removeFile,
       formatFileSize,
+      // Validation
+      validationError,
+      validatePattern,
+      clearValidationError,
       t,
     };
   },
@@ -612,6 +649,19 @@ export default {
   &:hover:not(:focus) {
     border-color: var(--color-primary-element-light);
   }
+
+  &.has-error {
+    border-color: var(--color-error);
+  }
+}
+
+.validation-error {
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: var(--color-error);
+  color: white;
+  border-radius: var(--border-radius);
+  font-size: 13px;
 }
 
 .choice-options {

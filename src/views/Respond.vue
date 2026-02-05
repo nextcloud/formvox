@@ -10,8 +10,15 @@
       />
     </div>
 
+    <!-- Response Limit Reached -->
+    <div v-if="isLimitReached" class="limit-reached-zone">
+      <div class="limit-message">
+        {{ form.settings?.limit_message || t('This form is no longer accepting responses.') }}
+      </div>
+    </div>
+
     <!-- Thank You Page (after submission) -->
-    <div v-if="submitted" class="thank-you-zone">
+    <div v-else-if="submitted" class="thank-you-zone">
       <template v-if="thankYouBlocks.length > 0">
         <BlockRenderer
           v-for="block in thankYouBlocks"
@@ -34,7 +41,7 @@
     </div>
 
     <!-- Form -->
-    <form v-else @submit.prevent="submit">
+    <form v-else-if="!isLimitReached" @submit.prevent="submit">
       <div class="form-header">
         <h1>{{ form.title }}</h1>
         <p v-if="form.description" class="form-description">{{ form.description }}</p>
@@ -160,6 +167,14 @@ export default {
     const globalStyles = computed(() => props.branding?.globalStyles || {
       primaryColor: '#0082c9',
       backgroundColor: '#ffffff',
+    });
+
+    // Check if response limit is reached
+    const isLimitReached = computed(() => {
+      const maxResponses = props.form.settings?.max_responses || 0;
+      if (maxResponses <= 0) return false;
+      const currentCount = props.form._index?.response_count || 0;
+      return currentCount >= maxResponses;
     });
 
     // Container styles based on global styles
@@ -318,11 +333,27 @@ export default {
 
     const validateCurrentPage = () => {
       for (const question of visibleQuestions.value) {
+        const answer = answers[question.id];
+
+        // Required check
         if (question.required) {
-          const answer = answers[question.id];
           if (!answer || answer === '' || (Array.isArray(answer) && answer.length === 0)) {
             error.value = t('Please answer all required questions');
             return false;
+          }
+        }
+
+        // Pattern validation (only for non-empty answers)
+        if (question.validation?.pattern && answer && answer !== '') {
+          try {
+            const regex = new RegExp(question.validation.pattern);
+            if (!regex.test(String(answer))) {
+              error.value = question.validation.errorMessage
+                || t('"{question}" does not match the required format', { question: question.question });
+              return false;
+            }
+          } catch (e) {
+            // Invalid regex - skip validation
           }
         }
       }
@@ -455,6 +486,7 @@ export default {
       globalStyles,
       containerStyles,
       submitButtonStyles,
+      isLimitReached,
       updateAnswer,
       updatePendingFiles,
       previousPage,
@@ -481,6 +513,19 @@ export default {
   margin-top: 40px;
   padding-top: 20px;
   border-top: 1px solid var(--color-border);
+}
+
+.limit-reached-zone {
+  text-align: center;
+  padding: 60px 20px;
+
+  .limit-message {
+    font-size: 18px;
+    color: var(--color-text-maxcontrast);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
 }
 
 .thank-you-zone {

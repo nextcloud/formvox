@@ -311,6 +311,52 @@
         </NcCheckboxRadioSwitch>
       </div>
 
+      <!-- Custom validation (text types only) -->
+      <div v-if="supportsValidation" class="validation-settings">
+        <NcCheckboxRadioSwitch
+          :model-value="hasValidation"
+          @update:model-value="toggleValidation"
+        >
+          {{ t('Validation pattern') }}
+        </NcCheckboxRadioSwitch>
+
+        <div v-if="hasValidation" class="validation-fields">
+          <!-- Easy mode: preset patterns -->
+          <div class="form-field">
+            <label class="form-label">{{ t('Validation type') }}</label>
+            <NcSelect
+              v-model="validationPreset"
+              :options="validationPresetOptions"
+              :placeholder="t('Select a validation type')"
+              label="label"
+              track-by="value"
+              @update:model-value="onValidationPresetChange"
+            />
+          </div>
+
+          <!-- Custom regex input (only shown for 'custom' preset) -->
+          <div v-if="validationPreset?.value === 'custom'" class="form-field">
+            <label class="form-label">{{ t('Regular expression') }}</label>
+            <NcTextField
+              v-model="localQuestion.validation.pattern"
+              :placeholder="t('e.g. ^[0-9]{4}[A-Z]{2}$')"
+              @update:model-value="emitUpdate"
+            />
+            <small class="hint">{{ t('Examples: ^[A-Z]{2}[0-9]{4}$ (license plate), ^\\d{10}$ (10 digits)') }}</small>
+          </div>
+
+          <!-- Custom error message -->
+          <div class="form-field">
+            <label class="form-label">{{ t('Error message') }}</label>
+            <NcTextField
+              v-model="localQuestion.validation.errorMessage"
+              :placeholder="validationPreset?.defaultError || t('e.g. Please enter a valid value')"
+              @update:model-value="emitUpdate"
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- Condition indicator -->
       <div v-if="localQuestion.showIf" class="condition-indicator">
         <BranchIcon :size="16" />
@@ -341,6 +387,7 @@ import {
   NcTextField,
   NcTextArea,
   NcCheckboxRadioSwitch,
+  NcSelect,
 } from '@nextcloud/vue';
 import { v4 as uuidv4 } from 'uuid';
 import { t } from '@/utils/l10n';
@@ -364,6 +411,7 @@ export default {
     NcTextField,
     NcTextArea,
     NcCheckboxRadioSwitch,
+    NcSelect,
     draggable,
     ConditionEditor,
     DragIcon,
@@ -405,7 +453,8 @@ export default {
   setup(props, { emit }) {
     const collapsed = ref(false);
     const showConditions = ref(false);
-    const localQuestion = reactive({ ...props.question });
+    // Deep copy to preserve nested objects like validation
+    const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
     const customTypesString = ref('');
 
     // File type presets
@@ -417,7 +466,11 @@ export default {
     };
 
     watch(() => props.question, (newVal) => {
-      Object.assign(localQuestion, newVal);
+      // Deep copy to preserve nested objects like validation
+      Object.keys(localQuestion).forEach(key => {
+        delete localQuestion[key];
+      });
+      Object.assign(localQuestion, JSON.parse(JSON.stringify(newVal)));
     }, { deep: true });
 
     const hasOptions = computed(() => {
@@ -427,6 +480,81 @@ export default {
     const isQuizMode = computed(() => {
       return localQuestion.options?.some(opt => typeof opt.score === 'number');
     });
+
+    // Validation support for text-based types
+    const supportsValidation = computed(() => {
+      return ['text', 'textarea', 'number'].includes(localQuestion.type);
+    });
+
+    const hasValidation = computed(() => {
+      return localQuestion.validation !== undefined && localQuestion.validation !== null;
+    });
+
+    // Validation presets for easy mode
+    const validationPresets = {
+      email: { pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$', defaultError: t('Please enter a valid email address') },
+      phone_nl: { pattern: '^(\\+31|0)[1-9][0-9]{8}$', defaultError: t('Please enter a valid Dutch phone number') },
+      phone_intl: { pattern: '^\\+?[1-9]\\d{6,14}$', defaultError: t('Please enter a valid phone number') },
+      postal_nl: { pattern: '^[1-9][0-9]{3}\\s?[A-Za-z]{2}$', defaultError: t('Please enter a valid Dutch postal code (e.g. 1234 AB)') },
+      postal_be: { pattern: '^[1-9][0-9]{3}$', defaultError: t('Please enter a valid Belgian postal code (e.g. 1000)') },
+      url: { pattern: '^https?:\\/\\/[\\w\\-]+(\\.[\\w\\-]+)+[/#?]?.*$', defaultError: t('Please enter a valid URL') },
+      digits_only: { pattern: '^[0-9]+$', defaultError: t('Please enter only digits') },
+      letters_only: { pattern: '^[a-zA-Z]+$', defaultError: t('Please enter only letters') },
+      alphanumeric: { pattern: '^[a-zA-Z0-9]+$', defaultError: t('Please enter only letters and numbers') },
+      custom: { pattern: '', defaultError: '' },
+    };
+
+    const validationPresetOptions = [
+      { value: 'email', label: t('Email address'), defaultError: validationPresets.email.defaultError },
+      { value: 'phone_nl', label: t('Phone number (NL)'), defaultError: validationPresets.phone_nl.defaultError },
+      { value: 'phone_intl', label: t('Phone number (international)'), defaultError: validationPresets.phone_intl.defaultError },
+      { value: 'postal_nl', label: t('Postal code (NL)'), defaultError: validationPresets.postal_nl.defaultError },
+      { value: 'postal_be', label: t('Postal code (BE)'), defaultError: validationPresets.postal_be.defaultError },
+      { value: 'url', label: t('Website URL'), defaultError: validationPresets.url.defaultError },
+      { value: 'digits_only', label: t('Digits only'), defaultError: validationPresets.digits_only.defaultError },
+      { value: 'letters_only', label: t('Letters only'), defaultError: validationPresets.letters_only.defaultError },
+      { value: 'alphanumeric', label: t('Letters and numbers'), defaultError: validationPresets.alphanumeric.defaultError },
+      { value: 'custom', label: t('Custom (advanced)'), defaultError: '' },
+    ];
+
+    // Determine current validation preset based on pattern
+    const validationPreset = ref(null);
+
+    // Initialize validationPreset when question changes
+    watch(() => localQuestion.validation?.pattern, (pattern) => {
+      if (!pattern) {
+        validationPreset.value = null;
+        return;
+      }
+      // Find matching preset
+      const found = Object.entries(validationPresets).find(([key, preset]) => preset.pattern === pattern);
+      if (found) {
+        validationPreset.value = validationPresetOptions.find(opt => opt.value === found[0]) || null;
+      } else {
+        // Custom pattern
+        validationPreset.value = validationPresetOptions.find(opt => opt.value === 'custom') || null;
+      }
+    }, { immediate: true });
+
+    const onValidationPresetChange = (selected) => {
+      if (!selected) {
+        localQuestion.validation.pattern = '';
+        localQuestion.validation.errorMessage = '';
+      } else if (selected.value === 'custom') {
+        // Keep existing pattern if any, or clear
+        if (!localQuestion.validation.pattern) {
+          localQuestion.validation.pattern = '';
+        }
+      } else {
+        const preset = validationPresets[selected.value];
+        localQuestion.validation.pattern = preset.pattern;
+        // Only set default error if user hasn't customized it
+        if (!localQuestion.validation.errorMessage) {
+          localQuestion.validation.errorMessage = preset.defaultError;
+        }
+      }
+      emitUpdate();
+    };
 
     // Get other pages (excluding current page) for "Move to page" menu
     const otherPages = computed(() => {
@@ -441,7 +569,8 @@ export default {
     };
 
     const emitUpdate = () => {
-      emit('update', { ...localQuestion });
+      // Deep copy to preserve nested objects like validation
+      emit('update', JSON.parse(JSON.stringify(localQuestion)));
     };
 
     const onTypeChange = () => {
@@ -532,6 +661,34 @@ export default {
       emitUpdate();
     };
 
+    const toggleValidation = (enabled) => {
+      if (enabled) {
+        localQuestion.validation = {
+          pattern: '',
+          errorMessage: '',
+        };
+      } else {
+        delete localQuestion.validation;
+      }
+      emitUpdate();
+    };
+
+    const updateValidationPattern = (value) => {
+      if (!localQuestion.validation) {
+        localQuestion.validation = {};
+      }
+      localQuestion.validation.pattern = value;
+      emitUpdate();
+    };
+
+    const updateValidationErrorMessage = (value) => {
+      if (!localQuestion.validation) {
+        localQuestion.validation = {};
+      }
+      localQuestion.validation.errorMessage = value;
+      emitUpdate();
+    };
+
     const addRow = () => {
       if (!localQuestion.rows) {
         localQuestion.rows = [];
@@ -579,6 +736,11 @@ export default {
       customTypesString,
       hasOptions,
       isQuizMode,
+      supportsValidation,
+      hasValidation,
+      validationPreset,
+      validationPresetOptions,
+      onValidationPresetChange,
       otherPages,
       emitUpdate,
       onTypeChange,
@@ -587,6 +749,9 @@ export default {
       addOption,
       removeOption,
       toggleQuizMode,
+      toggleValidation,
+      updateValidationPattern,
+      updateValidationErrorMessage,
       addRow,
       removeRow,
       addColumn,
@@ -823,6 +988,29 @@ export default {
   gap: 20px;
   padding-top: 16px;
   border-top: 1px solid var(--color-border);
+}
+
+.validation-settings {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+
+  .validation-fields {
+    margin-top: 12px;
+    padding-left: 28px;
+
+    .form-field {
+      margin-bottom: 12px;
+    }
+
+    .hint {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--color-text-maxcontrast);
+      padding-left: 12px;
+    }
+  }
 }
 
 .condition-indicator {
