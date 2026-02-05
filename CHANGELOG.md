@@ -2,6 +2,31 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.9] - 2026-02-05
+
+### Added
+- **Custom regex validation** per question with custom error messages
+  - Define validation patterns (e.g., postal codes, license plates, phone numbers)
+  - Custom error messages when validation fails
+  - Real-time validation feedback on form submission
+- **Response limits** - Set maximum number of responses per form
+  - Custom "form closed" message when limit is reached
+  - Live counter showing current vs max responses
+- **Multiple submissions control** - Allow or disallow multiple responses per user
+- **Anonymous collection** - Option to collect responses without tracking user identity
+
+### Changed
+- **Share dialog reorganization**
+  - Response settings and Link settings are now always visible (not collapsed)
+  - Embed code, API & Webhooks, and Responses moved to collapsible "Advanced" section
+  - Cleaner, more intuitive settings layout
+
+### Fixed
+- **Scroll issues on public forms** caused by password manager browser extensions
+  - Fixed for LastPass, Bitwarden, 1Password, and similar extensions
+  - Added CSS workarounds for extension-injected elements
+- Improved scroll compatibility for Nextcloud 28+ public page layout
+
 ## [0.2.8] - 2026-02-02
 
 ### Added
