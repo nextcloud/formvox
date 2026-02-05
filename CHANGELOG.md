@@ -12,8 +12,6 @@ All notable changes to FormVox will be documented in this file.
 - **Response limits** - Set maximum number of responses per form
   - Custom "form closed" message when limit is reached
   - Live counter showing current vs max responses
-- **Multiple submissions control** - Allow or disallow multiple responses per user
-- **Anonymous collection** - Option to collect responses without tracking user identity
 
 ### Changed
 - **Share dialog reorganization**
