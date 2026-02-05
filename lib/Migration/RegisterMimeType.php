@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Migration;
 
+use OCP\App\IAppManager;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
@@ -14,6 +15,13 @@ use OCP\Migration\IRepairStep;
  */
 class RegisterMimeType implements IRepairStep
 {
+    private IAppManager $appManager;
+
+    public function __construct(IAppManager $appManager)
+    {
+        $this->appManager = $appManager;
+    }
+
     public function getName(): string
     {
         return 'Register FormVox MIME type';
@@ -92,7 +100,7 @@ class RegisterMimeType implements IRepairStep
      */
     private function copyFileTypeIcon(IOutput $output): void
     {
-        $appPath = \OC_App::getAppPath('formvox');
+        $appPath = $this->appManager->getAppPath('formvox');
         $sourceIcon = $appPath . '/img/filetypes/application-x-fvform.svg';
         $targetDir = \OC::$SERVERROOT . '/core/img/filetypes';
         $targetIcon = $targetDir . '/formvox.svg';
