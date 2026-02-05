@@ -26,6 +26,7 @@ All notable changes to FormVox will be documented in this file.
   - Fixed for LastPass, Bitwarden, 1Password, and similar extensions
   - Added CSS workarounds for extension-injected elements
 - Improved scroll compatibility for Nextcloud 28+ public page layout
+- **Nextcloud 33 compatibility** - Fixed deprecated `OC_App::getAppPath()` call
 
 ## [0.2.8] - 2026-02-02
 
