@@ -3,41 +3,89 @@
     class="question-renderer"
     :class="{ 'has-color': question.color }"
     :style="question.color ? { '--question-color': question.color } : {}"
+    role="group"
+    :aria-labelledby="`question-label-${question.id}`"
+    :aria-describedby="ariaDescribedBy"
   >
-    <label class="question-label">
-      {{ renderedQuestion }}
-      <span v-if="question.required" class="required-indicator" :title="t('Required')">*</span>
-      <span v-if="question.required" class="required-text">{{ t('(required)') }}</span>
-    </label>
-    <p v-if="question.description" class="question-description">
+    <div class="question-label-row">
+      <label :id="`question-label-${question.id}`" class="question-label" :for="inputId">
+        {{ renderedQuestion }}
+        <span v-if="question.required" class="required-indicator" :title="t('Required')" aria-hidden="true">*</span>
+        <span v-if="question.required" class="required-text">{{ t('(required)') }}</span>
+      </label>
+      <button
+        v-if="ttsSupported"
+        type="button"
+        class="tts-button"
+        :class="{ speaking: isSpeaking }"
+        :aria-label="isSpeaking ? t('Stop reading question aloud') : t('Read question aloud')"
+        :aria-pressed="isSpeaking"
+        @click="toggleTts"
+      >
+        <SpeakerIcon :size="18" />
+      </button>
+    </div>
+    <p
+      v-if="question.description"
+      :id="`question-desc-${question.id}`"
+      class="question-description"
+    >
       {{ renderedDescription }}
     </p>
 
     <!-- Text -->
     <NcTextField
       v-if="question.type === 'text'"
+      :id="inputId"
       :value="value"
-      :error="!!validationError"
+      :error="!!effectiveError"
+      :aria-required="question.required || undefined"
+      :aria-invalid="!!effectiveError || undefined"
+      :aria-describedby="ariaDescribedBy"
       @update:model-value="$emit('update:value', $event); clearValidationError()"
       @blur="validatePattern"
     />
-    <p v-if="question.type === 'text' && validationError" class="validation-error">{{ validationError }}</p>
+    <p
+      v-if="question.type === 'text' && effectiveError"
+      :id="`question-error-${question.id}`"
+      class="validation-error"
+      role="alert"
+    >
+      {{ effectiveError }}
+    </p>
 
     <!-- Textarea -->
     <div v-else-if="question.type === 'textarea'" class="textarea-wrapper">
       <textarea
+        :id="inputId"
         :value="value"
         rows="4"
         class="nc-textarea"
-        :class="{ 'has-error': !!validationError }"
+        :class="{ 'has-error': !!effectiveError }"
+        :aria-required="question.required || undefined"
+        :aria-invalid="!!effectiveError || undefined"
+        :aria-describedby="ariaDescribedBy"
         @input="$emit('update:value', $event.target.value); clearValidationError()"
         @blur="validatePattern"
       />
-      <p v-if="validationError" class="validation-error">{{ validationError }}</p>
+      <p
+        v-if="effectiveError"
+        :id="`question-error-${question.id}`"
+        class="validation-error"
+        role="alert"
+      >
+        {{ effectiveError }}
+      </p>
     </div>
 
     <!-- Single Choice (Radio) -->
-    <div v-else-if="question.type === 'choice'" class="choice-options">
+    <div
+      v-else-if="question.type === 'choice'"
+      class="choice-options"
+      role="radiogroup"
+      :aria-labelledby="`question-label-${question.id}`"
+      :aria-required="question.required || undefined"
+    >
       <NcCheckboxRadioSwitch
         v-for="option in question.options"
         :key="option.id"
@@ -51,7 +99,13 @@
     </div>
 
     <!-- Multiple Choice (Checkbox) -->
-    <div v-else-if="question.type === 'multiple'" class="choice-options">
+    <div
+      v-else-if="question.type === 'multiple'"
+      class="choice-options"
+      role="group"
+      :aria-labelledby="`question-label-${question.id}`"
+      :aria-required="question.required || undefined"
+    >
       <NcCheckboxRadioSwitch
         v-for="option in question.options"
         :key="option.id"
@@ -66,8 +120,12 @@
     <!-- Dropdown -->
     <select
       v-else-if="question.type === 'dropdown'"
+      :id="inputId"
       :value="value"
       class="dropdown-select"
+      :aria-required="question.required || undefined"
+      :aria-describedby="ariaDescribedBy"
+      :aria-label="renderedQuestion"
       @change="$emit('update:value', $event.target.value)"
     >
       <option value="">{{ t('Select...') }}</option>
@@ -95,33 +153,57 @@
     <!-- Time -->
     <input
       v-else-if="question.type === 'time'"
+      :id="inputId"
       type="time"
       :value="value"
       class="time-input"
+      :aria-required="question.required || undefined"
+      :aria-label="renderedQuestion"
       @input="$emit('update:value', $event.target.value)"
     >
 
     <!-- Number -->
     <NcTextField
       v-else-if="question.type === 'number'"
+      :id="inputId"
       type="number"
       :value="value"
-      :error="!!validationError"
+      :error="!!effectiveError"
+      :aria-required="question.required || undefined"
+      :aria-invalid="!!effectiveError || undefined"
+      :aria-describedby="ariaDescribedBy"
       @update:model-value="$emit('update:value', $event); clearValidationError()"
       @blur="validatePattern"
     />
-    <p v-if="question.type === 'number' && validationError" class="validation-error">{{ validationError }}</p>
+    <p
+      v-if="question.type === 'number' && effectiveError"
+      :id="`question-error-${question.id}`"
+      class="validation-error"
+      role="alert"
+    >
+      {{ effectiveError }}
+    </p>
 
     <!-- Scale -->
     <div v-else-if="question.type === 'scale'" class="scale-input">
       <span v-if="question.scaleMinLabel" class="scale-label">{{ question.scaleMinLabel }}</span>
-      <div class="scale-options">
+      <div
+        class="scale-options"
+        role="radiogroup"
+        :aria-labelledby="`question-label-${question.id}`"
+        :aria-required="question.required || undefined"
+        @keydown="handleScaleKeydown($event)"
+      >
         <button
           v-for="n in scaleRange"
           :key="n"
           type="button"
           class="scale-option"
           :class="{ selected: value === n }"
+          role="radio"
+          :aria-checked="value === n"
+          :aria-label="`${n}`"
+          :tabindex="getRadioTabindex(n, scaleRange, value)"
           @click="$emit('update:value', n)"
         >
           {{ n }}
@@ -131,13 +213,24 @@
     </div>
 
     <!-- Rating -->
-    <div v-else-if="question.type === 'rating'" class="rating-input">
+    <div
+      v-else-if="question.type === 'rating'"
+      class="rating-input"
+      role="radiogroup"
+      :aria-labelledby="`question-label-${question.id}`"
+      :aria-required="question.required || undefined"
+      @keydown="handleRatingKeydown($event)"
+    >
       <button
         v-for="n in ratingRange"
         :key="n"
         type="button"
         class="star-button"
         :class="{ filled: n <= value }"
+        role="radio"
+        :aria-checked="value === n"
+        :aria-label="t('{n} stars', { n })"
+        :tabindex="getRadioTabindex(n, ratingRange, value)"
         @click="$emit('update:value', n)"
       >
         <StarIcon :size="24" />
@@ -149,10 +242,15 @@
       <div
         class="file-upload-zone"
         :class="{ 'drag-over': isDragging, 'has-files': selectedFiles.length > 0 }"
+        role="button"
+        tabindex="0"
+        :aria-label="t('Drop files here or click to upload')"
         @dragover.prevent="isDragging = true"
         @dragleave="isDragging = false"
         @drop.prevent="handleDrop"
         @click="triggerFileInput"
+        @keydown.enter="triggerFileInput"
+        @keydown.space.prevent="triggerFileInput"
       >
         <input
           ref="fileInput"
@@ -164,7 +262,7 @@
         >
 
         <div v-if="selectedFiles.length === 0" class="upload-prompt">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="17 8 12 3 7 8"/>
             <line x1="12" y1="3" x2="12" y2="15"/>
@@ -175,13 +273,20 @@
 
         <div v-else class="uploaded-files">
           <div v-for="(file, index) in selectedFiles" :key="index" class="file-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
               <polyline points="13 2 13 9 20 9"/>
             </svg>
             <span class="file-name">{{ file.name }}</span>
             <span class="file-size">{{ formatFileSize(file.size) }}</span>
-            <button type="button" class="remove-file" @click.stop="removeFile(index)">×</button>
+            <button
+              type="button"
+              class="remove-file"
+              :aria-label="t('Remove file {name}', { name: file.name })"
+              @click.stop="removeFile(index)"
+            >
+              &times;
+            </button>
           </div>
           <button v-if="canAddMore" type="button" class="add-more-btn" @click.stop="triggerFileInput">
             + {{ t('Add more') }}
@@ -189,26 +294,32 @@
         </div>
       </div>
 
-      <p v-if="fileError" class="file-error">{{ fileError }}</p>
+      <p v-if="fileError" class="file-error" role="alert">{{ fileError }}</p>
     </div>
 
     <!-- Matrix -->
-    <div v-else-if="question.type === 'matrix'" class="matrix-input">
+    <div
+      v-else-if="question.type === 'matrix'"
+      class="matrix-input"
+      role="group"
+      :aria-labelledby="`question-label-${question.id}`"
+    >
       <table class="matrix-table">
         <thead>
           <tr>
-            <th></th>
-            <th v-for="col in question.columns" :key="col.id">{{ col.label }}</th>
+            <th scope="col"></th>
+            <th v-for="col in question.columns" :key="col.id" scope="col">{{ col.label }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in question.rows" :key="row.id">
-            <td class="row-label">{{ row.label }}</td>
+            <th scope="row" class="row-label">{{ row.label }}</th>
             <td v-for="col in question.columns" :key="col.id" class="matrix-cell">
               <NcCheckboxRadioSwitch
                 :model-value="(value || {})[row.id] === col.value"
                 type="radio"
                 :name="`matrix-${question.id}-${row.id}`"
+                :aria-label="`${row.label}: ${col.label}`"
                 @update:model-value="updateMatrix(row.id, col.value)"
               />
             </td>
@@ -216,6 +327,16 @@
         </tbody>
       </table>
     </div>
+
+    <!-- External validation error (from parent) -->
+    <p
+      v-if="validationErrorExternal && !validationError"
+      :id="`question-error-${question.id}`"
+      class="validation-error"
+      role="alert"
+    >
+      {{ validationErrorExternal }}
+    </p>
   </div>
 </template>
 
@@ -229,6 +350,7 @@ import {
   NcDateTimePicker,
 } from '@nextcloud/vue';
 import StarIcon from './icons/StarIcon.vue';
+import SpeakerIcon from './icons/SpeakerIcon.vue';
 
 export default {
   name: 'QuestionRenderer',
@@ -238,6 +360,7 @@ export default {
     NcCheckboxRadioSwitch,
     NcDateTimePicker,
     StarIcon,
+    SpeakerIcon,
   },
   props: {
     question: {
@@ -256,8 +379,20 @@ export default {
       type: Array,
       default: () => [],
     },
+    ttsSupported: {
+      type: Boolean,
+      default: false,
+    },
+    speakingQuestionId: {
+      type: String,
+      default: null,
+    },
+    validationErrorExternal: {
+      type: String,
+      default: '',
+    },
   },
-  emits: ['update:value', 'update:files'],
+  emits: ['update:value', 'update:files', 'speak'],
   setup(props, { emit }) {
     // File upload state
     const fileInput = ref(null);
@@ -267,6 +402,96 @@ export default {
 
     // Validation state
     const validationError = ref('');
+
+    // Effective error (internal or external)
+    const effectiveError = computed(() =>
+      validationError.value || props.validationErrorExternal
+    );
+
+    // Input ID for label association (not for group types)
+    const inputId = computed(() => {
+      if (['choice', 'multiple', 'scale', 'rating', 'matrix'].includes(props.question.type)) {
+        return undefined;
+      }
+      return `input-${props.question.id}`;
+    });
+
+    // Computed aria-describedby
+    const ariaDescribedBy = computed(() => {
+      const ids = [];
+      if (props.question.description) {
+        ids.push(`question-desc-${props.question.id}`);
+      }
+      if (effectiveError.value) {
+        ids.push(`question-error-${props.question.id}`);
+      }
+      return ids.length > 0 ? ids.join(' ') : undefined;
+    });
+
+    // TTS
+    const isSpeaking = computed(() =>
+      props.speakingQuestionId === props.question.id
+    );
+
+    const toggleTts = () => {
+      emit('speak', props.question.id);
+    };
+
+    // Roving tabindex for radio-like groups
+    const getRadioTabindex = (n, range, currentValue) => {
+      if (currentValue !== '' && currentValue !== null && currentValue !== undefined) {
+        return n === currentValue ? 0 : -1;
+      }
+      return n === range[0] ? 0 : -1;
+    };
+
+    const handleRadioGroupKeydown = (event, range, currentValue, onSelect) => {
+      const currentIndex = range.indexOf(currentValue);
+      let newIndex = -1;
+
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          event.preventDefault();
+          newIndex = currentIndex < range.length - 1 ? currentIndex + 1 : 0;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          event.preventDefault();
+          newIndex = currentIndex > 0 ? currentIndex - 1 : range.length - 1;
+          break;
+        case 'Home':
+          event.preventDefault();
+          newIndex = 0;
+          break;
+        case 'End':
+          event.preventDefault();
+          newIndex = range.length - 1;
+          break;
+        default:
+          return;
+      }
+
+      if (newIndex >= 0) {
+        onSelect(range[newIndex]);
+        const buttons = event.currentTarget.querySelectorAll('[role="radio"]');
+        if (buttons[newIndex]) {
+          buttons[newIndex].focus();
+        }
+      }
+    };
+
+    const handleScaleKeydown = (event) => {
+      handleRadioGroupKeydown(event, scaleRange.value, props.value, (n) => {
+        emit('update:value', n);
+      });
+    };
+
+    const handleRatingKeydown = (event) => {
+      handleRadioGroupKeydown(event, ratingRange.value, props.value, (n) => {
+        emit('update:value', n);
+      });
+    };
 
     const validatePattern = () => {
       validationError.value = '';
@@ -560,8 +785,17 @@ export default {
       formatFileSize,
       // Validation
       validationError,
+      effectiveError,
       validatePattern,
       clearValidationError,
+      // Accessibility
+      inputId,
+      ariaDescribedBy,
+      isSpeaking,
+      toggleTts,
+      getRadioTabindex,
+      handleScaleKeydown,
+      handleRatingKeydown,
       t,
     };
   },
@@ -581,7 +815,6 @@ export default {
     display: block;
     font-size: 16px;
     font-weight: 600;
-    margin-bottom: 8px;
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
@@ -630,6 +863,58 @@ export default {
   :deep(.mx-datepicker) {
     max-width: 100%;
     width: 100%;
+  }
+}
+
+.question-label-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  .question-label {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}
+
+.tts-button {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-maxcontrast);
+  transition: all 0.2s;
+  padding: 0;
+
+  &:hover {
+    color: var(--color-primary-element);
+    border-color: var(--color-primary-element);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary-element);
+    outline-offset: 2px;
+  }
+
+  &.speaking {
+    color: var(--color-primary-element);
+    border-color: var(--color-primary-element);
+    background: var(--color-primary-element-light);
+    animation: tts-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+:global {
+  @keyframes tts-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 }
 
@@ -765,6 +1050,11 @@ export default {
       border-color: var(--color-primary);
     }
 
+    &:focus-visible {
+      outline: 2px solid var(--color-primary-element);
+      outline-offset: 2px;
+    }
+
     &.selected {
       background: var(--color-primary);
       border-color: var(--color-primary);
@@ -805,6 +1095,12 @@ export default {
     &.filled {
       color: #ffc107;
     }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary-element);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
   }
 }
 
@@ -821,6 +1117,11 @@ export default {
     &:hover {
       border-color: var(--color-primary-element);
       background: var(--color-primary-element-light);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary-element);
+      outline-offset: 2px;
     }
 
     &.drag-over {

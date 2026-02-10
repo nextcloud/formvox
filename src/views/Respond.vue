@@ -1,5 +1,10 @@
 <template>
   <div class="respond-container" :style="containerStyles">
+    <!-- Skip link -->
+    <a v-if="!submitted && !isLimitReached" href="#formvox-form-content" class="sr-only sr-only-focusable">
+      {{ t('Skip to form questions') }}
+    </a>
+
     <!-- Header Zone -->
     <div v-if="headerBlocks.length > 0" class="zone-header">
       <BlockRenderer
@@ -11,14 +16,21 @@
     </div>
 
     <!-- Response Limit Reached -->
-    <div v-if="isLimitReached" class="limit-reached-zone">
+    <div v-if="isLimitReached" class="limit-reached-zone" role="alert">
       <div class="limit-message">
         {{ form.settings?.limit_message || t('This form is no longer accepting responses.') }}
       </div>
     </div>
 
     <!-- Thank You Page (after submission) -->
-    <div v-else-if="submitted" class="thank-you-zone">
+    <div
+      v-else-if="submitted"
+      class="thank-you-zone"
+      role="status"
+      aria-live="polite"
+      ref="thankYouRef"
+      tabindex="-1"
+    >
       <template v-if="thankYouBlocks.length > 0">
         <BlockRenderer
           v-for="block in thankYouBlocks"
@@ -41,20 +53,26 @@
     </div>
 
     <!-- Form -->
-    <form v-else-if="!isLimitReached" @submit.prevent="submit">
+    <form v-else-if="!isLimitReached" @submit.prevent="submit" novalidate :aria-label="form.title">
       <div class="form-header">
         <h1>{{ form.title }}</h1>
         <p v-if="form.description" class="form-description">{{ form.description }}</p>
       </div>
 
-      <div v-if="currentPage && pages.length > 1" class="page-indicator">
+      <div
+        v-if="currentPage && pages.length > 1"
+        class="page-indicator"
+        role="status"
+        aria-live="polite"
+      >
         {{ t('Page {current} of {total}', { current: currentPageIndex + 1, total: pages.length }) }}
       </div>
 
-      <div class="questions">
+      <div id="formvox-form-content" class="questions">
         <div
           v-for="question in visibleQuestions"
           :key="question.id"
+          :id="`question-${question.id}`"
           class="question-container"
         >
           <QuestionRenderer
@@ -62,8 +80,12 @@
             :value="answers[question.id]"
             :all-answers="answers"
             :all-questions="form.questions"
+            :tts-supported="ttsIsSupported"
+            :speaking-question-id="speakingQuestionId"
+            :validation-error-external="validationErrors[question.id] || ''"
             @update:value="updateAnswer(question.id, $event)"
             @update:files="updatePendingFiles(question.id, $event)"
+            @speak="handleSpeak"
           />
         </div>
       </div>
@@ -95,8 +117,16 @@
         </NcButton>
       </div>
 
-      <div v-if="error" class="error-message">
-        {{ error }}
+      <!-- Submission status for screen readers -->
+      <div class="sr-only" aria-live="polite" role="status">
+        <span v-if="submitting">{{ t('Submitting your response...') }}</span>
+        <span v-if="uploadProgress">{{ uploadProgress }}</span>
+      </div>
+
+      <div class="error-message-container" aria-live="assertive" role="alert">
+        <div v-if="error" class="error-message">
+          {{ error }}
+        </div>
       </div>
     </form>
 
@@ -113,11 +143,12 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, nextTick, onBeforeUnmount } from 'vue';
 import { NcButton } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { t } from '@/utils/l10n';
+import { useTts } from '../composables/useTts';
 import QuestionRenderer from '../components/QuestionRenderer.vue';
 import BlockRenderer from '../components/pagebuilder/BlockRenderer.vue';
 import CheckIcon from '../components/icons/CheckIcon.vue';
@@ -163,6 +194,17 @@ export default {
     const error = ref(null);
     const score = ref(null);
     const currentPageIndex = ref(0);
+    const validationErrors = reactive({});
+    const thankYouRef = ref(null);
+
+    // TTS
+    const {
+      isSupported: ttsIsSupported,
+      speakingQuestionId,
+      buildSpeechText,
+      speak: ttsSpeak,
+      stop: ttsStop,
+    } = useTts();
 
     const globalStyles = computed(() => props.branding?.globalStyles || {
       primaryColor: '#0082c9',
@@ -325,21 +367,85 @@ export default {
 
     const updateAnswer = (questionId, value) => {
       answers[questionId] = value;
+      // Clear validation error when user answers
+      if (validationErrors[questionId]) {
+        delete validationErrors[questionId];
+      }
     };
 
     const updatePendingFiles = (questionId, files) => {
       pendingFiles[questionId] = files;
     };
 
+    // Piping helper for TTS
+    const applyPipingForTts = (text) => {
+      if (!text) return '';
+      const matches = text.match(/\{\{(\w+)\}\}/g);
+      if (!matches) return text;
+
+      matches.forEach(match => {
+        const ref = match.replace(/\{\{|\}\}/g, '');
+        let questionId = null;
+        const numMatch = ref.match(/^Q(\d+)$/i);
+        if (numMatch) {
+          const index = parseInt(numMatch[1], 10) - 1;
+          if (props.form.questions && props.form.questions[index]) {
+            questionId = props.form.questions[index].id;
+          }
+        } else {
+          questionId = ref;
+        }
+        if (questionId) {
+          const answer = answers[questionId];
+          if (answer && answer !== '') {
+            text = text.replace(match, Array.isArray(answer) ? answer.join(', ') : String(answer));
+          }
+        }
+      });
+      return text;
+    };
+
+    const handleSpeak = (questionId) => {
+      const question = props.form.questions.find(q => q.id === questionId);
+      if (!question) return;
+
+      const renderedQ = applyPipingForTts(question.question);
+      const renderedDesc = question.description ? applyPipingForTts(question.description) : '';
+      const text = buildSpeechText(
+        question,
+        renderedQ,
+        renderedDesc,
+        (label) => applyPipingForTts(label)
+      );
+      ttsSpeak(questionId, text);
+    };
+
+    const focusFirstQuestion = () => {
+      nextTick(() => {
+        const firstQuestion = document.querySelector('.question-container');
+        if (firstQuestion) {
+          firstQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const focusable = firstQuestion.querySelector(
+            'input, textarea, select, [tabindex="0"]'
+          );
+          if (focusable) focusable.focus();
+        }
+      });
+    };
+
     const validateCurrentPage = () => {
+      // Clear previous errors
+      Object.keys(validationErrors).forEach(k => delete validationErrors[k]);
+      let firstErrorQuestionId = null;
+
       for (const question of visibleQuestions.value) {
         const answer = answers[question.id];
 
         // Required check
         if (question.required) {
           if (!answer || answer === '' || (Array.isArray(answer) && answer.length === 0)) {
-            error.value = t('Please answer all required questions');
-            return false;
+            if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+            validationErrors[question.id] = t('This question is required');
           }
         }
 
@@ -348,28 +454,49 @@ export default {
           try {
             const regex = new RegExp(question.validation.pattern);
             if (!regex.test(String(answer))) {
-              error.value = question.validation.errorMessage
+              if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+              validationErrors[question.id] = question.validation.errorMessage
                 || t('"{question}" does not match the required format', { question: question.question });
-              return false;
             }
           } catch (e) {
             // Invalid regex - skip validation
           }
         }
       }
+
+      if (firstErrorQuestionId) {
+        error.value = t('Please answer all required questions');
+        // Focus the first question with an error
+        nextTick(() => {
+          const el = document.getElementById(`question-${firstErrorQuestionId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const focusable = el.querySelector(
+              'input, textarea, select, [tabindex="0"], button:not(.tts-button)'
+            );
+            if (focusable) focusable.focus();
+          }
+        });
+        return false;
+      }
+
       error.value = null;
       return true;
     };
 
     const previousPage = () => {
       if (hasPreviousPage.value) {
+        ttsStop();
         currentPageIndex.value--;
+        focusFirstQuestion();
       }
     };
 
     const nextPage = () => {
       if (validateCurrentPage() && hasNextPage.value) {
+        ttsStop();
         currentPageIndex.value++;
+        focusFirstQuestion();
       }
     };
 
@@ -455,10 +582,18 @@ export default {
         const response = await axios.post(url, { answers: finalAnswers });
 
         submitted.value = true;
+        ttsStop();
 
         if (response.data.score) {
           score.value = response.data.score;
         }
+
+        // Focus the thank you zone
+        nextTick(() => {
+          if (thankYouRef.value) {
+            thankYouRef.value.focus();
+          }
+        });
       } catch (err) {
         error.value = err.response?.data?.error || t('Failed to submit response');
       } finally {
@@ -466,6 +601,11 @@ export default {
         uploadProgress.value = '';
       }
     };
+
+    // Clean up TTS on unmount
+    onBeforeUnmount(() => {
+      ttsStop();
+    });
 
     return {
       answers,
@@ -492,6 +632,12 @@ export default {
       previousPage,
       nextPage,
       submit,
+      // Accessibility
+      validationErrors,
+      thankYouRef,
+      ttsIsSupported,
+      speakingQuestionId,
+      handleSpeak,
       t,
     };
   },
@@ -503,6 +649,34 @@ export default {
   max-width: 700px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  padding: 8px 16px;
+  background: var(--color-primary-element);
+  color: white;
+  border-radius: var(--border-radius);
+  display: block;
+  margin-bottom: 16px;
+  text-decoration: none;
 }
 
 .zone-header {
@@ -531,6 +705,10 @@ export default {
 .thank-you-zone {
   text-align: center;
   padding: 40px 20px;
+
+  &:focus {
+    outline: none;
+  }
 
   h2 {
     margin: 20px 0 10px;
@@ -579,6 +757,10 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.error-message-container {
+  min-height: 0;
 }
 
 .error-message {

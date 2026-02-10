@@ -2,6 +2,37 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.10] - 2026-02-10
+
+### Added
+- **Accessibility (a11y) improvements** for public form response pages
+  - **Text-to-Speech (TTS)** - Speaker icon per question to read question text, description, and answer options aloud using the Web Speech API
+  - Toggle behavior: click to start reading, click again to stop
+  - Language automatically detected from Nextcloud user locale
+  - Visual feedback on speaker button while reading (color change)
+- **ARIA attributes** on all question types for screen reader support
+  - `role="group"` with `aria-labelledby` on every question
+  - `aria-required`, `aria-invalid`, `aria-describedby` on all input fields
+  - `role="radiogroup"` for single choice, scale, and rating questions
+  - `role="alert"` on validation error messages
+  - `aria-live="polite"` on page indicator and submission status
+  - `aria-live="assertive"` on form error messages
+  - `aria-label` on file upload zone, remove buttons, and matrix radio buttons
+  - `scope="col"` / `scope="row"` on matrix table headers
+- **Keyboard navigation** for custom controls
+  - Arrow keys (left/right/up/down) to navigate scale and star rating buttons
+  - Home/End keys for first/last option
+  - Enter/Space to activate file upload zone
+  - Roving tabindex (WAI-ARIA radiogroup pattern) on scale and rating
+- **Focus management**
+  - On validation error: scroll to and focus first question with error
+  - On page navigation: focus first question on new page
+  - After submission: focus thank-you page for screen reader announcement
+  - TTS automatically stops on page navigation and form submission
+- **Skip link** - "Skip to form questions" link (visible on Tab focus) to bypass headers
+- **Per-question inline validation errors** alongside global error banner
+- Screen reader-only status announcements for submission progress
+
 ## [0.2.9] - 2026-02-05
 
 ### Added
