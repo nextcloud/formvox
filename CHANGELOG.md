@@ -2,6 +2,12 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.2.11] - 2026-02-18
+
+### Changed
+- **Nextcloud 33 support** - App now supports Nextcloud 28 through 33
+- Replaced deprecated `IResult::fetch()` with `fetchAssociative()` in StatisticsService
+
 ## [0.2.10] - 2026-02-11
 
 ### Added

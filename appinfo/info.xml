@@ -14,7 +14,7 @@ FormVox is a file-based forms and polls app for Nextcloud. Unlike traditional fo
 
 **📋 Requirements:**
 * PHP 8.2 or higher
-* Nextcloud 28-32
+* Nextcloud 28-33
 
 **Features:**
 * 100% file-based storage (.fvform files)
@@ -42,7 +42,7 @@ FormVox is a file-based forms and polls app for Nextcloud. Unlike traditional fo
 
 Built with Vue 3 and modern web technologies for a smooth, secure experience.
     ]]></description>
-    <version>0.2.10</version>
+    <version>0.2.11</version>
     <licence>agpl</licence>
     <author mail="sam@mief.info">Sam Ditmeijer</author>
     <author mail="rik@shalution.nl">Rik Dekker</author>
@@ -62,7 +62,7 @@ Built with Vue 3 and modern web technologies for a smooth, secure experience.
     <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Result.png</screenshot>
 
     <dependencies>
-        <nextcloud min-version="28" max-version="32"/>
+        <nextcloud min-version="28" max-version="33"/>
         <php min-version="8.2"/>
     </dependencies>
 
