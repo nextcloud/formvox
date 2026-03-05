@@ -37,7 +37,7 @@
     <NcTextField
       v-if="question.type === 'text'"
       :id="inputId"
-      :value="value"
+      :model-value="value"
       :error="!!effectiveError"
       :aria-required="question.required || undefined"
       :aria-invalid="!!effectiveError || undefined"
@@ -167,7 +167,7 @@
       v-else-if="question.type === 'number'"
       :id="inputId"
       type="number"
-      :value="value"
+      :model-value="value"
       :error="!!effectiveError"
       :aria-required="question.required || undefined"
       :aria-invalid="!!effectiveError || undefined"

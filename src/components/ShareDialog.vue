@@ -26,6 +26,17 @@
           </NcButton>
         </div>
 
+        <!-- QR Code -->
+        <div v-if="shareLink" class="qr-code-section">
+          <canvas ref="qrCanvas" class="qr-canvas" />
+          <NcButton type="tertiary" @click="downloadQr">
+            <template #icon>
+              <DownloadIcon :size="20" />
+            </template>
+            {{ t('Download QR code') }}
+          </NcButton>
+        </div>
+
         <div v-else class="create-link">
           <p v-if="canShare">{{ t('No link yet. Create one to start collecting responses.') }}</p>
           <p v-else>{{ t('You do not have permission to create a response link.') }}</p>
@@ -305,7 +316,8 @@
 
 <script>
 import { t } from '@/utils/l10n';
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, watch, onMounted, nextTick } from 'vue';
+import QRCode from 'qrcode';
 import {
   NcModal,
   NcButton,
@@ -326,6 +338,7 @@ import LinkIcon from 'vue-material-design-icons/Link.vue';
 import AccountIcon from 'vue-material-design-icons/Account.vue';
 import AccountGroupIcon from 'vue-material-design-icons/AccountGroup.vue';
 import IntegrationSettings from './IntegrationSettings.vue';
+import DownloadIcon from 'vue-material-design-icons/Download.vue';
 
 export default {
   name: 'ShareDialog',
@@ -345,6 +358,7 @@ export default {
     AccountIcon,
     AccountGroupIcon,
     IntegrationSettings,
+    DownloadIcon,
   },
   props: {
     fileId: {
@@ -368,6 +382,8 @@ export default {
     const creatingLink = ref(false);
     const linkInput = ref(null);
     const responseCount = ref(props.form._index?.response_count || 0);
+
+    const qrCanvas = ref(null);
 
     const linkSettings = reactive({
       passwordProtected: false,
@@ -431,6 +447,34 @@ export default {
         console.error('Error loading shares:', error);
       }
     };
+
+    const generateQr = async () => {
+      await nextTick();
+      if (shareLink.value && qrCanvas.value) {
+        try {
+          await QRCode.toCanvas(qrCanvas.value, shareLink.value, {
+            width: 200,
+            margin: 2,
+            color: { dark: '#000000', light: '#ffffff' },
+          });
+        } catch (e) {
+          console.error('QR generation failed:', e);
+        }
+      }
+    };
+
+    const downloadQr = () => {
+      if (!qrCanvas.value) return;
+      const url = qrCanvas.value.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${props.form.title || 'form'}-qr.png`;
+      a.click();
+    };
+
+    watch(shareLink, (link) => {
+      if (link) generateQr();
+    });
 
     const createShareLink = async () => {
       creatingLink.value = true;
@@ -788,9 +832,10 @@ export default {
       }
     };
 
-    onMounted(() => {
-      loadExistingShare();
+    onMounted(async () => {
+      await loadExistingShare();
       loadAccessRestrictions();
+      generateQr();
     });
 
     return {
@@ -808,6 +853,8 @@ export default {
       embedOptions,
       embedCopied,
       embedCode,
+      qrCanvas,
+      downloadQr,
       createShareLink,
       copyLink,
       copyEmbedCode,
@@ -866,6 +913,21 @@ export default {
       border-radius: var(--border-radius);
       background: var(--color-background-hover);
       font-size: 14px;
+    }
+  }
+
+  .qr-code-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--color-background-hover);
+    border-radius: var(--border-radius-large);
+
+    .qr-canvas {
+      border-radius: var(--border-radius);
     }
   }
 

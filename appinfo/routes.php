@@ -40,6 +40,10 @@ return [
         // API routes - Index management
         ['name' => 'api#rebuildIndex', 'url' => '/api/form/{fileId}/rebuild-index', 'verb' => 'POST'],
 
+        // API routes - Presence (collaborative editing)
+        ['name' => 'api#sendPresence', 'url' => '/api/form/{fileId}/presence', 'verb' => 'POST'],
+        ['name' => 'api#getPresence', 'url' => '/api/form/{fileId}/presence', 'verb' => 'GET'],
+
         // API routes - File permissions
         ['name' => 'file_permission#getPermissions', 'url' => '/api/permissions/{fileId}', 'verb' => 'GET'],
 

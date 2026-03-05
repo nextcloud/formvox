@@ -19,6 +19,7 @@ use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\IndexService;
+use OCP\IConfig;
 
 class ApiController extends Controller
 {
@@ -29,6 +30,7 @@ class ApiController extends Controller
     private IUserSession $userSession;
     private IUserManager $userManager;
     private IGroupManager $groupManager;
+    private IConfig $config;
 
     public function __construct(
         IRequest $request,
@@ -38,7 +40,8 @@ class ApiController extends Controller
         IndexService $indexService,
         IUserSession $userSession,
         IUserManager $userManager,
-        IGroupManager $groupManager
+        IGroupManager $groupManager,
+        IConfig $config
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
@@ -48,6 +51,7 @@ class ApiController extends Controller
         $this->userSession = $userSession;
         $this->userManager = $userManager;
         $this->groupManager = $groupManager;
+        $this->config = $config;
     }
 
     /**
@@ -548,6 +552,95 @@ class ApiController extends Controller
             );
         } catch (\OCP\Files\NotFoundException $e) {
             throw new \Exception('No uploads found');
+        }
+    }
+
+    /**
+     * Send presence heartbeat for a form
+     */
+    #[NoAdminRequired]
+    public function sendPresence(int $fileId): DataResponse
+    {
+        try {
+            $user = $this->userSession->getUser();
+            if (!$user) {
+                return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
+            }
+
+            $userId = $user->getUID();
+            $displayName = $user->getDisplayName();
+
+            $this->config->setUserValue(
+                $userId,
+                Application::APP_ID,
+                'presence_' . $fileId,
+                json_encode([
+                    'userId' => $userId,
+                    'displayName' => $displayName,
+                    'timestamp' => time(),
+                ])
+            );
+
+            return new DataResponse(['status' => 'ok']);
+        } catch (\Exception $e) {
+            return new DataResponse(
+                ['error' => $e->getMessage()],
+                Http::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get active editors for a form
+     */
+    #[NoAdminRequired]
+    public function getPresence(int $fileId): DataResponse
+    {
+        try {
+            $currentUser = $this->userSession->getUser();
+            if (!$currentUser) {
+                return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
+            }
+
+            $currentUserId = $currentUser->getUID();
+            $editors = [];
+            $now = time();
+            $timeout = 60; // seconds
+
+            // Check all known users for presence on this form
+            // We use getUserValueForUsers which checks all users that have this key
+            $this->userManager->callForAllUsers(function ($user) use ($fileId, $now, $timeout, $currentUserId, &$editors) {
+                $userId = $user->getUID();
+                $value = $this->config->getUserValue(
+                    $userId,
+                    Application::APP_ID,
+                    'presence_' . $fileId,
+                    ''
+                );
+
+                if (!$value) return;
+
+                $data = json_decode($value, true);
+                if (!$data || !isset($data['timestamp'])) return;
+
+                // Skip stale entries
+                if ($now - $data['timestamp'] > $timeout) return;
+
+                // Skip current user
+                if ($userId === $currentUserId) return;
+
+                $editors[] = [
+                    'userId' => $data['userId'],
+                    'displayName' => $data['displayName'],
+                ];
+            });
+
+            return new DataResponse(['editors' => $editors]);
+        } catch (\Exception $e) {
+            return new DataResponse(
+                ['error' => $e->getMessage()],
+                Http::STATUS_INTERNAL_SERVER_ERROR
+            );
         }
     }
 }

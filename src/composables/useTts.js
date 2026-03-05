@@ -52,7 +52,7 @@ export function useTts() {
 		window.speechSynthesis.cancel();
 
 		const utterance = new SpeechSynthesisUtterance(text);
-		utterance.lang = document.documentElement.lang || navigator.language || 'en';
+		utterance.lang = navigator.language || document.documentElement.lang || 'en';
 
 		utterance.onend = () => {
 			speakingQuestionId.value = null;

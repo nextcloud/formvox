@@ -71,6 +71,8 @@
 
           <!-- Right: View & Share actions -->
           <div class="toolbar-section toolbar-section--end">
+            <PresenceAvatars :editors="activeEditors" />
+
             <NcButton type="secondary" @click="showPreview = !showPreview">
               <template #icon>
                 <EyeIcon :size="20" />
@@ -137,6 +139,12 @@
             <NcActions v-if="form.pages.length > 1" class="page-actions">
               <NcActionButton @click.stop="renamePage(pageIndex)">
                 {{ t('Rename') }}
+              </NcActionButton>
+              <NcActionButton @click.stop="openRouting(pageIndex)">
+                <template #icon>
+                  <RouteIcon :size="20" />
+                </template>
+                {{ t('Routing') }}
               </NcActionButton>
               <NcActionButton @click.stop="deletePage(pageIndex)">
                 {{ t('Delete') }}
@@ -247,11 +255,20 @@
       @update:branding="updateBranding"
       @close="showBranding = false"
     />
+
+    <PageRoutingEditor
+      v-if="showRouting !== null"
+      :page="form.pages[showRouting]"
+      :pages="form.pages"
+      :questions="form.questions"
+      @update:routing="updatePageRouting"
+      @close="showRouting = null"
+    />
   </NcContent>
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
 import {
   NcContent,
   NcAppContent,
@@ -271,6 +288,8 @@ import QuestionEditor from '../components/QuestionEditor.vue';
 import SettingsPanel from '../components/SettingsPanel.vue';
 import ShareDialog from '../components/ShareDialog.vue';
 import FormBrandingEditor from '../components/FormBrandingEditor.vue';
+import PageRoutingEditor from '../components/PageRoutingEditor.vue';
+import PresenceAvatars from '../components/PresenceAvatars.vue';
 import PlusIcon from '../components/icons/PlusIcon.vue';
 import EyeIcon from '../components/icons/EyeIcon.vue';
 import CogIcon from '../components/icons/CogIcon.vue';
@@ -279,6 +298,7 @@ import ChartIcon from '../components/icons/ChartIcon.vue';
 import PagesIcon from '../components/icons/PagesIcon.vue';
 import PaletteIcon from '../components/icons/PaletteIcon.vue';
 import ArrowLeftIcon from '../components/icons/ArrowLeftIcon.vue';
+import RouteIcon from 'vue-material-design-icons/DirectionsFork.vue';
 
 export default {
   name: 'Editor',
@@ -295,6 +315,8 @@ export default {
     SettingsPanel,
     ShareDialog,
     FormBrandingEditor,
+    PageRoutingEditor,
+    PresenceAvatars,
     PlusIcon,
     EyeIcon,
     CogIcon,
@@ -303,6 +325,7 @@ export default {
     PagesIcon,
     PaletteIcon,
     ArrowLeftIcon,
+    RouteIcon,
   },
   props: {
     fileId: {
@@ -334,7 +357,12 @@ export default {
     const showShare = ref(false);
     const showBranding = ref(false);
     const showPreview = ref(false);
+    const showRouting = ref(null);
     const currentPageIndex = ref(0);
+
+    // Presence
+    const activeEditors = ref([]);
+    let presenceInterval = null;
 
     let saveTimeout = null;
 
@@ -599,6 +627,51 @@ export default {
       window.location.href = generateUrl('/apps/formvox');
     };
 
+    // Page routing
+    const openRouting = (pageIndex) => {
+      showRouting.value = pageIndex;
+    };
+
+    const updatePageRouting = (routing) => {
+      if (showRouting.value !== null && form.pages[showRouting.value]) {
+        form.pages[showRouting.value].routing = routing;
+        debouncedSave();
+      }
+    };
+
+    // Presence
+    const sendHeartbeat = async () => {
+      try {
+        await axios.post(
+          generateUrl('/apps/formvox/api/form/{fileId}/presence', { fileId: props.fileId })
+        );
+      } catch (e) { /* ignore */ }
+    };
+
+    const fetchPresence = async () => {
+      try {
+        const res = await axios.get(
+          generateUrl('/apps/formvox/api/form/{fileId}/presence', { fileId: props.fileId })
+        );
+        activeEditors.value = res.data.editors || [];
+      } catch (e) { /* ignore */ }
+    };
+
+    onMounted(() => {
+      sendHeartbeat();
+      fetchPresence();
+      presenceInterval = setInterval(() => {
+        sendHeartbeat();
+        fetchPresence();
+      }, 30000);
+    });
+
+    onBeforeUnmount(() => {
+      if (presenceInterval) {
+        clearInterval(presenceInterval);
+      }
+    });
+
     return {
       form,
       showSettings,
@@ -633,6 +706,10 @@ export default {
       updateBranding,
       viewResults,
       goBack,
+      showRouting,
+      openRouting,
+      updatePageRouting,
+      activeEditors,
       t,
     };
   },

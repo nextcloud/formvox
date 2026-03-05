@@ -54,6 +54,18 @@
 
     <!-- Form -->
     <form v-else-if="!isLimitReached" @submit.prevent="submit" novalidate :aria-label="form.title">
+      <!-- Draft restored banner -->
+      <div v-if="draftRestored" class="draft-banner">
+        <div class="draft-banner-content">
+          <span class="draft-banner-title">{{ t('Welcome back!') }}</span>
+          <span class="draft-banner-text">{{ t('We saved your progress. You can continue where you left off.') }}</span>
+        </div>
+        <div class="draft-banner-actions">
+          <button type="button" class="draft-continue" @click="draftRestored = false">{{ t('Continue') }}</button>
+          <button type="button" class="draft-dismiss" @click="clearDraft">{{ t('Start over') }}</button>
+        </div>
+      </div>
+
       <div class="form-header">
         <h1>{{ form.title }}</h1>
         <p v-if="form.description" class="form-description">{{ form.description }}</p>
@@ -197,6 +209,14 @@ export default {
     const validationErrors = reactive({});
     const thankYouRef = ref(null);
 
+    // Draft autosave
+    const draftKey = `formvox-draft-${props.fileId}-${props.token}`;
+    const draftRestored = ref(false);
+    let draftSaveTimeout = null;
+
+    // Page routing history (for "Previous" to go back through routed path)
+    const pageHistory = ref([]);
+
     // TTS
     const {
       isSupported: ttsIsSupported,
@@ -250,6 +270,81 @@ export default {
       }
     });
 
+    // Restore draft from localStorage
+    const restoreDraft = () => {
+      try {
+        const saved = localStorage.getItem(draftKey);
+        if (!saved) return;
+        const draft = JSON.parse(saved);
+        const savedAt = new Date(draft.savedAt);
+        if (Date.now() - savedAt.getTime() > 7 * 24 * 60 * 60 * 1000) {
+          localStorage.removeItem(draftKey);
+          return;
+        }
+        if (draft.answers) {
+          let hasValues = false;
+          Object.keys(draft.answers).forEach(key => {
+            if (key in answers) {
+              const val = draft.answers[key];
+              // Check if value is non-empty
+              if (val !== '' && val !== null && val !== undefined &&
+                !(Array.isArray(val) && val.length === 0) &&
+                !(typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length === 0)) {
+                hasValues = true;
+              }
+              // For arrays/objects, deep copy to ensure reactivity
+              if (Array.isArray(val)) {
+                answers[key] = [...val];
+              } else if (typeof val === 'object' && val !== null) {
+                answers[key] = { ...val };
+              } else {
+                answers[key] = val;
+              }
+            }
+          });
+          // Only show banner if there were actual answers
+          if (!hasValues) return;
+        }
+        if (typeof draft.currentPageIndex === 'number') {
+          currentPageIndex.value = draft.currentPageIndex;
+        }
+        draftRestored.value = true;
+      } catch (e) {
+        localStorage.removeItem(draftKey);
+      }
+    };
+
+    const saveDraft = () => {
+      if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
+      draftSaveTimeout = setTimeout(() => {
+        try {
+          localStorage.setItem(draftKey, JSON.stringify({
+            answers: JSON.parse(JSON.stringify(answers)),
+            currentPageIndex: currentPageIndex.value,
+            savedAt: new Date().toISOString(),
+          }));
+        } catch (e) { /* localStorage full - ignore */ }
+      }, 1000);
+    };
+
+    const clearDraft = () => {
+      localStorage.removeItem(draftKey);
+      draftRestored.value = false;
+      props.form.questions?.forEach(q => {
+        if (q.type === 'multiple') {
+          answers[q.id] = [];
+        } else if (q.type === 'matrix') {
+          answers[q.id] = {};
+        } else {
+          answers[q.id] = '';
+        }
+      });
+      currentPageIndex.value = 0;
+    };
+
+    // Restore draft on load
+    restoreDraft();
+
     // Pages support
     const pages = computed(() => {
       if (props.form.pages && Array.isArray(props.form.pages) && props.form.pages.length > 0) {
@@ -261,7 +356,7 @@ export default {
 
     const currentPage = computed(() => pages.value[currentPageIndex.value]);
 
-    const hasPreviousPage = computed(() => currentPageIndex.value > 0);
+    const hasPreviousPage = computed(() => currentPageIndex.value > 0 || pageHistory.value.length > 0);
     const hasNextPage = computed(() => currentPageIndex.value < pages.value.length - 1);
 
     // Calculate real progress based on answered questions
@@ -371,6 +466,7 @@ export default {
       if (validationErrors[questionId]) {
         delete validationErrors[questionId];
       }
+      saveDraft();
     };
 
     const updatePendingFiles = (questionId, files) => {
@@ -484,18 +580,62 @@ export default {
       return true;
     };
 
+    // Evaluate page routing rules for current page
+    const evaluatePageRouting = () => {
+      const page = currentPage.value;
+      if (!page?.routing || !Array.isArray(page.routing) || page.routing.length === 0) {
+        return null;
+      }
+      for (const rule of page.routing) {
+        const condition = {
+          questionId: rule.questionId,
+          operator: rule.operator,
+          value: rule.value,
+        };
+        if (evaluateCondition(condition, answers)) {
+          return rule.targetPageId;
+        }
+      }
+      return null;
+    };
+
     const previousPage = () => {
-      if (hasPreviousPage.value) {
+      if (pageHistory.value.length > 0) {
+        ttsStop();
+        currentPageIndex.value = pageHistory.value.pop();
+        saveDraft();
+        focusFirstQuestion();
+      } else if (hasPreviousPage.value) {
         ttsStop();
         currentPageIndex.value--;
+        saveDraft();
         focusFirstQuestion();
       }
     };
 
     const nextPage = () => {
-      if (validateCurrentPage() && hasNextPage.value) {
-        ttsStop();
+      if (!validateCurrentPage()) return;
+      ttsStop();
+
+      // Push current page to history for back-navigation
+      pageHistory.value.push(currentPageIndex.value);
+
+      // Check routing rules
+      const targetPageId = evaluatePageRouting();
+      if (targetPageId) {
+        const targetIndex = pages.value.findIndex(p => p.id === targetPageId);
+        if (targetIndex !== -1) {
+          currentPageIndex.value = targetIndex;
+          saveDraft();
+          focusFirstQuestion();
+          return;
+        }
+      }
+
+      // Default: linear navigation
+      if (hasNextPage.value) {
         currentPageIndex.value++;
+        saveDraft();
         focusFirstQuestion();
       }
     };
@@ -583,6 +723,7 @@ export default {
 
         submitted.value = true;
         ttsStop();
+        localStorage.removeItem(draftKey);
 
         if (response.data.score) {
           score.value = response.data.score;
@@ -632,6 +773,9 @@ export default {
       previousPage,
       nextPage,
       submit,
+      // Draft
+      draftRestored,
+      clearDraft,
       // Accessibility
       validationErrors,
       thankYouRef,
@@ -717,6 +861,69 @@ export default {
   p {
     color: var(--color-text-maxcontrast);
     margin-bottom: 20px;
+  }
+}
+
+.draft-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  background: var(--color-primary-element-light);
+  border-radius: var(--border-radius-large);
+  border-left: 4px solid var(--color-primary-element);
+
+  .draft-banner-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .draft-banner-title {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .draft-banner-text {
+    font-size: 13px;
+    color: var(--color-text-maxcontrast);
+  }
+
+  .draft-banner-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .draft-continue {
+    background: var(--color-primary-element);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  .draft-dismiss {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-text-maxcontrast);
+
+    &:hover {
+      background: var(--color-background-hover);
+      color: var(--color-error);
+      border-color: var(--color-error);
+    }
   }
 }
 
