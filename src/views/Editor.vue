@@ -11,8 +11,20 @@
           </NcButton>
         </div>
 
+        <!-- Lock banner when another editor is active -->
+        <div v-if="lockedByOther" class="permission-banner permission-banner--lock">
+          <div class="lock-editor-info">
+            <NcAvatar :user="activeEditors[0]?.userId" :display-name="activeEditors[0]?.displayName" :size="32" />
+            <div class="lock-editor-text">
+              <strong>{{ activeEditors[0]?.displayName || t('Someone') }}</strong>
+              {{ t('is currently editing this form') }}
+            </div>
+          </div>
+          <span class="lock-subtitle">{{ t('You can view the form but not make changes right now.') }}</span>
+        </div>
+
         <!-- Permission banner for read-only users -->
-        <div v-if="!canEdit" class="permission-banner">
+        <div v-else-if="!hasEditPermission" class="permission-banner">
           <span class="permission-icon">🔒</span>
           <span>{{ t('You have read-only access to this form. Contact the owner to request edit permissions.') }}</span>
         </div>
@@ -71,8 +83,6 @@
 
           <!-- Right: View & Share actions -->
           <div class="toolbar-section toolbar-section--end">
-            <PresenceAvatars :editors="activeEditors" />
-
             <NcButton type="secondary" @click="showPreview = !showPreview">
               <template #icon>
                 <EyeIcon :size="20" />
@@ -277,6 +287,7 @@ import {
   NcActionButton,
   NcTextField,
   NcTextArea,
+  NcAvatar,
 } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
@@ -289,7 +300,6 @@ import SettingsPanel from '../components/SettingsPanel.vue';
 import ShareDialog from '../components/ShareDialog.vue';
 import FormBrandingEditor from '../components/FormBrandingEditor.vue';
 import PageRoutingEditor from '../components/PageRoutingEditor.vue';
-import PresenceAvatars from '../components/PresenceAvatars.vue';
 import PlusIcon from '../components/icons/PlusIcon.vue';
 import EyeIcon from '../components/icons/EyeIcon.vue';
 import CogIcon from '../components/icons/CogIcon.vue';
@@ -316,7 +326,7 @@ export default {
     ShareDialog,
     FormBrandingEditor,
     PageRoutingEditor,
-    PresenceAvatars,
+    NcAvatar,
     PlusIcon,
     EyeIcon,
     CogIcon,
@@ -367,8 +377,10 @@ export default {
     let saveTimeout = null;
 
     // Permission checks
-    const canEdit = computed(() => props.permissions?.editQuestions ?? false);
-    const canEditSettings = computed(() => props.permissions?.editSettings ?? false);
+    const hasEditPermission = computed(() => props.permissions?.editQuestions ?? false);
+    const lockedByOther = computed(() => activeEditors.value.length > 0);
+    const canEdit = computed(() => hasEditPermission.value && !lockedByOther.value);
+    const canEditSettings = computed(() => (props.permissions?.editSettings ?? false) && !lockedByOther.value);
     const canViewResponses = computed(() => props.permissions?.viewResponses ?? false);
     const canShare = computed(() => props.permissions?.canShare ?? false);
 
@@ -684,6 +696,8 @@ export default {
       publicPreviewUrl,
       canEdit,
       canEditSettings,
+      hasEditPermission,
+      lockedByOther,
       canViewResponses,
       canShare,
       debouncedSave,
@@ -740,6 +754,34 @@ export default {
 
   .permission-icon {
     font-size: 20px;
+  }
+
+  &--lock {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    background: var(--color-background-hover);
+    border: 1px solid var(--color-border);
+    color: var(--color-main-text);
+
+    .lock-editor-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lock-editor-text {
+      font-size: 14px;
+
+      strong {
+        font-weight: 600;
+      }
+    }
+
+    .lock-subtitle {
+      font-size: 13px;
+      color: var(--color-text-maxcontrast);
+    }
   }
 }
 
