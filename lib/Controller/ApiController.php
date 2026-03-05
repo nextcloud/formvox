@@ -570,6 +570,24 @@ class ApiController extends Controller
             $userId = $user->getUID();
             $displayName = $user->getDisplayName();
 
+            // Preserve firstSeen timestamp if already present
+            $existing = $this->config->getUserValue(
+                $userId,
+                Application::APP_ID,
+                'presence_' . $fileId,
+                ''
+            );
+            $firstSeen = time();
+            if ($existing) {
+                $existingData = json_decode($existing, true);
+                if ($existingData && isset($existingData['firstSeen'])) {
+                    // Only keep firstSeen if still within timeout (60s)
+                    if (time() - ($existingData['timestamp'] ?? 0) <= 60) {
+                        $firstSeen = $existingData['firstSeen'];
+                    }
+                }
+            }
+
             $this->config->setUserValue(
                 $userId,
                 Application::APP_ID,
@@ -578,6 +596,7 @@ class ApiController extends Controller
                     'userId' => $userId,
                     'displayName' => $displayName,
                     'timestamp' => time(),
+                    'firstSeen' => $firstSeen,
                 ])
             );
 
@@ -604,12 +623,12 @@ class ApiController extends Controller
 
             $currentUserId = $currentUser->getUID();
             $editors = [];
+            $myFirstSeen = null;
             $now = time();
             $timeout = 60; // seconds
 
             // Check all known users for presence on this form
-            // We use getUserValueForUsers which checks all users that have this key
-            $this->userManager->callForAllUsers(function ($user) use ($fileId, $now, $timeout, $currentUserId, &$editors) {
+            $this->userManager->callForAllUsers(function ($user) use ($fileId, $now, $timeout, $currentUserId, &$editors, &$myFirstSeen) {
                 $userId = $user->getUID();
                 $value = $this->config->getUserValue(
                     $userId,
@@ -626,16 +645,23 @@ class ApiController extends Controller
                 // Skip stale entries
                 if ($now - $data['timestamp'] > $timeout) return;
 
-                // Skip current user
-                if ($userId === $currentUserId) return;
+                // Track current user's firstSeen
+                if ($userId === $currentUserId) {
+                    $myFirstSeen = $data['firstSeen'] ?? $data['timestamp'];
+                    return;
+                }
 
                 $editors[] = [
                     'userId' => $data['userId'],
                     'displayName' => $data['displayName'],
+                    'firstSeen' => $data['firstSeen'] ?? $data['timestamp'],
                 ];
             });
 
-            return new DataResponse(['editors' => $editors]);
+            return new DataResponse([
+                'editors' => $editors,
+                'myFirstSeen' => $myFirstSeen,
+            ]);
         } catch (\Exception $e) {
             return new DataResponse(
                 ['error' => $e->getMessage()],

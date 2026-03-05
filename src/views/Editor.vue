@@ -14,9 +14,9 @@
         <!-- Lock banner when another editor is active -->
         <div v-if="lockedByOther" class="permission-banner permission-banner--lock">
           <div class="lock-editor-info">
-            <NcAvatar :user="activeEditors[0]?.userId" :display-name="activeEditors[0]?.displayName" :size="32" />
+            <NcAvatar :user="lockingEditor?.userId" :display-name="lockingEditor?.displayName" :size="32" />
             <div class="lock-editor-text">
-              <strong>{{ activeEditors[0]?.displayName || t('Someone') }}</strong>
+              <strong>{{ lockingEditor?.displayName || t('Someone') }}</strong>
               {{ t('is currently editing this form') }}
             </div>
           </div>
@@ -187,6 +187,7 @@
               item-key="id"
               handle=".drag-handle"
               group="questions"
+              :disabled="!canEdit"
               @end="onQuestionDragEnd"
             >
               <template #item="{ element }">
@@ -216,6 +217,7 @@
               v-model="form.questions"
               item-key="id"
               handle=".drag-handle"
+              :disabled="!canEdit"
               @end="debouncedSave"
             >
               <template #item="{ element, index }">
@@ -372,13 +374,28 @@ export default {
 
     // Presence
     const activeEditors = ref([]);
+    const myFirstSeen = ref(null);
     let presenceInterval = null;
 
     let saveTimeout = null;
 
     // Permission checks
     const hasEditPermission = computed(() => props.permissions?.editQuestions ?? false);
-    const lockedByOther = computed(() => activeEditors.value.length > 0);
+    // The editor who arrived first (has smallest firstSeen) gets priority
+    const lockingEditor = computed(() => {
+      if (activeEditors.value.length === 0) return null;
+      // Find the editor who was there first
+      return activeEditors.value.reduce((earliest, e) =>
+        !earliest || e.firstSeen < earliest.firstSeen ? e : earliest, null);
+    });
+
+    // Only locked if another editor was there before us
+    const lockedByOther = computed(() => {
+      if (activeEditors.value.length === 0) return false;
+      if (!myFirstSeen.value) return true; // Be safe: if we don't know our own firstSeen, assume locked
+      // Check if any other editor arrived before us
+      return activeEditors.value.some(e => e.firstSeen <= myFirstSeen.value);
+    });
     const canEdit = computed(() => hasEditPermission.value && !lockedByOther.value);
     const canEditSettings = computed(() => (props.permissions?.editSettings ?? false) && !lockedByOther.value);
     const canViewResponses = computed(() => props.permissions?.viewResponses ?? false);
@@ -666,6 +683,9 @@ export default {
           generateUrl('/apps/formvox/api/form/{fileId}/presence', { fileId: props.fileId })
         );
         activeEditors.value = res.data.editors || [];
+        if (res.data.myFirstSeen) {
+          myFirstSeen.value = res.data.myFirstSeen;
+        }
       } catch (e) { /* ignore */ }
     };
 
@@ -724,6 +744,7 @@ export default {
       openRouting,
       updatePageRouting,
       activeEditors,
+      lockingEditor,
       t,
     };
   },

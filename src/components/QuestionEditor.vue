@@ -5,7 +5,7 @@
     :style="localQuestion.color ? { '--question-color': localQuestion.color } : {}"
   >
     <div class="question-header">
-      <span class="drag-handle">
+      <span class="drag-handle" :class="{ disabled: readonly }">
         <DragIcon :size="20" />
       </span>
 
@@ -141,6 +141,7 @@
           v-model="localQuestion.options"
           item-key="id"
           handle=".option-handle"
+          :disabled="readonly"
           @end="emitUpdate"
         >
           <template #item="{ element: option, index: optIndex }">
@@ -150,6 +151,7 @@
               </span>
               <NcTextField
                 v-model="option.label"
+                :disabled="readonly"
                 :placeholder="t('Option {n}', { n: optIndex + 1 })"
                 @update:model-value="emitUpdate"
               />
@@ -157,11 +159,13 @@
                 v-if="isQuizMode"
                 v-model.number="option.score"
                 type="number"
+                :disabled="readonly"
                 :placeholder="t('Score')"
                 class="score-input"
                 @update:model-value="emitUpdate"
               />
               <NcButton
+                v-if="!readonly"
                 type="tertiary"
                 @click="removeOption(optIndex)"
               >
@@ -172,7 +176,7 @@
             </div>
           </template>
         </draggable>
-        <NcButton @click="addOption">
+        <NcButton v-if="!readonly" @click="addOption">
           <template #icon>
             <PlusIcon :size="20" />
           </template>
@@ -186,12 +190,14 @@
           <NcTextField
             v-model.number="localQuestion.scaleMin"
             type="number"
+            :disabled="readonly"
             :label="t('Min')"
             @update:model-value="emitUpdate"
           />
           <NcTextField
             v-model.number="localQuestion.scaleMax"
             type="number"
+            :disabled="readonly"
             :label="t('Max')"
             @update:model-value="emitUpdate"
           />
@@ -199,12 +205,14 @@
         <div class="scale-row">
           <NcTextField
             v-model="localQuestion.scaleMinLabel"
+            :disabled="readonly"
             :label="t('Min label')"
             :placeholder="t('e.g. Not at all')"
             @update:model-value="emitUpdate"
           />
           <NcTextField
             v-model="localQuestion.scaleMaxLabel"
+            :disabled="readonly"
             :label="t('Max label')"
             :placeholder="t('e.g. Very much')"
             @update:model-value="emitUpdate"
@@ -217,6 +225,7 @@
         <NcTextField
           v-model.number="localQuestion.ratingMax"
           type="number"
+          :disabled="readonly"
           :label="t('Maximum stars')"
           @update:model-value="emitUpdate"
         />
@@ -226,7 +235,7 @@
       <div v-if="localQuestion.type === 'file'" class="file-settings">
         <div class="form-field">
           <label class="form-label">{{ t('Allowed file types') }}</label>
-          <select v-model="localQuestion.allowedTypePreset" class="type-select" @change="onFileTypePresetChange">
+          <select v-model="localQuestion.allowedTypePreset" :disabled="readonly" class="type-select" @change="onFileTypePresetChange">
             <option value="images">{{ t('Images only') }}</option>
             <option value="documents">{{ t('Documents (PDF, Word, Excel)') }}</option>
             <option value="pdf">{{ t('PDF only') }}</option>
@@ -239,6 +248,7 @@
           <label class="form-label">{{ t('Custom MIME types or extensions') }}</label>
           <NcTextField
             v-model="customTypesString"
+            :disabled="readonly"
             :placeholder="t('e.g. .pdf, .docx, image/*')"
             @update:model-value="onCustomTypesChange"
           />
@@ -250,6 +260,7 @@
           <NcTextField
             v-model.number="localQuestion.maxFileSize"
             type="number"
+            :disabled="readonly"
             :min="1"
             :max="100"
             @update:model-value="emitUpdate"
@@ -259,6 +270,7 @@
         <div class="form-field">
           <NcCheckboxRadioSwitch
             :model-value="localQuestion.maxFiles > 1"
+            :disabled="readonly"
             @update:model-value="localQuestion.maxFiles = $event ? 5 : 1; emitUpdate()"
           >
             {{ t('Allow multiple files') }}
@@ -270,6 +282,7 @@
           <NcTextField
             v-model.number="localQuestion.maxFiles"
             type="number"
+            :disabled="readonly"
             :min="2"
             :max="20"
             @update:model-value="emitUpdate"
@@ -284,16 +297,17 @@
           <div v-for="(row, rowIndex) in localQuestion.rows" :key="row.id" class="matrix-item">
             <NcTextField
               v-model="row.label"
+              :disabled="readonly"
               :placeholder="t('Row {n}', { n: rowIndex + 1 })"
               @update:model-value="emitUpdate"
             />
-            <NcButton type="tertiary" @click="removeRow(rowIndex)">
+            <NcButton v-if="!readonly" type="tertiary" @click="removeRow(rowIndex)">
               <template #icon>
                 <CloseIcon :size="20" />
               </template>
             </NcButton>
           </div>
-          <NcButton @click="addRow">
+          <NcButton v-if="!readonly" @click="addRow">
             <template #icon>
               <PlusIcon :size="20" />
             </template>
@@ -306,16 +320,17 @@
           <div v-for="(col, colIndex) in localQuestion.columns" :key="col.id" class="matrix-item">
             <NcTextField
               v-model="col.label"
+              :disabled="readonly"
               :placeholder="t('Column {n}', { n: colIndex + 1 })"
               @update:model-value="emitUpdate"
             />
-            <NcButton type="tertiary" @click="removeColumn(colIndex)">
+            <NcButton v-if="!readonly" type="tertiary" @click="removeColumn(colIndex)">
               <template #icon>
                 <CloseIcon :size="20" />
               </template>
             </NcButton>
           </div>
-          <NcButton @click="addColumn">
+          <NcButton v-if="!readonly" @click="addColumn">
             <template #icon>
               <PlusIcon :size="20" />
             </template>
@@ -328,6 +343,7 @@
       <div class="question-settings">
         <NcCheckboxRadioSwitch
           :model-value="localQuestion.required"
+          :disabled="readonly"
           @update:model-value="localQuestion.required = $event; emitUpdate()"
         >
           {{ t('Required') }}
@@ -336,6 +352,7 @@
         <NcCheckboxRadioSwitch
           v-if="hasOptions"
           :model-value="isQuizMode"
+          :disabled="readonly"
           @update:model-value="toggleQuizMode"
         >
           {{ t('Quiz mode (with scores)') }}
@@ -347,6 +364,7 @@
       <div v-if="supportsValidation" class="validation-settings">
         <NcCheckboxRadioSwitch
           :model-value="hasValidation"
+          :disabled="readonly"
           @update:model-value="toggleValidation"
         >
           {{ t('Validation pattern') }}
@@ -358,6 +376,7 @@
             <label class="form-label">{{ t('Validation type') }}</label>
             <NcSelect
               v-model="validationPreset"
+              :disabled="readonly"
               :options="validationPresetOptions"
               :placeholder="t('Select a validation type')"
               label="label"
@@ -371,6 +390,7 @@
             <label class="form-label">{{ t('Regular expression') }}</label>
             <NcTextField
               v-model="localQuestion.validation.pattern"
+              :disabled="readonly"
               :placeholder="t('e.g. ^[0-9]{4}[A-Z]{2}$')"
               @update:model-value="emitUpdate"
             />
@@ -382,6 +402,7 @@
             <label class="form-label">{{ t('Error message') }}</label>
             <NcTextField
               v-model="localQuestion.validation.errorMessage"
+              :disabled="readonly"
               :placeholder="validationPreset?.defaultError || t('e.g. Please enter a valid value')"
               @update:model-value="emitUpdate"
             />
@@ -853,6 +874,12 @@ export default {
 
     &:active {
       cursor: grabbing;
+    }
+
+    &.disabled {
+      cursor: default;
+      opacity: 0.3;
+      pointer-events: none;
     }
   }
 
