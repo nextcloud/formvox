@@ -49,6 +49,11 @@ FormVox is available in:
 | **Login Required** | Require Nextcloud login | |
 | **Duplicate Prevention** | Fingerprint-based detection | |
 | **Export** | CSV, JSON, Excel export | |
+| **Page Routing** | Skip to pages based on answers | |
+| **QR Codes** | Generate QR codes for form links | |
+| **Draft Autosave** | Respondents can resume later | |
+| **Collaborative Editing** | See who else is editing | |
+| **Accessibility** | TTS, keyboard nav, ARIA, skip links | |
 
 ### Homepage
 - **Template Gallery** - Quick access to create forms from colorful template cards
@@ -70,8 +75,8 @@ FormVox is available in:
 
 ## Requirements
 
-- Nextcloud 28 - 32
-- PHP 8.1+
+- Nextcloud 28 - 33
+- PHP 8.2+
 
 ## Installation
 

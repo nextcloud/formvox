@@ -6,11 +6,11 @@ This guide covers installing and updating FormVox on your Nextcloud server.
 
 ### Nextcloud Version
 - **Minimum:** Nextcloud 28
-- **Maximum:** Nextcloud 32
+- **Maximum:** Nextcloud 33
 - **Recommended:** Latest stable release
 
 ### PHP Version
-- **Minimum:** PHP 8.1
+- **Minimum:** PHP 8.2
 - **Recommended:** PHP 8.2 or higher
 
 ### Server Requirements

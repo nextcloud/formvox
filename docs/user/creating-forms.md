@@ -104,6 +104,40 @@ For longer forms, you can organize questions into pages:
 2. Drag questions into the new page
 3. Respondents will see a "Next" button between pages
 
+## Collaborative Editing
+
+When multiple users have edit access to a form, FormVox shows who else is currently editing.
+
+### Presence Indicators
+
+- **Avatar icons** appear in the editor toolbar showing other active editors
+- Presence is detected automatically via heartbeat polling (every 30 seconds)
+- Editors who have been inactive for more than 60 seconds are removed from the list
+
+### How It Works
+
+1. Open a form that is shared with edit permissions
+2. If other users are also editing, their avatars appear in the toolbar
+3. A count badge shows when many editors are active (e.g., "3 others editing")
+
+## Draft Autosave
+
+FormVox automatically saves respondents' progress when filling in a form, so they can resume later if they close the browser or navigate away.
+
+### How It Works
+
+- Answers are saved to the browser's localStorage as the respondent fills in the form
+- If a respondent returns to the same form, a **"Welcome back!"** banner appears
+- They can choose **Continue** to resume where they left off, or **Start over** to begin fresh
+- Drafts are automatically cleared after successful submission
+- Drafts expire after **7 days** of inactivity
+
+### Notes
+
+- Drafts are stored per browser — switching browsers or devices starts a new session
+- Clearing browser data removes saved drafts
+- This works on both public and authenticated forms
+
 ## Saving Your Form
 
 Forms are automatically saved as you edit. The form file (`.fvform`) is stored in the location you specified when creating the form.

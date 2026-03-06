@@ -366,6 +366,51 @@ X-RateLimit-Remaining: 45
 X-RateLimit-Reset: 1705329600
 ```
 
+## Presence (Collaborative Editing)
+
+Endpoints for real-time collaborative editing presence detection.
+
+#### Send Presence Heartbeat
+
+```http
+POST /apps/formvox/api/form/{fileId}/presence
+```
+
+Registers the current user as actively editing the form. Should be called every 30 seconds as a heartbeat.
+
+**Response:**
+```json
+{
+  "status": "ok"
+}
+```
+
+#### Get Active Editors
+
+```http
+GET /apps/formvox/api/form/{fileId}/presence
+```
+
+Returns a list of users currently editing the form (active within the last 60 seconds).
+
+**Response:**
+```json
+{
+  "editors": [
+    {
+      "userId": "jane",
+      "displayName": "Jane Doe"
+    }
+  ],
+  "myFirstSeen": 1709740800
+}
+```
+
+**Notes:**
+- The current user is excluded from the editors list
+- Users who haven't sent a heartbeat in 60 seconds are considered inactive
+- `myFirstSeen` indicates when the current user first started editing (used for edit priority/locking)
+
 ## External API & Webhooks
 
 FormVox now supports an External API with API key authentication and webhooks for real-time notifications.

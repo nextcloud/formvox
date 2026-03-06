@@ -132,6 +132,30 @@ Administrators can restrict which domains are allowed to embed forms. If embeddi
 
 See [Admin Configuration](../admin/configuration.md) for details.
 
+## QR Code
+
+FormVox can generate a QR code for any public form link, making it easy to share forms in print materials, presentations, or on screens.
+
+### Generating a QR Code
+
+1. Open your form
+2. Click **Share** in the toolbar
+3. Enable a public link (if not already enabled)
+4. The QR code is automatically generated and displayed in the Share dialog
+
+### Downloading the QR Code
+
+1. Click **Download QR code** below the QR code image
+2. The QR code is saved as a PNG file
+3. The filename includes the form title for easy identification
+
+### Use Cases
+
+- Print on posters or flyers for event registration
+- Display on slides during presentations
+- Include in email signatures or newsletters
+- Place at physical locations (reception desks, classrooms)
+
 ## File-Based Sharing
 
 Since FormVox stores forms as files, you can also share via:

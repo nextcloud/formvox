@@ -118,6 +118,51 @@ Combine pages with conditional logic:
 - Skip entire pages based on answers
 - Show different paths for different users
 
+### Conditional Page Routing
+
+Conditional page routing lets you skip to a specific page based on a respondent's answers. This is more powerful than simple page-level conditional logic — it changes which page comes next.
+
+#### Setting Up Routing Rules
+
+1. In the editor, navigate to the page you want to add routing to
+2. Click the **Routing** button in the page header
+3. Click **Add rule** to create a routing rule
+4. Configure the rule:
+   - **If question** — Select the question to evaluate
+   - **Operator** — Choose a comparison operator
+   - **Value** — The answer value to match (if applicable)
+   - **Go to page** — Select the target page
+
+#### Available Operators
+
+| Operator | Description |
+|----------|-------------|
+| equals | Answer exactly matches the value |
+| not equals | Answer does not match the value |
+| contains | Answer contains the value |
+| is empty | Answer is blank (no value needed) |
+| is not empty | Answer has any value (no value needed) |
+| greater than | Answer is numerically greater |
+| less than | Answer is numerically less |
+
+#### How It Works
+
+- Rules are evaluated in order — the first matching rule wins
+- If no rule matches, the form advances to the next page as normal
+- The **Back** button navigates through the actual routed path, not just the previous page number
+
+#### Example
+
+A satisfaction survey with 4 pages:
+- **Page 1**: General questions (includes "How satisfied are you?" scale 1-5)
+- **Page 2**: Detailed feedback (for dissatisfied users)
+- **Page 3**: Testimonial request (for satisfied users)
+- **Page 4**: Thank you
+
+Routing rules on Page 1:
+- If "How satisfied are you?" **less than** 3 → Go to Page 2
+- If "How satisfied are you?" **greater than** 3 → Go to Page 3
+
 ## Form Branding
 
 Customize the appearance of your forms to match your organization.
