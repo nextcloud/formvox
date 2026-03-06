@@ -2,7 +2,7 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [0.3.0] - 2026-02-10
+## [0.3.0] - 2026-03-06
 
 ### Added
 - **Accessibility (a11y) improvements** for public form response pages
