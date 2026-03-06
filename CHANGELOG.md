@@ -53,6 +53,10 @@ All notable changes to FormVox will be documented in this file.
 - **Nextcloud 33 support** - App now supports Nextcloud 28 through 33
 - Replaced deprecated `IResult::fetch()` with `fetchAssociative()` in StatisticsService
 
+### Fixed
+- **Mimetype registration breaking all file types** - FormVox's MIME type registration in `Application::boot()` populated `MimeTypeDetector::$mimeTypes` before core defaults were loaded, causing Nextcloud to lose mimetype detection for images, PDFs, and all other file types ([#12](https://github.com/nextcloud/formvox/issues/12))
+  - After updating, run `occ maintenance:mimetype:update-db` and `occ maintenance:mimetype:update-js` to restore mimetypes
+
 ## [0.2.9] - 2026-02-05
 
 ### Added
