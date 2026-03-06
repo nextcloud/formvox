@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.1] - 2026-03-06
+
+### Fixed
+- Added missing translations for all 0.3.0 features (page routing, collaborative presence, draft autosave, QR code, accessibility) in NL, DE, FR
+
 ## [0.3.0] - 2026-03-06
 
 ### Added
