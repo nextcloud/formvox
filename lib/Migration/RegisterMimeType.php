@@ -31,12 +31,10 @@ class RegisterMimeType implements IRepairStep
     {
         $output->info('Registering .fvform MIME type...');
 
-        // Register MIME type in detector
-        $mimeTypeDetector = \OC::$server->getMimeTypeDetector();
-        $mimeTypeDetector->registerType('fvform', 'application/x-fvform');
-        $mimeTypeDetector->registerTypeArray([
-            'fvform' => ['application/x-fvform'],
-        ]);
+        // Note: Do NOT call registerType()/registerTypeArray() on the detector here.
+        // Doing so populates MimeTypeDetector::$mimeTypes before loadMappings() runs,
+        // causing loadMappings() to skip loading core defaults and breaking all mimetypes.
+        // The appinfo/mimetypemapping.json and config/mimetypemapping.json are sufficient.
 
         // Register MIME type in database
         $mimeTypeLoader = \OC::$server->getMimeTypeLoader();

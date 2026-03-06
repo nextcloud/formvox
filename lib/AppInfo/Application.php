@@ -50,24 +50,11 @@ class Application extends App implements IBootstrap
 
     public function boot(IBootContext $context): void
     {
-        $this->registerMimeType();
-    }
-
-    private function registerMimeType(): void
-    {
-        $mimeTypeDetector = \OC::$server->getMimeTypeDetector();
-
-        // Register the custom mime type for .fvform files
-        $mimeTypeDetector->registerType(
-            self::FILE_EXTENSION,
-            self::MIME_TYPE
-        );
-
-        // Register mapping from extension to mime type
-        $mappings = [
-            self::FILE_EXTENSION => [self::MIME_TYPE],
-        ];
-
-        $mimeTypeDetector->registerTypeArray($mappings);
+        // MIME type registration is handled by appinfo/mimetypemapping.json
+        // and the config/mimetypemapping.json (written by RegisterMimeType repair step).
+        // Do NOT call registerType()/registerTypeArray() here — it populates
+        // MimeTypeDetector::$mimeTypes before loadMappings() runs, which
+        // causes loadMappings() to skip loading all core defaults, breaking
+        // mimetype detection for every other file type (images, PDFs, etc.).
     }
 }
