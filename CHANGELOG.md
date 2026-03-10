@@ -2,6 +2,14 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.2] - 2026-03-10
+
+### Fixed
+- **Single choice questions broken** - All radio buttons were pre-selected and user selection didn't work. Fixed incorrect NcCheckboxRadioSwitch API usage: `model-value` now receives the selected value string instead of a boolean ([#16](https://github.com/nextcloud/formvox/issues/16))
+- **Multiple choice questions broken** - Clicking one checkbox selected all options. Fixed by passing an array as `model-value` with proper `:name` and `:value` props for NcCheckboxRadioSwitch's array management ([#16](https://github.com/nextcloud/formvox/issues/16))
+- **Dropdown selection not registering** - Dropdown questions showed validation errors even when answered. Root cause was the same NcCheckboxRadioSwitch misuse in the underlying component ([#16](https://github.com/nextcloud/formvox/issues/16))
+- **Matrix radio buttons broken** - Matrix question type had the same boolean vs string model-value issue ([#16](https://github.com/nextcloud/formvox/issues/16))
+
 ## [0.3.1] - 2026-03-06
 
 ### Fixed

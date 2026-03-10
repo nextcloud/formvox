@@ -89,10 +89,11 @@
       <NcCheckboxRadioSwitch
         v-for="option in question.options"
         :key="option.id"
-        :model-value="value === option.value"
+        :model-value="value"
+        :value="option.value"
         type="radio"
         :name="`question-${question.id}`"
-        @update:model-value="$emit('update:value', option.value)"
+        @update:model-value="$emit('update:value', $event)"
       >
         {{ renderPiping(option.label) }}
       </NcCheckboxRadioSwitch>
@@ -109,9 +110,11 @@
       <NcCheckboxRadioSwitch
         v-for="option in question.options"
         :key="option.id"
-        :model-value="(value || []).includes(option.value)"
+        :model-value="value || []"
+        :value="option.value"
+        :name="`question-${question.id}`"
         type="checkbox"
-        @update:model-value="toggleMultiple(option.value, $event)"
+        @update:model-value="$emit('update:value', $event)"
       >
         {{ renderPiping(option.label) }}
       </NcCheckboxRadioSwitch>
@@ -316,11 +319,12 @@
             <th scope="row" class="row-label">{{ row.label }}</th>
             <td v-for="col in question.columns" :key="col.id" class="matrix-cell">
               <NcCheckboxRadioSwitch
-                :model-value="(value || {})[row.id] === col.value"
+                :model-value="(value || {})[row.id]"
+                :value="col.value"
                 type="radio"
                 :name="`matrix-${question.id}-${row.id}`"
                 :aria-label="`${row.label}: ${col.label}`"
-                @update:model-value="updateMatrix(row.id, col.value)"
+                @update:model-value="updateMatrix(row.id, $event)"
               />
             </td>
           </tr>
