@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.3] - 2026-03-11
+
+### Fixed
+- **Public form scrolling broken on some Nextcloud setups** - Contradictory CSS `overflow: visible` combined with `overflow-x: hidden` / `overflow-y: auto` caused scroll to break per CSS spec. Removed `overflow: visible` from all public templates ([#17](https://github.com/nextcloud/formvox/issues/17))
+
 ## [0.3.2] - 2026-03-10
 
 ### Fixed
