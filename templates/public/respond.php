@@ -17,7 +17,6 @@ html body#body-public, html body #content {
     height: auto !important;
     max-height: none !important;
     min-height: 100vh !important;
-    overflow: visible !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     position: static !important;
@@ -26,7 +25,6 @@ html body#body-public, html body #content {
 
 /* Ensure the main content wrapper doesn't trap scrolling */
 #body-public > *:not(#header):not(script):not(style) {
-    overflow: visible !important;
     height: auto !important;
 }
 
@@ -39,7 +37,7 @@ html body#body-public, html body #content {
 /* Fix for Nextcloud 28+ public page layout */
 .public-layout, .public-layout__main, .public-layout__content {
     height: auto !important;
-    overflow: visible !important;
+    overflow-x: hidden !important;
     overflow-y: auto !important;
 }
 

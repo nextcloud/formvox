@@ -15,7 +15,7 @@ $title = $_['title'] ?? 'Form';
 html, body, #body-public, #content, #content-wrapper, .content {
     height: auto !important;
     min-height: 100vh !important;
-    overflow: visible !important;
+    overflow-x: hidden !important;
     overflow-y: auto !important;
     position: static !important;
 }
