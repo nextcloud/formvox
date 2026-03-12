@@ -2,7 +2,7 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [Unreleased]
+## [0.3.5] - 2026-03-12
 
 ### Fixed
 - **Form submits instead of going to next page on multi-page forms** - Previous and Next buttons were missing `native-type="button"`, causing the browser to treat them as submit buttons inside the form element. Clicking Next triggered both page navigation and form submission simultaneously ([#21](https://github.com/nextcloud/formvox/issues/21))
