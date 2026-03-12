@@ -1,6 +1,6 @@
 {
   "translations": {
-    "\"{question}\" does not match the required format": "\"{Frage}\" entspricht nicht dem erforderlichen Format",
+    "\"{question}\" does not match the required format": "\"{question}\" entspricht nicht dem erforderlichen Format",
     "(required)": "(erforderlich)",
     "(untitled)": "(ohne Titel)",
     "* (all domains)": "* (alle Bereiche)",
@@ -431,7 +431,7 @@
     "Rate these aspects of FormVox": "Bewerte diese Aspekte von FormVox",
     "Rate this demo form": "Bewerte dieses Demo-Formular",
     "Rating": "Bewertung",
-    "Raw link {options}": "Rohverbindung {Optionen}",
+    "Raw link {options}": "Rohverbindung {options}",
     "Read": "Lesen Sie",
     "Read form": "Formular lesen",
     "Read responses": "Antworten lesen",
@@ -568,7 +568,7 @@
     "Upload": "Hochladen",
     "Upload image": "Bild hochladen",
     "Upload logo": "Logo hochladen",
-    "Uploading {name}...": "Hochladen von {Name}...",
+    "Uploading {name}...": "Hochladen von {name}...",
     "Use ": "Verwenden Sie",
     "Use Nextcloud sharing to control access:": "Verwenden Sie Nextcloud Sharing, um den Zugriff zu kontrollieren:",
     "Use custom theme for this form": "Benutzerdefiniertes Design für dieses Formular verwenden",
@@ -694,8 +694,8 @@
     "update:value": "aktualisieren:Wert",
     "upload-image": "upload-image",
     "{count} others editing": "{count} andere bearbeiten",
-    "{count} responses": "{Anzahl} Antworten",
-    "{count} responses collected": "{Anzahl} erfasste Beantwortungen"
+    "{count} responses": "{count} Antworten",
+    "{count} responses collected": "{count} erfasste Beantwortungen"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -1,6 +1,6 @@
 {
   "translations": {
-    "\"{question}\" does not match the required format": "\"{vraag}\" komt niet overeen met de vereiste indeling",
+    "\"{question}\" does not match the required format": "\"{question}\" komt niet overeen met de vereiste indeling",
     "(required)": "(verplicht)",
     "(untitled)": "(zonder titel)",
     "* (all domains)": "* (alle domeinen)",
@@ -329,7 +329,7 @@
     "Matrix/grid question with multiple rows and columns": "Matrix/rastervraag met meerdere rijen en kolommen",
     "Max": "Max",
     "Max label": "Max label",
-    "Max {size} MB": "Max {grootte} MB",
+    "Max {size} MB": "Max {size} MB",
     "Maximum file size (MB)": "Maximale bestandsgrootte (MB)",
     "Maximum number of files": "Maximum aantal bestanden",
     "Maximum responses": "Maximale reacties",
@@ -343,7 +343,7 @@
     "Microsoft Forms settings saved": "Microsoft Forms instellingen opgeslagen",
     "Min": "Min",
     "Min label": "Min label",
-    "Move to {page}": "Ga naar {pagina}",
+    "Move to {page}": "Ga naar {page}",
     "Multi-line text area for longer responses": "Tekstveld met meerdere regels voor langere antwoorden",
     "Multiple choice": "Meerkeuze",
     "Multiple choice (checkboxes) - select all that apply": "Meerkeuze (selectievakjes) - selecteer alle toepasselijke opties",
@@ -431,7 +431,7 @@
     "Rate these aspects of FormVox": "Beoordeel deze aspecten van FormVox",
     "Rate this demo form": "Beoordeel dit demoformulier",
     "Rating": "Beoordeling",
-    "Raw link {options}": "Raw link {opties}",
+    "Raw link {options}": "Raw link {options}",
     "Read": "Lees",
     "Read form": "Lees formulier",
     "Read responses": "Reacties lezen",
@@ -568,7 +568,7 @@
     "Upload": "Uploaden",
     "Upload image": "Afbeelding uploaden",
     "Upload logo": "Logo uploaden",
-    "Uploading {name}...": "Uploaden {naam}...",
+    "Uploading {name}...": "Uploaden {name}...",
     "Use ": "Gebruik",
     "Use Nextcloud sharing to control access:": "Gebruik Nextcloud delen om toegang te beheren:",
     "Use custom theme for this form": "Gebruik aangepast thema voor dit formulier",
@@ -694,8 +694,8 @@
     "update:value": "update:waarde",
     "upload-image": "afbeelding uploaden",
     "{count} others editing": "{count} anderen aan het bewerken",
-    "{count} responses": "{telling} reacties",
-    "{count} responses collected": "{aantal} verzamelde reacties"
+    "{count} responses": "{count} reacties",
+    "{count} responses collected": "{count} verzamelde reacties"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }
