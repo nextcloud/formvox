@@ -57,8 +57,8 @@ Built with Vue 3 and modern web technologies for a smooth, secure experience.
     </documentation>
 
     <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Start.png</screenshot>
-    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/New%20form.png</screenshot>
-    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Edit%20form.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/New-form.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Edit-form.png</screenshot>
     <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Result.png</screenshot>
 
     <dependencies>
