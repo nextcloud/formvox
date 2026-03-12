@@ -2,6 +2,13 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Form submits instead of going to next page on multi-page forms** - Previous and Next buttons were missing `native-type="button"`, causing the browser to treat them as submit buttons inside the form element. Clicking Next triggered both page navigation and form submission simultaneously ([#21](https://github.com/nextcloud/formvox/issues/21))
+- **Translation placeholders not interpolated** - Placeholder names in German, Dutch and French translations used translated names (e.g. `{aktuell}`, `{huidig}`, `{courant}`) instead of the original variable names. Vue's `t()` function only substitutes exact matches, so the raw placeholder text was shown instead of the actual value ([#22](https://github.com/nextcloud/formvox/issues/22))
+- **Screenshot filenames with spaces** - Renamed all screenshot files to use hyphens instead of spaces and updated `info.xml` URLs accordingly to improve compatibility
+
 ## [0.3.4] - 2026-03-12
 
 ### Added
