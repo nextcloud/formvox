@@ -105,6 +105,7 @@
       <div class="form-actions">
         <NcButton
           v-if="hasPreviousPage"
+          native-type="button"
           @click="previousPage"
         >
           {{ t('Previous') }}
@@ -113,6 +114,7 @@
         <NcButton
           v-if="hasNextPage"
           type="primary"
+          native-type="button"
           @click="nextPage"
         >
           {{ t('Next') }}
