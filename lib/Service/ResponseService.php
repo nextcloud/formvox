@@ -379,6 +379,26 @@ class ResponseService
                 }
             }
         }
+
+        // Date/Time range validation (only for non-empty answers)
+        if ($answer !== '' && $answer !== null) {
+            if (in_array($type, ['date', 'datetime'])) {
+                if (!empty($question['dateMin']) && $answer < $question['dateMin']) {
+                    throw new \RuntimeException("Date is before the allowed minimum for question '{$question['question']}'");
+                }
+                if (!empty($question['dateMax']) && $answer > $question['dateMax']) {
+                    throw new \RuntimeException("Date is after the allowed maximum for question '{$question['question']}'");
+                }
+            }
+            if ($type === 'time') {
+                if (!empty($question['timeMin']) && $answer < $question['timeMin']) {
+                    throw new \RuntimeException("Time is before the allowed minimum for question '{$question['question']}'");
+                }
+                if (!empty($question['timeMax']) && $answer > $question['timeMax']) {
+                    throw new \RuntimeException("Time is after the allowed maximum for question '{$question['question']}'");
+                }
+            }
+        }
     }
 
     /**

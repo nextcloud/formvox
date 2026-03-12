@@ -122,15 +122,14 @@
       </div>
 
       <div class="form-field">
-        <label class="form-label">{{ t('Description (optional)') }}</label>
-        <NcTextArea
+        <label class="form-label">{{ t('Description (optional, supports Markdown)') }}</label>
+        <textarea
           v-model="localQuestion.description"
           :disabled="readonly"
           :placeholder="t('Add a description or instructions')"
-          :resize="false"
-          :rows="2"
+          rows="3"
           class="description-input"
-          @update:model-value="emitUpdate"
+          @input="emitUpdate"
         />
       </div>
 
@@ -229,6 +228,53 @@
           :label="t('Maximum stars')"
           @update:model-value="emitUpdate"
         />
+      </div>
+
+      <!-- Date/Time range settings -->
+      <div v-if="['date', 'datetime', 'time'].includes(localQuestion.type)" class="scale-settings">
+        <h4>{{ t('Restrict selectable range (optional)') }}</h4>
+        <div class="scale-row">
+          <template v-if="localQuestion.type !== 'time'">
+            <NcDateTimePicker
+              :model-value="localQuestion.dateMin ? new Date(localQuestion.dateMin) : null"
+              :type="localQuestion.type === 'datetime' ? 'datetime' : 'date'"
+              :clearable="true"
+              :disabled="readonly"
+              :placeholder="t('No minimum')"
+              @update:model-value="updateDateMin"
+            />
+            <NcDateTimePicker
+              :model-value="localQuestion.dateMax ? new Date(localQuestion.dateMax) : null"
+              :type="localQuestion.type === 'datetime' ? 'datetime' : 'date'"
+              :clearable="true"
+              :disabled="readonly"
+              :placeholder="t('No maximum')"
+              @update:model-value="updateDateMax"
+            />
+          </template>
+          <template v-else>
+            <div class="form-field">
+              <label class="form-label">{{ t('Earliest time') }}</label>
+              <input
+                type="time"
+                :value="localQuestion.timeMin || ''"
+                class="time-input"
+                :disabled="readonly"
+                @input="localQuestion.timeMin = $event.target.value || undefined; emitUpdate()"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label">{{ t('Latest time') }}</label>
+              <input
+                type="time"
+                :value="localQuestion.timeMax || ''"
+                class="time-input"
+                :disabled="readonly"
+                @input="localQuestion.timeMax = $event.target.value || undefined; emitUpdate()"
+              />
+            </div>
+          </template>
+        </div>
       </div>
 
       <!-- File upload settings -->
@@ -432,7 +478,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, reactive, computed, watch, nextTick } from 'vue';
 import {
   NcButton,
   NcActions,
@@ -441,6 +487,7 @@ import {
   NcTextArea,
   NcCheckboxRadioSwitch,
   NcSelect,
+  NcDateTimePicker,
 } from '@nextcloud/vue';
 import { v4 as uuidv4 } from 'uuid';
 import { t } from '@/utils/l10n';
@@ -465,6 +512,7 @@ export default {
     NcTextArea,
     NcCheckboxRadioSwitch,
     NcSelect,
+    NcDateTimePicker,
     draggable,
     ConditionEditor,
     DragIcon,
@@ -788,6 +836,28 @@ export default {
       emitUpdate();
     };
 
+    const updateDateMin = (date) => {
+      if (!date) {
+        delete localQuestion.dateMin;
+      } else if (localQuestion.type === 'datetime') {
+        localQuestion.dateMin = date.toISOString();
+      } else {
+        localQuestion.dateMin = date.toISOString().split('T')[0];
+      }
+      emitUpdate();
+    };
+
+    const updateDateMax = (date) => {
+      if (!date) {
+        delete localQuestion.dateMax;
+      } else if (localQuestion.type === 'datetime') {
+        localQuestion.dateMax = date.toISOString();
+      } else {
+        localQuestion.dateMax = date.toISOString().split('T')[0];
+      }
+      emitUpdate();
+    };
+
     const updateCondition = (condition) => {
       localQuestion.showIf = condition;
       emitUpdate();
@@ -822,6 +892,8 @@ export default {
       removeRow,
       addColumn,
       removeColumn,
+      updateDateMin,
+      updateDateMax,
       updateCondition,
       moveToPage,
       t,
@@ -987,9 +1059,24 @@ export default {
 }
 
 .description-input {
-  :deep(textarea) {
-    resize: none;
-    min-height: 52px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--color-border-maxcontrast);
+  border-radius: var(--border-radius-large);
+  background: var(--color-main-background);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--color-primary-element);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.7;
   }
 }
 

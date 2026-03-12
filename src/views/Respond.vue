@@ -406,19 +406,20 @@ export default {
     const thankYouBlocks = computed(() => props.branding?.layout?.thankYou || []);
 
     // Visible questions based on current page and showIf conditions
+    // Uses pageQuestionIds order (not form.questions order) to respect editor reordering
     const visibleQuestions = computed(() => {
       const pageQuestionIds = currentPage.value?.questions || [];
-      return props.form.questions?.filter(q => {
-        // Check if question is on current page
-        if (!pageQuestionIds.includes(q.id)) {
-          return false;
-        }
-        // Check showIf condition
-        if (q.showIf) {
-          return evaluateCondition(q.showIf, answers);
-        }
-        return true;
-      }) || [];
+      const questionsMap = {};
+      (props.form.questions || []).forEach(q => { questionsMap[q.id] = q; });
+      return pageQuestionIds
+        .map(id => questionsMap[id])
+        .filter(q => {
+          if (!q) return false;
+          if (q.showIf) {
+            return evaluateCondition(q.showIf, answers);
+          }
+          return true;
+        });
     });
 
     const evaluateCondition = (condition, answers) => {
@@ -448,9 +449,13 @@ export default {
         case 'isNotEmpty':
           return answer && answer !== '' && (!Array.isArray(answer) || answer.length > 0);
         case 'greaterThan':
-          return Number(answer) > Number(value);
-        case 'lessThan':
-          return Number(answer) < Number(value);
+        case 'lessThan': {
+          // Date strings (YYYY-MM-DD or YYYY-MM-DDTHH:MM) compare correctly as strings
+          const isDate = /^\d{4}-\d{2}-\d{2}/.test(answer) && /^\d{4}-\d{2}-\d{2}/.test(value);
+          const a = isDate ? answer : Number(answer);
+          const b = isDate ? value : Number(value);
+          return condition.operator === 'greaterThan' ? a > b : a < b;
+        }
         case 'in':
           return Array.isArray(value) && value.includes(answer);
         case 'notIn':
@@ -501,12 +506,27 @@ export default {
       return text;
     };
 
+    const stripMarkdown = (text) => {
+      if (!text) return '';
+      return text
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/(\*\*|__)(.*?)\1/g, '$2')
+        .replace(/(\*|_)(.*?)\1/g, '$2')
+        .replace(/~~(.*?)~~/g, '$1')
+        .replace(/`{1,3}[^`]*`{1,3}/g, '')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/^[>\-*+]\s+/gm, '')
+        .replace(/^\d+\.\s+/gm, '')
+        .replace(/\n{2,}/g, '. ');
+    };
+
     const handleSpeak = (questionId) => {
       const question = props.form.questions.find(q => q.id === questionId);
       if (!question) return;
 
       const renderedQ = applyPipingForTts(question.question);
-      const renderedDesc = question.description ? applyPipingForTts(question.description) : '';
+      const renderedDesc = question.description ? stripMarkdown(applyPipingForTts(question.description)) : '';
       const text = buildSpeechText(
         question,
         renderedQ,
@@ -556,6 +576,26 @@ export default {
             }
           } catch (e) {
             // Invalid regex - skip validation
+          }
+        }
+
+        // Date/Time range validation (only for non-empty answers)
+        if (['date', 'datetime'].includes(question.type) && answer && answer !== '') {
+          if (question.dateMin && answer < question.dateMin) {
+            if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+            validationErrors[question.id] = t('Date must be on or after {min}', { min: question.dateMin.split('T')[0] });
+          } else if (question.dateMax && answer > question.dateMax) {
+            if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+            validationErrors[question.id] = t('Date must be on or before {max}', { max: question.dateMax.split('T')[0] });
+          }
+        }
+        if (question.type === 'time' && answer && answer !== '') {
+          if (question.timeMin && answer < question.timeMin) {
+            if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+            validationErrors[question.id] = t('Time must be at or after {min}', { min: question.timeMin });
+          } else if (question.timeMax && answer > question.timeMax) {
+            if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+            validationErrors[question.id] = t('Time must be at or before {max}', { max: question.timeMax });
           }
         }
       }

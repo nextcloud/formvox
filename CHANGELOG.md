@@ -2,6 +2,27 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.4] - 2026-03-12
+
+### Added
+- **Date/time range restrictions** - Set minimum and maximum allowed values for Date, DateTime, and Time questions ([#15](https://github.com/nextcloud/formvox/issues/15))
+  - Date/DateTime: NcDateTimePicker-based min/max selectors in question settings
+  - Time: native time input for earliest/latest allowed time
+  - Client-side and server-side validation with clear error messages
+  - Date picker automatically restricts selectable dates to the allowed range
+- **Markdown support in descriptions** - Question descriptions now render Markdown formatting ([#5](https://github.com/nextcloud/formvox/issues/5), [#6](https://github.com/nextcloud/formvox/issues/6))
+  - Bold, italic, links, images, lists, headings, and more
+  - Images in descriptions are rendered inline with responsive sizing
+  - External HTTPS images allowed via Content Security Policy
+  - Links are auto-linked and clickable
+  - Answer piping (`{{Q1}}`) still works alongside Markdown
+  - TTS (text-to-speech) strips Markdown syntax for natural speech output
+- **Condition editor date/time picker** - Condition value inputs now auto-detect the question type and show the appropriate picker (date picker, datetime picker, or time input) instead of a plain text field
+
+### Fixed
+- **Date comparison in conditions not working** - "Greater than" and "Less than" operators on date questions always evaluated to false because date strings (e.g. `2026-03-12`) were converted with `Number()` resulting in `NaN`. Now correctly compares date strings lexicographically ([#19](https://github.com/nextcloud/formvox/issues/19))
+- **Question reordering not visible to respondents** - Dragging questions to a new position in the editor was saved correctly, but the public form still displayed questions in their original creation order. Fixed by using the page's question ID order instead of the form's question array order ([#20](https://github.com/nextcloud/formvox/issues/20))
+
 ## [0.3.3] - 2026-03-11
 
 ### Fixed

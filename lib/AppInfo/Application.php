@@ -56,5 +56,11 @@ class Application extends App implements IBootstrap
         // MimeTypeDetector::$mimeTypes before loadMappings() runs, which
         // causes loadMappings() to skip loading all core defaults, breaking
         // mimetype detection for every other file type (images, PDFs, etc.).
+
+        // Allow external images in descriptions (markdown img support)
+        $cspManager = $context->getServerContainer()->get(\OCP\Security\IContentSecurityPolicyManager::class);
+        $csp = new \OCP\AppFramework\Http\ContentSecurityPolicy();
+        $csp->addAllowedImageDomain('https:');
+        $cspManager->addDefaultPolicy($csp);
     }
 }

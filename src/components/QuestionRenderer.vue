@@ -25,13 +25,12 @@
         <SpeakerIcon :size="18" />
       </button>
     </div>
-    <p
+    <div
       v-if="question.description"
       :id="`question-desc-${question.id}`"
       class="question-description"
-    >
-      {{ renderedDescription }}
-    </p>
+      v-html="renderedDescriptionHtml"
+    />
 
     <!-- Text -->
     <NcTextField
@@ -142,6 +141,8 @@
       v-else-if="question.type === 'date'"
       :model-value="value ? new Date(value) : null"
       type="date"
+      :minDate="question.dateMin ? new Date(question.dateMin) : undefined"
+      :maxDate="question.dateMax ? new Date(question.dateMax) : undefined"
       @update:model-value="$emit('update:value', formatDate($event))"
     />
 
@@ -150,6 +151,8 @@
       v-else-if="question.type === 'datetime'"
       :model-value="value ? new Date(value) : null"
       type="datetime"
+      :minDate="question.dateMin ? new Date(question.dateMin) : undefined"
+      :maxDate="question.dateMax ? new Date(question.dateMax) : undefined"
       @update:model-value="$emit('update:value', formatDateTime($event))"
     />
 
@@ -159,6 +162,8 @@
       :id="inputId"
       type="time"
       :value="value"
+      :min="question.timeMin || undefined"
+      :max="question.timeMax || undefined"
       class="time-input"
       :aria-required="question.required || undefined"
       :aria-label="renderedQuestion"
@@ -353,7 +358,11 @@ import {
   NcCheckboxRadioSwitch,
   NcDateTimePicker,
 } from '@nextcloud/vue';
+import MarkdownIt from 'markdown-it';
+import DOMPurify from 'dompurify';
 import StarIcon from './icons/StarIcon.vue';
+
+const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 import SpeakerIcon from './icons/SpeakerIcon.vue';
 
 export default {
@@ -571,6 +580,13 @@ export default {
 
     const renderedQuestion = computed(() => applyPiping(props.question.question || ''));
     const renderedDescription = computed(() => applyPiping(props.question.description || ''));
+    const renderedDescriptionHtml = computed(() => {
+      const raw = md.render(renderedDescription.value);
+      return DOMPurify.sanitize(raw, {
+        ADD_TAGS: ['img'],
+        ADD_ATTR: ['target', 'src', 'alt'],
+      });
+    });
 
     const scaleRange = computed(() => {
       const min = props.question.scaleMin || 1;
@@ -766,6 +782,7 @@ export default {
     return {
       renderedQuestion,
       renderedDescription,
+      renderedDescriptionHtml,
       renderPiping,
       scaleRange,
       ratingRange,
@@ -845,6 +862,20 @@ export default {
     margin: 0 0 12px;
     word-wrap: break-word;
     overflow-wrap: break-word;
+
+    :deep(img) {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+
+    :deep(a) {
+      color: var(--color-primary-element);
+    }
+
+    :deep(p:last-child) {
+      margin-bottom: 0;
+    }
   }
 
   // NcTextArea styling

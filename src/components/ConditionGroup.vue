@@ -32,6 +32,29 @@
             {{ opt.label }}
           </option>
         </select>
+        <NcDateTimePicker
+          v-else-if="selectedQuestionType === 'date'"
+          :model-value="localCondition.value ? new Date(localCondition.value) : null"
+          type="date"
+          :clearable="true"
+          :placeholder="t('Value')"
+          @update:model-value="onDateValue($event, 'date')"
+        />
+        <NcDateTimePicker
+          v-else-if="selectedQuestionType === 'datetime'"
+          :model-value="localCondition.value ? new Date(localCondition.value) : null"
+          type="datetime"
+          :clearable="true"
+          :placeholder="t('Value')"
+          @update:model-value="onDateValue($event, 'datetime')"
+        />
+        <input
+          v-else-if="selectedQuestionType === 'time'"
+          type="time"
+          :value="localCondition.value"
+          class="condition-time-input"
+          @input="localCondition.value = $event.target.value; emitUpdate()"
+        >
         <input
           v-else
           v-model="localCondition.value"
@@ -101,7 +124,7 @@
 <script>
 import { t } from '@/utils/l10n';
 import { ref, computed, watch } from 'vue';
-import { NcButton } from '@nextcloud/vue';
+import { NcButton, NcDateTimePicker } from '@nextcloud/vue';
 import PlusIcon from './icons/PlusIcon.vue';
 import DeleteIcon from './icons/DeleteIcon.vue';
 
@@ -109,6 +132,7 @@ export default {
   name: 'ConditionGroup',
   components: {
     NcButton,
+    NcDateTimePicker,
     PlusIcon,
     DeleteIcon,
   },
@@ -153,6 +177,21 @@ export default {
       }
       return selectedQuestion.value.options;
     });
+
+    const selectedQuestionType = computed(() => {
+      return selectedQuestion.value?.type || 'text';
+    });
+
+    const onDateValue = (date, type) => {
+      if (!date) {
+        localCondition.value.value = '';
+      } else if (type === 'datetime') {
+        localCondition.value.value = date.toISOString();
+      } else {
+        localCondition.value.value = date.toISOString().split('T')[0];
+      }
+      emitUpdate();
+    };
 
     const emitUpdate = () => {
       emit('update', { ...localCondition.value });
@@ -209,6 +248,8 @@ export default {
       isSimpleCondition,
       needsValue,
       selectedQuestionOptions,
+      selectedQuestionType,
+      onDateValue,
       emitUpdate,
       onQuestionChange,
       convertToGroup,
@@ -245,6 +286,10 @@ export default {
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     background: var(--color-main-background);
+  }
+
+  :deep(.mx-datepicker) {
+    min-width: 200px;
   }
 
   .condition-actions {

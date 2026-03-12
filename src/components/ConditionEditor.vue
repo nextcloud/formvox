@@ -112,10 +112,20 @@ export default {
 .condition-editor {
   padding: 20px;
   min-width: 500px;
+  overflow: visible;
 
   h2 {
     margin: 0 0 20px;
   }
+}
+
+// Allow datepicker popup to overflow the modal
+:deep(.modal-wrapper .modal-container) {
+  overflow: visible !important;
+}
+
+:deep(.modal-container__content) {
+  overflow: visible !important;
 }
 
 .no-condition {
