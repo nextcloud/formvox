@@ -740,6 +740,12 @@ export default {
         return;
       }
 
+      // On multi-page forms, Enter key triggers submit — navigate to next page instead
+      if (hasNextPage.value) {
+        nextPage();
+        return;
+      }
+
       if (props.isPreview) {
         emit('submit', answers);
         return;

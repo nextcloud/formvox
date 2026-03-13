@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.8] - 2026-03-13
+
+### Fixed
+- **Form submits on Enter key in multi-page forms** - Pressing Enter in a text input triggered the browser's native form submit event, bypassing page navigation and submitting the form even on page 1 of a multi-page form. The submit handler now checks for remaining pages and navigates forward instead of submitting ([#21](https://github.com/nextcloud/formvox/issues/21))
+
 ## [0.3.7] - 2026-03-13
 
 ### Fixed
