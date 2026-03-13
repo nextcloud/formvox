@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.7] - 2026-03-13
+
+### Fixed
+- **Single choice / multiple choice / dropdown options have no value** - Option values were never populated when creating questions in the editor (always empty string `""`), making all options indistinguishable. Radio buttons, checkboxes, dropdowns, and conditional rules all failed because every option had the same empty value. Now generates a unique value (based on option ID) for each option. Existing forms with empty values are automatically migrated on load ([#16](https://github.com/nextcloud/formvox/issues/16), [#18](https://github.com/nextcloud/formvox/issues/18))
+
 ## [0.3.6] - 2026-03-13
 
 ### Fixed

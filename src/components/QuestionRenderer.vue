@@ -86,7 +86,7 @@
       :aria-required="question.required || undefined"
     >
       <NcCheckboxRadioSwitch
-        v-for="option in question.options"
+        v-for="option in normalizedOptions"
         :key="option.id"
         :model-value="value"
         :value="option.value"
@@ -107,7 +107,7 @@
       :aria-required="question.required || undefined"
     >
       <NcCheckboxRadioSwitch
-        v-for="option in question.options"
+        v-for="option in normalizedOptions"
         :key="option.id"
         :model-value="value || []"
         :value="option.value"
@@ -131,7 +131,7 @@
       @change="$emit('update:value', $event.target.value)"
     >
       <option value="">{{ t('Select...') }}</option>
-      <option v-for="option in question.options" :key="option.id" :value="option.value">
+      <option v-for="option in normalizedOptions" :key="option.id" :value="option.value">
         {{ renderPiping(option.label) }}
       </option>
     </select>
@@ -578,6 +578,14 @@ export default {
       return text;
     };
 
+    // Normalize options: migrate legacy options with empty values
+    const normalizedOptions = computed(() => {
+      return (props.question.options || []).map(opt => ({
+        ...opt,
+        value: opt.value || opt.id,
+      }));
+    });
+
     const renderedQuestion = computed(() => applyPiping(props.question.question || ''));
     const renderedDescription = computed(() => applyPiping(props.question.description || ''));
     const renderedDescriptionHtml = computed(() => {
@@ -780,6 +788,7 @@ export default {
     const renderPiping = (text) => applyPiping(text);
 
     return {
+      normalizedOptions,
       renderedQuestion,
       renderedDescription,
       renderedDescriptionHtml,

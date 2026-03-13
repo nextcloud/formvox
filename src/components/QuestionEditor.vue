@@ -556,6 +556,14 @@ export default {
     const showConditions = ref(false);
     // Deep copy to preserve nested objects like validation
     const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
+    // Migrate legacy options with empty values
+    if (localQuestion.options) {
+      localQuestion.options.forEach(opt => {
+        if (!opt.value) {
+          opt.value = opt.id;
+        }
+      });
+    }
     const customTypesString = ref('');
 
     // Color options for question highlighting
@@ -584,6 +592,14 @@ export default {
         delete localQuestion[key];
       });
       Object.assign(localQuestion, JSON.parse(JSON.stringify(newVal)));
+      // Migrate legacy options with empty values
+      if (localQuestion.options) {
+        localQuestion.options.forEach(opt => {
+          if (!opt.value) {
+            opt.value = opt.id;
+          }
+        });
+      }
     }, { deep: true });
 
     const hasOptions = computed(() => {
@@ -689,9 +705,11 @@ export default {
     const onTypeChange = () => {
       // Initialize type-specific properties
       if (hasOptions.value && (!localQuestion.options || localQuestion.options.length === 0)) {
+        const id1 = `opt${uuidv4().split('-')[0]}`;
+        const id2 = `opt${uuidv4().split('-')[0]}`;
         localQuestion.options = [
-          { id: `opt${uuidv4().split('-')[0]}`, label: '', value: '' },
-          { id: `opt${uuidv4().split('-')[0]}`, label: '', value: '' },
+          { id: id1, label: '', value: id1 },
+          { id: id2, label: '', value: id2 },
         ];
       }
 
@@ -748,10 +766,11 @@ export default {
       if (!localQuestion.options) {
         localQuestion.options = [];
       }
+      const id = `opt${uuidv4().split('-')[0]}`;
       localQuestion.options.push({
-        id: `opt${uuidv4().split('-')[0]}`,
+        id,
         label: '',
-        value: '',
+        value: id,
       });
       emitUpdate();
     };
