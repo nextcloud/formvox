@@ -2,13 +2,18 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.6] - 2026-03-13
+
+### Fixed
+- **Translation .js runtime files not updated** - The v0.3.5 release fixed placeholder names in `.json` files but not in the corresponding `.js` files that Nextcloud actually loads at runtime via `OC.L10N.register()`. All broken placeholder names are now also fixed in `de.js`, `nl.js`, and `fr.js` ([#22](https://github.com/nextcloud/formvox/issues/22))
+- **Single choice / checkbox questions not selectable** - Confirmed fix was present in source since v0.3.2 but may not have been correctly included in the v0.3.4 App Store tarball. This release ensures the correct compiled JavaScript is shipped ([#18](https://github.com/nextcloud/formvox/issues/18))
+
 ## [0.3.5] - 2026-03-12
 
 ### Fixed
 - **Form submits instead of going to next page on multi-page forms** - Previous and Next buttons were missing `native-type="button"`, causing the browser to treat them as submit buttons inside the form element. Clicking Next triggered both page navigation and form submission simultaneously ([#21](https://github.com/nextcloud/formvox/issues/21))
 - **Translation placeholders not interpolated** - Placeholder names in German, Dutch and French translations used translated names (e.g. `{aktuell}`, `{huidig}`, `{courant}`) instead of the original variable names. Vue's `t()` function only substitutes exact matches, so the raw placeholder text was shown instead of the actual value ([#22](https://github.com/nextcloud/formvox/issues/22))
 - **Screenshot filenames with spaces** - Renamed all screenshot files to use hyphens instead of spaces and updated `info.xml` URLs accordingly to improve compatibility
-- **Single choice / checkbox questions not selectable** - Confirmed fix was present since v0.3.2 but the v0.3.4 App Store tarball may have shipped with a stale JavaScript bundle. Fresh build in v0.3.5 ensures the fix is correctly included ([#18](https://github.com/nextcloud/formvox/issues/18))
 
 ## [0.3.4] - 2026-03-12
 
