@@ -37,12 +37,18 @@ return [
         ['name' => 'api#exportJson', 'url' => '/api/form/{fileId}/export/json', 'verb' => 'GET'],
         ['name' => 'api#exportExcel', 'url' => '/api/form/{fileId}/export/xlsx', 'verb' => 'GET'],
 
+        // API routes - ODT template
+        ['name' => 'api#uploadOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'POST'],
+        ['name' => 'api#downloadOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'GET'],
+        ['name' => 'api#deleteOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'DELETE'],
+        ['name' => 'api#hasOdtTemplate', 'url' => '/api/form/{fileId}/odt-template/status', 'verb' => 'GET'],
+
         // API routes - Index management
         ['name' => 'api#rebuildIndex', 'url' => '/api/form/{fileId}/rebuild-index', 'verb' => 'POST'],
 
-        // API routes - Presence (collaborative editing)
-        ['name' => 'api#sendPresence', 'url' => '/api/form/{fileId}/presence', 'verb' => 'POST'],
-        ['name' => 'api#getPresence', 'url' => '/api/form/{fileId}/presence', 'verb' => 'GET'],
+        // Presence (collaborative editing)
+        ['name' => 'presence#sendPresence', 'url' => '/api/form/{fileId}/presence', 'verb' => 'POST'],
+        ['name' => 'presence#getPresence', 'url' => '/api/form/{fileId}/presence', 'verb' => 'GET'],
 
         // API routes - File permissions
         ['name' => 'file_permission#getPermissions', 'url' => '/api/permissions/{fileId}', 'verb' => 'GET'],

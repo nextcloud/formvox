@@ -42,33 +42,31 @@ class FormDeletedListener implements IEventListener
             }
         }
 
-        $this->deleteUploadsFolder($node);
+        $this->deleteAssociatedFolder($node, 'uploads');
+        $this->deleteAssociatedFolder($node, 'templates');
     }
 
     /**
-     * Delete the uploads folder associated with a form file
-     * Uses file ID in the folder name (never changes even if form is renamed)
+     * Delete an associated folder (uploads or templates) for a form file
      */
-    private function deleteUploadsFolder($formFile): void
+    private function deleteAssociatedFolder($formFile, string $type): void
     {
         try {
             $parent = $formFile->getParent();
             $fileId = $formFile->getId();
-
-            // Use file ID based folder name
-            $uploadsFolderName = ".formvox-uploads-{$fileId}";
+            $folderName = ".formvox-{$type}-{$fileId}";
 
             try {
-                $uploadsFolder = $parent->get($uploadsFolderName);
-                if ($uploadsFolder instanceof Folder) {
-                    $uploadsFolder->delete();
-                    $this->logger->info("FormVox: Deleted uploads folder for form ID {$fileId}");
+                $folder = $parent->get($folderName);
+                if ($folder instanceof Folder) {
+                    $folder->delete();
+                    $this->logger->info("FormVox: Deleted {$type} folder for form ID {$fileId}");
                 }
             } catch (NotFoundException $e) {
-                // No uploads folder to delete - this is fine
+                // No folder to delete - this is fine
             }
         } catch (\Exception $e) {
-            $this->logger->error("FormVox: Failed to delete uploads folder: " . $e->getMessage());
+            $this->logger->error("FormVox: Failed to delete {$type} folder: " . $e->getMessage());
         }
     }
 }

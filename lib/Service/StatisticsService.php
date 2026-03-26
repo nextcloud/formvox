@@ -85,7 +85,7 @@ class StatisticsService
             $result = $qb->executeQuery();
             $totalResponses = 0;
 
-            while ($row = $result->fetchAssociative()) {
+            while ($row = $result->fetch()) {
                 try {
                     $storageId = $row['id'];
                     $fileId = (int)$row['fileid'];

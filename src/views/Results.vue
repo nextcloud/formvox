@@ -23,9 +23,23 @@
               <NcActionButton @click="exportJson">
                 {{ t('Export JSON') }}
               </NcActionButton>
+              <NcActionButton @click="exportAllOdt">
+                {{ t('Export ODT') }}
+              </NcActionButton>
+              <NcActionButton @click="showTemplateDialog = true">
+                {{ t('ODT template...') }}
+              </NcActionButton>
             </NcActions>
           </div>
         </div>
+
+        <OdtTemplateDialog
+          :show="showTemplateDialog"
+          :file-id="fileId"
+          :form="form"
+          @close="showTemplateDialog = false"
+          @template-changed="onTemplateChanged"
+        />
 
         <div class="view-toggle">
           <NcButton
@@ -151,6 +165,10 @@
               </table>
             </div>
 
+            <div v-else-if="isTableType(question.type)" class="table-summary">
+              <p>{{ t('{count} rows total across all responses', { count: question.answerCounts['[table]'] || 0 }) }}</p>
+            </div>
+
             <div v-else-if="isFileType(question.type)" class="file-responses">
               <div class="file-header">
                 <p class="file-count">
@@ -252,7 +270,7 @@
                 <th v-for="question in form.questions" :key="question.id">
                   {{ truncate(question.question, 30) }}
                 </th>
-                <th v-if="permissions.deleteResponses"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -279,12 +297,36 @@
                       </a>
                     </div>
                   </template>
+                  <template v-else-if="isTableType(question.type) && Array.isArray(response.answers[question.id])">
+                    <table class="inline-table">
+                      <thead>
+                        <tr>
+                          <th v-for="col in question.columns" :key="col.id">{{ col.label }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(row, ri) in response.answers[question.id]" :key="ri">
+                          <td v-for="col in question.columns" :key="col.id">{{ row[col.id] || '-' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </template>
                   <template v-else>
                     {{ formatAnswer(response.answers[question.id], question) }}
                   </template>
                 </td>
-                <td v-if="permissions.deleteResponses">
+                <td class="response-actions">
                   <NcButton
+                    type="tertiary"
+                    :title="t('Export ODT')"
+                    @click="exportResponseOdt(response)"
+                  >
+                    <template #icon>
+                      <DownloadIcon :size="20" />
+                    </template>
+                  </NcButton>
+                  <NcButton
+                    v-if="permissions.deleteResponses"
                     type="error"
                     @click="deleteResponse(response.id)"
                   >
@@ -350,6 +392,8 @@ import { generateUrl } from '@nextcloud/router';
 import { t } from '@/utils/l10n';
 import axios from '@nextcloud/axios';
 import { showError, showSuccess } from '@nextcloud/dialogs';
+import { generateResponseOdt, generateAllResponsesZip, generateFromTemplate, generateAllFromTemplateZip, downloadFile } from '../utils/odt-export';
+import OdtTemplateDialog from '../components/OdtTemplateDialog.vue';
 import EditIcon from '../components/icons/EditIcon.vue';
 import DeleteIcon from '../components/icons/DeleteIcon.vue';
 import FileIcon from '../components/icons/FileIcon.vue';
@@ -374,6 +418,7 @@ export default {
     PieChart,
     BarChart,
     DoughnutChart,
+    OdtTemplateDialog,
   },
   props: {
     fileId: {
@@ -399,6 +444,8 @@ export default {
     const summary = ref({ responseCount: 0, questions: [] });
     const responses = ref([]);
     const chartTypes = ref({}); // Store chart type per question
+    const showTemplateDialog = ref(false);
+    const hasOdtTemplate = ref(false);
 
     // Pagination
     const currentPage = ref(1);
@@ -452,6 +499,10 @@ export default {
 
     const isFileType = (type) => {
       return type === 'file';
+    };
+
+    const isTableType = (type) => {
+      return type === 'table';
     };
 
     // Get all files for a specific question from all responses
@@ -592,6 +643,84 @@ export default {
       window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/uploads', { fileId: props.fileId });
     };
 
+    const exportAllOdt = async () => {
+      if (responses.value.length === 0) {
+        showError(t('No responses to export'));
+        return;
+      }
+      try {
+        let zipBytes;
+        const safeName = (props.form.title || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');
+        if (hasOdtTemplate.value) {
+          const templateBytes = await fetchTemplateBytes();
+          zipBytes = await generateAllFromTemplateZip(templateBytes, props.form, responses.value);
+        } else {
+          zipBytes = await generateAllResponsesZip(props.form, responses.value);
+        }
+        downloadFile(zipBytes, `${safeName}_responses.zip`, 'application/zip');
+      } catch (error) {
+        showError(t('Failed to export ODT'));
+        console.error(error);
+      }
+    };
+
+    const exportResponseOdt = async (response) => {
+      try {
+        let bytes;
+        if (hasOdtTemplate.value) {
+          const templateBytes = await fetchTemplateBytes();
+          bytes = generateFromTemplate(templateBytes, props.form, response);
+        } else {
+          bytes = await generateResponseOdt(props.form, response);
+        }
+        const date = new Date(response.submitted_at).toISOString().split('T')[0];
+        const safeName = (props.form.title || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');
+        downloadFile(bytes, `${safeName}_${date}_${response.id.substring(0, 8)}.odt`);
+      } catch (error) {
+        showError(t('Failed to export ODT'));
+        console.error(error);
+      }
+    };
+
+    const checkOdtTemplate = async () => {
+      try {
+        const response = await axios.get(
+          generateUrl('/apps/formvox/api/form/{fileId}/odt-template/status', { fileId: props.fileId })
+        );
+        hasOdtTemplate.value = response.data.hasTemplate;
+      } catch (error) {
+        hasOdtTemplate.value = false;
+      }
+    };
+
+    const onTemplateChanged = (exists) => {
+      hasOdtTemplate.value = exists;
+    };
+
+    const fetchTemplateBytes = async () => {
+      const response = await axios.get(
+        generateUrl('/apps/formvox/api/form/{fileId}/odt-template', { fileId: props.fileId }),
+        { responseType: 'arraybuffer' }
+      );
+      return response.data;
+    };
+
+    const exportAllFromTemplate = async () => {
+      if (responses.value.length === 0) {
+        showError(t('No responses to export'));
+        return;
+      }
+      try {
+        const templateBytes = await fetchTemplateBytes();
+        const zipBytes = await generateAllFromTemplateZip(templateBytes, props.form, responses.value);
+        const safeName = (props.form.title || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');
+        downloadFile(zipBytes, `${safeName}_template_responses.zip`, 'application/zip');
+      } catch (error) {
+        showError(t('Failed to export ODT from template'));
+        console.error(error);
+      }
+    };
+
     const deleteResponse = async (responseId) => {
       if (!confirm(t('Are you sure you want to delete this response?'))) {
         return;
@@ -615,6 +744,7 @@ export default {
 
     onMounted(() => {
       loadData();
+      checkOdtTemplate();
     });
 
     return {
@@ -635,6 +765,7 @@ export default {
       isNumericType,
       isMatrixType,
       isFileType,
+      isTableType,
       isFileAnswer,
       normalizeFileAnswer,
       getFileDownloadUrl,
@@ -651,6 +782,12 @@ export default {
       goToEditor,
       exportCsv,
       exportJson,
+      exportAllOdt,
+      exportResponseOdt,
+      exportAllFromTemplate,
+      showTemplateDialog,
+      hasOdtTemplate,
+      onTemplateChanged,
       downloadAllUploads,
       deleteResponse,
       t,
@@ -922,6 +1059,12 @@ export default {
     background: var(--color-background-hover);
   }
 
+  .response-actions {
+    display: flex;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
   .anonymous {
     color: var(--color-text-maxcontrast);
     font-style: italic;
@@ -948,6 +1091,28 @@ export default {
         flex-shrink: 0;
       }
     }
+  }
+
+  .inline-table {
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 4px 0;
+
+    th, td {
+      padding: 3px 8px;
+      border: 1px solid var(--color-border);
+      text-align: left;
+    }
+
+    th {
+      background: var(--color-background-hover);
+      font-weight: 600;
+    }
+  }
+
+  .table-summary {
+    padding: 12px;
+    color: var(--color-text-maxcontrast);
   }
 }
 </style>

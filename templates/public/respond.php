@@ -30,7 +30,7 @@ html body#body-public, html body #content {
 
 /* Reset any transform/position that could create stacking context issues */
 #body-public {
-    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    background: var(--formvox-page-bg);
     transform: none !important;
 }
 

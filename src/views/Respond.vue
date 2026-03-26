@@ -267,6 +267,13 @@ export default {
         answers[q.id] = [];
       } else if (q.type === 'matrix') {
         answers[q.id] = {};
+      } else if (q.type === 'table') {
+        const minRows = q.minRows || 1;
+        answers[q.id] = Array.from({ length: minRows }, () => {
+          const row = {};
+          (q.columns || []).forEach(col => { row[col.id] = ''; });
+          return row;
+        });
       } else {
         answers[q.id] = '';
       }
@@ -337,6 +344,13 @@ export default {
           answers[q.id] = [];
         } else if (q.type === 'matrix') {
           answers[q.id] = {};
+        } else if (q.type === 'table') {
+          const minRows = q.minRows || 1;
+          answers[q.id] = Array.from({ length: minRows }, () => {
+            const row = {};
+            (q.columns || []).forEach(col => { row[col.id] = ''; });
+            return row;
+          });
         } else {
           answers[q.id] = '';
         }
@@ -362,17 +376,33 @@ export default {
     const hasNextPage = computed(() => currentPageIndex.value < pages.value.length - 1);
 
     // Calculate real progress based on answered questions
+    // Only counts visible questions (excludes conditionally hidden ones)
     const realProgress = computed(() => {
       const questions = props.form.questions || [];
       if (questions.length === 0) return 0;
 
+      let visibleCount = 0;
       let answeredCount = 0;
       for (const question of questions) {
+        // Skip questions hidden by showIf conditions
+        if (question.showIf && !evaluateCondition(question.showIf, answers)) {
+          continue;
+        }
+        visibleCount++;
+
         const answer = answers[question.id];
         // Check if question has been answered
         if (answer !== undefined && answer !== '' && answer !== null) {
           if (Array.isArray(answer)) {
-            if (answer.length > 0) answeredCount++;
+            // Table: check if at least one row has content
+            if (answer.length > 0 && typeof answer[0] === 'object' && answer[0] !== null && !answer[0]?.filename) {
+              const hasContent = answer.some(row =>
+                Object.values(row).some(v => v !== '' && v !== null && v !== undefined)
+              );
+              if (hasContent) answeredCount++;
+            } else if (answer.length > 0) {
+              answeredCount++;
+            }
           } else if (typeof answer === 'object') {
             // Matrix questions - check if at least one row is answered
             if (Object.keys(answer).length > 0) answeredCount++;
@@ -382,7 +412,8 @@ export default {
         }
       }
 
-      return Math.round((answeredCount / questions.length) * 100);
+      if (visibleCount === 0) return 100;
+      return Math.round((answeredCount / visibleCount) * 100);
     });
 
     // Inject real progress into progress bar blocks
@@ -477,7 +508,8 @@ export default {
     };
 
     const updatePendingFiles = (questionId, files) => {
-      pendingFiles[questionId] = files;
+      // Store a copy to avoid losing files when QuestionRenderer is destroyed
+      pendingFiles[questionId] = [...files];
     };
 
     // Piping helper for TTS
@@ -561,9 +593,37 @@ export default {
 
         // Required check
         if (question.required) {
-          if (!answer || answer === '' || (Array.isArray(answer) && answer.length === 0)) {
+          let isEmpty = !answer || answer === '';
+          if (Array.isArray(answer)) {
+            isEmpty = answer.length === 0;
+          } else if (typeof answer === 'object' && answer !== null) {
+            isEmpty = Object.keys(answer).length === 0;
+          }
+
+          if (isEmpty) {
             if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
             validationErrors[question.id] = t('This question is required');
+          }
+
+          // Matrix: require ALL rows to be answered
+          if (!isEmpty && question.type === 'matrix' && question.rows) {
+            const matrixAnswer = answer || {};
+            const unansweredRows = question.rows.filter(row => !matrixAnswer[row.id]);
+            if (unansweredRows.length > 0) {
+              if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+              validationErrors[question.id] = t('Please answer all rows in this question');
+            }
+          }
+
+          // Table: require at least one row with content
+          if (!isEmpty && question.type === 'table' && Array.isArray(answer)) {
+            const hasContent = answer.some(row =>
+              Object.values(row).some(v => v !== '' && v !== null && v !== undefined)
+            );
+            if (!hasContent) {
+              if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+              validationErrors[question.id] = t('Please fill in at least one row');
+            }
           }
         }
 

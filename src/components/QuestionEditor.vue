@@ -33,6 +33,7 @@
           <option value="matrix">{{ t('Matrix') }}</option>
         </optgroup>
         <optgroup :label="t('Other')">
+          <option value="table">{{ t('Table') }}</option>
           <option value="file">{{ t('File upload') }}</option>
         </optgroup>
       </select>
@@ -385,6 +386,52 @@
         </div>
       </div>
 
+      <!-- Table column configuration -->
+      <div v-if="localQuestion.type === 'table'" class="table-settings">
+        <h4>{{ t('Columns') }}</h4>
+        <div v-for="(col, colIndex) in localQuestion.columns" :key="col.id" class="table-column-item">
+          <div class="table-column-row">
+            <NcTextField
+              v-model="col.label"
+              :disabled="readonly"
+              :placeholder="t('Column {n}', { n: colIndex + 1 })"
+              class="column-label"
+              @update:model-value="emitUpdate"
+            />
+            <select
+              v-model="col.inputType"
+              :disabled="readonly"
+              class="column-type-select"
+              @change="emitUpdate"
+            >
+              <option value="text">{{ t('Text') }}</option>
+              <option value="number">{{ t('Number') }}</option>
+              <option value="date">{{ t('Date') }}</option>
+              <option value="dropdown">{{ t('Dropdown') }}</option>
+            </select>
+            <NcButton v-if="!readonly" type="tertiary" @click="removeTableColumn(colIndex)">
+              <template #icon>
+                <CloseIcon :size="20" />
+              </template>
+            </NcButton>
+          </div>
+          <NcTextField
+            v-if="col.inputType === 'dropdown'"
+            v-model="col.optionsText"
+            :disabled="readonly"
+            :placeholder="t('Options (comma separated)')"
+            class="column-options"
+            @update:model-value="updateTableColumnOptions(colIndex); emitUpdate()"
+          />
+        </div>
+        <NcButton v-if="!readonly" @click="addTableColumn">
+          <template #icon>
+            <PlusIcon :size="20" />
+          </template>
+          {{ t('Add column') }}
+        </NcButton>
+      </div>
+
       <!-- Question settings -->
       <div class="question-settings">
         <NcCheckboxRadioSwitch
@@ -734,6 +781,15 @@ export default {
         ];
       }
 
+      if (localQuestion.type === 'table') {
+        localQuestion.columns = localQuestion.columns ?? [
+          { id: `col${uuidv4().split('-')[0]}`, label: '', inputType: 'text', options: [], optionsText: '' },
+          { id: `col${uuidv4().split('-')[0]}`, label: '', inputType: 'text', options: [], optionsText: '' },
+        ];
+        localQuestion.minRows = localQuestion.minRows ?? 1;
+        localQuestion.maxRows = localQuestion.maxRows ?? 50;
+      }
+
       if (localQuestion.type === 'file') {
         localQuestion.allowedTypePreset = localQuestion.allowedTypePreset ?? 'all';
         localQuestion.allowedTypes = localQuestion.allowedTypes ?? fileTypePresets.all;
@@ -855,6 +911,35 @@ export default {
       emitUpdate();
     };
 
+    const addTableColumn = () => {
+      if (!localQuestion.columns) {
+        localQuestion.columns = [];
+      }
+      localQuestion.columns.push({
+        id: `col${uuidv4().split('-')[0]}`,
+        label: '',
+        inputType: 'text',
+        options: [],
+        optionsText: '',
+      });
+      emitUpdate();
+    };
+
+    const removeTableColumn = (index) => {
+      localQuestion.columns.splice(index, 1);
+      emitUpdate();
+    };
+
+    const updateTableColumnOptions = (colIndex) => {
+      const col = localQuestion.columns[colIndex];
+      if (col) {
+        col.options = (col.optionsText || '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+      }
+    };
+
     const updateDateMin = (date) => {
       if (!date) {
         delete localQuestion.dateMin;
@@ -911,6 +996,9 @@ export default {
       removeRow,
       addColumn,
       removeColumn,
+      addTableColumn,
+      removeTableColumn,
+      updateTableColumnOptions,
       updateDateMin,
       updateDateMax,
       updateCondition,
@@ -1153,6 +1241,46 @@ export default {
       align-items: center;
       gap: 8px;
       margin-bottom: 8px;
+    }
+  }
+}
+
+.table-settings {
+  margin-bottom: 16px;
+
+  h4 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .table-column-item {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: var(--color-background-hover);
+    border-radius: var(--border-radius-large);
+
+    .table-column-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .column-label {
+      flex: 1;
+    }
+
+    .column-type-select {
+      min-width: 110px;
+      padding: 8px 10px;
+      border: 1px solid var(--color-border-dark);
+      border-radius: var(--border-radius);
+      background: var(--color-main-background);
+      font-size: 14px;
+    }
+
+    .column-options {
+      margin-top: 8px;
     }
   }
 }

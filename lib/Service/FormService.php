@@ -948,7 +948,24 @@ class FormService
                             ['id' => 'col4', 'label' => $this->l->t('Excellent'), 'value' => '4'],
                         ],
                     ],
-                    // Section 7: Conditional Branching Demo
+                    // Section 7: Table (Dynamic Rows)
+                    [
+                        'id' => 'demo_table',
+                        'type' => 'table',
+                        'question' => $this->l->t('Expense declaration'),
+                        'description' => $this->l->t('Add your expenses below. Click "+ Add row" to add more items.'),
+                        'required' => false,
+                        'columns' => [
+                            ['id' => 'col_desc', 'label' => $this->l->t('Description'), 'inputType' => 'text', 'options' => []],
+                            ['id' => 'col_amount', 'label' => $this->l->t('Amount'), 'inputType' => 'number', 'options' => []],
+                            ['id' => 'col_date', 'label' => $this->l->t('Date'), 'inputType' => 'date', 'options' => []],
+                            ['id' => 'col_cat', 'label' => $this->l->t('Category'), 'inputType' => 'dropdown', 'options' => ['Travel', 'Food', 'Office', 'Other']],
+                        ],
+                        'minRows' => 1,
+                        'maxRows' => 20,
+                    ],
+
+                    // Section 8: Conditional Branching Demo
                     [
                         'id' => 'demo_want_contact',
                         'type' => 'choice',
@@ -1365,5 +1382,84 @@ class FormService
         }
 
         return $name . '.' . $extension;
+    }
+
+    /**
+     * Get the templates folder for a form
+     * Creates it if it doesn't exist
+     */
+    public function getTemplatesFolder(int $fileId): Folder
+    {
+        $formFile = $this->getFileByIdPublic($fileId);
+        $formFolder = $formFile->getParent();
+        $templatesFolderName = ".formvox-templates-{$fileId}";
+
+        try {
+            $templatesFolder = $formFolder->get($templatesFolderName);
+            if (!($templatesFolder instanceof Folder)) {
+                throw new \RuntimeException('Templates path is not a folder');
+            }
+            return $templatesFolder;
+        } catch (NotFoundException $e) {
+            return $formFolder->newFolder($templatesFolderName);
+        }
+    }
+
+    /**
+     * Store an ODT template for a form
+     */
+    public function storeOdtTemplate(int $fileId, array $uploadedFile): void
+    {
+        $folder = $this->getTemplatesFolder($fileId);
+
+        // Remove existing template if present
+        try {
+            $existing = $folder->get('template.odt');
+            $existing->delete();
+        } catch (NotFoundException $e) {
+            // No existing template
+        }
+
+        $newFile = $folder->newFile('template.odt');
+        $newFile->putContent(file_get_contents($uploadedFile['tmp_name']));
+    }
+
+    /**
+     * Get the ODT template file for a form
+     */
+    public function getOdtTemplate(int $fileId): File
+    {
+        $folder = $this->getTemplatesFolder($fileId);
+        $file = $folder->get('template.odt');
+        if (!($file instanceof File)) {
+            throw new NotFoundException('Template not found');
+        }
+        return $file;
+    }
+
+    /**
+     * Check if a form has an ODT template
+     */
+    public function hasOdtTemplate(int $fileId): bool
+    {
+        try {
+            $this->getOdtTemplate($fileId);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Delete the ODT template for a form
+     */
+    public function deleteOdtTemplate(int $fileId): void
+    {
+        try {
+            $file = $this->getOdtTemplate($fileId);
+            $file->delete();
+        } catch (NotFoundException $e) {
+            // No template to delete
+        }
     }
 }
