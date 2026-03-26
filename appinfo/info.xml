@@ -4,43 +4,36 @@
     <id>formvox</id>
     <name>FormVox</name>
     <summary>File-based forms and polls for Nextcloud</summary>
-    <description><![CDATA[**⚠️ EVALUATION VERSION - NOT FOR PRODUCTION USE**
-
-This is an evaluation version intended for testing and demonstration purposes only. Do not use in production environments.
-
----
-
-FormVox is a file-based forms and polls app for Nextcloud. Unlike traditional form apps, FormVox stores everything in .fvform files - no database tables needed.
-
-**📋 Requirements:**
-* PHP 8.2 or higher
-* Nextcloud 28-33
+    <description><![CDATA[FormVox is a file-based forms and polls app for Nextcloud. Unlike traditional form apps, FormVox stores everything in .fvform files — no database tables needed.
 
 **Features:**
 * 100% file-based storage (.fvform files)
-* Multiple question types: text, textarea, single/multiple choice, dropdown, date, time, number, scale, rating, file upload, matrix
-* Conditional logic (branching)
+* Question types: text, textarea, single/multiple choice, dropdown, date, time, number, scale, rating, file upload, matrix, table
+* Conditional logic and page routing
 * Quiz mode with scoring
-* Export to CSV, JSON, Excel
+* Export to CSV, JSON, and ODT (with custom template support)
+* Import from Microsoft Forms
 * Per-form branding with visual page builder
 * Answer piping (use previous answers in later questions)
 * Charts and visualizations in Results view
+* Webhooks and REST API for integrations
+* Collaborative editing with real-time presence indicators
+* Notifications on new responses
 * Password protection and expiration for public links
+* Multi-language: English, Dutch, German, French
 
 **Unique Benefits:**
 * One file contains everything (definition + responses)
-* Works with Nextcloud's versioning
+* Works with Nextcloud's versioning and sharing
 * End-to-end encryption compatible
 * No database migrations needed
-* Native Nextcloud sharing integration
 
 **Perfect for:**
 * Surveys and feedback forms
 * Quizzes and assessments
 * Event registrations
+* Expense declarations
 * Data collection with privacy requirements
-
-Built with Vue 3 and modern web technologies for a smooth, secure experience.
     ]]></description>
     <version>0.3.9</version>
     <licence>agpl</licence>
