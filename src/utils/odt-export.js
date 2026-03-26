@@ -14,6 +14,15 @@ function formatAnswerForOdt(answer, question) {
 		if (answer.length > 0 && answer[0]?.filename) {
 			return answer.map(f => f.originalName || f.filename).join(', ');
 		}
+		// Table (dynamic rows)
+		if (question && question.type === 'table' && answer.length > 0 && typeof answer[0] === 'object') {
+			return answer.map((row, i) => {
+				const cells = (question.columns || []).map(col =>
+					`${col.label}: ${row[col.id] || '-'}`
+				);
+				return `Row ${i + 1}: ${cells.join(', ')}`;
+			}).join('\n');
+		}
 		if (question && question.options) {
 			return answer.map(val => {
 				const opt = question.options.find(o => o.value === val);

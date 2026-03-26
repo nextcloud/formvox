@@ -8,6 +8,9 @@ All notable changes to FormVox will be documented in this file.
 - **ODT template export** — Upload a custom ODT template with placeholders like `{Q1}`, `{Q2}`, `{form_title}`, etc. Responses are automatically filled into your template when exporting as ODT ([#23](https://github.com/nextcloud/formvox/issues/23))
 - **Template auto-detection** — "Export ODT" now automatically uses the uploaded template if one exists, removing the need for a separate export option
 - **Template portability** — ODT templates follow the form when moved between folders and are cleaned up when the form is deleted
+- **Table question type** — New "Table" question with configurable columns (text, number, date, dropdown) and dynamic rows. Ideal for expense declarations, item lists, and structured data collection ([#35](https://github.com/nextcloud/formvox/issues/35))
+- **Notification on new responses** — Form owners receive a Nextcloud notification when someone submits a response. Toggle on/off per form in Share settings
+- **Wider form layout** — Public form container increased from 700px to 960px for better readability
 
 ### Fixed
 - **TelemetryJob crash** — Background job crashed with `fetchAssociative()` not found on Nextcloud's `ResultAdapter`. Changed to `fetch()` ([#31](https://github.com/nextcloud/formvox/issues/31))

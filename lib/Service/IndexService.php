@@ -55,6 +55,9 @@ class IndexService
                         $fileCount = count($answer);
                     }
                     $idx['answer_counts'][$questionId]['[file]'] = ($idx['answer_counts'][$questionId]['[file]'] ?? 0) + $fileCount;
+                } elseif ($this->isTableAnswer($answer)) {
+                    $rowCount = count($answer);
+                    $idx['answer_counts'][$questionId]['[table]'] = ($idx['answer_counts'][$questionId]['[table]'] ?? 0) + $rowCount;
                 } elseif (is_array($answer)) {
                     // Multiple choice
                     foreach ($answer as $val) {
@@ -129,6 +132,10 @@ class IndexService
                         }
                         $form['_index']['answer_counts'][$questionId]['[file]'] =
                             ($form['_index']['answer_counts'][$questionId]['[file]'] ?? 0) + $fileCount;
+                    } elseif ($this->isTableAnswer($answer)) {
+                        $rowCount = count($answer);
+                        $form['_index']['answer_counts'][$questionId]['[table]'] =
+                            ($form['_index']['answer_counts'][$questionId]['[table]'] ?? 0) + $rowCount;
                     } elseif (is_array($answer)) {
                         foreach ($answer as $val) {
                             $val = (string)$val;
@@ -238,5 +245,36 @@ class IndexService
         }
 
         return false;
+    }
+
+    /**
+     * Check if an answer is a table (dynamic rows) answer
+     * Table answers are arrays of associative arrays with string keys (column IDs)
+     */
+    private function isTableAnswer($answer): bool
+    {
+        if (!is_array($answer) || empty($answer)) {
+            return false;
+        }
+
+        // Must have numeric keys (sequential array)
+        if (!isset($answer[0]) || !is_array($answer[0])) {
+            return false;
+        }
+
+        // First element must have string keys (column IDs), not file properties
+        $firstRow = $answer[0];
+        if (isset($firstRow['responseId']) || isset($firstRow['filename'])) {
+            return false;
+        }
+
+        // Check that keys are strings (column IDs like "col1a2b3c4")
+        foreach (array_keys($firstRow) as $key) {
+            if (!is_string($key)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

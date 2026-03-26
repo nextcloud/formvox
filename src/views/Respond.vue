@@ -267,6 +267,13 @@ export default {
         answers[q.id] = [];
       } else if (q.type === 'matrix') {
         answers[q.id] = {};
+      } else if (q.type === 'table') {
+        const minRows = q.minRows || 1;
+        answers[q.id] = Array.from({ length: minRows }, () => {
+          const row = {};
+          (q.columns || []).forEach(col => { row[col.id] = ''; });
+          return row;
+        });
       } else {
         answers[q.id] = '';
       }
@@ -337,6 +344,13 @@ export default {
           answers[q.id] = [];
         } else if (q.type === 'matrix') {
           answers[q.id] = {};
+        } else if (q.type === 'table') {
+          const minRows = q.minRows || 1;
+          answers[q.id] = Array.from({ length: minRows }, () => {
+            const row = {};
+            (q.columns || []).forEach(col => { row[col.id] = ''; });
+            return row;
+          });
         } else {
           answers[q.id] = '';
         }
@@ -380,7 +394,15 @@ export default {
         // Check if question has been answered
         if (answer !== undefined && answer !== '' && answer !== null) {
           if (Array.isArray(answer)) {
-            if (answer.length > 0) answeredCount++;
+            // Table: check if at least one row has content
+            if (answer.length > 0 && typeof answer[0] === 'object' && answer[0] !== null && !answer[0]?.filename) {
+              const hasContent = answer.some(row =>
+                Object.values(row).some(v => v !== '' && v !== null && v !== undefined)
+              );
+              if (hasContent) answeredCount++;
+            } else if (answer.length > 0) {
+              answeredCount++;
+            }
           } else if (typeof answer === 'object') {
             // Matrix questions - check if at least one row is answered
             if (Object.keys(answer).length > 0) answeredCount++;
@@ -590,6 +612,17 @@ export default {
             if (unansweredRows.length > 0) {
               if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
               validationErrors[question.id] = t('Please answer all rows in this question');
+            }
+          }
+
+          // Table: require at least one row with content
+          if (!isEmpty && question.type === 'table' && Array.isArray(answer)) {
+            const hasContent = answer.some(row =>
+              Object.values(row).some(v => v !== '' && v !== null && v !== undefined)
+            );
+            if (!hasContent) {
+              if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+              validationErrors[question.id] = t('Please fill in at least one row');
             }
           }
         }

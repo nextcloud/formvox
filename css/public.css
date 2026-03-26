@@ -82,7 +82,7 @@ body.theme--dark#body-public {
 
 /* Public container */
 #formvox-public {
-  max-width: min(700px, 100vw);
+  max-width: min(960px, 100vw);
   margin: 0 auto;
   padding: 40px 20px;
   padding-bottom: 80px;
@@ -108,10 +108,14 @@ body.theme--dark#body-public {
   max-width: none;
 }
 
-/* Exception for matrix tables which may need horizontal scrolling */
+/* Exception for matrix tables and dynamic tables which may need horizontal scrolling */
 #formvox-public .matrix-input,
 #formvox-public .matrix-table,
-#formvox-public .matrix-table * {
+#formvox-public .matrix-table *,
+#formvox-public .table-input,
+#formvox-public .table-dynamic,
+#formvox-public .table-dynamic *,
+#formvox-public .add-row-btn {
   max-width: none;
 }
 
@@ -376,6 +380,100 @@ body.theme--dark#body-public {
   font-weight: 500;
   background: var(--formvox-bg-secondary);
   color: var(--formvox-text-primary);
+}
+
+/* Table (dynamic rows) styling */
+#formvox-public .table-input {
+  overflow-x: auto;
+  margin-top: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+#formvox-public .table-dynamic {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--formvox-border);
+}
+
+#formvox-public .table-dynamic th,
+#formvox-public .table-dynamic td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--formvox-border);
+  border-right: 1px solid var(--formvox-border);
+}
+
+#formvox-public .table-dynamic th {
+  background: var(--formvox-bg-secondary);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--formvox-text-primary);
+}
+
+#formvox-public .table-dynamic th:last-child,
+#formvox-public .table-dynamic td:last-child {
+  border-right: none;
+}
+
+#formvox-public .table-dynamic tr:last-child td {
+  border-bottom: none;
+}
+
+#formvox-public .table-cell-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid var(--formvox-border);
+  border-radius: var(--formvox-radius);
+  background: var(--formvox-bg-primary);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+#formvox-public .table-cell-input:focus {
+  border-color: var(--formvox-accent, #0060df);
+  outline: none;
+}
+
+#formvox-public .row-actions-col {
+  width: 40px;
+  text-align: center;
+}
+
+#formvox-public .remove-row-btn {
+  background: none;
+  border: none;
+  color: var(--formvox-text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+#formvox-public .remove-row-btn:hover {
+  background: var(--formvox-bg-secondary);
+  color: #e53e3e;
+}
+
+#formvox-public .add-row-btn {
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: var(--formvox-bg-secondary);
+  border: 1px dashed var(--formvox-border);
+  border-radius: var(--formvox-radius);
+  color: var(--formvox-text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  width: 100%;
+}
+
+#formvox-public .add-row-btn:hover {
+  background: var(--formvox-bg-primary);
+  border-color: var(--formvox-accent, #0060df);
+  color: var(--formvox-accent, #0060df);
 }
 
 /* Public form actions */

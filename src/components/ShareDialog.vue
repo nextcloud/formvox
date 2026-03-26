@@ -75,6 +75,13 @@
           </NcCheckboxRadioSwitch>
 
           <NcCheckboxRadioSwitch
+            :model-value="responseSettings.notifyOwner"
+            @update:model-value="updateResponseSetting('notify_owner', $event)"
+          >
+            {{ t('Notify me on new responses') }}
+          </NcCheckboxRadioSwitch>
+
+          <NcCheckboxRadioSwitch
             :model-value="responseSettings.limitResponses"
             @update:model-value="toggleResponseLimit"
           >
@@ -408,6 +415,7 @@ export default {
       allowAnonymous: props.form.settings?.anonymous ?? true,
       allowMultiple: props.form.settings?.allow_multiple ?? false,
       requireLogin: props.form.settings?.require_login ?? false,
+      notifyOwner: props.form.settings?.notify_owner ?? true,
       limitResponses: props.form.settings?.max_responses > 0,
       maxResponses: props.form.settings?.max_responses || 100,
       limitMessage: props.form.settings?.limit_message || '',
@@ -784,7 +792,15 @@ export default {
     };
 
     const updateResponseSetting = async (key, value) => {
-      responseSettings[key === 'anonymous' ? 'allowAnonymous' : key === 'allow_multiple' ? 'allowMultiple' : 'requireLogin'] = value;
+      const keyMap = {
+        anonymous: 'allowAnonymous',
+        allow_multiple: 'allowMultiple',
+        require_login: 'requireLogin',
+        notify_owner: 'notifyOwner',
+      };
+      if (keyMap[key]) {
+        responseSettings[keyMap[key]] = value;
+      }
 
       try {
         const settings = {

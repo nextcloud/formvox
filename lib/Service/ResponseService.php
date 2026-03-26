@@ -5,21 +5,26 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCP\IRequest;
+use OCP\Notification\IManager as INotificationManager;
+use OCA\FormVox\AppInfo\Application;
 
 class ResponseService
 {
     private FormService $formService;
     private IndexService $indexService;
     private WebhookService $webhookService;
+    private INotificationManager $notificationManager;
 
     public function __construct(
         FormService $formService,
         IndexService $indexService,
-        WebhookService $webhookService
+        WebhookService $webhookService,
+        INotificationManager $notificationManager
     ) {
         $this->formService = $formService;
         $this->indexService = $indexService;
         $this->webhookService = $webhookService;
+        $this->notificationManager = $notificationManager;
     }
 
     /**
@@ -74,6 +79,9 @@ class ResponseService
         // Trigger webhook
         $this->webhookService->trigger($form, 'response.created', $response);
 
+        // Send notification to form owner
+        $this->notifyFormOwner($fileId, $form, $response);
+
         return $result;
     }
 
@@ -120,7 +128,56 @@ class ResponseService
         // Trigger webhook
         $this->webhookService->trigger($form, 'response.created', $response);
 
+        // Send notification to form owner
+        $this->notifyFormOwner($fileId, $form, $response);
+
         return $result;
+    }
+
+    /**
+     * Send a Nextcloud notification to the form owner
+     */
+    private function notifyFormOwner(int $fileId, array $form, array $response): void
+    {
+        try {
+            // Determine form owner
+            $file = $this->formService->getFileByIdPublic($fileId);
+            $owner = $file->getOwner();
+            if ($owner === null) {
+                return;
+            }
+            $ownerId = $owner->getUID();
+
+            // Don't notify if the respondent is the owner
+            if (($response['respondent']['type'] ?? '') === 'user'
+                && ($response['respondent']['user_id'] ?? '') === $ownerId) {
+                return;
+            }
+
+            // Check if notifications are enabled for this form
+            if (($form['settings']['notify_owner'] ?? true) === false) {
+                return;
+            }
+
+            $respondentName = ($response['respondent']['type'] ?? '') === 'user'
+                ? ($response['respondent']['display_name'] ?? 'Unknown')
+                : 'Anonymous';
+
+            $notification = $this->notificationManager->createNotification();
+            $notification->setApp(Application::APP_ID)
+                ->setUser($ownerId)
+                ->setDateTime(new \DateTime())
+                ->setObject('response', $response['id'])
+                ->setSubject('response_submitted', [
+                    'formTitle' => $form['title'] ?? 'Untitled',
+                    'respondentName' => $respondentName,
+                    'fileId' => $fileId,
+                ]);
+
+            $this->notificationManager->notify($notification);
+        } catch (\Exception $e) {
+            // Don't let notification failures break form submission
+        }
     }
 
     /**
@@ -223,7 +280,12 @@ class ResponseService
             foreach ($form['questions'] ?? [] as $question) {
                 $answer = $response['answers'][$question['id']] ?? '';
                 if (is_array($answer)) {
-                    $answer = implode(', ', $answer);
+                    // Table or file answers: serialize as JSON
+                    if (!empty($answer) && is_array(reset($answer))) {
+                        $answer = json_encode($answer, JSON_UNESCAPED_UNICODE);
+                    } else {
+                        $answer = implode(', ', $answer);
+                    }
                 }
                 $row[] = $answer;
             }

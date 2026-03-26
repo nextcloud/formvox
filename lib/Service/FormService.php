@@ -948,7 +948,24 @@ class FormService
                             ['id' => 'col4', 'label' => $this->l->t('Excellent'), 'value' => '4'],
                         ],
                     ],
-                    // Section 7: Conditional Branching Demo
+                    // Section 7: Table (Dynamic Rows)
+                    [
+                        'id' => 'demo_table',
+                        'type' => 'table',
+                        'question' => $this->l->t('Expense declaration'),
+                        'description' => $this->l->t('Add your expenses below. Click "+ Add row" to add more items.'),
+                        'required' => false,
+                        'columns' => [
+                            ['id' => 'col_desc', 'label' => $this->l->t('Description'), 'inputType' => 'text', 'options' => []],
+                            ['id' => 'col_amount', 'label' => $this->l->t('Amount'), 'inputType' => 'number', 'options' => []],
+                            ['id' => 'col_date', 'label' => $this->l->t('Date'), 'inputType' => 'date', 'options' => []],
+                            ['id' => 'col_cat', 'label' => $this->l->t('Category'), 'inputType' => 'dropdown', 'options' => ['Travel', 'Food', 'Office', 'Other']],
+                        ],
+                        'minRows' => 1,
+                        'maxRows' => 20,
+                    ],
+
+                    // Section 8: Conditional Branching Demo
                     [
                         'id' => 'demo_want_contact',
                         'type' => 'choice',

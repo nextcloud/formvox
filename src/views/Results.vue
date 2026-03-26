@@ -165,6 +165,10 @@
               </table>
             </div>
 
+            <div v-else-if="isTableType(question.type)" class="table-summary">
+              <p>{{ t('{count} rows total across all responses', { count: question.answerCounts['[table]'] || 0 }) }}</p>
+            </div>
+
             <div v-else-if="isFileType(question.type)" class="file-responses">
               <div class="file-header">
                 <p class="file-count">
@@ -292,6 +296,20 @@
                         {{ file.originalName || file.filename }}
                       </a>
                     </div>
+                  </template>
+                  <template v-else-if="isTableType(question.type) && Array.isArray(response.answers[question.id])">
+                    <table class="inline-table">
+                      <thead>
+                        <tr>
+                          <th v-for="col in question.columns" :key="col.id">{{ col.label }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(row, ri) in response.answers[question.id]" :key="ri">
+                          <td v-for="col in question.columns" :key="col.id">{{ row[col.id] || '-' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </template>
                   <template v-else>
                     {{ formatAnswer(response.answers[question.id], question) }}
@@ -481,6 +499,10 @@ export default {
 
     const isFileType = (type) => {
       return type === 'file';
+    };
+
+    const isTableType = (type) => {
+      return type === 'table';
     };
 
     // Get all files for a specific question from all responses
@@ -743,6 +765,7 @@ export default {
       isNumericType,
       isMatrixType,
       isFileType,
+      isTableType,
       isFileAnswer,
       normalizeFileAnswer,
       getFileDownloadUrl,
@@ -1068,6 +1091,28 @@ export default {
         flex-shrink: 0;
       }
     }
+  }
+
+  .inline-table {
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 4px 0;
+
+    th, td {
+      padding: 3px 8px;
+      border: 1px solid var(--color-border);
+      text-align: left;
+    }
+
+    th {
+      background: var(--color-background-hover);
+      font-weight: 600;
+    }
+  }
+
+  .table-summary {
+    padding: 12px;
+    color: var(--color-text-maxcontrast);
   }
 }
 </style>

@@ -337,6 +337,79 @@
       </table>
     </div>
 
+    <!-- Table (dynamic rows) -->
+    <div v-else-if="question.type === 'table'" class="table-input">
+      <table class="table-dynamic">
+        <thead>
+          <tr>
+            <th v-for="col in question.columns" :key="col.id">{{ col.label }}</th>
+            <th class="row-actions-col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, rowIndex) in tableRows" :key="rowIndex">
+            <td v-for="col in question.columns" :key="col.id" class="table-cell">
+              <input
+                v-if="col.inputType === 'text'"
+                type="text"
+                :value="row[col.id]"
+                :aria-label="col.label"
+                class="table-cell-input"
+                @input="updateTableCell(rowIndex, col.id, $event.target.value)"
+              />
+              <input
+                v-else-if="col.inputType === 'number'"
+                type="number"
+                :value="row[col.id]"
+                :aria-label="col.label"
+                class="table-cell-input"
+                @input="updateTableCell(rowIndex, col.id, $event.target.value)"
+              />
+              <input
+                v-else-if="col.inputType === 'date'"
+                type="date"
+                :value="row[col.id]"
+                :aria-label="col.label"
+                class="table-cell-input"
+                @input="updateTableCell(rowIndex, col.id, $event.target.value)"
+              />
+              <select
+                v-else-if="col.inputType === 'dropdown'"
+                :value="row[col.id]"
+                :aria-label="col.label"
+                class="table-cell-input"
+                @change="updateTableCell(rowIndex, col.id, $event.target.value)"
+              >
+                <option value="">—</option>
+                <option
+                  v-for="opt in col.options"
+                  :key="opt"
+                  :value="opt"
+                >{{ opt }}</option>
+              </select>
+            </td>
+            <td class="row-actions-col">
+              <button
+                v-if="tableRows.length > (question.minRows || 1)"
+                type="button"
+                class="remove-row-btn"
+                :aria-label="t('Remove row')"
+                @click="removeTableRow(rowIndex)"
+              >✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button
+        v-if="tableRows.length < (question.maxRows || 50)"
+        type="button"
+        class="add-row-btn"
+        @click="addTableRow"
+      >
+        + {{ t('Add row') }}
+      </button>
+    </div>
+
     <!-- External validation error (from parent) -->
     <p
       v-if="validationErrorExternal && !validationError"
@@ -636,6 +709,39 @@ export default {
       emit('update:value', current);
     };
 
+    // Table (dynamic rows) methods
+    const tableRows = computed(() => {
+      const val = props.value;
+      if (Array.isArray(val) && val.length > 0) return val;
+      const minRows = props.question.minRows || 1;
+      const emptyRow = () => {
+        const row = {};
+        (props.question.columns || []).forEach(col => { row[col.id] = ''; });
+        return row;
+      };
+      return Array.from({ length: minRows }, emptyRow);
+    });
+
+    const updateTableCell = (rowIndex, colId, cellValue) => {
+      const rows = JSON.parse(JSON.stringify(tableRows.value));
+      rows[rowIndex][colId] = cellValue;
+      emit('update:value', rows);
+    };
+
+    const addTableRow = () => {
+      const rows = JSON.parse(JSON.stringify(tableRows.value));
+      const emptyRow = {};
+      (props.question.columns || []).forEach(col => { emptyRow[col.id] = ''; });
+      rows.push(emptyRow);
+      emit('update:value', rows);
+    };
+
+    const removeTableRow = (index) => {
+      const rows = JSON.parse(JSON.stringify(tableRows.value));
+      rows.splice(index, 1);
+      emit('update:value', rows);
+    };
+
     const formatDate = (date) => {
       if (!date) return '';
       return date.toISOString().split('T')[0];
@@ -797,6 +903,10 @@ export default {
       ratingRange,
       toggleMultiple,
       updateMatrix,
+      tableRows,
+      updateTableCell,
+      addTableRow,
+      removeTableRow,
       formatDate,
       formatDateTime,
       handleFileChange,

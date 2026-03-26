@@ -18,6 +18,7 @@ use OCA\FormVox\Listener\FormCopiedListener;
 use OCA\FormVox\Listener\FormDeletedListener;
 use OCA\FormVox\Listener\FormMovedListener;
 use OCA\FormVox\Listener\RegisterDavPluginListener;
+use OCA\FormVox\Notification\Notifier;
 use OCA\FormVox\Preview\FormPreview;
 
 class Application extends App implements IBootstrap
@@ -48,6 +49,9 @@ class Application extends App implements IBootstrap
 
         // Register listener to move associated folders when form is moved
         $context->registerEventListener(NodeRenamedEvent::class, FormMovedListener::class);
+
+        // Register notification handler
+        $context->registerNotifierService(Notifier::class);
 
         // Register DAV plugin to hide .fvform files from sync clients
         $context->registerEventListener(SabrePluginAuthInitEvent::class, RegisterDavPluginListener::class);
