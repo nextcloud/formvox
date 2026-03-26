@@ -49,7 +49,12 @@ class IndexService
 
                 // Skip file upload answers (they have responseId property)
                 if ($this->isFileAnswer($answer)) {
-                    $idx['answer_counts'][$questionId]['[file]'] = ($idx['answer_counts'][$questionId]['[file]'] ?? 0) + 1;
+                    // Count actual number of files (multi-file uploads are arrays of file objects)
+                    $fileCount = 1;
+                    if (isset($answer[0]) && is_array($answer[0])) {
+                        $fileCount = count($answer);
+                    }
+                    $idx['answer_counts'][$questionId]['[file]'] = ($idx['answer_counts'][$questionId]['[file]'] ?? 0) + $fileCount;
                 } elseif (is_array($answer)) {
                     // Multiple choice
                     foreach ($answer as $val) {
@@ -118,8 +123,12 @@ class IndexService
 
                     // Skip file upload answers (they have responseId property)
                     if ($this->isFileAnswer($answer)) {
+                        $fileCount = 1;
+                        if (isset($answer[0]) && is_array($answer[0])) {
+                            $fileCount = count($answer);
+                        }
                         $form['_index']['answer_counts'][$questionId]['[file]'] =
-                            ($form['_index']['answer_counts'][$questionId]['[file]'] ?? 0) + 1;
+                            ($form['_index']['answer_counts'][$questionId]['[file]'] ?? 0) + $fileCount;
                     } elseif (is_array($answer)) {
                         foreach ($answer as $val) {
                             $val = (string)$val;

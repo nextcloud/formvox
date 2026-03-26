@@ -108,6 +108,13 @@ body.theme--dark#body-public {
   max-width: none;
 }
 
+/* Exception for matrix tables which may need horizontal scrolling */
+#formvox-public .matrix-input,
+#formvox-public .matrix-table,
+#formvox-public .matrix-table * {
+  max-width: none;
+}
+
 /* Exception for datepicker input wrapper inside formvox */
 #formvox-public .mx-datepicker,
 #formvox-public .mx-datepicker *,

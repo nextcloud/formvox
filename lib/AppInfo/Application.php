@@ -10,11 +10,13 @@ use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\Files\Events\Node\NodeCopiedEvent;
 use OCP\Files\Events\Node\NodeDeletedEvent;
+use OCP\Files\Events\Node\NodeRenamedEvent;
 use OCA\DAV\Events\SabrePluginAuthInitEvent;
 use OCA\Files\Event\LoadAdditionalScriptsEvent;
 use OCA\FormVox\Listener\LoadFilesPluginListener;
 use OCA\FormVox\Listener\FormCopiedListener;
 use OCA\FormVox\Listener\FormDeletedListener;
+use OCA\FormVox\Listener\FormMovedListener;
 use OCA\FormVox\Listener\RegisterDavPluginListener;
 use OCA\FormVox\Preview\FormPreview;
 
@@ -43,6 +45,9 @@ class Application extends App implements IBootstrap
 
         // Register listener to delete uploads folder when form is deleted
         $context->registerEventListener(NodeDeletedEvent::class, FormDeletedListener::class);
+
+        // Register listener to move associated folders when form is moved
+        $context->registerEventListener(NodeRenamedEvent::class, FormMovedListener::class);
 
         // Register DAV plugin to hide .fvform files from sync clients
         $context->registerEventListener(SabrePluginAuthInitEvent::class, RegisterDavPluginListener::class);

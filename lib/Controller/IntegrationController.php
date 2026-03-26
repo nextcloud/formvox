@@ -166,9 +166,15 @@ class IntegrationController extends Controller
      * Create a new webhook for a form
      */
     #[NoAdminRequired]
-    public function createWebhook(int $fileId, string $url, string $name = '', array $events = []): DataResponse
+    public function createWebhook(int $fileId): DataResponse
     {
         try {
+            $url = $this->request->getParam('url', '');
+            $name = $this->request->getParam('name', 'Webhook');
+            $events = $this->request->getParam('events', []);
+            if (!is_array($events)) {
+                $events = [];
+            }
             $file = $this->formService->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);

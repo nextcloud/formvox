@@ -2,6 +2,28 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.3.9] - 2026-03-26
+
+### Added
+- **ODT template export** — Upload a custom ODT template with placeholders like `{Q1}`, `{Q2}`, `{form_title}`, etc. Responses are automatically filled into your template when exporting as ODT ([#23](https://github.com/nextcloud/formvox/issues/23))
+- **Template auto-detection** — "Export ODT" now automatically uses the uploaded template if one exists, removing the need for a separate export option
+- **Template portability** — ODT templates follow the form when moved between folders and are cleaned up when the form is deleted
+
+### Fixed
+- **TelemetryJob crash** — Background job crashed with `fetchAssociative()` not found on Nextcloud's `ResultAdapter`. Changed to `fetch()` ([#31](https://github.com/nextcloud/formvox/issues/31))
+- **External API missing pages/pageOrder** — API response now includes `pages` and `pageOrder` fields ([#27](https://github.com/nextcloud/formvox/issues/27))
+- **Required matrix not validated on page navigation** — Users could skip to the next page without filling required matrix questions ([#34](https://github.com/nextcloud/formvox/issues/34))
+- **Required matrix accepting one row** — Matrix questions marked as required now require all rows to be answered ([#25](https://github.com/nextcloud/formvox/issues/25))
+- **Horizontal scrolling blocked for wide matrix tables** — Matrix tables now scroll horizontally within the form container ([#28](https://github.com/nextcloud/formvox/issues/28))
+- **Multiple file uploads broken** — File metadata was lost for multi-file uploads, showing only filenames instead of clickable links in results ([#36](https://github.com/nextcloud/formvox/issues/36))
+- **Multi-file upload count incorrect** — File count now shows total number of files, not number of responses
+- **`[object Object]` in ODT export** — Multi-file answers now display filenames correctly in ODT exports
+- **Webhook creation failing** — Fixed parameter binding for webhook creation endpoint
+
+### Changed
+- **Presence endpoints moved to PresenceController** — Collaborative editing presence heartbeat and editor list moved from `ApiController` to dedicated `PresenceController` for cleaner separation
+- **FormDeletedListener extended** — Now also cleans up ODT template folders when a form is deleted
+
 ## [0.3.8] - 2026-03-13
 
 ### Fixed

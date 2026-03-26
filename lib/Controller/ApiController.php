@@ -19,8 +19,6 @@ use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\IndexService;
-use OCP\IConfig;
-
 class ApiController extends Controller
 {
     private FormService $formService;
@@ -30,7 +28,6 @@ class ApiController extends Controller
     private IUserSession $userSession;
     private IUserManager $userManager;
     private IGroupManager $groupManager;
-    private IConfig $config;
 
     public function __construct(
         IRequest $request,
@@ -40,8 +37,7 @@ class ApiController extends Controller
         IndexService $indexService,
         IUserSession $userSession,
         IUserManager $userManager,
-        IGroupManager $groupManager,
-        IConfig $config
+        IGroupManager $groupManager
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
@@ -51,7 +47,6 @@ class ApiController extends Controller
         $this->userSession = $userSession;
         $this->userManager = $userManager;
         $this->groupManager = $groupManager;
-        $this->config = $config;
     }
 
     /**
@@ -416,6 +411,100 @@ class ApiController extends Controller
     }
 
     /**
+     * Upload ODT template
+     */
+    #[NoAdminRequired]
+    public function uploadOdtTemplate(int $fileId): DataResponse
+    {
+        try {
+            $file = $this->formService->getFileById($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
+
+            if (!$this->permissionService->canViewResponses($role)) {
+                return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
+            }
+
+            $uploadedFile = $this->request->getUploadedFile('template');
+            if (!$uploadedFile || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
+                return new DataResponse(['error' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
+            }
+
+            $this->formService->storeOdtTemplate($fileId, $uploadedFile);
+            return new DataResponse(['success' => true]);
+        } catch (\Exception $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Download ODT template
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function downloadOdtTemplate(int $fileId): DataDownloadResponse
+    {
+        $file = $this->formService->getFileById($fileId);
+        $userId = $this->userSession->getUser()?->getUID() ?? '';
+        $role = $this->permissionService->getRoleFromFile($file, $userId);
+
+        if (!$this->permissionService->canViewResponses($role)) {
+            throw new \Exception('Permission denied');
+        }
+
+        $template = $this->formService->getOdtTemplate($fileId);
+        return new DataDownloadResponse(
+            $template->getContent(),
+            'template.odt',
+            'application/vnd.oasis.opendocument.text'
+        );
+    }
+
+    /**
+     * Delete ODT template
+     */
+    #[NoAdminRequired]
+    public function deleteOdtTemplate(int $fileId): DataResponse
+    {
+        try {
+            $file = $this->formService->getFileById($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
+
+            if (!$this->permissionService->canViewResponses($role)) {
+                return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
+            }
+
+            $this->formService->deleteOdtTemplate($fileId);
+            return new DataResponse(['success' => true]);
+        } catch (\Exception $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Check if ODT template exists
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function hasOdtTemplate(int $fileId): DataResponse
+    {
+        try {
+            $file = $this->formService->getFileById($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
+
+            if (!$this->permissionService->canViewResponses($role)) {
+                return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
+            }
+
+            return new DataResponse(['hasTemplate' => $this->formService->hasOdtTemplate($fileId)]);
+        } catch (\Exception $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
      * Rebuild form index
      */
     #[NoAdminRequired]
@@ -555,118 +644,4 @@ class ApiController extends Controller
         }
     }
 
-    /**
-     * Send presence heartbeat for a form
-     */
-    #[NoAdminRequired]
-    public function sendPresence(int $fileId): DataResponse
-    {
-        try {
-            $user = $this->userSession->getUser();
-            if (!$user) {
-                return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
-            }
-
-            $userId = $user->getUID();
-            $displayName = $user->getDisplayName();
-
-            // Preserve firstSeen timestamp if already present
-            $existing = $this->config->getUserValue(
-                $userId,
-                Application::APP_ID,
-                'presence_' . $fileId,
-                ''
-            );
-            $firstSeen = time();
-            if ($existing) {
-                $existingData = json_decode($existing, true);
-                if ($existingData && isset($existingData['firstSeen'])) {
-                    // Only keep firstSeen if still within timeout (60s)
-                    if (time() - ($existingData['timestamp'] ?? 0) <= 60) {
-                        $firstSeen = $existingData['firstSeen'];
-                    }
-                }
-            }
-
-            $this->config->setUserValue(
-                $userId,
-                Application::APP_ID,
-                'presence_' . $fileId,
-                json_encode([
-                    'userId' => $userId,
-                    'displayName' => $displayName,
-                    'timestamp' => time(),
-                    'firstSeen' => $firstSeen,
-                ])
-            );
-
-            return new DataResponse(['status' => 'ok']);
-        } catch (\Exception $e) {
-            return new DataResponse(
-                ['error' => $e->getMessage()],
-                Http::STATUS_INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    /**
-     * Get active editors for a form
-     */
-    #[NoAdminRequired]
-    public function getPresence(int $fileId): DataResponse
-    {
-        try {
-            $currentUser = $this->userSession->getUser();
-            if (!$currentUser) {
-                return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
-            }
-
-            $currentUserId = $currentUser->getUID();
-            $editors = [];
-            $myFirstSeen = null;
-            $now = time();
-            $timeout = 60; // seconds
-
-            // Check all known users for presence on this form
-            $this->userManager->callForAllUsers(function ($user) use ($fileId, $now, $timeout, $currentUserId, &$editors, &$myFirstSeen) {
-                $userId = $user->getUID();
-                $value = $this->config->getUserValue(
-                    $userId,
-                    Application::APP_ID,
-                    'presence_' . $fileId,
-                    ''
-                );
-
-                if (!$value) return;
-
-                $data = json_decode($value, true);
-                if (!$data || !isset($data['timestamp'])) return;
-
-                // Skip stale entries
-                if ($now - $data['timestamp'] > $timeout) return;
-
-                // Track current user's firstSeen
-                if ($userId === $currentUserId) {
-                    $myFirstSeen = $data['firstSeen'] ?? $data['timestamp'];
-                    return;
-                }
-
-                $editors[] = [
-                    'userId' => $data['userId'],
-                    'displayName' => $data['displayName'],
-                    'firstSeen' => $data['firstSeen'] ?? $data['timestamp'],
-                ];
-            });
-
-            return new DataResponse([
-                'editors' => $editors,
-                'myFirstSeen' => $myFirstSeen,
-            ]);
-        } catch (\Exception $e) {
-            return new DataResponse(
-                ['error' => $e->getMessage()],
-                Http::STATUS_INTERNAL_SERVER_ERROR
-            );
-        }
-    }
 }

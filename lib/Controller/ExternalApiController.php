@@ -113,6 +113,8 @@ class ExternalApiController extends Controller
             'title' => $form['title'] ?? '',
             'description' => $form['description'] ?? '',
             'questions' => $form['questions'] ?? [],
+            'pages' => $form['pages'] ?? [],
+            'pageOrder' => $form['pageOrder'] ?? [],
             'settings' => [
                 'anonymous' => $form['settings']['anonymous'] ?? true,
                 'allow_multiple' => $form['settings']['allow_multiple'] ?? false,

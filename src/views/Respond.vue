@@ -362,12 +362,20 @@ export default {
     const hasNextPage = computed(() => currentPageIndex.value < pages.value.length - 1);
 
     // Calculate real progress based on answered questions
+    // Only counts visible questions (excludes conditionally hidden ones)
     const realProgress = computed(() => {
       const questions = props.form.questions || [];
       if (questions.length === 0) return 0;
 
+      let visibleCount = 0;
       let answeredCount = 0;
       for (const question of questions) {
+        // Skip questions hidden by showIf conditions
+        if (question.showIf && !evaluateCondition(question.showIf, answers)) {
+          continue;
+        }
+        visibleCount++;
+
         const answer = answers[question.id];
         // Check if question has been answered
         if (answer !== undefined && answer !== '' && answer !== null) {
@@ -382,7 +390,8 @@ export default {
         }
       }
 
-      return Math.round((answeredCount / questions.length) * 100);
+      if (visibleCount === 0) return 100;
+      return Math.round((answeredCount / visibleCount) * 100);
     });
 
     // Inject real progress into progress bar blocks
@@ -477,7 +486,8 @@ export default {
     };
 
     const updatePendingFiles = (questionId, files) => {
-      pendingFiles[questionId] = files;
+      // Store a copy to avoid losing files when QuestionRenderer is destroyed
+      pendingFiles[questionId] = [...files];
     };
 
     // Piping helper for TTS
@@ -561,9 +571,26 @@ export default {
 
         // Required check
         if (question.required) {
-          if (!answer || answer === '' || (Array.isArray(answer) && answer.length === 0)) {
+          let isEmpty = !answer || answer === '';
+          if (Array.isArray(answer)) {
+            isEmpty = answer.length === 0;
+          } else if (typeof answer === 'object' && answer !== null) {
+            isEmpty = Object.keys(answer).length === 0;
+          }
+
+          if (isEmpty) {
             if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
             validationErrors[question.id] = t('This question is required');
+          }
+
+          // Matrix: require ALL rows to be answered
+          if (!isEmpty && question.type === 'matrix' && question.rows) {
+            const matrixAnswer = answer || {};
+            const unansweredRows = question.rows.filter(row => !matrixAnswer[row.id]);
+            if (unansweredRows.length > 0) {
+              if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
+              validationErrors[question.id] = t('Please answer all rows in this question');
+            }
           }
         }
 

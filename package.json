@@ -17,6 +17,7 @@
     "@vue/compiler-sfc": "^3.5.22",
     "chart.js": "^4.5.1",
     "markdown-it": "^14.1.1",
+    "odf-kit": "^0.5.2",
     "qrcode": "^1.5.4",
     "sortablejs": "^1.15.6",
     "uuid": "^9.0.0",
