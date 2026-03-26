@@ -99,6 +99,7 @@ class PublicController extends Controller
      */
     private function showUnauthorized(string $title): TemplateResponse
     {
+        Util::addStyle(Application::APP_ID, 'public');
         $response = new TemplateResponse(
             Application::APP_ID,
             'public/unauthorized',
@@ -533,6 +534,7 @@ class PublicController extends Controller
      */
     private function showPasswordForm(int $fileId, string $token, string $title, ?string $error = null): TemplateResponse
     {
+        Util::addStyle(Application::APP_ID, 'public');
         return new TemplateResponse(
             Application::APP_ID,
             'public/password',

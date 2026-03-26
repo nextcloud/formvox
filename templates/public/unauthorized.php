@@ -20,33 +20,13 @@ html, body, #body-public, #content, #content-wrapper, .content {
     position: static !important;
 }
 #body-public {
-    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
-}
-@media (prefers-color-scheme: dark) {
-    #body-public {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    }
-    .unauthorized-container {
-        background: #2c2c2c !important;
-    }
-    .unauthorized-container h2 {
-        color: #e0e0e0 !important;
-    }
-    .unauthorized-container .subtitle {
-        color: #999 !important;
-    }
-    .unauthorized-container .icon-lock {
-        background: #3a3a3a !important;
-    }
-    .unauthorized-container .icon-lock svg {
-        color: #999 !important;
-    }
+    background: var(--formvox-page-bg);
 }
 .unauthorized-container {
     max-width: 400px;
     margin: 100px auto;
     padding: 40px;
-    background: white;
+    background: var(--formvox-bg-primary);
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     text-align: center;
@@ -55,10 +35,10 @@ html, body, #body-public, #content, #content-wrapper, .content {
     margin: 0 0 8px;
     font-size: 24px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--formvox-text-primary);
 }
 .unauthorized-container .subtitle {
-    color: #666;
+    color: var(--formvox-text-muted);
     margin: 0 0 24px;
     font-size: 14px;
     line-height: 1.5;

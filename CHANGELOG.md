@@ -22,6 +22,7 @@ All notable changes to FormVox will be documented in this file.
 - **Multi-file upload count incorrect** — File count now shows total number of files, not number of responses
 - **`[object Object]` in ODT export** — Multi-file answers now display filenames correctly in ODT exports
 - **Webhook creation failing** — Fixed parameter binding for webhook creation endpoint
+- **Form hard to read in dark mode** — Public form templates had hardcoded light background colors that overrode dark mode CSS variables, making text unreadable ([#39](https://github.com/nextcloud/formvox/issues/39))
 
 ### Changed
 - **Presence endpoints moved to PresenceController** — Collaborative editing presence heartbeat and editor list moved from `ApiController` to dedicated `PresenceController` for cleaner separation
