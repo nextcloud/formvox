@@ -37,12 +37,12 @@
     ]]></description>
     <version>0.3.9</version>
     <licence>agpl</licence>
-    <author mail="sam@mief.info">Sam Ditmeijer</author>
-    <author mail="rik@shalution.nl">Rik Dekker</author>
+    <author mail="info@voxcloud.nl">Sam Ditmeijer</author>
+    <author mail="info@voxcloud.nl">Rik Dekker</author>
     <namespace>FormVox</namespace>
     <category>office</category>
     <category>organization</category>
-    <website>https://github.com/nextcloud/formvox</website>
+    <website>https://voxcloud.nl</website>
     <bugs>https://github.com/nextcloud/formvox/issues</bugs>
     <repository type="git">https://github.com/nextcloud/formvox.git</repository>
     <documentation>
