@@ -476,6 +476,49 @@ body.theme--dark#body-public {
   color: var(--formvox-accent, #0060df);
 }
 
+/* Section (fieldset) styling */
+#formvox-public .form-section {
+  border: none;
+  border-left: 4px solid var(--formvox-accent, #0060df);
+  border-radius: 0 12px 12px 0;
+  padding: 20px 24px;
+  margin: 24px 0;
+  background: var(--formvox-bg-secondary);
+  min-width: 0;
+  overflow: hidden;
+}
+
+#formvox-public .form-section .section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--formvox-text-primary);
+  padding: 0;
+  margin-bottom: 4px;
+  float: left;
+  width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+#formvox-public .form-section .section-description {
+  color: var(--formvox-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+#formvox-public .form-section .question-card {
+  background: var(--formvox-bg-primary);
+}
+
+#formvox-public .form-section .question-container {
+  margin-bottom: 20px;
+}
+
+#formvox-public .form-section .question-container:last-child {
+  margin-bottom: 0;
+}
+
 /* Public form actions */
 #formvox-public .form-actions {
   display: flex;

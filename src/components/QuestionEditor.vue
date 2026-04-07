@@ -1,9 +1,69 @@
 <template>
   <div
     class="question-editor"
-    :class="{ collapsed, 'has-color': localQuestion.color }"
+    :class="{ collapsed, 'has-color': localQuestion.color, 'is-section': localQuestion.type === 'section' }"
     :style="localQuestion.color ? { '--question-color': localQuestion.color } : {}"
   >
+    <!-- Section header (special rendering for type=section) -->
+    <template v-if="localQuestion.type === 'section'">
+      <div class="section-editor-header">
+        <span class="drag-handle" :class="{ disabled: readonly }">
+          <DragIcon :size="20" />
+        </span>
+        <span class="section-badge">{{ t('Section') }}</span>
+        <div class="question-actions">
+          <NcButton v-if="!readonly" type="error" @click="$emit('delete')">
+            <template #icon>
+              <CloseIcon :size="20" />
+            </template>
+          </NcButton>
+        </div>
+      </div>
+
+      <div class="section-editor-body">
+        <NcTextField
+          v-model="localQuestion.question"
+          :disabled="readonly"
+          :placeholder="t('Section title')"
+          class="section-title-input"
+          @update:model-value="emitUpdate"
+        />
+        <NcTextArea
+          v-model="localQuestion.description"
+          :disabled="readonly"
+          :placeholder="t('Section description (optional)')"
+          :resize="true"
+          :rows="2"
+          @update:model-value="emitUpdate"
+        />
+
+        <div v-if="localQuestion.showIf && !showConditions" class="condition-section">
+          <div class="condition-display">
+            <span class="condition-label">{{ t('Condition active') }}</span>
+            <NcButton type="tertiary" @click="showConditions = true">{{ t('Edit') }}</NcButton>
+            <NcButton type="tertiary" @click="updateCondition(null)">{{ t('Remove') }}</NcButton>
+          </div>
+        </div>
+        <ConditionEditor
+          v-if="showConditions"
+          :condition="localQuestion.showIf"
+          :questions="questions.filter(q => q.id !== localQuestion.id && q.type !== 'section')"
+          @update="(val) => { updateCondition(val); showConditions = false; }"
+          @close="showConditions = false"
+        />
+        <NcButton
+          v-if="!localQuestion.showIf && !showConditions && !readonly"
+          type="tertiary"
+          class="add-condition-btn"
+          @click="showConditions = true"
+        >
+          {{ t('+ Add condition') }}
+        </NcButton>
+      </div>
+    </template>
+
+    <!-- Normal question editor -->
+    <template v-else>
     <div class="question-header">
       <span class="drag-handle" :class="{ disabled: readonly }">
         <DragIcon :size="20" />
@@ -87,6 +147,25 @@
               <BranchIcon :size="20" />
             </template>
             {{ t('Conditions') }}
+          </NcActionButton>
+          <NcActionButton
+            v-if="localQuestion.sectionId"
+            @click="removeFromSection"
+          >
+            <template #icon>
+              <CloseIcon :size="20" />
+            </template>
+            {{ t('Remove from section') }}
+          </NcActionButton>
+          <NcActionButton
+            v-for="section in availableSections"
+            :key="'section-' + section.id"
+            @click="assignToSection(section.id)"
+          >
+            <template #icon>
+              <SectionIcon :size="20" />
+            </template>
+            {{ t('Move to "{section}"', { section: section.question || t('Untitled section') }) }}
           </NcActionButton>
           <template v-if="otherPages.length > 0">
             <NcActionButton
@@ -521,6 +600,7 @@
       @update="updateCondition"
       @close="showConditions = false"
     />
+    </template>
   </div>
 </template>
 
@@ -548,6 +628,7 @@ import DeleteIcon from './icons/DeleteIcon.vue';
 import CloseIcon from './icons/CloseIcon.vue';
 import PlusIcon from './icons/PlusIcon.vue';
 import PagesIcon from './icons/PagesIcon.vue';
+import SectionIcon from 'vue-material-design-icons/CardText.vue';
 
 export default {
   name: 'QuestionEditor',
@@ -597,7 +678,7 @@ export default {
       default: false,
     },
   },
-  emits: ['update', 'delete', 'duplicate', 'move'],
+  emits: ['update', 'delete', 'duplicate', 'move', 'move-to-section'],
   setup(props, { emit }) {
     const collapsed = ref(false);
     const showConditions = ref(false);
@@ -733,6 +814,20 @@ export default {
     };
 
     // Get other pages (excluding current page) for "Move to page" menu
+    // Available sections for "Move to section" menu
+    const availableSections = computed(() => {
+      return props.questions.filter(q => q.type === 'section' && q.id !== localQuestion.id);
+    });
+
+    const assignToSection = (sectionId) => {
+      emit('move-to-section', sectionId);
+    };
+
+    const removeFromSection = () => {
+      delete localQuestion.sectionId;
+      emitUpdate();
+    };
+
     const otherPages = computed(() => {
       if (!props.pages || props.pages.length <= 1) return [];
       return props.pages
@@ -982,6 +1077,10 @@ export default {
       validationPresetOptions,
       onValidationPresetChange,
       otherPages,
+      availableSections,
+      assignToSection,
+      removeFromSection,
+      SectionIcon,
       emitUpdate,
       onTypeChange,
       onFileTypePresetChange,
@@ -1023,6 +1122,22 @@ export default {
 
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &.is-section {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .add-condition-btn {
+    border: 1px solid var(--color-border-dark) !important;
+    background: white !important;
+    margin-top: 8px;
+
+    &:hover {
+      background: var(--color-background-hover) !important;
+    }
   }
 
   &:focus-within {
@@ -1383,5 +1498,61 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.section-editor-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+
+  .drag-handle {
+    cursor: grab;
+    color: var(--color-text-maxcontrast);
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  .section-badge {
+    background: var(--color-primary-element);
+    color: white;
+    padding: 2px 10px;
+    border-radius: var(--border-radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .question-actions {
+    margin-left: auto;
+  }
+}
+
+.section-editor-body {
+  padding: 16px;
+
+  .section-title-input {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .condition-section {
+    margin-top: 12px;
+  }
+
+  .condition-display {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .condition-label {
+      font-size: 13px;
+      color: var(--color-text-maxcontrast);
+      margin-right: 4px;
+    }
+  }
 }
 </style>

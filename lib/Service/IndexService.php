@@ -58,6 +58,12 @@ class IndexService
                 } elseif ($this->isTableAnswer($answer)) {
                     $rowCount = count($answer);
                     $idx['answer_counts'][$questionId]['[table]'] = ($idx['answer_counts'][$questionId]['[table]'] ?? 0) + $rowCount;
+                } elseif ($this->isMatrixAnswer($answer)) {
+                    // Matrix: count as "rowId:colValue" pairs
+                    foreach ($answer as $rowId => $colValue) {
+                        $key = $rowId . ':' . $colValue;
+                        $idx['answer_counts'][$questionId][$key] = ($idx['answer_counts'][$questionId][$key] ?? 0) + 1;
+                    }
                 } elseif (is_array($answer)) {
                     // Multiple choice
                     foreach ($answer as $val) {
@@ -136,6 +142,12 @@ class IndexService
                         $rowCount = count($answer);
                         $form['_index']['answer_counts'][$questionId]['[table]'] =
                             ($form['_index']['answer_counts'][$questionId]['[table]'] ?? 0) + $rowCount;
+                    } elseif ($this->isMatrixAnswer($answer)) {
+                        foreach ($answer as $rowId => $colValue) {
+                            $key = $rowId . ':' . $colValue;
+                            $form['_index']['answer_counts'][$questionId][$key] =
+                                ($form['_index']['answer_counts'][$questionId][$key] ?? 0) + 1;
+                        }
                     } elseif (is_array($answer)) {
                         foreach ($answer as $val) {
                             $val = (string)$val;
@@ -271,6 +283,30 @@ class IndexService
         // Check that keys are strings (column IDs like "col1a2b3c4")
         foreach (array_keys($firstRow) as $key) {
             if (!is_string($key)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if an answer is a matrix answer.
+     * Matrix answers are associative arrays with string keys (row IDs) and scalar values (column values).
+     */
+    private function isMatrixAnswer($answer): bool
+    {
+        if (!is_array($answer) || empty($answer)) {
+            return false;
+        }
+
+        // Must have string keys (row IDs like "r1", "r2")
+        foreach ($answer as $key => $value) {
+            if (!is_string($key)) {
+                return false;
+            }
+            // Values must be scalar (not arrays/objects)
+            if (is_array($value)) {
                 return false;
             }
         }

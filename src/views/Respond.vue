@@ -81,25 +81,52 @@
       </div>
 
       <div id="formvox-form-content" class="questions">
-        <div
-          v-for="question in visibleQuestions"
-          :key="question.id"
-          :id="`question-${question.id}`"
-          class="question-container"
-        >
-          <QuestionRenderer
-            :question="question"
-            :value="answers[question.id]"
-            :all-answers="answers"
-            :all-questions="form.questions"
-            :tts-supported="ttsIsSupported"
-            :speaking-question-id="speakingQuestionId"
-            :validation-error-external="validationErrors[question.id] || ''"
-            @update:value="updateAnswer(question.id, $event)"
-            @update:files="updatePendingFiles(question.id, $event)"
-            @speak="handleSpeak"
-          />
-        </div>
+        <template v-for="item in displayItems" :key="item.type === 'section' ? item.section.id : item.question.id">
+          <!-- Section group -->
+          <fieldset v-if="item.type === 'section'" class="form-section">
+            <legend v-if="item.section.question" class="section-title">{{ item.section.question }}</legend>
+            <div v-if="item.section.description" class="section-description" v-html="renderMarkdown(item.section.description)" />
+            <div
+              v-for="question in item.questions"
+              :key="question.id"
+              :id="`question-${question.id}`"
+              class="question-container"
+            >
+              <QuestionRenderer
+                :question="question"
+                :value="answers[question.id]"
+                :all-answers="answers"
+                :all-questions="form.questions"
+                :tts-supported="ttsIsSupported"
+                :speaking-question-id="speakingQuestionId"
+                :validation-error-external="validationErrors[question.id] || ''"
+                @update:value="updateAnswer(question.id, $event)"
+                @update:files="updatePendingFiles(question.id, $event)"
+                @speak="handleSpeak"
+              />
+            </div>
+          </fieldset>
+
+          <!-- Standalone question -->
+          <div
+            v-else
+            :id="`question-${item.question.id}`"
+            class="question-container"
+          >
+            <QuestionRenderer
+              :question="item.question"
+              :value="answers[item.question.id]"
+              :all-answers="answers"
+              :all-questions="form.questions"
+              :tts-supported="ttsIsSupported"
+              :speaking-question-id="speakingQuestionId"
+              :validation-error-external="validationErrors[item.question.id] || ''"
+              @update:value="updateAnswer(item.question.id, $event)"
+              @update:files="updatePendingFiles(item.question.id, $event)"
+              @speak="handleSpeak"
+            />
+          </div>
+        </template>
       </div>
 
       <div class="form-actions">
@@ -159,6 +186,10 @@
 <script>
 import { ref, reactive, computed, nextTick, onBeforeUnmount } from 'vue';
 import { NcButton } from '@nextcloud/vue';
+import MarkdownIt from 'markdown-it';
+import DOMPurify from 'dompurify';
+
+const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { t } from '@/utils/l10n';
@@ -263,6 +294,7 @@ export default {
 
     // Initialize answers
     props.form.questions?.forEach(q => {
+      if (q.type === 'section') return; // Sections have no answers
       if (q.type === 'multiple') {
         answers[q.id] = [];
       } else if (q.type === 'matrix') {
@@ -384,6 +416,10 @@ export default {
       let visibleCount = 0;
       let answeredCount = 0;
       for (const question of questions) {
+        // Skip section headers (they have no answers)
+        if (question.type === 'section') continue;
+        // Skip questions in hidden sections
+        if (question.sectionId && hiddenSectionIds.value.has(question.sectionId)) continue;
         // Skip questions hidden by showIf conditions
         if (question.showIf && !evaluateCondition(question.showIf, answers)) {
           continue;
@@ -438,6 +474,17 @@ export default {
     const footerBlocks = computed(() => injectProgress(props.branding?.layout?.footer || []));
     const thankYouBlocks = computed(() => props.branding?.layout?.thankYou || []);
 
+    // Build a set of hidden section IDs (sections whose showIf evaluates to false)
+    const hiddenSectionIds = computed(() => {
+      const hidden = new Set();
+      (props.form.questions || []).forEach(q => {
+        if (q.type === 'section' && q.showIf && !evaluateCondition(q.showIf, answers)) {
+          hidden.add(q.id);
+        }
+      });
+      return hidden;
+    });
+
     // Visible questions based on current page and showIf conditions
     // Uses pageQuestionIds order (not form.questions order) to respect editor reordering
     const visibleQuestions = computed(() => {
@@ -448,11 +495,58 @@ export default {
         .map(id => questionsMap[id])
         .filter(q => {
           if (!q) return false;
+          // Skip section items themselves (they are rendered as wrappers)
+          if (q.type === 'section') return false;
+          // Hide questions in a hidden section
+          if (q.sectionId && hiddenSectionIds.value.has(q.sectionId)) return false;
+          // Individual showIf
           if (q.showIf) {
             return evaluateCondition(q.showIf, answers);
           }
           return true;
         });
+    });
+
+    const renderMarkdown = (text) => DOMPurify.sanitize(md.render(text), {
+      ADD_TAGS: ['img'],
+      ADD_ATTR: ['src', 'alt', 'target'],
+    });
+
+    // Group visible questions into display items (standalone questions and section groups)
+    const displayItems = computed(() => {
+      const items = [];
+      const questionsMap = {};
+      (props.form.questions || []).forEach(q => { questionsMap[q.id] = q; });
+      const sectionQuestions = {};
+
+      // Group questions by sectionId
+      for (const q of visibleQuestions.value) {
+        if (q.sectionId) {
+          if (!sectionQuestions[q.sectionId]) {
+            sectionQuestions[q.sectionId] = [];
+          }
+          sectionQuestions[q.sectionId].push(q);
+        }
+      }
+
+      // Build display items in order
+      const processedSections = new Set();
+      for (const q of visibleQuestions.value) {
+        if (q.sectionId) {
+          if (!processedSections.has(q.sectionId)) {
+            processedSections.add(q.sectionId);
+            const section = questionsMap[q.sectionId];
+            items.push({
+              type: 'section',
+              section: section || { id: q.sectionId, question: '', description: '' },
+              questions: sectionQuestions[q.sectionId] || [],
+            });
+          }
+        } else {
+          items.push({ type: 'question', question: q });
+        }
+      }
+      return items;
     });
 
     const evaluateCondition = (condition, answers) => {
@@ -869,6 +963,8 @@ export default {
       hasPreviousPage,
       hasNextPage,
       visibleQuestions,
+      displayItems,
+      renderMarkdown,
       headerBlocks,
       footerBlocks,
       thankYouBlocks,

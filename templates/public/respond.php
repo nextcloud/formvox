@@ -9,58 +9,27 @@ declare(strict_types=1);
 
 <style>
 /* Override Nextcloud's public template scroll restrictions */
-/* Using multiple specificity levels to override any conflicting styles */
-/* Also handles password manager extensions (LastPass, Bitwarden) that inject elements */
-html, body, #body-public, #content, #content-wrapper, .content,
-html body, html #body-public, body#body-public,
-html body#body-public, html body #content {
+html, body, #body-public, #content, #content-wrapper, .content {
     height: auto !important;
     max-height: none !important;
     min-height: 100vh !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    overflow: visible !important;
     position: static !important;
-    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: auto !important;
 }
 
-/* Ensure the main content wrapper doesn't trap scrolling */
-#body-public > *:not(#header):not(script):not(style) {
-    height: auto !important;
-}
-
-/* Reset any transform/position that could create stacking context issues */
+/* Body background and scroll */
 #body-public {
     background: var(--formvox-page-bg);
     transform: none !important;
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
 }
 
 /* Fix for Nextcloud 28+ public page layout */
 .public-layout, .public-layout__main, .public-layout__content {
     height: auto !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-}
-
-/* Password manager extension fixes (LastPass, Bitwarden, 1Password, etc.) */
-/* These extensions inject elements that can break scroll behavior */
-[data-lastpass-root],
-[data-lastpass-icon-root],
-com-1password-button,
-[data-bitwarden-watching] {
-    position: absolute !important;
-    z-index: 999999 !important;
-}
-
-/* Prevent extension overlays from capturing scroll events */
-#body-public [style*="position: fixed"],
-#body-public [style*="position:fixed"] {
-    pointer-events: none;
-}
-#body-public [style*="position: fixed"] input,
-#body-public [style*="position: fixed"] button,
-#body-public [style*="position:fixed"] input,
-#body-public [style*="position:fixed"] button {
-    pointer-events: auto;
+    overflow: visible !important;
 }
 </style>
 

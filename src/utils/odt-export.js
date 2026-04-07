@@ -1,5 +1,7 @@
 import { OdtDocument, fillTemplate } from 'odf-kit';
 import { zipSync } from 'fflate';
+import axios from '@nextcloud/axios';
+import { generateUrl } from '@nextcloud/router';
 
 /**
  * Format an answer value for ODT display.
@@ -58,9 +60,29 @@ function formatAnswerForOdt(answer, question) {
 }
 
 /**
- * Generate an ODT document for a single form response.
+ * Check if a filename has an image extension.
  */
-export async function generateResponseOdt(form, response) {
+function isImageFile(filename) {
+	const ext = (filename || '').split('.').pop().toLowerCase();
+	return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext);
+}
+
+/**
+ * Get MIME type from filename extension.
+ */
+function getMimeType(filename) {
+	const ext = (filename || '').split('.').pop().toLowerCase();
+	const types = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp' };
+	return types[ext] || 'image/png';
+}
+
+/**
+ * Generate an ODT document for a single form response.
+ * @param {Object} form - The form definition
+ * @param {Object} response - The response data
+ * @param {number} [fileId] - Optional file ID for fetching uploaded images
+ */
+export async function generateResponseOdt(form, response, fileId) {
 	const doc = new OdtDocument();
 
 	doc.setMetadata({
@@ -98,6 +120,31 @@ export async function generateResponseOdt(form, response) {
 		doc.addParagraph((p) => {
 			p.addText(displayValue, { color: '#444444' });
 		});
+
+		// Embed uploaded images if fileId is available
+		if (fileId && question.type === 'file' && answer) {
+			const files = Array.isArray(answer) ? (answer[0]?.filename ? answer : []) : (answer?.filename ? [answer] : []);
+			for (const file of files) {
+				if (isImageFile(file.filename || file.originalName)) {
+					try {
+						const url = generateUrl('/apps/formvox/api/form/{fileId}/uploads/{responseId}/{filename}', {
+							fileId,
+							responseId: file.responseId,
+							filename: file.filename,
+						});
+						const imgResponse = await axios.get(url, { responseType: 'arraybuffer' });
+						const imgBytes = new Uint8Array(imgResponse.data);
+						doc.addImage(imgBytes, {
+							width: '12cm',
+							height: '8cm',
+							mimeType: getMimeType(file.filename),
+						});
+					} catch (e) {
+						// Image fetch failed, skip embedding
+					}
+				}
+			}
+		}
 	}
 
 	return doc.save();
@@ -158,12 +205,12 @@ export async function generateAllFromTemplateZip(templateBytes, form, responses)
 /**
  * Generate ODT files for all responses and bundle them in a ZIP.
  */
-export async function generateAllResponsesZip(form, responses) {
+export async function generateAllResponsesZip(form, responses, fileId) {
 	const files = {};
 	const safeName = (form.title || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');
 
 	for (const response of responses) {
-		const bytes = await generateResponseOdt(form, response);
+		const bytes = await generateResponseOdt(form, response, fileId);
 		const date = new Date(response.submitted_at).toISOString().split('T')[0];
 		const filename = `${safeName}_${date}_${response.id.substring(0, 8)}.odt`;
 		files[filename] = bytes;

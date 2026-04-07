@@ -655,7 +655,7 @@ export default {
           const templateBytes = await fetchTemplateBytes();
           zipBytes = await generateAllFromTemplateZip(templateBytes, props.form, responses.value);
         } else {
-          zipBytes = await generateAllResponsesZip(props.form, responses.value);
+          zipBytes = await generateAllResponsesZip(props.form, responses.value, props.fileId);
         }
         downloadFile(zipBytes, `${safeName}_responses.zip`, 'application/zip');
       } catch (error) {
@@ -671,7 +671,7 @@ export default {
           const templateBytes = await fetchTemplateBytes();
           bytes = generateFromTemplate(templateBytes, props.form, response);
         } else {
-          bytes = await generateResponseOdt(props.form, response);
+          bytes = await generateResponseOdt(props.form, response, props.fileId);
         }
         const date = new Date(response.submitted_at).toISOString().split('T')[0];
         const safeName = (props.form.title || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');

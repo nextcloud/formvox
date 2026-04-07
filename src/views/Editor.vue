@@ -69,21 +69,26 @@
             </NcButton>
 
             <NcButton
-              v-if="hasPages"
               type="secondary"
               :disabled="!canEdit"
-              @click="addPage"
+              @click="addSection"
             >
               <template #icon>
-                <PagesIcon :size="20" />
+                <SectionIcon :size="20" />
               </template>
-              {{ t('Add page') }}
+              {{ t('Add section') }}
             </NcButton>
+
           </div>
 
           <!-- Right: View & Share actions -->
           <div class="toolbar-section toolbar-section--end">
-            <NcButton type="secondary" @click="showPreview = !showPreview">
+            <NcButton
+              type="secondary"
+              :title="showPreview ? t('Edit') : t('Preview')"
+              :aria-label="showPreview ? t('Edit') : t('Preview')"
+              @click="showPreview = !showPreview"
+            >
               <template #icon>
                 <EyeIcon :size="20" />
               </template>
@@ -93,6 +98,8 @@
             <NcButton
               type="secondary"
               :disabled="!canShare"
+              :title="t('Share')"
+              :aria-label="t('Share')"
               @click="showShare = true"
             >
               <template #icon>
@@ -104,6 +111,8 @@
             <NcButton
               v-if="canViewResponses"
               type="primary"
+              :title="t('Results')"
+              :aria-label="t('Results')"
               @click="viewResults"
             >
               <template #icon>
@@ -113,12 +122,20 @@
             </NcButton>
 
             <NcActions>
-              <NcActionButton :disabled="!canEdit" @click="togglePages">
+              <NcActionButton v-if="hasPages" :disabled="!canEdit" @click="addPage">
                 <template #icon>
                   <PagesIcon :size="20" />
                 </template>
+                {{ t('Add page') }}
+              </NcActionButton>
+              <NcActionButton :disabled="!canEdit" @click="togglePages">
+                <template #icon>
+                  <PagesOffIcon v-if="hasPages" :size="20" />
+                  <PagesOnIcon v-else :size="20" />
+                </template>
                 {{ hasPages ? t('Disable pages') : t('Enable pages') }}
               </NcActionButton>
+              <NcActionSeparator />
               <NcActionButton :disabled="!canEditSettings" @click="showBranding = true">
                 <template #icon>
                   <PaletteIcon :size="20" />
@@ -218,18 +235,21 @@
               item-key="id"
               handle=".drag-handle"
               :disabled="!canEdit"
-              @end="debouncedSave"
+              @end="onDragEnd"
             >
               <template #item="{ element, index }">
-                <QuestionEditor
-                  :question="element"
-                  :index="index"
-                  :questions="form.questions"
-                  :readonly="!canEdit"
-                  @update="updateQuestion(index, $event)"
-                  @delete="deleteQuestion(index)"
-                  @duplicate="duplicateQuestion(index)"
-                />
+                <div :class="{ 'section-header-wrapper': element.type === 'section', 'in-section-wrapper': element.sectionId && element.type !== 'section' }">
+                  <QuestionEditor
+                    :question="element"
+                    :index="index"
+                    :questions="form.questions"
+                    :readonly="!canEdit"
+                    @update="updateQuestion(index, $event)"
+                    @delete="element.type === 'section' ? deleteSectionById(element.id) : deleteQuestion(index)"
+                    @duplicate="duplicateQuestion(index)"
+                    @move-to-section="moveQuestionToSection(index, $event)"
+                  />
+                </div>
               </template>
             </draggable>
 
@@ -287,6 +307,7 @@ import {
   NcButton,
   NcActions,
   NcActionButton,
+  NcActionSeparator,
   NcTextField,
   NcTextArea,
   NcAvatar,
@@ -309,6 +330,9 @@ import ShareIcon from '../components/icons/ShareIcon.vue';
 import ChartIcon from '../components/icons/ChartIcon.vue';
 import PagesIcon from '../components/icons/PagesIcon.vue';
 import PaletteIcon from '../components/icons/PaletteIcon.vue';
+import SectionIcon from 'vue-material-design-icons/CardText.vue';
+import PagesOnIcon from 'vue-material-design-icons/Grid.vue';
+import PagesOffIcon from 'vue-material-design-icons/GridOff.vue';
 import ArrowLeftIcon from '../components/icons/ArrowLeftIcon.vue';
 import RouteIcon from 'vue-material-design-icons/DirectionsFork.vue';
 
@@ -320,6 +344,7 @@ export default {
     NcButton,
     NcActions,
     NcActionButton,
+    NcActionSeparator,
     NcTextField,
     NcTextArea,
     draggable,
@@ -335,9 +360,12 @@ export default {
     ShareIcon,
     ChartIcon,
     PagesIcon,
+    PagesOnIcon,
+    PagesOffIcon,
     PaletteIcon,
     ArrowLeftIcon,
     RouteIcon,
+    SectionIcon,
   },
   props: {
     fileId: {
@@ -469,6 +497,154 @@ export default {
         clearTimeout(saveTimeout);
       }
       saveTimeout = setTimeout(save, 500);
+    };
+
+    // Group questions into display items for the editor
+    const editorDisplayItems = computed(() => {
+      const items = [];
+      const sectionChildren = {};
+
+      // Collect children per section
+      for (const q of form.questions) {
+        if (q.sectionId) {
+          if (!sectionChildren[q.sectionId]) sectionChildren[q.sectionId] = [];
+          sectionChildren[q.sectionId].push(q);
+        }
+      }
+
+      // Build display items in order (top-level only)
+      for (const q of form.questions) {
+        if (q.sectionId) continue; // Skip, will be rendered inside section
+        if (q.type === 'section') {
+          items.push({
+            type: 'section-group',
+            id: 'sg-' + q.id,
+            section: q,
+            questions: sectionChildren[q.id] || [],
+          });
+        } else {
+          items.push({ type: 'question', id: q.id, question: q });
+        }
+      }
+      return items;
+    });
+
+    const onDragEnd = (evt) => {
+      const newIndex = evt.newIndex;
+      if (newIndex === undefined) {
+        debouncedSave();
+        return;
+      }
+
+      const movedItem = form.questions[newIndex];
+      if (!movedItem) {
+        debouncedSave();
+        return;
+      }
+
+      // If a section was moved, bring its children along
+      if (movedItem.type === 'section') {
+        const sectionId = movedItem.id;
+        // Collect all children (they may now be scattered)
+        const children = form.questions.filter(q => q.sectionId === sectionId && q.id !== sectionId);
+        // Remove children from current positions
+        for (const child of children) {
+          const idx = form.questions.indexOf(child);
+          if (idx !== -1) form.questions.splice(idx, 1);
+        }
+        // Re-insert children right after the section header
+        const sectionPos = form.questions.indexOf(movedItem);
+        form.questions.splice(sectionPos + 1, 0, ...children);
+        debouncedSave();
+        return;
+      }
+
+      // For regular questions: auto-assign sectionId based on position
+      let sectionId = null;
+      for (let i = newIndex - 1; i >= 0; i--) {
+        const above = form.questions[i];
+        if (above.type === 'section') {
+          sectionId = above.id;
+          break;
+        }
+        if (above.sectionId) {
+          sectionId = above.sectionId;
+          break;
+        }
+        // Hit a standalone question — not in any section
+        break;
+      }
+
+      if (sectionId) {
+        const sectionIndex = form.questions.findIndex(q => q.id === sectionId);
+        if (sectionIndex < newIndex) {
+          movedItem.sectionId = sectionId;
+        } else {
+          delete movedItem.sectionId;
+        }
+      } else {
+        delete movedItem.sectionId;
+      }
+
+      debouncedSave();
+    };
+
+    const moveQuestionToSection = (currentIndex, sectionId) => {
+      // Remove the question from its current position
+      const [question] = form.questions.splice(currentIndex, 1);
+
+      // Set the sectionId
+      question.sectionId = sectionId;
+
+      // Find the last question in this section, or the section header itself
+      let insertAfter = form.questions.findIndex(q => q.id === sectionId);
+      for (let i = insertAfter + 1; i < form.questions.length; i++) {
+        if (form.questions[i].sectionId === sectionId) {
+          insertAfter = i;
+        } else {
+          break;
+        }
+      }
+
+      // Insert after the last section member
+      form.questions.splice(insertAfter + 1, 0, question);
+      debouncedSave();
+    };
+
+    const deleteSectionById = (sectionId) => {
+      // Remove section and unlink its questions
+      form.questions.forEach(q => {
+        if (q.sectionId === sectionId) {
+          delete q.sectionId;
+        }
+      });
+      const index = form.questions.findIndex(q => q.id === sectionId);
+      if (index !== -1) {
+        form.questions.splice(index, 1);
+      }
+      if (hasPages.value) {
+        form.pages.forEach(page => {
+          page.questions = page.questions.filter(qId => qId !== sectionId);
+        });
+      }
+      debouncedSave();
+    };
+
+    const addSection = () => {
+      const newSection = {
+        id: `s${uuidv4().split('-')[0]}`,
+        type: 'section',
+        question: '',
+        description: '',
+        required: false,
+        options: [],
+        showIf: null,
+      };
+      form.questions.push(newSection);
+      if (hasPages.value && form.pages[currentPageIndex.value]) {
+        form.pages[currentPageIndex.value].questions.push(newSection.id);
+      }
+      debouncedSave();
     };
 
     const addQuestion = () => {
@@ -721,6 +897,11 @@ export default {
       canViewResponses,
       canShare,
       debouncedSave,
+      addSection,
+      editorDisplayItems,
+      onDragEnd,
+      moveQuestionToSection,
+      deleteSectionById,
       addQuestion,
       updateQuestion,
       deleteQuestion,
@@ -922,6 +1103,46 @@ export default {
 
 .questions-container {
   min-height: 200px;
+}
+
+.section-header-wrapper,
+.in-section-wrapper {
+  background: var(--color-primary-element-light, rgba(0, 96, 223, 0.06));
+  border-left: 2px solid var(--color-primary-element);
+  border-right: 2px solid var(--color-primary-element);
+  padding: 8px 16px;
+  margin-bottom: 0;
+
+  .question-editor {
+    margin-bottom: 0;
+  }
+}
+
+.section-header-wrapper {
+  border-top: 2px solid var(--color-primary-element);
+  border-top-left-radius: var(--border-radius-large);
+  border-top-right-radius: var(--border-radius-large);
+  padding-top: 12px;
+}
+
+/* Last in-section item gets bottom border/radius */
+.in-section-wrapper:has(+ :not(.in-section-wrapper)),
+.in-section-wrapper:last-child {
+  border-bottom: 2px solid var(--color-primary-element);
+  border-bottom-left-radius: var(--border-radius-large);
+  border-bottom-right-radius: var(--border-radius-large);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+/* Section header without children */
+.section-header-wrapper:has(+ :not(.in-section-wrapper)),
+.section-header-wrapper:last-child {
+  border-bottom: 2px solid var(--color-primary-element);
+  border-bottom-left-radius: var(--border-radius-large);
+  border-bottom-right-radius: var(--border-radius-large);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .empty-questions {

@@ -2,6 +2,26 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [0.4.0] - 2026-04-07
+
+### Added
+- **Sections / fieldsets** — Group questions into collapsible sections with an optional title, description, and conditional display (`showIf`). Entire sections can be shown or hidden based on answers ([#38](https://github.com/nextcloud/formvox/issues/38))
+- **Markdown in section descriptions** — Section descriptions support Markdown including images (`![](url)`)
+- **Drag & drop into sections** — Drag questions into a section; `sectionId` is auto-assigned based on position
+- **"Move to section" menu item** — Assign a question to a section via the `...` menu
+- **Specify notification recipients** — Form owners can now select which users or groups receive a Nextcloud notification when a response is submitted ([#46](https://github.com/nextcloud/formvox/issues/46))
+
+### Fixed
+- **Form not submitted for logged-in users** — Forms with login requirement now correctly save responses without requiring edit-level share permissions ([#43](https://github.com/nextcloud/formvox/issues/43))
+- **Scroll broken on public form** — Added `overscroll-behavior: auto` to override Nextcloud's layout scroll capture, restoring mouse wheel scroll on Windows/Chrome/Edge ([#44](https://github.com/nextcloud/formvox/issues/44))
+- **CSV export shows option IDs instead of labels** — CSV export now outputs human-readable option names instead of internal IDs ([#41](https://github.com/nextcloud/formvox/issues/41))
+- **Images embedded in ODT exports** — Uploaded image files are now embedded directly in the ODT document ([#45](https://github.com/nextcloud/formvox/issues/45))
+
+### Changed
+- **Toolbar layout** — Editor toolbar splits into left (content actions) and right (view/share actions); labels hide when space is tight
+- **"Add page" moved to `...` menu** — Keeps the toolbar compact when pages are enabled
+- **odf-kit updated to v0.9.4** — Picks up latest fixes from upstream
+
 ## [0.3.9] - 2026-03-26
 
 ### Added

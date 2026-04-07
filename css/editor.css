@@ -31,12 +31,17 @@
 }
 
 /* Toolbar */
-.editor-toolbar {
+.toolbar-section {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  gap: 8px;
+}
+
+/* Hide button labels when toolbar is narrow (many buttons visible) */
+@media (max-width: 1100px) {
+  .editor-toolbar .button-vue__text {
+    display: none;
+  }
 }
 
 /* Question editor */

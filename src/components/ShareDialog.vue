@@ -74,12 +74,49 @@
             {{ t('Require login to respond') }}
           </NcCheckboxRadioSwitch>
 
-          <NcCheckboxRadioSwitch
-            :model-value="responseSettings.notifyOwner"
-            @update:model-value="updateResponseSetting('notify_owner', $event)"
-          >
-            {{ t('Notify me on new responses') }}
-          </NcCheckboxRadioSwitch>
+          <div class="notify-recipients">
+            <span class="section-label">{{ t('Notify on new responses') }}</span>
+            <div class="chips">
+              <div
+                v-for="r in notifyRecipients"
+                :key="r.type + '-' + r.id"
+                class="chip"
+              >
+                <AccountIcon v-if="r.type === 'user'" :size="14" />
+                <AccountGroupIcon v-else :size="14" />
+                <span>{{ r.displayName || r.id }}</span>
+                <button type="button" class="remove-btn" @click="removeNotifyRecipient(r)">×</button>
+              </div>
+            </div>
+            <div class="search-field">
+              <NcTextField
+                v-model="notifySearchTerm"
+                :label="t('Search users and groups')"
+                :placeholder="t('Type to search...')"
+                @input="searchNotifySharees"
+              />
+            </div>
+            <div v-if="notifySearchResults.users.length || notifySearchResults.groups.length" class="search-results">
+              <div
+                v-for="user in notifySearchResults.users"
+                :key="'notify-user-' + user.id"
+                class="result-item"
+                @click="addNotifyRecipient({ type: 'user', id: user.id, displayName: user.displayName })"
+              >
+                <AccountIcon :size="16" />
+                <span>{{ user.displayName }}</span>
+              </div>
+              <div
+                v-for="group in notifySearchResults.groups"
+                :key="'notify-group-' + group.id"
+                class="result-item"
+                @click="addNotifyRecipient({ type: 'group', id: group.id, displayName: group.displayName })"
+              >
+                <AccountGroupIcon :size="16" />
+                <span>{{ group.displayName }}</span>
+              </div>
+            </div>
+          </div>
 
           <NcCheckboxRadioSwitch
             :model-value="responseSettings.limitResponses"
@@ -410,12 +447,31 @@ export default {
     });
     const embedCopied = ref(false);
 
+    // Notify recipients state
+    const notifySearchTerm = ref('');
+    const notifySearchResults = reactive({ users: [], groups: [] });
+    const currentUserId = window.OC?.currentUser || '';
+    const currentUserDisplayName = window.OC?.getCurrentUser?.()?.displayName || currentUserId;
+
+    // Build initial recipients list: include owner if notify_owner is enabled
+    const initialRecipients = (props.form.settings?.notify_recipients || []).map(r => ({
+      type: r.type,
+      id: r.id,
+      displayName: r.displayName || r.id,
+    }));
+    // Add current user (owner) if notify_owner is true and not already in the list
+    if ((props.form.settings?.notify_owner ?? true) !== false && currentUserId) {
+      if (!initialRecipients.find(r => r.type === 'user' && r.id === currentUserId)) {
+        initialRecipients.unshift({ type: 'user', id: currentUserId, displayName: currentUserDisplayName + ' (' + t('you') + ')' });
+      }
+    }
+    const notifyRecipients = reactive(initialRecipients);
+
     // Response settings state
     const responseSettings = reactive({
       allowAnonymous: props.form.settings?.anonymous ?? true,
       allowMultiple: props.form.settings?.allow_multiple ?? false,
       requireLogin: props.form.settings?.require_login ?? false,
-      notifyOwner: props.form.settings?.notify_owner ?? true,
       limitResponses: props.form.settings?.max_responses > 0,
       maxResponses: props.form.settings?.max_responses || 100,
       limitMessage: props.form.settings?.limit_message || '',
@@ -782,6 +838,73 @@ export default {
       }
     };
 
+    // Notify recipients methods
+    let notifySearchTimeout = null;
+    const searchNotifySharees = () => {
+      if (notifySearchTimeout) clearTimeout(notifySearchTimeout);
+      notifySearchTimeout = setTimeout(async () => {
+        const term = notifySearchTerm.value;
+        if (!term || term.length < 2) {
+          notifySearchResults.users = [];
+          notifySearchResults.groups = [];
+          return;
+        }
+        try {
+          const response = await axios.get(
+            generateUrl('/apps/formvox/api/sharees'),
+            { params: { search: term, limit: 10 } }
+          );
+          notifySearchResults.users = response.data.users || [];
+          notifySearchResults.groups = response.data.groups || [];
+        } catch (error) {
+          console.error('Search failed:', error);
+        }
+      }, 300);
+    };
+
+    const addNotifyRecipient = (recipient) => {
+      if (!notifyRecipients.find(r => r.type === recipient.type && r.id === recipient.id)) {
+        notifyRecipients.push(recipient);
+        saveNotifyRecipients();
+      }
+      notifySearchTerm.value = '';
+      notifySearchResults.users = [];
+      notifySearchResults.groups = [];
+    };
+
+    const removeNotifyRecipient = (recipient) => {
+      const idx = notifyRecipients.findIndex(r => r.type === recipient.type && r.id === recipient.id);
+      if (idx !== -1) {
+        notifyRecipients.splice(idx, 1);
+        saveNotifyRecipients();
+      }
+    };
+
+    const saveNotifyRecipients = async () => {
+      try {
+        // Filter out the owner from the stored recipients (owner is tracked via notify_owner)
+        const otherRecipients = notifyRecipients
+          .filter(r => !(r.type === 'user' && r.id === currentUserId))
+          .map(r => ({ type: r.type, id: r.id, displayName: r.displayName }));
+        const ownerInList = notifyRecipients.some(r => r.type === 'user' && r.id === currentUserId);
+
+        const settings = {
+          ...props.form.settings,
+          notify_owner: ownerInList,
+          notify_recipients: otherRecipients,
+        };
+        await axios.put(
+          generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
+          { settings }
+        );
+        props.form.settings.notify_owner = ownerInList;
+        props.form.settings.notify_recipients = otherRecipients;
+      } catch (error) {
+        showError(t('Failed to save notification recipients'));
+        console.error(error);
+      }
+    };
+
     const loadAccessRestrictions = () => {
       const users = props.form.settings?.allowed_users || [];
       const groups = props.form.settings?.allowed_groups || [];
@@ -796,7 +919,6 @@ export default {
         anonymous: 'allowAnonymous',
         allow_multiple: 'allowMultiple',
         require_login: 'requireLogin',
-        notify_owner: 'notifyOwner',
       };
       if (keyMap[key]) {
         responseSettings[keyMap[key]] = value;
@@ -888,6 +1010,12 @@ export default {
       updateResponseSetting,
       toggleResponseLimit,
       saveResponseLimit,
+      notifySearchTerm,
+      notifySearchResults,
+      notifyRecipients,
+      searchNotifySharees,
+      addNotifyRecipient,
+      removeNotifyRecipient,
       t,
     };
   },
@@ -1277,6 +1405,78 @@ export default {
       &:hover {
         color: var(--color-error);
       }
+    }
+  }
+}
+
+.notify-recipients {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding: 12px;
+  background: var(--color-background-dark);
+  border-radius: var(--border-radius);
+
+  .section-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--color-text-maxcontrast);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--color-primary-element-light);
+    border-radius: var(--border-radius-pill);
+    font-size: 13px;
+
+    .remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      margin-left: 2px;
+      color: var(--color-text-maxcontrast);
+
+      &:hover {
+        color: var(--color-error);
+      }
+    }
+  }
+
+  .search-field {
+    margin-bottom: 8px;
+  }
+
+  .search-results {
+    background: var(--color-main-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .result-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-background-hover);
     }
   }
 }

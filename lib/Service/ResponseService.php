@@ -6,6 +6,7 @@ namespace OCA\FormVox\Service;
 
 use OCP\IRequest;
 use OCP\Notification\IManager as INotificationManager;
+use OCP\IGroupManager;
 use OCA\FormVox\AppInfo\Application;
 
 class ResponseService
@@ -14,17 +15,20 @@ class ResponseService
     private IndexService $indexService;
     private WebhookService $webhookService;
     private INotificationManager $notificationManager;
+    private IGroupManager $groupManager;
 
     public function __construct(
         FormService $formService,
         IndexService $indexService,
         WebhookService $webhookService,
-        INotificationManager $notificationManager
+        INotificationManager $notificationManager,
+        IGroupManager $groupManager
     ) {
         $this->formService = $formService;
         $this->indexService = $indexService;
         $this->webhookService = $webhookService;
         $this->notificationManager = $notificationManager;
+        $this->groupManager = $groupManager;
     }
 
     /**
@@ -122,8 +126,8 @@ class ResponseService
             $response['score'] = $this->calculateScore($form, $answers);
         }
 
-        // Append response
-        $result = $this->formService->appendResponse($fileId, $response);
+        // Append response (use public method so respondent doesn't need file permissions)
+        $result = $this->formService->appendResponsePublic($fileId, $response);
 
         // Trigger webhook
         $this->webhookService->trigger($form, 'response.created', $response);
@@ -140,41 +144,59 @@ class ResponseService
     private function notifyFormOwner(int $fileId, array $form, array $response): void
     {
         try {
-            // Determine form owner
-            $file = $this->formService->getFileByIdPublic($fileId);
-            $owner = $file->getOwner();
-            if ($owner === null) {
-                return;
-            }
-            $ownerId = $owner->getUID();
-
-            // Don't notify if the respondent is the owner
-            if (($response['respondent']['type'] ?? '') === 'user'
-                && ($response['respondent']['user_id'] ?? '') === $ownerId) {
-                return;
-            }
-
-            // Check if notifications are enabled for this form
-            if (($form['settings']['notify_owner'] ?? true) === false) {
-                return;
-            }
+            $respondentId = ($response['respondent']['type'] ?? '') === 'user'
+                ? ($response['respondent']['user_id'] ?? '')
+                : '';
 
             $respondentName = ($response['respondent']['type'] ?? '') === 'user'
                 ? ($response['respondent']['display_name'] ?? 'Unknown')
                 : 'Anonymous';
 
-            $notification = $this->notificationManager->createNotification();
-            $notification->setApp(Application::APP_ID)
-                ->setUser($ownerId)
-                ->setDateTime(new \DateTime())
-                ->setObject('response', $response['id'])
-                ->setSubject('response_submitted', [
-                    'formTitle' => $form['title'] ?? 'Untitled',
-                    'respondentName' => $respondentName,
-                    'fileId' => $fileId,
-                ]);
+            // Collect all user IDs to notify
+            $recipientIds = [];
 
-            $this->notificationManager->notify($notification);
+            // 1. Form owner (if notify_owner is enabled)
+            if (($form['settings']['notify_owner'] ?? true) !== false) {
+                $file = $this->formService->getFileByIdPublic($fileId);
+                $owner = $file->getOwner();
+                if ($owner !== null) {
+                    $recipientIds[] = $owner->getUID();
+                }
+            }
+
+            // 2. Additional recipients from settings
+            foreach ($form['settings']['notify_recipients'] ?? [] as $recipient) {
+                if (($recipient['type'] ?? '') === 'user') {
+                    $recipientIds[] = $recipient['id'];
+                } elseif (($recipient['type'] ?? '') === 'group') {
+                    $group = $this->groupManager->get($recipient['id']);
+                    if ($group !== null) {
+                        foreach ($group->getUsers() as $user) {
+                            $recipientIds[] = $user->getUID();
+                        }
+                    }
+                }
+            }
+
+            // Deduplicate and exclude the respondent
+            $recipientIds = array_unique($recipientIds);
+            $recipientIds = array_filter($recipientIds, fn($id) => $id !== $respondentId);
+
+            // Send notifications
+            foreach ($recipientIds as $userId) {
+                $notification = $this->notificationManager->createNotification();
+                $notification->setApp(Application::APP_ID)
+                    ->setUser($userId)
+                    ->setDateTime(new \DateTime())
+                    ->setObject('response', $response['id'])
+                    ->setSubject('response_submitted', [
+                        'formTitle' => $form['title'] ?? 'Untitled',
+                        'respondentName' => $respondentName,
+                        'fileId' => $fileId,
+                    ]);
+
+                $this->notificationManager->notify($notification);
+            }
         } catch (\Exception $e) {
             // Don't let notification failures break form submission
         }
@@ -279,12 +301,51 @@ class ResponseService
 
             foreach ($form['questions'] ?? [] as $question) {
                 $answer = $response['answers'][$question['id']] ?? '';
-                if (is_array($answer)) {
-                    // Table or file answers: serialize as JSON
-                    if (!empty($answer) && is_array(reset($answer))) {
-                        $answer = json_encode($answer, JSON_UNESCAPED_UNICODE);
-                    } else {
-                        $answer = implode(', ', $answer);
+
+                // Matrix questions: format as "Row: Column" pairs
+                if (($question['type'] ?? '') === 'matrix' && is_array($answer)) {
+                    $rows = $question['rows'] ?? [];
+                    $columns = $question['columns'] ?? [];
+                    $rowMap = [];
+                    foreach ($rows as $r) {
+                        $rowMap[$r['id']] = $r['label'] ?? $r['id'];
+                    }
+                    $colMap = [];
+                    foreach ($columns as $c) {
+                        $colMap[$c['value'] ?? $c['id']] = $c['label'] ?? $c['value'] ?? '';
+                    }
+                    $parts = [];
+                    foreach ($answer as $rowId => $colValue) {
+                        $rowLabel = $rowMap[$rowId] ?? $rowId;
+                        $colLabel = $colMap[$colValue] ?? $colValue;
+                        $parts[] = $rowLabel . ': ' . $colLabel;
+                    }
+                    $answer = implode(', ', $parts);
+                } else {
+                    // Map option values to labels for choice/multiple/dropdown questions
+                    $options = $question['options'] ?? [];
+                    if (!empty($options)) {
+                        $optionMap = [];
+                        foreach ($options as $opt) {
+                            $optionMap[$opt['value'] ?? $opt['id']] = $opt['label'] ?? $opt['value'] ?? '';
+                        }
+
+                        if (is_array($answer)) {
+                            $answer = array_map(function ($val) use ($optionMap) {
+                                return $optionMap[$val] ?? $val;
+                            }, $answer);
+                        } elseif (is_string($answer) && isset($optionMap[$answer])) {
+                            $answer = $optionMap[$answer];
+                        }
+                    }
+
+                    if (is_array($answer)) {
+                        // Table or file answers: serialize as JSON
+                        if (!empty($answer) && is_array(reset($answer))) {
+                            $answer = json_encode($answer, JSON_UNESCAPED_UNICODE);
+                        } else {
+                            $answer = implode(', ', $answer);
+                        }
                     }
                 }
                 $row[] = $answer;
