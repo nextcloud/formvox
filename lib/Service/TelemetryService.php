@@ -139,6 +139,8 @@ class TelemetryService
                 'totalUsers' => $stats['totalUsers'],
                 'activeUsers30d' => $stats['activeUsers30d'],
             ],
+            'organizationName' => $this->config->getAppValue(Application::APP_ID, 'organization_name', ''),
+            'contactEmail' => $this->config->getAppValue(Application::APP_ID, 'contact_email', ''),
         ];
     }
 

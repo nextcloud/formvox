@@ -35,7 +35,7 @@
 * Expense declarations
 * Data collection with privacy requirements
     ]]></description>
-    <version>0.4.0</version>
+    <version>1.0.0</version>
     <licence>agpl</licence>
     <author mail="info@voxcloud.nl">Sam Ditmeijer</author>
     <author mail="info@voxcloud.nl">Rik Dekker</author>
@@ -78,6 +78,7 @@
 
     <background-jobs>
         <job>OCA\FormVox\BackgroundJob\TelemetryJob</job>
+        <job>OCA\FormVox\BackgroundJob\LicenseUsageJob</job>
     </background-jobs>
 
     <repair-steps>

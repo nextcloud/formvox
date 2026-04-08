@@ -2,6 +2,21 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.0.0] - 2026-04-07
+
+### Added
+- **Support tab in admin settings** — New "Support" tab in the FormVox admin panel with subscription pricing, installation statistics, organization contact fields, and license key management
+- **License key management** — Admins can enter and activate a `FVOX-` subscription key, which is validated against the VoxCloud license server. The key is displayed masked and can be removed at any time
+- **Installation statistics in Support tab** — Shows total forms, total responses, and total users directly in the admin panel
+- **License banner** — An info banner appears at the top of the admin panel when the installation exceeds the free tier limits (25 forms or 50 users) and no valid subscription key is configured. A warning banner is shown when a subscription key is invalid or expired
+- **Organization contact fields** — Admins can optionally save an organization name and contact email to be associated with their subscription
+- **Background license sync** — A daily background job validates the license and reports usage to the VoxCloud license server, with per-instance jitter to spread server load
+- **Telemetry section moved to Support tab** — The anonymous usage statistics section has been moved from the Statistics tab to the Support tab for better discoverability
+- **Full translations (EN, NL, DE, FR)** — All Support tab strings are fully translated in all four supported languages
+
+### Changed
+- **Statistics tab simplified** — The "About FormVox" blurb and anonymous usage statistics section have been moved to the Support tab, keeping the Statistics tab focused on form and response counts
+
 ## [0.4.0] - 2026-04-07
 
 ### Added

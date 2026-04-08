@@ -75,8 +75,16 @@ return [
         ['name' => 'statistics#sendTelemetry', 'url' => '/api/statistics/telemetry/send', 'verb' => 'POST'],
 
         // Settings routes (admin only)
+        ['name' => 'settings#get', 'url' => '/api/settings', 'verb' => 'GET'],
+        ['name' => 'settings#saveContact', 'url' => '/api/settings', 'verb' => 'POST'],
         ['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
         ['name' => 'settings#saveMsForms', 'url' => '/api/settings/ms-forms', 'verb' => 'POST'],
+
+        // License routes (admin only)
+        ['name' => 'license#getStats', 'url' => '/api/license/stats', 'verb' => 'GET'],
+        ['name' => 'license#saveSettings', 'url' => '/api/settings/license', 'verb' => 'POST'],
+        ['name' => 'license#validate', 'url' => '/api/license/validate', 'verb' => 'POST'],
+        ['name' => 'license#updateUsage', 'url' => '/api/license/update-usage', 'verb' => 'POST'],
 
         // API key management (authenticated users)
         ['name' => 'integration#createApiKey', 'url' => '/api/form/{fileId}/api-keys', 'verb' => 'POST'],

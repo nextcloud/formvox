@@ -1,5 +1,15 @@
 <template>
   <div class="formvox-admin-settings">
+    <!-- License Banner -->
+    <NcNoteCard v-if="licenseBanner"
+      :type="licenseBanner.type"
+      class="license-banner">
+      {{ licenseBanner.message }}
+      <NcButton type="tertiary" @click="activeTab = 'support'">
+        {{ t('formvox', 'View subscription options') }}
+      </NcButton>
+    </NcNoteCard>
+
     <!-- Tab Navigation -->
     <div class="tab-navigation">
       <button
@@ -25,6 +35,12 @@
         @click="activeTab = 'integrations'">
         <MicrosoftIcon :size="16" />
         {{ t('formvox', 'Integrations') }}
+      </button>
+      <button
+        :class="['tab-button', { active: activeTab === 'support' }]"
+        @click="activeTab = 'support'">
+        <HeartIcon :size="16" />
+        {{ t('formvox', 'Support') }}
       </button>
     </div>
 
@@ -70,60 +86,6 @@
           </div>
         </div>
 
-        <!-- About FormVox -->
-        <div class="future-licensing-info">
-          <h4>{{ t('formvox', 'About FormVox') }}</h4>
-          <p>{{ t('formvox', 'FormVox is open source form software for Nextcloud. We aim to keep FormVox free and accessible for everyone.') }}</p>
-          <p>{{ t('formvox', 'Anonymous usage statistics help us understand how FormVox is used and guide future development.') }}</p>
-        </div>
-      </div>
-
-      <!-- Telemetry Section -->
-      <div class="settings-section">
-        <h2>{{ t('formvox', 'Anonymous Usage Statistics') }}</h2>
-        <p class="settings-section-desc">
-          {{ t('formvox', 'Help improve FormVox by sharing anonymous usage statistics.') }}
-        </p>
-
-        <div class="telemetry-settings">
-          <div class="engagement-option">
-            <NcCheckboxRadioSwitch
-              type="switch"
-              :model-value="telemetryEnabled"
-              @update:model-value="toggleTelemetry($event)">
-              <div class="option-info">
-                <span class="option-label">{{ t('formvox', 'Share anonymous usage statistics') }}</span>
-                <span class="option-desc">{{ t('formvox', 'We collect: form counts, response counts, user counts, and version info (FormVox, Nextcloud, PHP). No personal data or form content is shared.') }}</span>
-              </div>
-            </NcCheckboxRadioSwitch>
-          </div>
-
-          <div v-if="telemetryEnabled" class="telemetry-info">
-            <NcNoteCard type="success">
-              <p>{{ t('formvox', 'Thank you for helping improve FormVox!') }}</p>
-              <p v-if="telemetryStatus.lastReport">
-                {{ t('formvox', 'Last report sent') }}: {{ formatDate(telemetryStatus.lastReport) }}
-              </p>
-            </NcNoteCard>
-          </div>
-
-          <div class="telemetry-details">
-            <h4>{{ t('formvox', 'What we collect') }}:</h4>
-            <ul>
-              <li>{{ t('formvox', 'Number of forms and responses') }}</li>
-              <li>{{ t('formvox', 'Number of active users') }}</li>
-              <li>{{ t('formvox', 'FormVox, Nextcloud, and PHP version numbers') }}</li>
-              <li>{{ t('formvox', 'A unique hash of your instance URL (privacy-friendly identifier)') }}</li>
-            </ul>
-            <h4>{{ t('formvox', 'What we never collect') }}:</h4>
-            <ul class="not-collected">
-              <li>{{ t('formvox', 'Form content or titles') }}</li>
-              <li>{{ t('formvox', 'Response data or answers') }}</li>
-              <li>{{ t('formvox', 'User names or email addresses') }}</li>
-              <li>{{ t('formvox', 'Your actual server URL') }}</li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -154,6 +116,14 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- Support Tab -->
+    <div v-if="activeTab === 'support'" class="tab-content">
+      <SupportSettings
+        :initial-telemetry-enabled="telemetryEnabled"
+        :initial-telemetry-last-report="telemetryStatus.lastReport"
+        @license-changed="onLicenseChanged" />
     </div>
 
     <!-- Integrations Tab -->
@@ -232,16 +202,18 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { NcCheckboxRadioSwitch, NcNoteCard, NcButton, NcLoadingIcon } from '@nextcloud/vue';
 import axios from '@nextcloud/axios';
 import { generateUrl } from '@nextcloud/router';
 import { showSuccess, showError } from '@nextcloud/dialogs';
 import PageBuilder from '../components/pagebuilder/PageBuilder.vue';
+import SupportSettings from '../components/SupportSettings.vue';
 import Palette from 'vue-material-design-icons/Palette.vue';
 import ChartBox from 'vue-material-design-icons/ChartBox.vue';
 import Cog from 'vue-material-design-icons/Cog.vue';
 import MicrosoftIcon from 'vue-material-design-icons/Microsoft.vue';
+import HeartIcon from 'vue-material-design-icons/Heart.vue';
 
 export default {
   name: 'AdminSettings',
@@ -251,10 +223,12 @@ export default {
     NcButton,
     NcLoadingIcon,
     PageBuilder,
+    SupportSettings,
     Palette,
     ChartBox,
     Cog,
     MicrosoftIcon,
+    HeartIcon,
   },
   props: {
     initialBranding: {
@@ -380,15 +354,46 @@ export default {
     onMounted(async () => {
       try {
         const response = await axios.get(generateUrl('/apps/formvox/api/statistics'));
-        stats.totalForms = response.data.totalForms || 0;
-        stats.totalResponses = response.data.totalResponses || 0;
-        stats.activeUsers30d = response.data.activeUsers30d || 0;
+        stats.totalForms = response.data.statistics?.totalForms || response.data.totalForms || 0;
+        stats.totalResponses = response.data.statistics?.totalResponses || response.data.totalResponses || 0;
+        stats.activeUsers30d = response.data.statistics?.activeUsers30d || response.data.activeUsers30d || 0;
       } catch (error) {
         console.error('Failed to load statistics:', error);
       } finally {
         loadingStatistics.value = false;
       }
+
+      // Load license stats for banner
+      try {
+        const res = await axios.get(generateUrl('/apps/formvox/api/license/stats'));
+        if (res.data.success) licenseStats.value = res.data;
+      } catch (e) { /* ignore */ }
     });
+
+    const licenseStats = ref(null);
+    const licenseBanner = computed(() => {
+      if (!licenseStats.value) return null;
+      const s = licenseStats.value;
+      if (s.hasLicense && s.licenseValid) return null;
+      if (!s.needsLicense) return null;
+      if (s.hasLicense && !s.licenseValid) {
+        return {
+          type: 'warning',
+          message: t('formvox', 'Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.'),
+        };
+      }
+      return {
+        type: 'info',
+        message: t('formvox', 'Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development.'),
+      };
+    });
+
+    const onLicenseChanged = async () => {
+      try {
+        const res = await axios.get(generateUrl('/apps/formvox/api/license/stats'));
+        if (res.data.success) licenseStats.value = res.data;
+      } catch (e) { /* ignore */ }
+    };
 
     return {
       activeTab,
@@ -404,6 +409,9 @@ export default {
       toggleTelemetry,
       saveEmbedSettings,
       saveMsFormsSettings,
+      licenseStats,
+      licenseBanner,
+      onLicenseChanged,
       formatDate,
       t,
     };
@@ -415,6 +423,11 @@ export default {
 .formvox-admin-settings {
   max-width: 900px;
   padding: 20px;
+}
+
+/* License Banner */
+.license-banner {
+  margin-bottom: 16px;
 }
 
 /* Tab Navigation - IntraVox style */
@@ -521,106 +534,6 @@ export default {
   color: var(--color-primary);
 }
 
-/* Future licensing info */
-.future-licensing-info {
-  margin-top: 24px;
-  padding: 20px;
-  background: var(--color-background-hover);
-  border-radius: var(--border-radius-large);
-  border-left: 4px solid var(--color-primary-element);
-}
-
-.future-licensing-info h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-main-text);
-}
-
-.future-licensing-info p {
-  margin: 0 0 12px 0;
-  color: var(--color-main-text);
-  line-height: 1.5;
-}
-
-.future-licensing-info p:last-child {
-  margin-bottom: 0;
-}
-
-.promise-list {
-  margin: 8px 0 16px 0;
-  padding-left: 24px;
-  color: var(--color-main-text);
-}
-
-.promise-list li {
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-
-.feedback-note {
-  font-size: 13px;
-  color: var(--color-text-maxcontrast);
-  font-style: italic;
-}
-
-/* Telemetry section */
-.telemetry-settings {
-  margin-top: 20px;
-}
-
-.engagement-option {
-  padding: 8px 0;
-}
-
-.option-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.option-label {
-  font-weight: 500;
-  color: var(--color-main-text);
-}
-
-.option-desc {
-  font-size: 12px;
-  color: var(--color-text-maxcontrast);
-}
-
-.telemetry-info {
-  margin-top: 16px;
-}
-
-.telemetry-details {
-  margin-top: 24px;
-  padding: 16px;
-  background: var(--color-background-hover);
-  border-radius: var(--border-radius-large);
-}
-
-.telemetry-details h4 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-main-text);
-}
-
-.telemetry-details h4:not(:first-child) {
-  margin-top: 20px;
-}
-
-.telemetry-details ul {
-  margin: 0;
-  padding-left: 24px;
-  color: var(--color-text-maxcontrast);
-}
-
-.telemetry-details ul li {
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
 
 .telemetry-details ul.not-collected {
   color: var(--color-main-text);

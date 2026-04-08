@@ -27,6 +27,31 @@ class SettingsController extends Controller
     }
 
     /**
+     * Get settings (admin only)
+     */
+    public function get(): DataResponse
+    {
+        return new DataResponse([
+            'success' => true,
+            'settings' => [
+                'organization_name' => $this->config->getAppValue(Application::APP_ID, 'organization_name', ''),
+                'contact_email' => $this->config->getAppValue(Application::APP_ID, 'contact_email', ''),
+            ],
+        ]);
+    }
+
+    /**
+     * Save organization contact info (admin only)
+     */
+    public function saveContact(string $organizationName = '', string $contactEmail = ''): DataResponse
+    {
+        $this->config->setAppValue(Application::APP_ID, 'organization_name', substr($organizationName, 0, 255));
+        $this->config->setAppValue(Application::APP_ID, 'contact_email', substr($contactEmail, 0, 255));
+
+        return new DataResponse(['success' => true]);
+    }
+
+    /**
      * Save embed settings (admin only)
      */
     public function saveEmbed(string $allowedDomains): DataResponse
