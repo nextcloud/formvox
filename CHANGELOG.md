@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Telemetry error feedback**: The "Send report now" button now shows the actual server error message (e.g., rate limit, connectivity issue) instead of silently failing
+
 ## [1.0.0] - 2026-04-07
 
 ### Added
