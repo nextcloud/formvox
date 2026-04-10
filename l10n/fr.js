@@ -823,5 +823,9 @@ OC.L10N.register('formvox', {
   "Your organization (optional)": "Votre organisation (optionnel)",
   "View subscription options": "Voir les options d'abonnement",
   "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development.": "Votre installation FormVox a d\u00e9pass\u00e9 les limites gratuites (25 formulaires ou 50 utilisateurs). Envisagez de vous abonner pour soutenir le d\u00e9veloppement continu.",
-  "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.": "Votre cl\u00e9 d'abonnement FormVox est invalide ou expir\u00e9e. Renouvelez-la pour continuer \u00e0 b\u00e9n\u00e9ficier du support."
+  "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.": "Votre cl\u00e9 d'abonnement FormVox est invalide ou expir\u00e9e. Renouvelez-la pour continuer \u00e0 b\u00e9n\u00e9ficier du support.",
+  "Report sent successfully": "Rapport envoy\u00e9 avec succ\u00e8s",
+  "The telemetry server returned an error:": "Le serveur de t\u00e9l\u00e9m\u00e9trie a renvoy\u00e9 une erreur :",
+  "Could not reach the telemetry server. Please try again later.": "Impossible de joindre le serveur de t\u00e9l\u00e9m\u00e9trie. Veuillez r\u00e9essayer plus tard.",
+  "Failed to send report": "\u00c9chec de l'envoi du rapport"
 }, 'nplurals=2; plural=(n != 1);');

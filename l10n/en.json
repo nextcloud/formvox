@@ -827,7 +827,11 @@
     "1000+ users": "1000+ users",
     "€19/year": "€19/year",
     "€59/year": "€59/year",
-    "€139/year": "€139/year"
+    "€139/year": "€139/year",
+    "Report sent successfully": "Report sent successfully",
+    "The telemetry server returned an error:": "The telemetry server returned an error:",
+    "Could not reach the telemetry server. Please try again later.": "Could not reach the telemetry server. Please try again later.",
+    "Failed to send report": "Failed to send report"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

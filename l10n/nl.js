@@ -823,5 +823,9 @@ OC.L10N.register('formvox', {
   "Your organization (optional)": "Uw organisatie (optioneel)",
   "View subscription options": "Abonnementsopties bekijken",
   "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development.": "Uw FormVox-installatie heeft de gratis limieten overschreden (25 formulieren of 50 gebruikers). Overweeg een abonnement om de verdere ontwikkeling te ondersteunen.",
-  "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.": "Uw FormVox-abonnementssleutel is ongeldig of verlopen. Verleng om ondersteuning te blijven ontvangen."
+  "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.": "Uw FormVox-abonnementssleutel is ongeldig of verlopen. Verleng om ondersteuning te blijven ontvangen.",
+  "Report sent successfully": "Rapport succesvol verstuurd",
+  "The telemetry server returned an error:": "De telemetrieserver gaf een fout:",
+  "Could not reach the telemetry server. Please try again later.": "Kan de telemetrieserver niet bereiken. Probeer het later opnieuw.",
+  "Failed to send report": "Rapport versturen mislukt"
 }, 'nplurals=2; plural=(n != 1);');

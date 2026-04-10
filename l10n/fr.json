@@ -827,7 +827,11 @@
     "Your organization (optional)": "Votre organisation (optionnel)",
     "View subscription options": "Voir les options d'abonnement",
     "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development.": "Votre installation FormVox a dépassé les limites gratuites (25 formulaires ou 50 utilisateurs). Envisagez de vous abonner pour soutenir le développement continu.",
-    "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.": "Votre clé d'abonnement FormVox est invalide ou expirée. Renouvelez-la pour continuer à bénéficier du support."
+    "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.": "Votre clé d'abonnement FormVox est invalide ou expirée. Renouvelez-la pour continuer à bénéficier du support.",
+    "Report sent successfully": "Rapport envoyé avec succès",
+    "The telemetry server returned an error:": "Le serveur de télémétrie a renvoyé une erreur :",
+    "Could not reach the telemetry server. Please try again later.": "Impossible de joindre le serveur de télémétrie. Veuillez réessayer plus tard.",
+    "Failed to send report": "Échec de l'envoi du rapport"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

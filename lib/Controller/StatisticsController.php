@@ -67,7 +67,7 @@ class StatisticsController extends Controller
             $this->telemetryService->setEnabled(true);
         }
 
-        $success = $this->telemetryService->sendReport();
+        $result = $this->telemetryService->sendReportWithDetails();
 
         // Restore original state
         if (!$wasEnabled) {
@@ -75,7 +75,9 @@ class StatisticsController extends Controller
         }
 
         return new DataResponse([
-            'success' => $success,
+            'success' => $result['success'],
+            'reason' => $result['reason'] ?? null,
+            'message' => $result['message'] ?? null,
             'lastReport' => $this->telemetryService->getLastReportTime(),
         ]);
     }

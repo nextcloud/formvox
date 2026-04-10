@@ -823,5 +823,9 @@ OC.L10N.register('formvox', {
   "1000+ users": "1000+ users",
   "\u20ac19/year": "\u20ac19/year",
   "\u20ac59/year": "\u20ac59/year",
-  "\u20ac139/year": "\u20ac139/year"
+  "\u20ac139/year": "\u20ac139/year",
+  "Report sent successfully": "Report sent successfully",
+  "The telemetry server returned an error:": "The telemetry server returned an error:",
+  "Could not reach the telemetry server. Please try again later.": "Could not reach the telemetry server. Please try again later.",
+  "Failed to send report": "Failed to send report"
 }, 'nplurals=2; plural=(n != 1);');
