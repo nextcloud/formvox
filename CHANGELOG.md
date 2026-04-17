@@ -7,6 +7,19 @@ All notable changes to FormVox will be documented in this file.
 ### Fixed
 - **Telemetry error feedback**: The "Send report now" button now shows the actual server error message (e.g., rate limit, connectivity issue) instead of silently failing
 
+## [1.0.1] - 2026-04-17
+
+### Added
+- **Team folder support** — Forms stored in Nextcloud Team Folders with object storage backends can now be loaded via public share links ([#49](https://github.com/nextcloud/formvox/issues/49))
+- **Native date/time pickers** — Share link expiration and `datetime` question answers now use two separate native fields (date + time) side-by-side for a consistent, accessible experience ([#48](https://github.com/nextcloud/formvox/issues/48))
+
+### Fixed
+- **Share link expiration date picker not working** — The expiration picker now correctly captures selected dates and times ([#48](https://github.com/nextcloud/formvox/issues/48))
+- **Forms saved in team folders cannot be displayed** — `FormService::getFileByIdPublic` now recognizes the `object::groupfolder:` storage pattern ([#49](https://github.com/nextcloud/formvox/issues/49))
+
+### Security
+- Security improvements to the public submission flow (token handling and share-link gating)
+
 ## [1.0.0] - 2026-04-07
 
 ### Added

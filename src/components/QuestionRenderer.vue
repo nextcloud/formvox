@@ -137,24 +137,34 @@
     </select>
 
     <!-- Date -->
-    <NcDateTimePicker
+    <NcDateTimePickerNative
       v-else-if="question.type === 'date'"
       :model-value="value ? new Date(value) : null"
       type="date"
-      :minDate="question.dateMin ? new Date(question.dateMin) : undefined"
-      :maxDate="question.dateMax ? new Date(question.dateMax) : undefined"
+      :label="question.question"
+      hide-label
+      :min="question.dateMin ? new Date(question.dateMin) : null"
+      :max="question.dateMax ? new Date(question.dateMax) : null"
       @update:model-value="$emit('update:value', formatDate($event))"
     />
 
     <!-- DateTime -->
-    <NcDateTimePicker
-      v-else-if="question.type === 'datetime'"
-      :model-value="value ? new Date(value) : null"
-      type="datetime"
-      :minDate="question.dateMin ? new Date(question.dateMin) : undefined"
-      :maxDate="question.dateMax ? new Date(question.dateMax) : undefined"
-      @update:model-value="$emit('update:value', formatDateTime($event))"
-    />
+    <div v-else-if="question.type === 'datetime'" class="datetime-split">
+      <NcDateTimePickerNative
+        :model-value="value ? new Date(value) : null"
+        type="date"
+        :label="t('Date')"
+        :min="question.dateMin ? new Date(question.dateMin) : null"
+        :max="question.dateMax ? new Date(question.dateMax) : null"
+        @update:model-value="onDateTimeDateChange"
+      />
+      <NcDateTimePickerNative
+        :model-value="value ? new Date(value) : null"
+        type="time"
+        :label="t('Time')"
+        @update:model-value="onDateTimeTimeChange"
+      />
+    </div>
 
     <!-- Time -->
     <input
@@ -430,6 +440,7 @@ import {
   NcTextArea,
   NcCheckboxRadioSwitch,
   NcDateTimePicker,
+  NcDateTimePickerNative,
 } from '@nextcloud/vue';
 import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
@@ -441,6 +452,7 @@ import SpeakerIcon from './icons/SpeakerIcon.vue';
 export default {
   name: 'QuestionRenderer',
   components: {
+    NcDateTimePickerNative,
     NcTextField,
     NcTextArea,
     NcCheckboxRadioSwitch,
@@ -752,6 +764,26 @@ export default {
       return date.toISOString();
     };
 
+    const onDateTimeDateChange = (newDate) => {
+      if (!newDate) {
+        emit('update:value', '');
+        return;
+      }
+      const current = props.value ? new Date(props.value) : null;
+      const hh = current ? current.getHours() : 0;
+      const mm = current ? current.getMinutes() : 0;
+      const combined = new Date(newDate);
+      combined.setHours(hh, mm, 0, 0);
+      emit('update:value', combined.toISOString());
+    };
+
+    const onDateTimeTimeChange = (newTime) => {
+      if (!newTime) return;
+      const base = props.value ? new Date(props.value) : new Date();
+      base.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
+      emit('update:value', base.toISOString());
+    };
+
     // Computed properties for file upload
     const acceptString = computed(() => {
       const types = props.question.allowedTypes || [];
@@ -909,6 +941,8 @@ export default {
       removeTableRow,
       formatDate,
       formatDateTime,
+      onDateTimeDateChange,
+      onDateTimeTimeChange,
       handleFileChange,
       // File upload
       fileInput,
@@ -943,6 +977,16 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.datetime-split {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+
+  > * {
+    flex: 1;
+  }
+}
+
 .question-renderer {
   max-width: 100%;
 

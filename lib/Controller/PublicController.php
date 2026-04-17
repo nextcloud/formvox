@@ -122,9 +122,9 @@ class PublicController extends Controller
         try {
             $form = $this->formService->loadPublic($fileId);
 
-            // Validate token matches
+            // Validate token matches (timing-safe)
             $storedToken = $form['settings']['public_token'] ?? null;
-            if ($storedToken === null || $storedToken !== $token) {
+            if ($storedToken === null || !is_string($storedToken) || !hash_equals($storedToken, $token)) {
                 return null;
             }
 
@@ -132,6 +132,41 @@ class PublicController extends Controller
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Enforce share-level gates on a submission/upload request:
+     *   - share-link expiration
+     *   - share password (if set)
+     * Returns an error DataResponse when blocked, or null when allowed.
+     */
+    private function enforceShareGate(array $form): ?DataResponse
+    {
+        if (!empty($form['settings']['share_expires_at'])) {
+            try {
+                $expiresAt = new \DateTime($form['settings']['share_expires_at']);
+                if ($expiresAt < new \DateTime()) {
+                    return new DataResponse(
+                        ['error' => 'This form has expired'],
+                        Http::STATUS_GONE
+                    );
+                }
+            } catch (\Exception $e) {
+                // invalid date → ignore and continue
+            }
+        }
+
+        if (!empty($form['settings']['share_password_hash'])) {
+            $providedPassword = (string)$this->request->getParam('password', '');
+            if ($providedPassword === '' || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
+                return new DataResponse(
+                    ['error' => 'Password required'],
+                    Http::STATUS_UNAUTHORIZED
+                );
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -278,6 +313,11 @@ class PublicController extends Controller
                 );
                 $response->throttle();
                 return $response;
+            }
+
+            $gateError = $this->enforceShareGate($form);
+            if ($gateError !== null) {
+                return $gateError;
             }
 
             // Check user/group access restrictions
@@ -582,15 +622,9 @@ class PublicController extends Controller
                 );
             }
 
-            // Check if form has expired
-            if (!empty($form['settings']['share_expires_at'])) {
-                $expiresAt = new \DateTime($form['settings']['share_expires_at']);
-                if ($expiresAt < new \DateTime()) {
-                    return new DataResponse(
-                        ['error' => 'This form has expired'],
-                        Http::STATUS_GONE
-                    );
-                }
+            $gateError = $this->enforceShareGate($form);
+            if ($gateError !== null) {
+                return $gateError;
             }
 
             // Check user/group access restrictions

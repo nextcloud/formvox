@@ -14,6 +14,7 @@ use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\IUserManager;
 use OCP\IGroupManager;
+use OCP\Security\ISecureRandom;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
@@ -28,6 +29,7 @@ class ApiController extends Controller
     private IUserSession $userSession;
     private IUserManager $userManager;
     private IGroupManager $groupManager;
+    private ISecureRandom $secureRandom;
 
     public function __construct(
         IRequest $request,
@@ -37,7 +39,8 @@ class ApiController extends Controller
         IndexService $indexService,
         IUserSession $userSession,
         IUserManager $userManager,
-        IGroupManager $groupManager
+        IGroupManager $groupManager,
+        ISecureRandom $secureRandom
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
@@ -47,6 +50,7 @@ class ApiController extends Controller
         $this->userSession = $userSession;
         $this->userManager = $userManager;
         $this->groupManager = $groupManager;
+        $this->secureRandom = $secureRandom;
     }
 
     /**
@@ -182,6 +186,31 @@ class ApiController extends Controller
             // Check settings permission separately
             if (isset($data['settings']) && !$this->permissionService->canEditSettings($role)) {
                 unset($data['settings']);
+            }
+
+            // Share tokens must be generated server-side with a cryptographically
+            // secure RNG. If the client is establishing/rotating a share link, mint
+            // a fresh token; preserve any existing token otherwise.
+            if (isset($data['settings']) && array_key_exists('public_token', $data['settings'])) {
+                $incoming = $data['settings']['public_token'];
+                if ($incoming === null || $incoming === '') {
+                    // client is revoking the link — leave as null
+                    $data['settings']['public_token'] = null;
+                } else {
+                    $existing = null;
+                    try {
+                        $existingForm = $this->formService->loadPublic($fileId);
+                        $existing = $existingForm['settings']['public_token'] ?? null;
+                    } catch (\Exception $e) {
+                        // ignore — new token will be minted below
+                    }
+                    if (!is_string($existing) || $existing === '' || $existing !== $incoming) {
+                        $data['settings']['public_token'] = $this->secureRandom->generate(
+                            32,
+                            ISecureRandom::CHAR_ALPHANUMERIC
+                        );
+                    }
+                }
             }
 
             $updatedForm = $this->formService->update($fileId, $data);

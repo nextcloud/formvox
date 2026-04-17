@@ -550,8 +550,13 @@ class FormService
             throw new NotFoundException('Form not found');
         }
 
-        // Case 2: Group folder (local::.../__groupfolders/{id}/)
-        if (preg_match('#__groupfolders/(\d+)/#', $storageId, $matches)) {
+        // Case 2: Group folder / Team folder
+        //   - Local:         local::.../__groupfolders/{id}/
+        //   - Object store:  object::groupfolder:{id}.{objectstore_id}
+        if (
+            preg_match('#__groupfolders/(\d+)/#', $storageId, $matches)
+            || preg_match('#^object::groupfolder:(\d+)#', $storageId, $matches)
+        ) {
             $groupFolderId = (int)$matches[1];
 
             // Find a user who has access to this group folder

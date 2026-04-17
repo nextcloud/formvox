@@ -185,12 +185,18 @@
             {{ t('Set expiration') }}
           </NcCheckboxRadioSwitch>
 
-          <NcDateTimePicker
-            v-if="linkSettings.expires"
-            :value="linkSettings.expiresAt"
-            type="datetime"
-            @update:value="linkSettings.expiresAt = $event"
-          />
+          <div v-if="linkSettings.expires" class="expiration-fields">
+            <NcDateTimePickerNative
+              v-model="expirationDate"
+              type="date"
+              :label="t('Date')"
+            />
+            <NcDateTimePickerNative
+              v-model="expirationTime"
+              type="time"
+              :label="t('Time')"
+            />
+          </div>
 
           <NcCheckboxRadioSwitch
             :model-value="accessRestrictions.enabled"
@@ -360,14 +366,14 @@
 
 <script>
 import { t } from '@/utils/l10n';
-import { ref, reactive, watch, onMounted, nextTick } from 'vue';
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue';
 import QRCode from 'qrcode';
 import {
   NcModal,
   NcButton,
   NcTextField,
   NcCheckboxRadioSwitch,
-  NcDateTimePicker,
+  NcDateTimePickerNative,
 } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
@@ -391,7 +397,7 @@ export default {
     NcButton,
     NcTextField,
     NcCheckboxRadioSwitch,
-    NcDateTimePicker,
+    NcDateTimePickerNative,
     CopyIcon,
     CogIcon,
     ChartIcon,
@@ -434,6 +440,37 @@ export default {
       password: '',
       expires: false,
       expiresAt: null,
+    });
+
+    // Two-field editor for expiration: separate date and time pickers that
+    // together compose linkSettings.expiresAt (a Date).
+    const expirationDate = computed({
+      get() {
+        return linkSettings.expiresAt || null;
+      },
+      set(newDate) {
+        if (!newDate) {
+          linkSettings.expiresAt = null;
+          return;
+        }
+        const previous = linkSettings.expiresAt;
+        const hh = previous ? previous.getHours() : 23;
+        const mm = previous ? previous.getMinutes() : 59;
+        const combined = new Date(newDate);
+        combined.setHours(hh, mm, 0, 0);
+        linkSettings.expiresAt = combined;
+      },
+    });
+    const expirationTime = computed({
+      get() {
+        return linkSettings.expiresAt || null;
+      },
+      set(newTime) {
+        if (!newTime) return;
+        const base = linkSettings.expiresAt ? new Date(linkSettings.expiresAt) : new Date();
+        base.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
+        linkSettings.expiresAt = base;
+      },
     });
 
     // Collapsible section toggles
@@ -543,18 +580,22 @@ export default {
     const createShareLink = async () => {
       creatingLink.value = true;
       try {
-        const token = generateShareToken();
-
-        // Save token to form settings via API
-        await axios.put(
+        // Ask the server to mint a cryptographically strong token — the
+        // placeholder is replaced server-side with a secure value.
+        const response = await axios.put(
           generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
           {
             settings: {
               ...props.form.settings,
-              public_token: token,
+              public_token: 'new',
             },
           }
         );
+
+        const token = response.data?.form?.settings?.public_token;
+        if (!token) {
+          throw new Error('Server did not return a share token');
+        }
 
         shareToken.value = token;
         const baseUrl = window.location.origin;
@@ -570,15 +611,6 @@ export default {
       } finally {
         creatingLink.value = false;
       }
-    };
-
-    const generateShareToken = () => {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let token = '';
-      for (let i = 0; i < 15; i++) {
-        token += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return token;
     };
 
     const copyLink = async () => {
@@ -982,6 +1014,8 @@ export default {
       creatingLink,
       linkInput,
       linkSettings,
+      expirationDate,
+      expirationTime,
       responseSettings,
       responseCount,
       accessRestrictions,
@@ -1023,6 +1057,16 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.expiration-fields {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+
+  > * {
+    flex: 1;
+  }
+}
+
 .share-dialog {
   padding: 20px;
   min-width: 450px;
