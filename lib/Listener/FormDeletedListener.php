@@ -44,6 +44,7 @@ class FormDeletedListener implements IEventListener
 
         $this->deleteAssociatedFolder($node, 'uploads');
         $this->deleteAssociatedFolder($node, 'templates');
+        $this->deleteAssociatedFolder($node, 'branding');
     }
 
     /**

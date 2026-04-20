@@ -14,6 +14,7 @@ class BrandingService
 {
     private IConfig $config;
     private IAppData $appData;
+    private FormService $formService;
 
     private const DEFAULT_LAYOUT = [
         'header' => [],
@@ -45,10 +46,11 @@ class BrandingService
         'fontFamily' => 'default',
     ];
 
-    public function __construct(IConfig $config, IAppData $appData)
+    public function __construct(IConfig $config, IAppData $appData, FormService $formService)
     {
         $this->config = $config;
         $this->appData = $appData;
+        $this->formService = $formService;
     }
 
     /**
@@ -193,6 +195,66 @@ class BrandingService
     private function getBlockImageUrl(string $blockId): string
     {
         return \OC::$server->getURLGenerator()->linkToRoute('formvox.branding.blockImage', ['blockId' => $blockId]);
+    }
+
+    /**
+     * Form-scoped variants — store branding images in a hidden folder next to
+     * the .fvform file (mirrors the .formvox-uploads-{fileId} pattern). This
+     * way they travel with the form on move and are cleaned up on delete.
+     */
+    public function saveFormBlockImage(int $fileId, string $blockId, string $tmpPath, string $mimeType): string
+    {
+        $folder = $this->formService->getBrandingFolder($fileId);
+        $extension = $this->getExtensionFromMimeType($mimeType);
+        $filename = 'block_' . $blockId . '.' . $extension;
+
+        // Drop any previous image for this block
+        try {
+            foreach ($folder->getDirectoryListing() as $node) {
+                if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
+                    $node->delete();
+                }
+            }
+        } catch (\Exception $e) {
+            // ignore — proceed with the upload
+        }
+
+        $content = file_get_contents($tmpPath);
+        $file = $folder->newFile($filename);
+        $file->putContent($content);
+        return $blockId;
+    }
+
+    public function getFormBlockImage(int $fileId, string $blockId): ?array
+    {
+        try {
+            $folder = $this->formService->getBrandingFolder($fileId);
+            foreach ($folder->getDirectoryListing() as $file) {
+                if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
+                    return [
+                        'content' => $file->getContent(),
+                        'mimeType' => $this->getMimeTypeFromFilename($file->getName()),
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            // no folder yet
+        }
+        return null;
+    }
+
+    public function deleteFormBlockImage(int $fileId, string $blockId): void
+    {
+        try {
+            $folder = $this->formService->getBrandingFolder($fileId);
+            foreach ($folder->getDirectoryListing() as $node) {
+                if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
+                    $node->delete();
+                }
+            }
+        } catch (\Exception $e) {
+            // nothing to delete
+        }
     }
 
     /**

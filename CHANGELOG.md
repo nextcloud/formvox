@@ -2,6 +2,24 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.0] - 2026-04-20
+
+### Added
+- **AI form generation** — Generate forms from a description, an uploaded document (PDF/DOCX/ODT/text), or both, using Nextcloud's built-in TaskProcessing API. Async pattern identical to nextcloud/assistant: the request returns immediately with a task id, the frontend polls, and a background `TaskSuccessfulEvent` listener materialises the form and sends a Nextcloud notification even if the user closes the browser tab. Includes heuristic truncated-JSON repair for less capable LLMs.
+- **AI conditional logic** — The AI may add `showIf` conditions on generated questions when a follow-up is genuinely only relevant given a prior answer. Values are snapped to existing option values; forward references and circular dependencies are rejected by construction.
+- **AI admin panel** — New "AI" tab in FormVox admin settings with provider-availability status (live-detected task type), per-instance enable/disable toggle, max-questions-per-form slider (3-20), max source-document size slider (1-25 MB), and toggles for source-document upload and conditional logic features.
+- **Scheduled opening (`share_starts_at`)** — Share links can be scheduled to open in the future. Before the start time, visitors see a "This form is not yet open — opens at {date}" page; submissions/uploads are blocked server-side on all public endpoints.
+- **Per-form branding logo uploads** — Logo and image blocks in per-form branding now upload to `.formvox-branding-{fileId}/` next to the `.fvform` file (mirrors the `.formvox-uploads-` pattern), travel along on form move, and are cleaned up on form delete ([#53](https://github.com/nextcloud/formvox/issues/53))
+- **Result summary shows labels** — Radio/choice questions in the Results summary chart and legend now show the option label instead of the internal id ([#52](https://github.com/nextcloud/formvox/issues/52))
+- **Full translations (EN, NL, DE, FR)** — 43 new user-facing strings for the AI flow, AI admin panel, scheduled opening and "not yet open" page are fully translated in all four supported languages
+
+### Fixed
+- **Share link date pickers don't persist changes** — Changing the expiration or opening date in the Share dialog now debounces and saves automatically instead of discarding the new value on reload
+- **Notification icons missing on mobile/desktop clients** — All FormVox notifications now emit an absolute icon URL ([#54](https://github.com/nextcloud/formvox/issues/54))
+
+### Changed
+- **AI form generation is off by default** until the admin enables it (unless a provider was already installed when the admin first visits the AI tab, in which case it's enabled automatically for convenience)
+
 ## [1.0.2] - 2026-04-17
 
 ### Fixed

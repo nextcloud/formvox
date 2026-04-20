@@ -17,6 +17,17 @@
 		<Transition name="slide">
 			<div v-if="!isCollapsed" class="template-gallery__content">
 				<div class="template-gallery__scroll">
+					<!-- AI Card (only shown when AI provider is available) -->
+					<TemplateCard
+						v-if="aiAvailable"
+						key="ai"
+						:name="aiBusy ? t('AI is generating…') : t('Generate with AI')"
+						:description="aiBusy ? t('Wait until current generation finishes') : t('Describe and let AI build it')"
+						:icon="AiIcon"
+						color="#7C4DFF"
+						:class="{ 'template-card--disabled': aiBusy }"
+						@select="!aiBusy && $emit('select-template', 'ai')"
+					/>
 					<TemplateCard
 						v-for="template in templates"
 						:key="template.id"
@@ -63,6 +74,9 @@ import SurveyIcon from './icons/SurveyIcon.vue'
 import RegistrationIcon from './icons/RegistrationIcon.vue'
 import DemoIcon from './icons/DemoIcon.vue'
 import ImportIcon from './icons/ImportIcon.vue'
+import AiIcon from 'vue-material-design-icons/Creation.vue'
+import axios from '@nextcloud/axios'
+import { generateUrl } from '@nextcloud/router'
 
 const STORAGE_KEY = 'formvox-templates-collapsed'
 
@@ -85,6 +99,20 @@ export default {
 		const router = useRouter()
 		const isCollapsed = ref(false)
 		const showImportModal = ref(false)
+		const aiAvailable = ref(false)
+		const aiBusy = ref(false)
+
+		const refreshAiBusy = () => {
+			try {
+				aiBusy.value = sessionStorage.getItem('formvox_ai_generating') === '1'
+			} catch (e) {
+				aiBusy.value = false
+			}
+		}
+
+		// On a fresh page load any pending generation is dead (PHP request was
+		// killed when the browser disconnected) — clear the stale flag.
+		try { sessionStorage.removeItem('formvox_ai_generating') } catch (e) { /* ignore */ }
 
 		const templates = [
 			{
@@ -139,7 +167,7 @@ export default {
 			// Navigation happens via openImportedForm in ImportModal
 		}
 
-		onMounted(() => {
+		onMounted(async () => {
 			try {
 				const stored = localStorage.getItem(STORAGE_KEY)
 				if (stored === 'true') {
@@ -148,16 +176,27 @@ export default {
 			} catch (e) {
 				// localStorage not available
 			}
+			try {
+				const resp = await axios.get(generateUrl('/apps/formvox/api/ai/status'))
+				aiAvailable.value = !!resp.data?.available
+			} catch (e) {
+				aiAvailable.value = false
+			}
+			refreshAiBusy()
+			window.addEventListener('formvox-ai-state-change', refreshAiBusy)
 		})
 
 		return {
 			isCollapsed,
 			showImportModal,
+			aiAvailable,
+			aiBusy,
 			templates,
 			toggleCollapsed,
 			onFormImported,
 			msFormsConfigured: props.msFormsConfigured,
 			ImportIcon,
+			AiIcon,
 			t,
 		}
 	},
@@ -165,6 +204,12 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.template-card--disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
 .template-gallery {
 	margin-bottom: 24px;
 	padding: 0 20px 0 44px;

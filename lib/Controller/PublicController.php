@@ -113,6 +113,23 @@ class PublicController extends Controller
         return $response;
     }
 
+    private function showNotYetOpenForm(string $title, \DateTime $opensAt): TemplateResponse
+    {
+        Util::addStyle(Application::APP_ID, 'public');
+        $response = new TemplateResponse(
+            Application::APP_ID,
+            'public/notyetopen',
+            [
+                'appId' => Application::APP_ID,
+                'title' => $title,
+                'opensAt' => $opensAt->format('d-m-Y H:i'),
+            ],
+            'public'
+        );
+        $response->setStatus(Http::STATUS_FORBIDDEN);
+        return $response;
+    }
+
     /**
      * Load form by fileId and validate the public token
      * Returns form data if valid, null otherwise
@@ -142,6 +159,20 @@ class PublicController extends Controller
      */
     private function enforceShareGate(array $form): ?DataResponse
     {
+        if (!empty($form['settings']['share_starts_at'])) {
+            try {
+                $startsAt = new \DateTime($form['settings']['share_starts_at']);
+                if ($startsAt > new \DateTime()) {
+                    return new DataResponse(
+                        ['error' => 'This form is not yet open', 'opensAt' => $startsAt->format(\DateTime::ATOM)],
+                        Http::STATUS_FORBIDDEN
+                    );
+                }
+            } catch (\Exception $e) {
+                // invalid date → ignore and continue
+            }
+        }
+
         if (!empty($form['settings']['share_expires_at'])) {
             try {
                 $expiresAt = new \DateTime($form['settings']['share_expires_at']);
@@ -182,6 +213,18 @@ class PublicController extends Controller
 
             if ($form === null) {
                 return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
+            }
+
+            // Check if form hasn't started yet
+            if (!empty($form['settings']['share_starts_at'])) {
+                try {
+                    $startsAt = new \DateTime($form['settings']['share_starts_at']);
+                    if ($startsAt > new \DateTime()) {
+                        return $this->showNotYetOpenForm($form['title'] ?? 'Form', $startsAt);
+                    }
+                } catch (\Exception $e) {
+                    // invalid date → ignore and continue
+                }
             }
 
             // Check if form has expired
@@ -509,6 +552,18 @@ class PublicController extends Controller
 
             if ($form === null) {
                 return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
+            }
+
+            // Check if form hasn't started yet
+            if (!empty($form['settings']['share_starts_at'])) {
+                try {
+                    $startsAt = new \DateTime($form['settings']['share_starts_at']);
+                    if ($startsAt > new \DateTime()) {
+                        return $this->showNotYetOpenForm($form['title'] ?? 'Form', $startsAt);
+                    }
+                } catch (\Exception $e) {
+                    // invalid date → ignore
+                }
             }
 
             // Check if form has expired

@@ -51,6 +51,7 @@ class FormMovedListener implements IEventListener
         $fileId = $target->getId();
         $this->moveAssociatedFolder($sourceParent, $targetParent, ".formvox-uploads-{$fileId}", $fileId);
         $this->moveAssociatedFolder($sourceParent, $targetParent, ".formvox-templates-{$fileId}", $fileId);
+        $this->moveAssociatedFolder($sourceParent, $targetParent, ".formvox-branding-{$fileId}", $fileId);
     }
 
     private function moveAssociatedFolder(Folder $sourceParent, Folder $targetParent, string $folderName, int $fileId): void

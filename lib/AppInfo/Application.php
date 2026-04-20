@@ -13,6 +13,8 @@ use OCP\Files\Events\Node\NodeDeletedEvent;
 use OCP\Files\Events\Node\NodeRenamedEvent;
 use OCA\DAV\Events\SabrePluginAuthInitEvent;
 use OCA\Files\Event\LoadAdditionalScriptsEvent;
+use OCA\FormVox\Listener\AiTaskFailedListener;
+use OCA\FormVox\Listener\AiTaskSuccessfulListener;
 use OCA\FormVox\Listener\LoadFilesPluginListener;
 use OCA\FormVox\Listener\FormCopiedListener;
 use OCA\FormVox\Listener\FormDeletedListener;
@@ -20,6 +22,8 @@ use OCA\FormVox\Listener\FormMovedListener;
 use OCA\FormVox\Listener\RegisterDavPluginListener;
 use OCA\FormVox\Notification\Notifier;
 use OCA\FormVox\Preview\FormPreview;
+use OCP\TaskProcessing\Events\TaskFailedEvent;
+use OCP\TaskProcessing\Events\TaskSuccessfulEvent;
 
 class Application extends App implements IBootstrap
 {
@@ -52,6 +56,10 @@ class Application extends App implements IBootstrap
 
         // Register notification handler
         $context->registerNotifierService(Notifier::class);
+
+        // Async AI form generation: pick up TaskProcessing task completion
+        $context->registerEventListener(TaskSuccessfulEvent::class, AiTaskSuccessfulListener::class);
+        $context->registerEventListener(TaskFailedEvent::class, AiTaskFailedListener::class);
 
         // Register DAV plugin to hide .fvform files from sync clients
         $context->registerEventListener(SabrePluginAuthInitEvent::class, RegisterDavPluginListener::class);

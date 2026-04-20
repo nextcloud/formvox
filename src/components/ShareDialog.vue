@@ -179,6 +179,26 @@
           </div>
 
           <NcCheckboxRadioSwitch
+            :model-value="linkSettings.hasStart"
+            @update:model-value="toggleLinkStart"
+          >
+            {{ t('Schedule opening') }}
+          </NcCheckboxRadioSwitch>
+
+          <div v-if="linkSettings.hasStart" class="expiration-fields">
+            <NcDateTimePickerNative
+              v-model="startDate"
+              type="date"
+              :label="t('Date')"
+            />
+            <NcDateTimePickerNative
+              v-model="startTime"
+              type="time"
+              :label="t('Time')"
+            />
+          </div>
+
+          <NcCheckboxRadioSwitch
             :model-value="linkSettings.expires"
             @update:model-value="toggleLinkExpiration"
           >
@@ -440,7 +460,18 @@ export default {
       password: '',
       expires: false,
       expiresAt: null,
+      hasStart: false,
+      startsAt: null,
     });
+
+    // Debounced auto-save so that picker drags/tabs don't hammer the API.
+    let datePickerSaveTimer = null;
+    const scheduleDatePickerSave = () => {
+      if (datePickerSaveTimer) clearTimeout(datePickerSaveTimer);
+      datePickerSaveTimer = setTimeout(() => {
+        saveLinkSettings();
+      }, 400);
+    };
 
     // Two-field editor for expiration: separate date and time pickers that
     // together compose linkSettings.expiresAt (a Date).
@@ -451,14 +482,15 @@ export default {
       set(newDate) {
         if (!newDate) {
           linkSettings.expiresAt = null;
-          return;
+        } else {
+          const previous = linkSettings.expiresAt;
+          const hh = previous ? previous.getHours() : 23;
+          const mm = previous ? previous.getMinutes() : 59;
+          const combined = new Date(newDate);
+          combined.setHours(hh, mm, 0, 0);
+          linkSettings.expiresAt = combined;
         }
-        const previous = linkSettings.expiresAt;
-        const hh = previous ? previous.getHours() : 23;
-        const mm = previous ? previous.getMinutes() : 59;
-        const combined = new Date(newDate);
-        combined.setHours(hh, mm, 0, 0);
-        linkSettings.expiresAt = combined;
+        scheduleDatePickerSave();
       },
     });
     const expirationTime = computed({
@@ -470,6 +502,39 @@ export default {
         const base = linkSettings.expiresAt ? new Date(linkSettings.expiresAt) : new Date();
         base.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
         linkSettings.expiresAt = base;
+        scheduleDatePickerSave();
+      },
+    });
+
+    // Same shape for the optional "form opens at" (share_starts_at).
+    const startDate = computed({
+      get() {
+        return linkSettings.startsAt || null;
+      },
+      set(newDate) {
+        if (!newDate) {
+          linkSettings.startsAt = null;
+        } else {
+          const previous = linkSettings.startsAt;
+          const hh = previous ? previous.getHours() : 9;
+          const mm = previous ? previous.getMinutes() : 0;
+          const combined = new Date(newDate);
+          combined.setHours(hh, mm, 0, 0);
+          linkSettings.startsAt = combined;
+        }
+        scheduleDatePickerSave();
+      },
+    });
+    const startTime = computed({
+      get() {
+        return linkSettings.startsAt || null;
+      },
+      set(newTime) {
+        if (!newTime) return;
+        const base = linkSettings.startsAt ? new Date(linkSettings.startsAt) : new Date();
+        base.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
+        linkSettings.startsAt = base;
+        scheduleDatePickerSave();
       },
     });
 
@@ -542,6 +607,12 @@ export default {
           if (props.form.settings.share_expires_at) {
             linkSettings.expires = true;
             linkSettings.expiresAt = new Date(props.form.settings.share_expires_at);
+          }
+
+          // Load scheduled opening setting
+          if (props.form.settings.share_starts_at) {
+            linkSettings.hasStart = true;
+            linkSettings.startsAt = new Date(props.form.settings.share_starts_at);
           }
         }
       } catch (error) {
@@ -687,6 +758,19 @@ export default {
       saveLinkSettings();
     };
 
+    const toggleLinkStart = (enabled) => {
+      linkSettings.hasStart = enabled;
+      if (enabled) {
+        const date = new Date();
+        date.setDate(date.getDate() + 1);
+        date.setHours(9, 0, 0, 0);
+        linkSettings.startsAt = date;
+      } else {
+        linkSettings.startsAt = null;
+      }
+      saveLinkSettings();
+    };
+
     const saveLinkSettings = async () => {
       try {
         const settings = {
@@ -707,6 +791,13 @@ export default {
           settings.share_expires_at = null;
         }
 
+        // Update start date
+        if (linkSettings.hasStart && linkSettings.startsAt) {
+          settings.share_starts_at = linkSettings.startsAt.toISOString();
+        } else {
+          settings.share_starts_at = null;
+        }
+
         await axios.put(
           generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
           { settings }
@@ -715,6 +806,7 @@ export default {
         // Update local form object
         props.form.settings.share_password = settings.share_password;
         props.form.settings.share_expires_at = settings.share_expires_at;
+        props.form.settings.share_starts_at = settings.share_starts_at;
 
         showSuccess(t('Settings saved'));
       } catch (error) {
@@ -734,6 +826,7 @@ export default {
           public_token: null,
           share_password: null,
           share_expires_at: null,
+          share_starts_at: null,
         };
 
         await axios.put(
@@ -748,11 +841,14 @@ export default {
         linkSettings.password = '';
         linkSettings.expires = false;
         linkSettings.expiresAt = null;
+        linkSettings.hasStart = false;
+        linkSettings.startsAt = null;
 
         // Update local form object
         props.form.settings.public_token = null;
         delete props.form.settings.share_password_hash;
         props.form.settings.share_expires_at = null;
+        props.form.settings.share_starts_at = null;
 
         showSuccess(t('Response link deleted'));
       } catch (error) {
@@ -1016,6 +1112,8 @@ export default {
       linkSettings,
       expirationDate,
       expirationTime,
+      startDate,
+      startTime,
       responseSettings,
       responseCount,
       accessRestrictions,
@@ -1032,6 +1130,7 @@ export default {
       copyEmbedCode,
       togglePassword,
       toggleLinkExpiration,
+      toggleLinkStart,
       savePassword,
       deleteShareLink,
       confirmDeleteResponses,

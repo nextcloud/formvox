@@ -50,11 +50,19 @@ class FormService
     /**
      * Create a new form
      */
-    public function create(string $title, string $path = '', ?string $template = null): array
+    public function create(string $title, string $path = '', ?string $template = null, array $prefilled = []): array
     {
         $user = $this->userSession->getUser();
-        $userId = $user->getUID();
-        $userFolder = $this->getUserFolder();
+        return $this->createAsUser($user->getUID(), $title, $path, $template, $prefilled);
+    }
+
+    /**
+     * Same as create(), but with an explicit userId so it can be invoked from
+     * a background context (event listener) where there is no session.
+     */
+    public function createAsUser(string $userId, string $title, string $path = '', ?string $template = null, array $prefilled = []): array
+    {
+        $userFolder = $this->rootFolder->getUserFolder($userId);
 
         // Determine target folder
         $targetFolder = $userFolder;
@@ -72,6 +80,14 @@ class FormService
 
         // Create form structure
         $form = $this->createFormStructure($title, $userId, $template);
+
+        // Apply prefilled content (e.g. from AI generation) on top of the template
+        if (isset($prefilled['description']) && is_string($prefilled['description'])) {
+            $form['description'] = $prefilled['description'];
+        }
+        if (isset($prefilled['questions']) && is_array($prefilled['questions']) && $prefilled['questions'] !== []) {
+            $form['questions'] = $prefilled['questions'];
+        }
 
         // Create file
         $file = $targetFolder->newFile($filename);
@@ -1135,6 +1151,28 @@ class FormService
             return $uploadsFolder;
         } catch (NotFoundException $e) {
             return $formFolder->newFolder($uploadsFolderName);
+        }
+    }
+
+    /**
+     * Hidden per-form folder for branding images (logo/header pictures).
+     * Sibling of the .fvform file, so it travels along on rename/move and
+     * is reachable from public form rendering as well as the editor.
+     */
+    public function getBrandingFolder(int $fileId): Folder
+    {
+        $formFile = $this->getFileByIdPublic($fileId);
+        $formFolder = $formFile->getParent();
+        $brandingFolderName = ".formvox-branding-{$fileId}";
+
+        try {
+            $brandingFolder = $formFolder->get($brandingFolderName);
+            if (!($brandingFolder instanceof Folder)) {
+                throw new \RuntimeException('Branding path is not a folder');
+            }
+            return $brandingFolder;
+        } catch (NotFoundException $e) {
+            return $formFolder->newFolder($brandingFolderName);
         }
     }
 

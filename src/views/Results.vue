@@ -93,16 +93,16 @@
               <div class="chart-display">
                 <BarChart
                   v-if="getChartType(question.id) === 'bar'"
-                  :data="question.answerCounts"
+                  :data="labelledAnswerCounts(question)"
                   :horizontal="true"
                 />
                 <PieChart
                   v-else-if="getChartType(question.id) === 'pie'"
-                  :data="question.answerCounts"
+                  :data="labelledAnswerCounts(question)"
                 />
                 <DoughnutChart
                   v-else-if="getChartType(question.id) === 'doughnut'"
-                  :data="question.answerCounts"
+                  :data="labelledAnswerCounts(question)"
                 />
               </div>
 
@@ -112,7 +112,7 @@
                   :key="answer"
                   class="legend-item"
                 >
-                  <span class="legend-label">{{ answer }}</span>
+                  <span class="legend-label">{{ findOptionLabel(question.options, answer) || answer }}</span>
                   <span class="legend-value">{{ count }} ({{ getPercentage(count, summary.responseCount) }}%)</span>
                 </div>
               </div>
@@ -584,14 +584,36 @@ export default {
       return date.toLocaleString();
     };
 
+    // Match a stored choice answer against an options[] array. Handles cases
+    // where the answer was stored as the option value, the option id, or the
+    // option label (older/imported forms can have any of these).
+    const findOptionLabel = (options, storedValue) => {
+      if (!options || storedValue === undefined || storedValue === null) return null;
+      const opt = options.find(o => o.value === storedValue)
+        || options.find(o => o.id === storedValue)
+        || options.find(o => o.label === storedValue);
+      return opt ? opt.label : null;
+    };
+
+    // Re-key the raw answerCounts dictionary using human-readable labels for
+    // choice/multiple/dropdown questions, so charts and tooltips don't show
+    // internal ids like "opt3e4c1927".
+    const labelledAnswerCounts = (question) => {
+      const counts = question.answerCounts || {};
+      if (!question.options) return counts;
+      const out = {};
+      for (const [key, count] of Object.entries(counts)) {
+        const label = findOptionLabel(question.options, key) || key;
+        out[label] = (out[label] || 0) + count;
+      }
+      return out;
+    };
+
     const formatAnswer = (answer, question = null) => {
       if (Array.isArray(answer)) {
         // For multiple choice, try to show labels instead of values
         if (question && question.options) {
-          const labels = answer.map(val => {
-            const option = question.options.find(o => o.value === val);
-            return option ? option.label : val;
-          });
+          const labels = answer.map(val => findOptionLabel(question.options, val) || val);
           return labels.join(', ');
         }
         return answer.join(', ');
@@ -602,21 +624,18 @@ export default {
           const parts = [];
           for (const [rowId, colValue] of Object.entries(answer)) {
             const row = question.rows.find(r => r.id === rowId);
-            const col = question.columns.find(c => c.value === colValue);
+            const colLabel = findOptionLabel(question.columns, colValue) || colValue;
             const rowLabel = row ? row.label : rowId;
-            const colLabel = col ? col.label : colValue;
             parts.push(`${rowLabel}: ${colLabel}`);
           }
           return parts.join(', ');
         }
         return JSON.stringify(answer);
       }
-      // For single choice, try to show label instead of value
+      // For single choice, try to show label instead of value/id/label
       if (question && question.options && answer) {
-        const option = question.options.find(o => o.value === answer);
-        if (option) {
-          return option.label;
-        }
+        const label = findOptionLabel(question.options, answer);
+        if (label) return label;
       }
       return answer || '-';
     };
@@ -778,6 +797,8 @@ export default {
       getPercentage,
       formatDate,
       formatAnswer,
+      findOptionLabel,
+      labelledAnswerCounts,
       truncate,
       goToEditor,
       exportCsv,

@@ -498,6 +498,12 @@ export default {
       type: Boolean,
       default: false,
     },
+    // When set, image uploads/deletes go to the per-form endpoint instead of
+    // the admin-only one. Required when used inside the form editor.
+    fileId: {
+      type: Number,
+      default: null,
+    },
   },
   emits: ['update:branding'],
   setup(props, { emit }) {
@@ -702,10 +708,18 @@ export default {
       const formData = new FormData();
       formData.append('image', file);
 
+      const isFormScoped = props.fileId !== null && props.fileId !== undefined;
+      const uploadUrl = isFormScoped
+        ? generateUrl('/apps/formvox/api/form/{fileId}/branding/image/{blockId}', { fileId: props.fileId, blockId })
+        : generateUrl('/apps/formvox/api/branding/image/{blockId}', { blockId });
+      const viewUrl = isFormScoped
+        ? generateUrl('/apps/formvox/branding/{fileId}/image/{blockId}', { fileId: props.fileId, blockId })
+        : generateUrl('/apps/formvox/branding/image/{blockId}', { blockId });
+
       saving.value = true;
       try {
         const response = await axios.post(
-          generateUrl('/apps/formvox/api/branding/image/{blockId}', { blockId }),
+          uploadUrl,
           formData,
           { headers: { 'Content-Type': 'multipart/form-data' } }
         );
@@ -714,7 +728,7 @@ export default {
         const block = currentBlocks.value.find(b => b.id === blockId);
         if (block) {
           block.settings.imageId = response.data.imageId;
-          block.settings.imageUrl = generateUrl('/apps/formvox/branding/image/{blockId}', { blockId }) + '?t=' + Date.now();
+          block.settings.imageUrl = viewUrl + '?t=' + Date.now();
           saveLayout();
         }
         showSuccess(t('Image uploaded'));

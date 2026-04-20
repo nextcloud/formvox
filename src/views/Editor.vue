@@ -284,6 +284,7 @@
     <FormBrandingEditor
       v-if="showBranding"
       :branding="form.branding"
+      :file-id="fileId"
       @update:branding="updateBranding"
       @close="showBranding = false"
     />

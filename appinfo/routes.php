@@ -27,6 +27,14 @@ return [
         ['name' => 'api#delete', 'url' => '/api/form/{fileId}', 'verb' => 'DELETE'],
         ['name' => 'api#setFavorite', 'url' => '/api/form/{fileId}/favorite', 'verb' => 'POST'],
 
+        // API routes - AI form generator
+        ['name' => 'settings#getAi', 'url' => '/api/settings/ai', 'verb' => 'GET'],
+        ['name' => 'settings#saveAi', 'url' => '/api/settings/ai', 'verb' => 'POST'],
+        ['name' => 'settings#getAiStatus', 'url' => '/api/ai/status', 'verb' => 'GET'],
+        ['name' => 'ai#generateForm', 'url' => '/api/ai/generate-form', 'verb' => 'POST'],
+        ['name' => 'ai#getTask', 'url' => '/api/ai/task/{taskId}', 'verb' => 'GET'],
+        ['name' => 'ai#resolveFile', 'url' => '/api/ai/resolve-file', 'verb' => 'GET'],
+
         // API routes - Responses
         ['name' => 'api#getResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'GET'],
         ['name' => 'api#deleteAllResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'DELETE'],
@@ -67,6 +75,11 @@ return [
         ['name' => 'branding#uploadBlockImage', 'url' => '/api/branding/image/{blockId}', 'verb' => 'POST'],
         ['name' => 'branding#deleteBlockImage', 'url' => '/api/branding/image/{blockId}', 'verb' => 'DELETE'],
         ['name' => 'branding#blockImage', 'url' => '/branding/image/{blockId}', 'verb' => 'GET'],
+
+        // Per-form branding (form owner / editor with branding rights)
+        ['name' => 'branding#uploadFormBlockImage', 'url' => '/api/form/{fileId}/branding/image/{blockId}', 'verb' => 'POST'],
+        ['name' => 'branding#deleteFormBlockImage', 'url' => '/api/form/{fileId}/branding/image/{blockId}', 'verb' => 'DELETE'],
+        ['name' => 'branding#formBlockImage', 'url' => '/branding/{fileId}/image/{blockId}', 'verb' => 'GET'],
 
         // Statistics routes (admin only)
         ['name' => 'statistics#getStatistics', 'url' => '/api/statistics', 'verb' => 'GET'],

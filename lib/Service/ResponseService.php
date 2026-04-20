@@ -241,6 +241,16 @@ class ResponseService
                 'answerCounts' => $this->indexService->getAnswerStats($form, $questionId),
             ];
 
+            // Preserve options/rows/columns so the frontend can map stored
+            // values (often internal ids) back to human-readable labels.
+            if (in_array($question['type'], ['choice', 'multiple', 'dropdown']) && isset($question['options'])) {
+                $questionSummary['options'] = $question['options'];
+            }
+            if ($question['type'] === 'matrix') {
+                if (isset($question['rows'])) $questionSummary['rows'] = $question['rows'];
+                if (isset($question['columns'])) $questionSummary['columns'] = $question['columns'];
+            }
+
             // For numeric types, calculate average
             if (in_array($question['type'], ['number', 'scale', 'rating'])) {
                 $stats = $this->calculateNumericStats($form, $questionId);

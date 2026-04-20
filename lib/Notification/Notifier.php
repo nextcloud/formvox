@@ -72,9 +72,66 @@ class Notifier implements INotifier
                 }
 
                 $notification->setIcon(
-                    $this->urlGenerator->imagePath(Application::APP_ID, 'app-dark.svg')
+                    $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath(Application::APP_ID, 'app-dark.svg'))
                 );
 
+                return $notification;
+
+            case 'ai_form_failed':
+                $formTitle = $params['formTitle'] ?? 'Untitled form';
+                $reason = $params['reason'] ?? '';
+                $notification->setRichSubject(
+                    $l->t('AI could not generate "{formTitle}"'),
+                    [
+                        'formTitle' => [
+                            'type' => 'highlight',
+                            'id' => (string)$notification->getObjectId(),
+                            'name' => $formTitle,
+                        ],
+                    ]
+                );
+                $notification->setParsedSubject(
+                    $l->t('AI could not generate "%1$s"', [$formTitle])
+                );
+                if ($reason !== '') {
+                    $notification->setParsedMessage($reason);
+                    $notification->setRichMessage($reason, []);
+                }
+                $notification->setIcon(
+                    $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath(Application::APP_ID, 'app-dark.svg'))
+                );
+                return $notification;
+
+            case 'ai_form_ready':
+                $formTitle = $params['formTitle'] ?? 'Untitled form';
+                $notification->setRichSubject(
+                    $l->t('AI finished generating "{formTitle}"'),
+                    [
+                        'formTitle' => [
+                            'type' => 'highlight',
+                            'id' => (string)$notification->getObjectId(),
+                            'name' => $formTitle,
+                        ],
+                    ]
+                );
+                $notification->setParsedSubject(
+                    $l->t('AI finished generating "%1$s"', [$formTitle])
+                );
+                $notification->setRichMessage(
+                    $l->t('Open the form to review the AI-generated questions.'),
+                    []
+                );
+                $notification->setParsedMessage(
+                    $l->t('Open the form to review the AI-generated questions.')
+                );
+                if (isset($params['fileId'])) {
+                    $notification->setLink(
+                        $this->urlGenerator->linkToRouteAbsolute('formvox.page.editor', ['fileId' => $params['fileId']])
+                    );
+                }
+                $notification->setIcon(
+                    $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath(Application::APP_ID, 'app-dark.svg'))
+                );
                 return $notification;
 
             default:

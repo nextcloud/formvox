@@ -37,11 +37,21 @@
         {{ t('formvox', 'Integrations') }}
       </button>
       <button
+        :class="['tab-button', { active: activeTab === 'ai' }]"
+        @click="activeTab = 'ai'">
+        <CreationIcon :size="16" />
+        {{ t('formvox', 'AI') }}
+      </button>
+      <button
         :class="['tab-button', { active: activeTab === 'support' }]"
         @click="activeTab = 'support'">
         <HeartIcon :size="16" />
         {{ t('formvox', 'Support') }}
       </button>
+    </div>
+
+    <div v-if="activeTab === 'ai'" class="tab-content">
+      <AiSettings />
     </div>
 
     <!-- Branding Tab -->
@@ -209,6 +219,8 @@ import { generateUrl } from '@nextcloud/router';
 import { showSuccess, showError } from '@nextcloud/dialogs';
 import PageBuilder from '../components/pagebuilder/PageBuilder.vue';
 import SupportSettings from '../components/SupportSettings.vue';
+import AiSettings from '../components/AiSettings.vue';
+import CreationIcon from 'vue-material-design-icons/Creation.vue';
 import Palette from 'vue-material-design-icons/Palette.vue';
 import ChartBox from 'vue-material-design-icons/ChartBox.vue';
 import Cog from 'vue-material-design-icons/Cog.vue';
@@ -224,6 +236,8 @@ export default {
     NcLoadingIcon,
     PageBuilder,
     SupportSettings,
+    AiSettings,
+    CreationIcon,
     Palette,
     ChartBox,
     Cog,

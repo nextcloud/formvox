@@ -1,6 +1,6 @@
 {
   "name": "formvox",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "File-based forms and polls for Nextcloud",
   "scripts": {
     "build": "webpack",

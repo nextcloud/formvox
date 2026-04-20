@@ -19,6 +19,7 @@
         <PageBuilder
           :initial-branding="localBranding"
           :embedded="true"
+          :file-id="fileId"
           @update:branding="onBrandingUpdate"
         />
       </template>
@@ -89,6 +90,10 @@ export default {
   props: {
     branding: {
       type: Object,
+      default: null,
+    },
+    fileId: {
+      type: Number,
       default: null,
     },
   },

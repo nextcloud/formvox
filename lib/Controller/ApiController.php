@@ -14,6 +14,7 @@ use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\IUserManager;
 use OCP\IGroupManager;
+use OCP\Notification\IManager as INotificationManager;
 use OCP\Security\ISecureRandom;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
@@ -30,6 +31,7 @@ class ApiController extends Controller
     private IUserManager $userManager;
     private IGroupManager $groupManager;
     private ISecureRandom $secureRandom;
+    private INotificationManager $notificationManager;
 
     public function __construct(
         IRequest $request,
@@ -40,7 +42,8 @@ class ApiController extends Controller
         IUserSession $userSession,
         IUserManager $userManager,
         IGroupManager $groupManager,
-        ISecureRandom $secureRandom
+        ISecureRandom $secureRandom,
+        INotificationManager $notificationManager
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
@@ -51,6 +54,7 @@ class ApiController extends Controller
         $this->userManager = $userManager;
         $this->groupManager = $groupManager;
         $this->secureRandom = $secureRandom;
+        $this->notificationManager = $notificationManager;
     }
 
     /**
@@ -74,16 +78,47 @@ class ApiController extends Controller
      * Create a new form
      */
     #[NoAdminRequired]
-    public function create(string $title, string $path = '', ?string $template = null): DataResponse
+    public function create(string $title, string $path = '', ?string $template = null, array $prefilled = [], bool $notifyOnReady = false): DataResponse
     {
         try {
-            $result = $this->formService->create($title, $path, $template);
+            $result = $this->formService->create($title, $path, $template, $prefilled);
+
+            if ($notifyOnReady) {
+                $this->sendAiReadyNotification($result, $title);
+            }
+
             return new DataResponse($result, Http::STATUS_CREATED);
         } catch (\Exception $e) {
             return new DataResponse(
                 ['error' => $e->getMessage()],
                 Http::STATUS_INTERNAL_SERVER_ERROR
             );
+        }
+    }
+
+    private function sendAiReadyNotification(array $result, string $title): void
+    {
+        $userId = $this->userSession->getUser()?->getUID();
+        if ($userId === null) {
+            return;
+        }
+        $fileId = (int)($result['fileId'] ?? 0);
+        if ($fileId <= 0) {
+            return;
+        }
+        try {
+            $notification = $this->notificationManager->createNotification();
+            $notification->setApp(Application::APP_ID)
+                ->setUser($userId)
+                ->setDateTime(new \DateTime())
+                ->setObject('form', (string)$fileId)
+                ->setSubject('ai_form_ready', [
+                    'formTitle' => $title,
+                    'fileId' => $fileId,
+                ]);
+            $this->notificationManager->notify($notification);
+        } catch (\Exception $e) {
+            // Notifications are best-effort; never block form creation
         }
     }
 
