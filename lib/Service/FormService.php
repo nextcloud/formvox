@@ -528,70 +528,100 @@ class FormService
 
     /**
      * Get file by ID without user context (for public/system access)
-     * Uses database lookup to find the owner and then accesses via their folder
-     * Supports both personal folders (home::) and group folders
+     * Supports personal folders, group folders, and external storage (SMB etc.)
      */
     public function getFileByIdPublic(int $fileId): File
     {
-        // Look up the file in the database to find the storage
+        // First: try a global rootFolder lookup — this covers ALL mount types
+        // including external storage (SMB, SFTP, S3, etc.) and group folders,
+        // as long as at least one user has the mount active.
+        $nodes = $this->rootFolder->getById($fileId);
+        if (!empty($nodes)) {
+            foreach ($nodes as $node) {
+                if ($node instanceof File) {
+                    return $node;
+                }
+            }
+        }
+    
+        // Fallback: database-assisted lookup for cases where rootFolder->getById()
+        // doesn't resolve (e.g. the mount isn't currently active in any user session).
         $qb = $this->db->getQueryBuilder();
         $qb->select('s.id', 's.numeric_id')
             ->from('filecache', 'fc')
             ->innerJoin('fc', 'storages', 's', 'fc.storage = s.numeric_id')
             ->where($qb->expr()->eq('fc.fileid', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
-
+    
         $result = $qb->executeQuery();
         $row = $result->fetch();
         $result->closeCursor();
-
+    
         if ($row === false) {
             throw new NotFoundException('Form not found');
         }
-
+    
         $storageId = $row['id'];
-        $storageNumericId = (int)$row['numeric_id'];
-
+    
         // Case 1: Personal folder (home::username)
         if (strpos($storageId, 'home::') === 0) {
             $userId = substr($storageId, 6);
             $userFolder = $this->rootFolder->getUserFolder($userId);
             $nodes = $userFolder->getById($fileId);
-
-            if (!empty($nodes)) {
-                $file = $nodes[0];
-                if ($file instanceof File) {
-                    return $file;
-                }
+            if (!empty($nodes) && $nodes[0] instanceof File) {
+                return $nodes[0];
             }
             throw new NotFoundException('Form not found');
         }
-
-        // Case 2: Group folder / Team folder
-        //   - Local:         local::.../__groupfolders/{id}/
-        //   - Object store:  object::groupfolder:{id}.{objectstore_id}
+    
+        // Case 2: Group folder
         if (
             preg_match('#__groupfolders/(\d+)/#', $storageId, $matches)
             || preg_match('#^object::groupfolder:(\d+)#', $storageId, $matches)
         ) {
             $groupFolderId = (int)$matches[1];
-
-            // Find a user who has access to this group folder
             $userId = $this->findUserWithGroupFolderAccess($groupFolderId);
             if ($userId !== null) {
                 $userFolder = $this->rootFolder->getUserFolder($userId);
                 $nodes = $userFolder->getById($fileId);
-
-                if (!empty($nodes)) {
-                    $file = $nodes[0];
-                    if ($file instanceof File) {
-                        return $file;
-                    }
+                if (!empty($nodes) && $nodes[0] instanceof File) {
+                    return $nodes[0];
                 }
             }
             throw new NotFoundException('Form not found');
         }
-
+    
+        // Case 3: External storage (SMB, SFTP, S3, local mount, etc.)
+        // Find any user who has this storage mounted and resolve via their folder.
+        $userId = $this->findUserWithStorage((int)$row['numeric_id']);
+        if ($userId !== null) {
+            $userFolder = $this->rootFolder->getUserFolder($userId);
+            $nodes = $userFolder->getById($fileId);
+            if (!empty($nodes) && $nodes[0] instanceof File) {
+                return $nodes[0];
+            }
+        }
+    
         throw new NotFoundException('Form not found');
+    }
+
+    /**
+     * Find a user who has a given storage numeric ID mounted
+     */
+    private function findUserWithStorage(int $storageNumericId): ?string
+    {
+        // mounts table maps storages to users
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('user_id')
+            ->from('mounts')
+            ->where($qb->expr()->eq('storage_id', $qb->createNamedParameter($storageNumericId, \PDO::PARAM_INT)))
+            ->andWhere($qb->expr()->neq('user_id', $qb->createNamedParameter('')))
+            ->setMaxResults(1);
+    
+        $result = $qb->executeQuery();
+        $row = $result->fetch();
+        $result->closeCursor();
+    
+        return $row !== false ? $row['user_id'] : null;
     }
 
     /**
