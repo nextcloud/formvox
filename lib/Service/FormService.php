@@ -529,7 +529,7 @@ class FormService
     /**
      * Get file by ID without user context (for public/system access)
      * Uses database lookup to find the owner and then accesses via their folder
-     * Supports both personal folders (home::) and group folders
+     * Supports personal folders, group folders, and external storage
      */
     public function getFileByIdPublic(int $fileId): File
     {
@@ -549,19 +549,15 @@ class FormService
         }
 
         $storageId = $row['id'];
-        $storageNumericId = (int)$row['numeric_id'];
 
         // Case 1: Personal folder (home::username)
-        if (strpos($storageId, 'home::') === 0) {
+        if (str_starts_with($storageId, 'home::')) {
             $userId = substr($storageId, 6);
             $userFolder = $this->rootFolder->getUserFolder($userId);
             $nodes = $userFolder->getById($fileId);
 
-            if (!empty($nodes)) {
-                $file = $nodes[0];
-                if ($file instanceof File) {
-                    return $file;
-                }
+            if (!empty($nodes) && $nodes[0] instanceof File) {
+                return $nodes[0];
             }
             throw new NotFoundException('Form not found');
         }
@@ -575,20 +571,27 @@ class FormService
         ) {
             $groupFolderId = (int)$matches[1];
 
-            // Find a user who has access to this group folder
             $userId = $this->findUserWithGroupFolderAccess($groupFolderId);
             if ($userId !== null) {
                 $userFolder = $this->rootFolder->getUserFolder($userId);
                 $nodes = $userFolder->getById($fileId);
 
-                if (!empty($nodes)) {
-                    $file = $nodes[0];
-                    if ($file instanceof File) {
-                        return $file;
-                    }
+                if (!empty($nodes) && $nodes[0] instanceof File) {
+                    return $nodes[0];
                 }
             }
             throw new NotFoundException('Form not found');
+        }
+
+        // Case 3: External storage (SMB, SFTP, S3, local mounts, etc.)
+        $userId = $this->findUserWithStorage((int)$row['numeric_id']);
+        if ($userId !== null) {
+            $userFolder = $this->rootFolder->getUserFolder($userId);
+            $nodes = $userFolder->getById($fileId);
+
+            if (!empty($nodes) && $nodes[0] instanceof File) {
+                return $nodes[0];
+            }
         }
 
         throw new NotFoundException('Form not found');
@@ -635,6 +638,25 @@ class FormService
         }
 
         return null;
+    }
+
+    /**
+     * Find a user who has a given storage mounted (for external storage)
+     */
+    private function findUserWithStorage(int $storageNumericId): ?string
+    {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('user_id')
+            ->from('mounts')
+            ->where($qb->expr()->eq('storage_id', $qb->createNamedParameter($storageNumericId, \PDO::PARAM_INT)))
+            ->andWhere($qb->expr()->neq('user_id', $qb->createNamedParameter('')))
+            ->setMaxResults(1);
+
+        $result = $qb->executeQuery();
+        $row = $result->fetch();
+        $result->closeCursor();
+
+        return $row !== false ? $row['user_id'] : null;
     }
 
     /**

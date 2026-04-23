@@ -2,6 +2,14 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.1] - 2026-04-23
+
+### Added
+- **External storage support** — Forms stored on external storage mounts (SMB, SFTP, S3, local mounts) can now be loaded via public share links ([#55](https://github.com/nextcloud/formvox/pull/55))
+
+### Security
+- Updated `fast-xml-parser` from 5.5.7 to 5.7.1 (fixes malicious CDATA/comment sanitization and stack overflow on long tag expressions)
+
 ## [1.1.0] - 2026-04-20
 
 ### Added
