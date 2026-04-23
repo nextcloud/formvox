@@ -2,6 +2,13 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.2] - 2026-04-23
+
+### Fixed
+- **CSV export garbled German/special characters** — CSV export now includes a UTF-8 BOM so Excel on Windows correctly recognises the encoding ([#57](https://github.com/nextcloud/formvox/issues/57))
+- **Results chart legend shows internal option IDs** — The chart legend now uses the same label mapping as the charts themselves ([#58](https://github.com/nextcloud/formvox/issues/58))
+- **Unanswered questions blank in Results** — Unanswered questions now show "Not answered" (translated) instead of a blank dash ([#58](https://github.com/nextcloud/formvox/issues/58))
+
 ## [1.1.1] - 2026-04-23
 
 ### Added

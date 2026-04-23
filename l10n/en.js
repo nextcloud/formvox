@@ -456,6 +456,7 @@ OC.L10N.register(
     "No results": "No results",
     "No routing rules yet. Add one to get started.": "No routing rules yet. Add one to get started.",
     "No, thanks": "No, thanks",
+    "Not answered": "Not answered",
     "Not likely": "Not likely",
     "Note: Search for ": "Note: Search for ",
     "Notes": "Notes",

@@ -108,11 +108,11 @@
 
               <div class="chart-legend">
                 <div
-                  v-for="(count, answer) in question.answerCounts"
+                  v-for="(count, answer) in labelledAnswerCounts(question)"
                   :key="answer"
                   class="legend-item"
                 >
-                  <span class="legend-label">{{ findOptionLabel(question.options, answer) || answer }}</span>
+                  <span class="legend-label">{{ answer }}</span>
                   <span class="legend-value">{{ count }} ({{ getPercentage(count, summary.responseCount) }}%)</span>
                 </div>
               </div>
@@ -637,7 +637,7 @@ export default {
         const label = findOptionLabel(question.options, answer);
         if (label) return label;
       }
-      return answer || '-';
+      return answer || t('Not answered');
     };
 
     const truncate = (text, length) => {

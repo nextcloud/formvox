@@ -456,6 +456,7 @@ OC.L10N.register(
     "No results": "Keine Ergebnisse",
     "No routing rules yet. Add one to get started.": "Noch keine Weiterleitungsregeln. Fügen Sie eine hinzu, um zu beginnen.",
     "No, thanks": "Nein, danke",
+    "Not answered": "Nicht beantwortet",
     "Not likely": "Unwahrscheinlich",
     "Note: Search for ": "Hinweis: Suche nach",
     "Notes": "Anmerkungen",

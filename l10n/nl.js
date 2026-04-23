@@ -456,6 +456,7 @@ OC.L10N.register(
     "No results": "Geen resultaten",
     "No routing rules yet. Add one to get started.": "Nog geen routeringsregels. Voeg er een toe om te beginnen.",
     "No, thanks": "Nee, bedankt",
+    "Not answered": "Niet beantwoord",
     "Not likely": "Niet waarschijnlijk",
     "Note: Search for ": "Opmerking: Zoek naar",
     "Notes": "Opmerkingen",

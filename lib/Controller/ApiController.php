@@ -449,7 +449,7 @@ class ApiController extends Controller
         $csv = $this->responseService->exportCsv($fileId);
         $filename = $this->sanitizeFilename($form['title']) . '-responses.csv';
 
-        return new DataDownloadResponse($csv, $filename, 'text/csv');
+        return new DataDownloadResponse($csv, $filename, 'text/csv; charset=utf-8');
     }
 
     /**

@@ -368,7 +368,8 @@ class ResponseService
         $csv = stream_get_contents($output);
         fclose($output);
 
-        return $csv;
+        // Prepend UTF-8 BOM so Excel on Windows recognises the encoding
+        return "\xEF\xBB\xBF" . $csv;
     }
 
     /**
