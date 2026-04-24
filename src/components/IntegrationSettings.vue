@@ -101,8 +101,8 @@
           </div>
           <div class="webhook-actions">
             <NcCheckboxRadioSwitch
-              :checked="webhook.enabled"
-              @update:checked="toggleWebhook(webhook.id, $event)"
+              :model-value="webhook.enabled"
+              @update:model-value="toggleWebhook(webhook.id, $event)"
             />
             <NcButton type="tertiary" @click="deleteWebhook(webhook.id)">
               <template #icon>

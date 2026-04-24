@@ -153,10 +153,17 @@ class StatisticsService
      */
     public function getUserCount(): int
     {
-        $count = 0;
-        $this->userManager->callForAllUsers(function ($user) use (&$count) {
-            $count++;
-        });
-        return $count;
+        try {
+            $count = 0;
+            $this->userManager->callForAllUsers(function ($user) use (&$count) {
+                $count++;
+            });
+            return max(1, $count);
+        } catch (\Exception $e) {
+            $this->logger->warning('StatisticsService: Failed to count users', [
+                'error' => $e->getMessage()
+            ]);
+            return 1;
+        }
     }
 }

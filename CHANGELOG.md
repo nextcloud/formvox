@@ -2,6 +2,15 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.3] - 2026-04-24
+
+### Fixed
+- **Webhook "Enabled" toggle unresponsive** — The enable/disable switch in Share → Advanced Settings → Integrations now correctly reflects its state and persists changes. Previously the switch used a deprecated Vue prop API (`:checked` / `@update:checked`) which silently sent `undefined` to the backend, disabling webhooks without feedback. ([#61](https://github.com/nextcloud/formvox/issues/61))
+- **Admin statistics no longer crash on user-backend errors** — `getUserCount()` now wraps `callForAllUsers()` in a try/catch and falls back to `1` if the user backend throws (e.g., LDAP timeout), keeping the admin stats page, license usage reporter, and telemetry job running.
+
+### Changed
+- **License usage reports now include `activeUsers30d`** — The daily license sync (`/api/licenses/usage`) now carries the same active-user metric that telemetry already reports, giving the license server full visibility of active instance usage.
+
 ## [1.1.2] - 2026-04-23
 
 ### Fixed

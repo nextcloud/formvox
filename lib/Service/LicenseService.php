@@ -120,6 +120,7 @@ class LicenseService {
 					'currentForms' => $stats['totalForms'],
 					'totalResponses' => $stats['totalResponses'],
 					'currentUsers' => $stats['totalUsers'],
+					'activeUsers30d' => $stats['activeUsers30d'],
 				],
 				'timeout' => 15,
 				'headers' => [
