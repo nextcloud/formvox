@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.4] - 2026-04-24
+
+### Fixed
+- **Description textareas overlap question actions when resized** — The question description and section description textareas in the form editor no longer have a resize handle, preventing them from growing over the per-question action buttons (edit/delete/drag) when dragged. Matches the existing behaviour of the top-level form description. ([#62](https://github.com/nextcloud/formvox/issues/62))
+
 ## [1.1.3] - 2026-04-24
 
 ### Fixed

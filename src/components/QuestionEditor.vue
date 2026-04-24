@@ -32,7 +32,7 @@
           v-model="localQuestion.description"
           :disabled="readonly"
           :placeholder="t('Section description (optional)')"
-          :resize="true"
+          :resize="false"
           :rows="2"
           @update:model-value="emitUpdate"
         />
@@ -1289,7 +1289,7 @@ export default {
   font-family: inherit;
   font-size: 14px;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
   box-sizing: border-box;
 
   &:focus {
