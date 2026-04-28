@@ -68,7 +68,7 @@
 
       <div class="form-header">
         <h1>{{ form.title }}</h1>
-        <p v-if="form.description" class="form-description">{{ form.description }}</p>
+        <div v-if="form.description" class="form-description" v-html="renderMarkdown(form.description)" />
       </div>
 
       <div
@@ -1143,6 +1143,22 @@ export default {
     color: var(--color-text-maxcontrast);
     font-size: 16px;
     margin: 0;
+
+    :deep(p) {
+      margin: 0 0 0.5em;
+      &:last-child { margin-bottom: 0; }
+    }
+    :deep(a) { color: var(--color-primary-element); }
+    :deep(ul), :deep(ol) {
+      padding-left: 1.5em;
+      margin: 0.25em 0;
+    }
+    :deep(code) {
+      font-family: monospace;
+      background: var(--color-background-dark);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
   }
 }
 
