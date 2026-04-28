@@ -358,7 +358,7 @@ class ResponseService
                         }
                     }
                 }
-                $row[] = $answer;
+                $row[] = is_string($answer) ? $this->sanitizeCsvValue($answer) : $answer;
             }
 
             fputcsv($output, $row);
@@ -702,6 +702,21 @@ class ResponseService
             'min' => min($values),
             'max' => max($values),
         ];
+    }
+
+    /**
+     * Escape newline characters in a CSV field value.
+     *
+     * RFC 4180 permits newlines inside quoted fields, but spreadsheet
+     * applications such as Microsoft Excel misinterpret embedded newlines as
+     * row separators even when the value is correctly enclosed in double-quotes.
+     * Replacing them with the two-character literal sequence "\n" keeps every
+     * response on a single row while still conveying that a line break was
+     * present in the original answer.
+     */
+    private function sanitizeCsvValue(string $value): string
+    {
+        return str_replace(["\r\n", "\r", "\n"], '\n', $value);
     }
 
     /**
