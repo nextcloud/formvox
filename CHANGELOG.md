@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.5] - 2026-04-28
+
+### Added
+- **Markdown support in form descriptions** — The form-level description field now renders markdown (bold, italic, links, lists, inline code, etc.) just as question and section descriptions already did. The form card preview in the dashboard strips markdown syntax before truncating, so it always shows clean plain text. ([#63](https://github.com/nextcloud/formvox/issues/63))
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
