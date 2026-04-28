@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.5] - 2026-04-28
+
+### Fixed
+- **CSV export breaks when answers contain newline characters** — Long-text answers with embedded newlines (`\n`) are now exported with the literal two-character sequence `\n` instead of actual line-feed characters. RFC 4180 permits newlines inside quoted fields, but spreadsheet applications (Excel, LibreOffice Calc) often misinterpret them as row separators, splitting a single response across multiple rows. ([#65](https://github.com/nextcloud/formvox/issues/65))
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
