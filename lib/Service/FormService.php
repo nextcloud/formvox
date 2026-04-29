@@ -562,9 +562,14 @@ class FormService
             throw new NotFoundException('Form not found');
         }
 
-        // Case 2: Group folder / Team folder
+        // Case 2: Group folder / Team folder (fast path)
         //   - Local:         local::.../__groupfolders/{id}/
         //   - Object store:  object::groupfolder:{id}.{objectstore_id}
+        // If the regex matches and we can resolve a user via the group_folders_groups
+        // table, return immediately. Otherwise fall through to Case 3, since some
+        // team-folder deployments grant access via mechanisms (Circles, direct user
+        // assignment) that group_folders_groups does not capture, and a different
+        // storage-id format may yet appear in future Nextcloud releases.
         if (
             preg_match('#__groupfolders/(\d+)/#', $storageId, $matches)
             || preg_match('#^object::groupfolder:(\d+)#', $storageId, $matches)
@@ -580,10 +585,12 @@ class FormService
                     return $nodes[0];
                 }
             }
-            throw new NotFoundException('Form not found');
+            // fall through to Case 3
         }
 
-        // Case 3: External storage (SMB, SFTP, S3, local mounts, etc.)
+        // Case 3: Generic fallback — find any user who has the storage mounted.
+        // Works for external storage (SMB, SFTP, S3, local mounts) and for any
+        // group/team folder whose access mechanism Case 2 could not resolve.
         $userId = $this->findUserWithStorage((int)$row['numeric_id']);
         if ($userId !== null) {
             $userFolder = $this->rootFolder->getUserFolder($userId);
