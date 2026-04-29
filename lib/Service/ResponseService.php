@@ -331,6 +331,23 @@ class ResponseService
                         $parts[] = $rowLabel . ': ' . $colLabel;
                     }
                     $answer = implode(', ', $parts);
+                } elseif (($question['type'] ?? '') === 'table' && is_array($answer)) {
+                    // Table questions: replace per-row column IDs with their human-readable labels
+                    $colLabels = [];
+                    foreach ($question['columns'] ?? [] as $c) {
+                        $colLabels[$c['id']] = $c['label'] ?? $c['id'];
+                    }
+                    $relabeled = array_map(function ($row) use ($colLabels) {
+                        if (!is_array($row)) {
+                            return $row;
+                        }
+                        $new = [];
+                        foreach ($row as $colId => $value) {
+                            $new[$colLabels[$colId] ?? $colId] = $value;
+                        }
+                        return $new;
+                    }, $answer);
+                    $answer = json_encode($relabeled, JSON_UNESCAPED_UNICODE);
                 } else {
                     // Map option values to labels for choice/multiple/dropdown questions
                     $options = $question['options'] ?? [];
