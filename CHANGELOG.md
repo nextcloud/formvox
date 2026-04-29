@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.5] - 2026-04-29
+
+### Fixed
+- **Forms in team folders return "Form not found" on the public share link** — `FormService::getFileByIdPublic` recognised the team-folder storage prefixes added in 1.0.1 but threw `NotFoundException` immediately if `findUserWithGroupFolderAccess` could not resolve a user via the `group_folders_groups` table — even though the generic Case 3 mounts-table fallback right below would have located the same file. The team-folder branch now falls through to that fallback instead of bailing out, so forms remain reachable when access is granted via Circles, individual user assignment, or any other mechanism the `group_folders_groups` table does not record. ([#68](https://github.com/nextcloud/formvox/issues/68))
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
