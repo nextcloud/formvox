@@ -568,8 +568,10 @@ export default {
         case 'notEquals':
           return answer !== value;
         case 'contains':
+          if (Array.isArray(answer)) return answer.includes(value);
           return typeof answer === 'string' && answer.includes(value);
         case 'notContains':
+          if (Array.isArray(answer)) return !answer.includes(value);
           return typeof answer !== 'string' || !answer.includes(value);
         case 'isEmpty':
           return !answer || answer === '' || (Array.isArray(answer) && answer.length === 0);
@@ -584,8 +586,10 @@ export default {
           return condition.operator === 'greaterThan' ? a > b : a < b;
         }
         case 'in':
+          if (Array.isArray(answer)) return Array.isArray(value) && answer.some(a => value.includes(a));
           return Array.isArray(value) && value.includes(answer);
         case 'notIn':
+          if (Array.isArray(answer)) return !Array.isArray(value) || !answer.some(a => value.includes(a));
           return !Array.isArray(value) || !value.includes(answer);
         default:
           return true;

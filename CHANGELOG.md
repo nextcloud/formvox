@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.5] - 2026-04-29
+
+### Fixed
+- **Conditional logic never triggers on multiple-choice questions** — All `showIf` operators silently evaluated to `false` when the source question was a multiple-choice (checkbox) question, because answers for that question type are stored as a string array at runtime while every operator was written assuming a scalar string. `contains`/`notContains` now check `answer.includes(value)` for array answers, and `in`/`notIn` now check for any intersection between the selected options and the configured value list. Existing string/numeric behaviour is unchanged. Fixed in both the frontend evaluator (`Respond.vue`) and the backend server-side evaluator (`ResponseService.php`) so visibility and server-side validation stay in sync. ([#71](https://github.com/nextcloud/formvox/issues/71))
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
