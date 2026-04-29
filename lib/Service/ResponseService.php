@@ -580,8 +580,10 @@ class ResponseService
                 case 'notEquals':
                     return $answer !== $value;
                 case 'contains':
+                    if (is_array($answer)) return in_array($value, $answer, true);
                     return is_string($answer) && str_contains($answer, $value);
                 case 'notContains':
+                    if (is_array($answer)) return !in_array($value, $answer, true);
                     return !is_string($answer) || !str_contains($answer, $value);
                 case 'isEmpty':
                     return $answer === null || $answer === '' || $answer === [];
@@ -592,9 +594,11 @@ class ResponseService
                 case 'lessThan':
                     return is_numeric($answer) && $answer < $value;
                 case 'in':
-                    return is_array($value) && in_array($answer, $value);
+                    if (is_array($answer)) return is_array($value) && count(array_intersect($answer, $value)) > 0;
+                    return is_array($value) && in_array($answer, $value, true);
                 case 'notIn':
-                    return is_array($value) && !in_array($answer, $value);
+                    if (is_array($answer)) return !is_array($value) || count(array_intersect($answer, $value)) === 0;
+                    return !is_array($value) || !in_array($answer, $value, true);
             }
         }
 
