@@ -844,7 +844,48 @@ export default {
       emit('update', JSON.parse(JSON.stringify(localQuestion)));
     };
 
+    // Type-specific fields kept on the question object for each question type.
+    // Anything in the union of all values that is NOT in the active type's list
+    // gets stripped on type change so stale settings (option lists, validation
+    // rules, columns with the wrong shape, etc.) don't leak between types.
+    const TYPE_FIELDS = {
+      text:     ['validation'],
+      textarea: ['validation'],
+      number:   ['validation'],
+      choice:   ['options'],
+      multiple: ['options'],
+      dropdown: ['options'],
+      date:     ['dateMin', 'dateMax'],
+      datetime: ['dateMin', 'dateMax'],
+      time:     ['timeMin', 'timeMax'],
+      scale:    ['scaleMin', 'scaleMax'],
+      rating:   ['ratingMax'],
+      matrix:   ['rows', 'columns'],
+      table:    ['columns', 'minRows', 'maxRows'],
+      file:     ['allowedTypePreset', 'allowedTypes', 'maxFileSize', 'maxFiles'],
+    };
+    const ALL_TYPE_SPECIFIC_FIELDS = [...new Set(Object.values(TYPE_FIELDS).flat())];
+
     const onTypeChange = () => {
+      // Drop every type-specific field the new type does not use.
+      const keep = TYPE_FIELDS[localQuestion.type] || [];
+      ALL_TYPE_SPECIFIC_FIELDS.forEach(field => {
+        if (!keep.includes(field)) delete localQuestion[field];
+      });
+
+      // matrix.columns and table.columns are both kept by name, but their row shapes
+      // are incompatible (matrix: {id,label,value}; table: {id,label,inputType,...}).
+      // If the existing array doesn't match the shape the new type expects, drop it
+      // so the initialiser below can build a fresh one.
+      const firstCol = localQuestion.columns?.[0];
+      if (firstCol) {
+        const isTableShape = 'inputType' in firstCol;
+        if ((localQuestion.type === 'table' && !isTableShape)
+            || (localQuestion.type === 'matrix' && isTableShape)) {
+          delete localQuestion.columns;
+        }
+      }
+
       // Initialize type-specific properties
       if (hasOptions.value && (!localQuestion.options || localQuestion.options.length === 0)) {
         const id1 = `opt${uuidv4().split('-')[0]}`;

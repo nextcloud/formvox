@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.5] - 2026-04-29
+
+### Fixed
+- **Question settings leak across type changes** — Switching a question's type in the editor only initialised new fields, never cleared the old ones, so e.g. options arrays from a former `choice` question kept polluting validation and CSV export after the question was changed to `text`, and integer-only validation rules from a `text` question silently rejected valid input on a former `multiple` question. `onTypeChange()` now drops every type-specific field the new type doesn't use, with a special case for the matrix↔table `columns` transition where both types share the field name but the row shapes are incompatible. ([#69](https://github.com/nextcloud/formvox/issues/69))
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
