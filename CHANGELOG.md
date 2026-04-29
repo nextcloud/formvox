@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.5] - 2026-04-29
+
+### Fixed
+- **CSV export of table-question answers shows internal column IDs** — Each row of a table answer was JSON-encoded as-is, so columns appeared as opaque keys like `col36d83f62` instead of the labels the form author typed. `exportCsv()` now resolves the column-ID → label map (mirroring the existing matrix handling) before serialising. ([#70](https://github.com/nextcloud/formvox/issues/70))
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
