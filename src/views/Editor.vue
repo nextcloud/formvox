@@ -2,99 +2,40 @@
   <NcContent app-name="formvox">
     <NcAppContent>
       <div class="editor-container">
-        <div class="editor-back">
+        <div class="editor-topbar">
           <NcButton type="tertiary" @click="goBack">
             <template #icon>
               <ArrowLeftIcon :size="20" />
             </template>
             {{ t('All forms') }}
           </NcButton>
-        </div>
 
-        <!-- Lock banner when another editor is active -->
-        <div v-if="lockedByOther" class="permission-banner permission-banner--lock">
-          <div class="lock-editor-info">
-            <NcAvatar :user="lockingEditor?.userId" :display-name="lockingEditor?.displayName" :size="32" />
-            <div class="lock-editor-text">
-              <strong>{{ lockingEditor?.displayName || t('Someone') }}</strong>
-              {{ t('is currently editing this form') }}
-            </div>
-          </div>
-          <span class="lock-subtitle">{{ t('You can view the form but not make changes right now.') }}</span>
-        </div>
-
-        <!-- Permission banner for read-only users -->
-        <div v-else-if="!hasEditPermission" class="permission-banner">
-          <span class="permission-icon">🔒</span>
-          <span>{{ t('You have read-only access to this form. Contact the owner to request edit permissions.') }}</span>
-        </div>
-
-        <div class="editor-header">
-          <div class="form-field">
-            <label class="form-label">{{ t('Form title') }}</label>
-            <NcTextField
-              v-model="form.title"
-              :disabled="!canEdit"
-              :placeholder="t('Enter form title')"
-              class="title-input"
-              @update:model-value="debouncedSave"
-            />
-          </div>
-          <div class="form-field">
-            <label class="form-label">{{ t('Description') }}</label>
-            <NcTextArea
-              v-model="form.description"
-              :disabled="!canEdit"
-              :placeholder="t('Enter description (optional)')"
-              :resize="false"
-              :rows="2"
-              class="description-input"
-              @update:model-value="debouncedSave"
-            />
-          </div>
-        </div>
-
-        <div class="editor-toolbar">
-          <!-- Left: Content editing actions -->
-          <div class="toolbar-section toolbar-section--start">
+          <div class="editor-topbar__tabs" role="tablist">
             <NcButton
-              :disabled="!canEdit"
-              :title="!canEdit ? t('You do not have permission to edit this form') : ''"
-              @click="addQuestion"
+              role="tab"
+              :type="!showPreview ? 'primary' : 'tertiary'"
+              :aria-selected="!showPreview"
+              @click="showPreview = false"
             >
               <template #icon>
-                <PlusIcon :size="20" />
+                <PencilIcon :size="20" />
               </template>
-              {{ t('Add question') }}
+              {{ t('Edit') }}
             </NcButton>
-
             <NcButton
-              type="secondary"
-              :disabled="!canEdit"
-              @click="addSection"
-            >
-              <template #icon>
-                <SectionIcon :size="20" />
-              </template>
-              {{ t('Add section') }}
-            </NcButton>
-
-          </div>
-
-          <!-- Right: View & Share actions -->
-          <div class="toolbar-section toolbar-section--end">
-            <NcButton
-              type="secondary"
-              :title="showPreview ? t('Edit') : t('Preview')"
-              :aria-label="showPreview ? t('Edit') : t('Preview')"
-              @click="showPreview = !showPreview"
+              role="tab"
+              :type="showPreview ? 'primary' : 'tertiary'"
+              :aria-selected="showPreview"
+              @click="showPreview = true"
             >
               <template #icon>
                 <EyeIcon :size="20" />
               </template>
-              {{ showPreview ? t('Edit') : t('Preview') }}
+              {{ t('Preview') }}
             </NcButton>
+          </div>
 
+          <div class="editor-topbar__actions">
             <NcButton
               type="secondary"
               :disabled="!canShare"
@@ -149,6 +90,47 @@
                 {{ t('Work together') }}
               </NcActionButton>
             </NcActions>
+          </div>
+        </div>
+
+        <!-- Lock banner when another editor is active -->
+        <div v-if="lockedByOther" class="permission-banner permission-banner--lock">
+          <div class="lock-editor-info">
+            <NcAvatar :user="lockingEditor?.userId" :display-name="lockingEditor?.displayName" :size="32" />
+            <div class="lock-editor-text">
+              <strong>{{ lockingEditor?.displayName || t('Someone') }}</strong>
+              {{ t('is currently editing this form') }}
+            </div>
+          </div>
+          <span class="lock-subtitle">{{ t('You can view the form but not make changes right now.') }}</span>
+        </div>
+
+        <!-- Permission banner for read-only users -->
+        <div v-else-if="!hasEditPermission" class="permission-banner">
+          <span class="permission-icon">🔒</span>
+          <span>{{ t('You have read-only access to this form. Contact the owner to request edit permissions.') }}</span>
+        </div>
+
+        <div class="editor-header">
+          <div class="form-field">
+            <label class="form-label">{{ t('Form title') }}</label>
+            <NcTextField
+              v-model="form.title"
+              :disabled="!canEdit"
+              :placeholder="t('Enter form title')"
+              class="title-input"
+              @update:model-value="debouncedSave"
+            />
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t('Description') }}</label>
+            <MarkdownEditor
+              v-model="form.description"
+              :disabled="!canEdit"
+              :placeholder="t('Enter description (optional)')"
+              class="description-input"
+              @update:model-value="debouncedSave"
+            />
           </div>
         </div>
 
@@ -257,6 +239,21 @@
               <p>{{ t('No questions yet. Click "Add question" to get started.') }}</p>
             </div>
           </template>
+
+          <div v-if="canEdit && !showPreview" class="add-question-rail">
+            <NcButton type="primary" @click="addQuestion">
+              <template #icon>
+                <PlusIcon :size="20" />
+              </template>
+              {{ t('Add question') }}
+            </NcButton>
+            <NcButton type="tertiary" @click="addSection">
+              <template #icon>
+                <SectionIcon :size="20" />
+              </template>
+              {{ t('Add section') }}
+            </NcButton>
+          </div>
         </div>
 
       </div>
@@ -320,6 +317,7 @@ import { t } from '@/utils/l10n';
 import { v4 as uuidv4 } from 'uuid';
 import draggable from 'vuedraggable';
 import QuestionEditor from '../components/QuestionEditor.vue';
+import MarkdownEditor from '../components/MarkdownEditor.vue';
 import SettingsPanel from '../components/SettingsPanel.vue';
 import ShareDialog from '../components/ShareDialog.vue';
 import FormBrandingEditor from '../components/FormBrandingEditor.vue';
@@ -327,6 +325,7 @@ import PageRoutingEditor from '../components/PageRoutingEditor.vue';
 import PlusIcon from '../components/icons/PlusIcon.vue';
 import EyeIcon from '../components/icons/EyeIcon.vue';
 import CogIcon from '../components/icons/CogIcon.vue';
+import PencilIcon from 'vue-material-design-icons/Pencil.vue';
 import ShareIcon from '../components/icons/ShareIcon.vue';
 import ChartIcon from '../components/icons/ChartIcon.vue';
 import PagesIcon from '../components/icons/PagesIcon.vue';
@@ -350,6 +349,7 @@ export default {
     NcTextArea,
     draggable,
     QuestionEditor,
+    MarkdownEditor,
     SettingsPanel,
     ShareDialog,
     FormBrandingEditor,
@@ -357,6 +357,7 @@ export default {
     NcAvatar,
     PlusIcon,
     EyeIcon,
+    PencilIcon,
     CogIcon,
     ShareIcon,
     ChartIcon,
@@ -940,8 +941,30 @@ export default {
   padding: 20px;
 }
 
-.editor-back {
-  margin-bottom: 16px;
+.editor-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-main-background);
+}
+
+.editor-topbar__tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.editor-topbar__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .permission-banner {
@@ -1020,39 +1043,37 @@ export default {
   // Standaard NcTextArea styling
 }
 
-.editor-toolbar {
+.add-question-rail {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.toolbar-section {
-  display: flex;
-  align-items: center;
   gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin: 24px 0;
+  padding: 18px;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--border-radius-large);
+  background: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-primary-element);
+    background: var(--color-background-hover);
+  }
 }
 
-.toolbar-section--start {
-  flex: 0 1 auto;
-}
-
-.toolbar-section--end {
-  flex: 0 1 auto;
-  justify-content: flex-end;
-}
-
-/* Responsive: wrap on small screens */
 @media (max-width: 768px) {
-  .editor-toolbar {
+  .editor-topbar {
     flex-wrap: wrap;
     gap: 8px;
   }
 
-  .toolbar-section {
+  .editor-topbar__tabs {
+    margin-left: 0;
+    order: 2;
+    width: 100%;
+  }
+
+  .editor-topbar__actions {
     flex-wrap: wrap;
   }
 }

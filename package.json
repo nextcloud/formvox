@@ -1,6 +1,6 @@
 {
   "name": "formvox",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "File-based forms and polls for Nextcloud",
   "scripts": {
     "build": "webpack",
@@ -8,6 +8,7 @@
     "watch": "webpack --watch"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
     "@nextcloud/axios": "^2.4.0",
     "@nextcloud/dialogs": "^7.1.0",
     "@nextcloud/files": "^3.0.0",
@@ -16,6 +17,7 @@
     "@nextcloud/vue": "^9.1.0",
     "@vue/compiler-sfc": "^3.5.22",
     "chart.js": "^4.5.1",
+    "easymde": "^2.21.0",
     "markdown-it": "^14.1.1",
     "odf-kit": "^0.9.4",
     "qrcode": "^1.5.4",
@@ -23,6 +25,7 @@
     "uuid": "^9.0.0",
     "vue": "^3.5.22",
     "vue-chartjs": "^5.3.3",
+    "vue-easymde": "^2.0.0",
     "vue-loader": "^17.4.2",
     "vue-material-design-icons": "^5.3.1",
     "vuedraggable": "^4.1.0"

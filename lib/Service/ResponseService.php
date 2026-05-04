@@ -331,6 +331,28 @@ class ResponseService
                         $parts[] = $rowLabel . ': ' . $colLabel;
                     }
                     $answer = implode(', ', $parts);
+                } elseif (($question['type'] ?? '') === 'table' && is_array($answer)) {
+                    // Table answers are arrays of row objects keyed by column id.
+                    // Replace internal column ids with the user-defined label.
+                    $columns = $question['columns'] ?? [];
+                    $colLabels = [];
+                    foreach ($columns as $c) {
+                        $cid = $c['id'] ?? null;
+                        if ($cid !== null) {
+                            $colLabels[$cid] = $c['label'] ?? $cid;
+                        }
+                    }
+                    $relabelled = [];
+                    foreach ($answer as $rowObj) {
+                        if (!is_array($rowObj)) continue;
+                        $relabelledRow = [];
+                        foreach ($rowObj as $cid => $val) {
+                            $key = $colLabels[$cid] ?? $cid;
+                            $relabelledRow[$key] = $val;
+                        }
+                        $relabelled[] = $relabelledRow;
+                    }
+                    $answer = json_encode($relabelled, JSON_UNESCAPED_UNICODE);
                 } else {
                     // Map option values to labels for choice/multiple/dropdown questions
                     $options = $question['options'] ?? [];
@@ -361,6 +383,14 @@ class ResponseService
                 $row[] = $answer;
             }
 
+            // Normalise embedded newlines so Excel recognises them as line
+            // breaks within a cell instead of starting a new row.
+            $row = array_map(function ($v) {
+                if (!is_string($v)) return $v;
+                // Convert standalone \n / lone \r to \r\n
+                $v = str_replace(["\r\n", "\r"], ["\n", "\n"], $v);
+                return str_replace("\n", "\r\n", $v);
+            }, $row);
             fputcsv($output, $row);
         }
 
@@ -573,28 +603,46 @@ class ResponseService
             $operator = $condition['operator'];
             $value = $condition['value'] ?? null;
             $answer = $answers[$questionId] ?? null;
+            $isArrayAnswer = is_array($answer);
 
             switch ($operator) {
                 case 'equals':
-                    return $answer === $value;
+                    // For multiple-choice (array answer), match if the array contains the expected value
+                    return $isArrayAnswer ? in_array($value, $answer, true) : $answer === $value;
                 case 'notEquals':
-                    return $answer !== $value;
+                    return $isArrayAnswer ? !in_array($value, $answer, true) : $answer !== $value;
                 case 'contains':
-                    return is_string($answer) && str_contains($answer, $value);
+                    if ($isArrayAnswer) return in_array($value, $answer, true);
+                    return is_string($answer) && str_contains($answer, (string)$value);
                 case 'notContains':
-                    return !is_string($answer) || !str_contains($answer, $value);
+                    if ($isArrayAnswer) return !in_array($value, $answer, true);
+                    return !is_string($answer) || !str_contains($answer, (string)$value);
                 case 'isEmpty':
                     return $answer === null || $answer === '' || $answer === [];
                 case 'isNotEmpty':
                     return $answer !== null && $answer !== '' && $answer !== [];
-                case 'greaterThan':
-                    return is_numeric($answer) && $answer > $value;
-                case 'lessThan':
-                    return is_numeric($answer) && $answer < $value;
+                case 'greaterThan': {
+                    $a = $isArrayAnswer ? ($answer[0] ?? null) : $answer;
+                    return is_numeric($a) && $a > $value;
+                }
+                case 'lessThan': {
+                    $a = $isArrayAnswer ? ($answer[0] ?? null) : $answer;
+                    return is_numeric($a) && $a < $value;
+                }
                 case 'in':
-                    return is_array($value) && in_array($answer, $value);
+                    if (!is_array($value)) return false;
+                    if ($isArrayAnswer) {
+                        foreach ($answer as $a) if (in_array($a, $value, true)) return true;
+                        return false;
+                    }
+                    return in_array($answer, $value, true);
                 case 'notIn':
-                    return is_array($value) && !in_array($answer, $value);
+                    if (!is_array($value)) return true;
+                    if ($isArrayAnswer) {
+                        foreach ($answer as $a) if (in_array($a, $value, true)) return false;
+                        return true;
+                    }
+                    return !in_array($answer, $value, true);
             }
         }
 

@@ -561,32 +561,42 @@ export default {
       // Simple condition
       const answer = answers[condition.questionId];
       const value = condition.value;
+      const isArrayAnswer = Array.isArray(answer);
 
       switch (condition.operator) {
         case 'equals':
-          return answer === value;
+          // For multiple-choice (array answer), match if the array contains the expected value
+          return isArrayAnswer ? answer.includes(value) : answer === value;
         case 'notEquals':
-          return answer !== value;
+          return isArrayAnswer ? !answer.includes(value) : answer !== value;
         case 'contains':
+          if (isArrayAnswer) return answer.includes(value);
           return typeof answer === 'string' && answer.includes(value);
         case 'notContains':
+          if (isArrayAnswer) return !answer.includes(value);
           return typeof answer !== 'string' || !answer.includes(value);
         case 'isEmpty':
-          return !answer || answer === '' || (Array.isArray(answer) && answer.length === 0);
+          return !answer || answer === '' || (isArrayAnswer && answer.length === 0);
         case 'isNotEmpty':
-          return answer && answer !== '' && (!Array.isArray(answer) || answer.length > 0);
+          return answer && answer !== '' && (!isArrayAnswer || answer.length > 0);
         case 'greaterThan':
         case 'lessThan': {
           // Date strings (YYYY-MM-DD or YYYY-MM-DDTHH:MM) compare correctly as strings
-          const isDate = /^\d{4}-\d{2}-\d{2}/.test(answer) && /^\d{4}-\d{2}-\d{2}/.test(value);
-          const a = isDate ? answer : Number(answer);
+          const aRaw = isArrayAnswer ? answer[0] : answer;
+          const isDate = /^\d{4}-\d{2}-\d{2}/.test(aRaw) && /^\d{4}-\d{2}-\d{2}/.test(value);
+          const a = isDate ? aRaw : Number(aRaw);
           const b = isDate ? value : Number(value);
           return condition.operator === 'greaterThan' ? a > b : a < b;
         }
         case 'in':
-          return Array.isArray(value) && value.includes(answer);
+          // value is an array of allowed options. For array answers, true if any answer is in the allowed list.
+          if (!Array.isArray(value)) return false;
+          if (isArrayAnswer) return answer.some(a => value.includes(a));
+          return value.includes(answer);
         case 'notIn':
-          return !Array.isArray(value) || !value.includes(answer);
+          if (!Array.isArray(value)) return true;
+          if (isArrayAnswer) return !answer.some(a => value.includes(a));
+          return !value.includes(answer);
         default:
           return true;
       }

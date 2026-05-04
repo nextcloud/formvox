@@ -28,12 +28,10 @@
           class="section-title-input"
           @update:model-value="emitUpdate"
         />
-        <NcTextArea
+        <MarkdownEditor
           v-model="localQuestion.description"
           :disabled="readonly"
           :placeholder="t('Section description (optional)')"
-          :resize="false"
-          :rows="2"
           @update:model-value="emitUpdate"
         />
 
@@ -202,14 +200,12 @@
       </div>
 
       <div class="form-field">
-        <label class="form-label">{{ t('Description (optional, supports Markdown)') }}</label>
-        <textarea
+        <label class="form-label">{{ t('Description (optional)') }}</label>
+        <MarkdownEditor
           v-model="localQuestion.description"
           :disabled="readonly"
           :placeholder="t('Add a description or instructions')"
-          rows="3"
-          class="description-input"
-          @input="emitUpdate"
+          @update:model-value="emitUpdate"
         />
       </div>
 
@@ -620,6 +616,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { t } from '@/utils/l10n';
 import draggable from 'vuedraggable';
 import ConditionEditor from './ConditionEditor.vue';
+import MarkdownEditor from './MarkdownEditor.vue';
 import DragIcon from './icons/DragIcon.vue';
 import ChevronIcon from './icons/ChevronIcon.vue';
 import CopyIcon from './icons/CopyIcon.vue';
@@ -643,6 +640,7 @@ export default {
     NcDateTimePicker,
     draggable,
     ConditionEditor,
+    MarkdownEditor,
     DragIcon,
     ChevronIcon,
     CopyIcon,
@@ -845,6 +843,51 @@ export default {
     };
 
     const onTypeChange = () => {
+      // Strip orphaned type-specific fields from the previous type so they
+      // don't bleed into the new type (e.g. options on a text question, or a
+      // text-only validation pattern on a multiple-choice question).
+      const t = localQuestion.type;
+      const hasOpts = ['choice', 'multiple', 'dropdown'].includes(t);
+      if (!hasOpts) {
+        delete localQuestion.options;
+      }
+      if (t !== 'scale') {
+        delete localQuestion.scaleMin;
+        delete localQuestion.scaleMax;
+        delete localQuestion.scaleMinLabel;
+        delete localQuestion.scaleMaxLabel;
+      }
+      if (t !== 'rating') {
+        delete localQuestion.ratingMax;
+      }
+      if (t !== 'matrix') {
+        delete localQuestion.rows;
+        // columns is shared with table — only drop if also not a table
+        if (t !== 'table') delete localQuestion.columns;
+      }
+      if (t !== 'table') {
+        delete localQuestion.minRows;
+        delete localQuestion.maxRows;
+      }
+      if (t !== 'file') {
+        delete localQuestion.allowedTypePreset;
+        delete localQuestion.allowedTypes;
+        delete localQuestion.maxFileSize;
+        delete localQuestion.maxFiles;
+      }
+      // text/textarea-only validation
+      if (!['text', 'textarea'].includes(t)) {
+        delete localQuestion.validation;
+      }
+      // number/date-only min/max bounds
+      if (!['number'].includes(t)) {
+        // keep number-only min/max separate from scale's; FormVox stores them at top-level for number too
+      }
+      if (!['date', 'datetime'].includes(t)) {
+        delete localQuestion.dateMin;
+        delete localQuestion.dateMax;
+      }
+
       // Initialize type-specific properties
       if (hasOptions.value && (!localQuestion.options || localQuestion.options.length === 0)) {
         const id1 = `opt${uuidv4().split('-')[0]}`;

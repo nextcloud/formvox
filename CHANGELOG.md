@@ -2,6 +2,20 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.5] - 2026-05-04
+
+### Added
+- **Markdown editor for descriptions** — Form description and per-question/section descriptions now use a native Nextcloud-style markdown editor (EasyMDE) with a toolbar for bold, italic, headings, lists, links, images, and preview. Includes a custom drag handle to resize the editor vertically.
+
+### Changed
+- **Form editor layout redesign** — Top-level form actions (Edit/Preview tabs, Share, Results, and the Pages/Branding/Settings overflow menu) now live in a sticky page header at the top of the editor, instead of a horizontal bar that visually appeared to belong to the form description. Question and section creation moved to a dedicated "+ Add question" rail below the question list — the spot where the cursor naturally lands after editing the previous question.
+
+### Fixed
+- **Conditional logic broke for multiple-choice answers** — `showIf` evaluation now correctly handles array answers from multiple-choice/checkbox questions in both the frontend evaluator and PHP backend, instead of comparing the whole array against a single value. ([#71](https://github.com/nextcloud/formvox/issues/71))
+- **CSV export of table answers showed internal column ids** — Table-type answers in CSV exports now use the column labels from the form definition instead of internal column ids. ([#70](https://github.com/nextcloud/formvox/issues/70))
+- **Orphaned fields persisted after question type change** — Switching a question's type (e.g. from `scale` to `text`) now strips type-specific fields (options, scale bounds, rating, matrix, table, file, validation, date bounds) so the saved question matches its new type. ([#69](https://github.com/nextcloud/formvox/issues/69))
+- **Newlines in answers broke CSV row alignment** — Long-text answers containing newlines are now normalised to `\r\n` per RFC 4180 before being written to CSV, so spreadsheets parse rows correctly. ([#65](https://github.com/nextcloud/formvox/issues/65))
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
