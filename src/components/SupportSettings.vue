@@ -187,11 +187,11 @@
 			<div class="contact-info-block">
 				<p>
 					{{ t('Learn more about FormVox') }}:
-					<a href="https://voxcloud.nl" target="_blank" rel="noopener noreferrer">voxcloud.nl</a>
+					<a href="https://voxcommons.com" target="_blank" rel="noopener noreferrer">voxcommons.com</a>
 				</p>
 				<p>
 					{{ t('Questions or feedback?') }}
-					<a href="mailto:info@voxcloud.nl">info@voxcloud.nl</a>
+					<a href="mailto:info@voxcommons.com">info@voxcommons.com</a>
 				</p>
 			</div>
 		</div>
@@ -308,7 +308,7 @@ export default {
 	computed: {
 		pricingUrl() {
 			const lang = (window.document?.documentElement?.lang || '').split('-')[0]
-			return lang === 'nl' ? 'https://voxcloud.nl/pricing/#formvox' : 'https://voxcloud.nl/en/pricing/#formvox'
+			return lang === 'nl' ? 'https://voxcommons.com/pricing/#formvox' : 'https://voxcommons.com/en/pricing/#formvox'
 		},
 	},
 

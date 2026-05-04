@@ -1,9 +1,9 @@
 /**
  * FormVox - Main styles
- * Based on VoxCloud Branding Guide
+ * Based on VoxCommons Branding Guide
  */
 
-/* === VoxCloud Design System Variables === */
+/* === VoxCommons Design System Variables === */
 :root {
 	/* App-specific accent */
 	--vox-accent-formvox: #e67e22;
