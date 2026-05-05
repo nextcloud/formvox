@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.1.6] - 2026-05-05
+
+### Fixed
+- **Form description rendered as plain text on the public form** — The form description on the public response page now renders as markdown instead of literal text with the raw `#`/`*` characters and collapsed newlines. Headings, lists, links, code, and blockquotes in the form description, section descriptions, and the in-editor markdown preview all render with proper visual styling. ([#63](https://github.com/nextcloud/formvox/issues/63))
+
 ## [1.1.5] - 2026-05-04
 
 ### Added

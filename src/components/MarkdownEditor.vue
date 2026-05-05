@@ -281,6 +281,21 @@ export default {
     .editor-preview, .editor-preview-side {
       background: var(--color-main-background);
       color: var(--color-main-text);
+      padding: 12px 16px;
+
+      h1 { font-size: 1.6em; font-weight: 700; margin: 0.5em 0 0.3em; }
+      h2 { font-size: 1.35em; font-weight: 700; margin: 0.5em 0 0.3em; }
+      h3 { font-size: 1.15em; font-weight: 700; margin: 0.5em 0 0.3em; }
+      h4, h5, h6 { font-weight: 700; margin: 0.5em 0 0.3em; }
+      p { margin: 0.4em 0; }
+      ul { list-style: disc; padding-left: 1.5em; margin: 0.4em 0; }
+      ol { list-style: decimal; padding-left: 1.5em; margin: 0.4em 0; }
+      li { margin: 0.2em 0; }
+      a { color: var(--color-primary-element); text-decoration: underline; }
+      code { background: var(--color-background-hover); padding: 2px 4px; border-radius: 3px; font-family: monospace; }
+      pre { background: var(--color-background-hover); padding: 8px; border-radius: 4px; overflow-x: auto; }
+      blockquote { border-left: 3px solid var(--color-border); padding-left: 12px; color: var(--color-text-maxcontrast); margin: 0.4em 0; }
+      img { max-width: 100%; height: auto; }
     }
   }
 }

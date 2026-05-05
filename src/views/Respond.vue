@@ -68,7 +68,7 @@
 
       <div class="form-header">
         <h1>{{ form.title }}</h1>
-        <p v-if="form.description" class="form-description">{{ form.description }}</p>
+        <div v-if="form.description" class="form-description" v-html="renderMarkdown(form.description)" />
       </div>
 
       <div
@@ -1153,7 +1153,35 @@ export default {
     color: var(--color-text-maxcontrast);
     font-size: 16px;
     margin: 0;
+
+    h1 { font-size: 1.6em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
+    h2 { font-size: 1.35em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
+    h3 { font-size: 1.15em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
+    h4, h5, h6 { font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
+    p { margin: 0.4em 0; }
+    ul { list-style: disc; padding-left: 1.5em; margin: 0.4em 0; }
+    ol { list-style: decimal; padding-left: 1.5em; margin: 0.4em 0; }
+    li { margin: 0.2em 0; }
+    a { color: var(--color-primary-element); text-decoration: underline; }
+    code { background: var(--color-background-hover); padding: 2px 4px; border-radius: 3px; font-family: monospace; }
+    pre { background: var(--color-background-hover); padding: 8px; border-radius: 4px; overflow-x: auto; }
+    blockquote { border-left: 3px solid var(--color-border); padding-left: 12px; margin: 0.4em 0; }
   }
+}
+
+.section-description {
+  h1 { font-size: 1.6em; font-weight: 700; margin: 0.5em 0 0.3em; }
+  h2 { font-size: 1.35em; font-weight: 700; margin: 0.5em 0 0.3em; }
+  h3 { font-size: 1.15em; font-weight: 700; margin: 0.5em 0 0.3em; }
+  h4, h5, h6 { font-weight: 700; margin: 0.5em 0 0.3em; }
+  p { margin: 0.4em 0; }
+  ul { list-style: disc; padding-left: 1.5em; margin: 0.4em 0; }
+  ol { list-style: decimal; padding-left: 1.5em; margin: 0.4em 0; }
+  li { margin: 0.2em 0; }
+  a { color: var(--color-primary-element); text-decoration: underline; }
+  code { background: var(--color-background-hover); padding: 2px 4px; border-radius: 3px; font-family: monospace; }
+  pre { background: var(--color-background-hover); padding: 8px; border-radius: 4px; overflow-x: auto; }
+  blockquote { border-left: 3px solid var(--color-border); padding-left: 12px; margin: 0.4em 0; }
 }
 
 .page-indicator {
