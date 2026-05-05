@@ -25,6 +25,7 @@ use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\BrandingService;
+use OCA\FormVox\Service\ChallengeService;
 
 class PublicController extends Controller
 {
@@ -35,6 +36,7 @@ class PublicController extends Controller
     private FormService $formService;
     private ResponseService $responseService;
     private BrandingService $brandingService;
+    private ChallengeService $challengeService;
     private IInitialState $initialState;
 
     public function __construct(
@@ -46,6 +48,7 @@ class PublicController extends Controller
         FormService $formService,
         ResponseService $responseService,
         BrandingService $brandingService,
+        ChallengeService $challengeService,
         IInitialState $initialState
     ) {
         parent::__construct(Application::APP_ID, $request);
@@ -56,6 +59,7 @@ class PublicController extends Controller
         $this->formService = $formService;
         $this->responseService = $responseService;
         $this->brandingService = $brandingService;
+        $this->challengeService = $challengeService;
         $this->initialState = $initialState;
     }
 
@@ -338,14 +342,45 @@ class PublicController extends Controller
     }
 
     /**
+     * Issue an ALTCHA proof-of-work challenge for a public form.
+     *
+     * Replaces per-IP rate limiting on submit (NAT-unfriendly) with a
+     * per-browser PoW token. Difficulty adapts to the per-form submit rate.
+     */
+    #[PublicPage]
+    #[NoCSRFRequired]
+    public function challenge(int $fileId, string $token): DataResponse
+    {
+        // $token is required for route binding (so /public/{fileId}/challenge
+        // doesn't collide with /public/{fileId}/{token}); we don't validate
+        // it here — verification happens at submit time.
+        unset($token);
+        return new DataResponse($this->challengeService->issue($fileId));
+    }
+
+    /**
      * Submit response (anonymous or authenticated based on form settings)
      */
     #[PublicPage]
     #[NoCSRFRequired]
-    #[AnonRateLimit(limit: 100, period: 3600)]
+    #[AnonRateLimit(limit: 25000, period: 3600)]
     #[BruteForceProtection(action: 'formvox_submit')]
-    public function submit(int $fileId, string $token, array $answers): DataResponse
+    public function submit(int $fileId, string $token, array $answers, ?array $altcha = null): DataResponse
     {
+        // Anti-bot: require a valid ALTCHA proof-of-work token before doing
+        // any work. Cost is per-browser, so 500 users behind one NAT IP each
+        // pay their own (tiny) cost — see issue #76. The AnonRateLimit above
+        // remains as a generous safety net for pathological cases.
+        if ($this->userSession->getUser() === null
+            && !$this->challengeService->verify($altcha, $fileId)) {
+            $response = new DataResponse(
+                ['error' => 'Challenge verification failed. Please refresh the page.'],
+                Http::STATUS_TOO_MANY_REQUESTS
+            );
+            $response->throttle();
+            return $response;
+        }
+
         try {
             $form = $this->loadAndValidateForm($fileId, $token);
 

@@ -192,6 +192,7 @@ import DOMPurify from 'dompurify';
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
+import { solveChallengeWorkers } from 'altcha-lib';
 import { t } from '@/utils/l10n';
 import { useTts } from '../composables/useTts';
 import QuestionRenderer from '../components/QuestionRenderer.vue';
@@ -899,6 +900,60 @@ export default {
       return fileAnswers;
     };
 
+    /**
+     * Fetch + solve an ALTCHA proof-of-work challenge for this form.
+     *
+     * Replaces per-IP rate limiting on the server (NAT-unfriendly) — cost is
+     * paid per browser, so 500 users behind one NAT IP each pay their own
+     * (tiny) cost. See issue #76.
+     *
+     * Returns the solved payload to include in the submit body, or null if
+     * something went wrong (we let the server respond with the rate-limit
+     * fallback in that case rather than blocking the user here).
+     */
+    const solveAltchaChallenge = async () => {
+      try {
+        const challengeUrl = generateUrl('/apps/formvox/public/{fileId}/{token}/challenge', {
+          fileId: props.fileId,
+          token: props.token,
+        });
+        const { data: challenge } = await axios.get(challengeUrl);
+        // Web Worker pool keeps the SHA-256 search off the main thread so
+        // the UI stays responsive even when difficulty is bumped under load.
+        // Nextcloud's CSP only allows `worker-src blob:`, so we fetch the
+        // bundled worker script and instantiate from a Blob URL.
+        const workerScriptUrl = new URL('../workers/altchaWorker.js', import.meta.url);
+        const workerSource = await (await fetch(workerScriptUrl)).text();
+        const workerBlobUrl = URL.createObjectURL(
+          new Blob([workerSource], { type: 'application/javascript' }),
+        );
+        const workerFactory = () => new Worker(workerBlobUrl);
+        const concurrency = Math.min(navigator.hardwareConcurrency || 4, 8);
+        const solution = await solveChallengeWorkers(
+          workerFactory,
+          concurrency,
+          challenge.challenge,
+          challenge.salt,
+          challenge.algorithm,
+          challenge.maxnumber,
+        );
+        URL.revokeObjectURL(workerBlobUrl);
+        if (!solution) {
+          return null;
+        }
+        return {
+          algorithm: challenge.algorithm,
+          challenge: challenge.challenge,
+          salt: challenge.salt,
+          signature: challenge.signature,
+          number: solution.number,
+        };
+      } catch (e) {
+        console.warn('ALTCHA challenge failed:', e);
+        return null;
+      }
+    };
+
     const submit = async () => {
       if (!validateCurrentPage()) {
         return;
@@ -925,13 +980,17 @@ export default {
         // Step 2: Merge file metadata into answers
         const finalAnswers = { ...answers, ...fileAnswers };
 
-        // Step 3: Submit the response
+        // Step 3: Solve ALTCHA challenge (anti-bot, NAT-friendly).
+        // Skip in preview mode and when explicitly disabled (e.g. tests).
+        const altcha = await solveAltchaChallenge();
+
+        // Step 4: Submit the response
         const url = generateUrl('/apps/formvox/public/{fileId}/{token}/submit', {
           fileId: props.fileId,
           token: props.token
         });
 
-        const response = await axios.post(url, { answers: finalAnswers });
+        const response = await axios.post(url, { answers: finalAnswers, altcha });
 
         submitted.value = true;
         ttsStop();

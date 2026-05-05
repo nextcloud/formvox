@@ -2,10 +2,17 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [1.1.6] - 2026-05-05
+## [1.2.0] - 2026-05-05
+
+### Added
+- **Bot protection that works behind NAT** — Public form submissions are now protected by an ALTCHA-style proof-of-work challenge solved in the user's browser, replacing per-IP rate limiting as the primary anti-bot defense. Cost is paid per browser, so an organisation with hundreds of users behind a single NAT IP all submit without throttling. The challenge is invisible to legitimate users (~50–150 ms of work in a Web Worker), self-hosted (no third-party service, no external JS, no API keys, GDPR-clean), and adapts difficulty to the per-form submit rate so attackers pay more under load. The signature is bound to the form's file ID so a challenge issued for one form cannot be reused on another. Single-use replay protection via Nextcloud's distributed cache (Redis) with APCu fallback for single-server installs. ([#76](https://github.com/nextcloud/formvox/issues/76))
+
+### Changed
+- **Anonymous submit rate limit raised from 100/hour to 25 000/hour** — With ALTCHA now the primary defense, the per-IP limit becomes a wide safety net rather than the front line. The new ceiling comfortably accommodates large-organisation peaks (think 10 000 employees filling in a training evaluation in one hour) while still bounding pathological abuse if the cache backend goes down.
 
 ### Fixed
 - **Form description rendered as plain text on the public form** — The form description on the public response page now renders as markdown instead of literal text with the raw `#`/`*` characters and collapsed newlines. Headings, lists, links, code, and blockquotes in the form description, section descriptions, and the in-editor markdown preview all render with proper visual styling. ([#63](https://github.com/nextcloud/formvox/issues/63))
+- **"Form not found" / "Access forbidden" for logged-in respondents on restricted folders** — When a public form had `require login` enabled and was stored in a Group Folder or Team Folder the respondent was not a member of, the submission failed because the authenticated submit path used a user-context file load. Authenticated respondents now use the same admin-bypass loader as anonymous submissions, so the share link plus token (and any `allowed_users`/`allowed_groups` rules) are the only gate — no folder ACL needed. ([#77](https://github.com/nextcloud/formvox/issues/77))
 
 ## [1.1.5] - 2026-05-04
 

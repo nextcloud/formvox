@@ -94,7 +94,11 @@ class ResponseService
      */
     public function submitAuthenticated(int $fileId, array $answers, string $userId, string $displayName): array
     {
-        $form = $this->formService->load($fileId);
+        // Use the admin-bypass loader: respondents are authenticated for
+        // identity (the response is attributed to $userId) but they don't
+        // need file/folder permissions on the form file itself. The share
+        // link + token already validated their right to submit. (#77)
+        $form = $this->formService->loadPublic($fileId);
 
         // Check if form accepts responses
         $this->validateFormAcceptsResponses($form);

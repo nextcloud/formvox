@@ -13,6 +13,7 @@ return [
         ['name' => 'public#showForm', 'url' => '/public/{fileId}/{token}', 'verb' => 'GET'],
         ['name' => 'public#authenticate', 'url' => '/public/{fileId}/{token}', 'verb' => 'POST'],
         ['name' => 'public#submit', 'url' => '/public/{fileId}/{token}/submit', 'verb' => 'POST'],
+        ['name' => 'public#challenge', 'url' => '/public/{fileId}/{token}/challenge', 'verb' => 'GET'],
         ['name' => 'public#uploadFile', 'url' => '/public/{fileId}/{token}/upload', 'verb' => 'POST'],
 
         // Embed routes (frameable version for iframes)

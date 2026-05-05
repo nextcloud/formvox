@@ -1,6 +1,6 @@
 {
   "name": "formvox",
-  "version": "1.1.6",
+  "version": "1.2.0",
   "description": "File-based forms and polls for Nextcloud",
   "scripts": {
     "build": "webpack",
@@ -16,6 +16,7 @@
     "@nextcloud/router": "^3.0.0",
     "@nextcloud/vue": "^9.1.0",
     "@vue/compiler-sfc": "^3.5.22",
+    "altcha-lib": "^1.2.0",
     "chart.js": "^4.5.1",
     "easymde": "^2.21.0",
     "markdown-it": "^14.1.1",

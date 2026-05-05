@@ -17,6 +17,7 @@ module.exports = {
     filename: 'formvox-[name].js',
     chunkFilename: 'formvox-[name].js',
     path: path.resolve(__dirname, 'js'),
+    publicPath: 'auto',
     clean: true,
   },
   optimization: {
