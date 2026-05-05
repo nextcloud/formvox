@@ -88,27 +88,10 @@ export default {
 			return null
 		})
 
-		const stripMarkdown = (text) => {
-			if (!text) return ''
-			return text
-				.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-				.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-				.replace(/(\*\*|__)(.*?)\1/gs, '$2')
-				.replace(/(\*|_)(.*?)\1/gs, '$2')
-				.replace(/~~(.*?)~~/gs, '$1')
-				.replace(/`{1,3}[^`]*`{1,3}/g, '')
-				.replace(/^#{1,6}\s+/gm, '')
-				.replace(/^[>\-*+]\s+/gm, '')
-				.replace(/^\d+\.\s+/gm, '')
-				.replace(/\s+/g, ' ')
-				.trim()
-		}
-
 		const truncate = (text, length) => {
 			if (!text) return ''
-			const plain = stripMarkdown(text)
-			if (plain.length <= length) return plain
-			return plain.substring(0, length) + '...'
+			if (text.length <= length) return text
+			return text.substring(0, length) + '...'
 		}
 
 		const formatDate = (dateString) => {
