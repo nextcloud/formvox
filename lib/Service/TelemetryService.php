@@ -23,19 +23,22 @@ class TelemetryService
     private LoggerInterface $logger;
     private IUserManager $userManager;
     private StatisticsService $statisticsService;
+    private LicenseService $licenseService;
 
     public function __construct(
         IClientService $httpClient,
         IConfig $config,
         LoggerInterface $logger,
         IUserManager $userManager,
-        StatisticsService $statisticsService
+        StatisticsService $statisticsService,
+        LicenseService $licenseService
     ) {
         $this->httpClient = $httpClient;
         $this->config = $config;
         $this->logger = $logger;
         $this->userManager = $userManager;
         $this->statisticsService = $statisticsService;
+        $this->licenseService = $licenseService;
     }
 
     /**
@@ -156,7 +159,35 @@ class TelemetryService
             ],
             'organizationName' => $this->config->getAppValue(Application::APP_ID, 'organization_name', ''),
             'contactEmail' => $this->config->getAppValue(Application::APP_ID, 'contact_email', ''),
+            'hasExtendedSupport' => $this->hasExtendedSupport(),
+            // Sent so the license server can verify hasExtendedSupport claims —
+            // the boolean alone is unauthenticated and could be spoofed by anyone
+            // posting to the telemetry endpoint. The server only honors the claim
+            // when this key + the instance hash match an active license_usage row.
+            // Empty string for community instances (no license) — server treats
+            // those as 'never Enterprise' which is correct.
+            'licenseKey' => $this->licenseService->getLicenseKey() ?? '',
         ];
+    }
+
+    /**
+     * Detect whether the host Nextcloud has an Extended Support / Enterprise
+     * subscription. Uses Nextcloud's public API (OCP\Util::hasExtendedSupport,
+     * available since NC 17). Returns false on any failure so a Community
+     * instance is never reported as Enterprise.
+     */
+    private function hasExtendedSupport(): bool
+    {
+        try {
+            if (class_exists(\OCP\Util::class) && method_exists(\OCP\Util::class, 'hasExtendedSupport')) {
+                return \OCP\Util::hasExtendedSupport();
+            }
+        } catch (\Throwable $e) {
+            $this->logger->debug('TelemetryService: hasExtendedSupport() check failed', [
+                'error' => $e->getMessage()
+            ]);
+        }
+        return false;
     }
 
     /**

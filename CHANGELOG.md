@@ -4,8 +4,18 @@ All notable changes to FormVox will be documented in this file.
 
 ## [1.2.1] - 2026-05-12
 
+### Changed
+- **Pricing removed from admin Support tab** — The Support tab no longer hardcodes subscription tiers and prices. A single "View pricing & plans" button now links to voxcloud.nl/pricing/#formvox where pricing is maintained. Reason: keeping prices in the app required a new App Store release for every price change (review time: days to weeks); the website can be updated instantly. The Support tab now focuses on installation state, organization details, and subscription-key management.
+- **Telemetry transparency expanded** — The "What we collect" list in the Anonymous Usage Statistics section now accurately reflects every field actually sent in the telemetry payload, including the organization name and contact email (only sent if filled in by the admin) and the new Extended Support flag (see below). The previous list omitted these fields.
+
 ### Added
+- **Extended Support / Enterprise flag in telemetry** — The telemetry payload now includes `hasExtendedSupport`, sourced from Nextcloud's public `OCP\Util::hasExtendedSupport()` API (NC 17+). Returns false on any failure so a Community instance is never reported as Enterprise. The license key is sent alongside so the license server can cross-check the claim against an active subscription — the boolean alone is unauthenticated and could otherwise be spoofed. Required for the Nextcloud ISV partnership where bundled-license customers need automatic recognition.
 - **Description links open in a new tab** — Links in form, section and question descriptions now open in a new browser tab with `rel="noopener noreferrer"`, so respondents don't lose their in-progress form when they click a reference link. ([#87](https://github.com/nextcloud/formvox/issues/87))
+
+### Removed
+- "What a subscription includes" checklist with green checkmarks — content moved to voxcloud.nl/pricing/#formvox.
+- Hardcoded pricing tiers (Free + €19/€59/€139/year + Contact us) — content moved to voxcloud.nl/pricing/#formvox.
+- Standalone "Learn more about FormVox" contact block at the bottom of the Support tab — replaced by an inline "Questions? info@voxcloud.nl" link next to the new pricing CTA.
 
 ### Fixed
 - **Submit failed on password-protected public forms** — After entering the share password the user could open the form but every submit was rejected with "Password required" because the frontend never replays the password on subsequent requests. The authenticate flow now sets a signed, HMAC-protected `formvox_pw_<fileId>` cookie (1 h validity, `SameSite=Lax`) which the share-gate accepts as proof of password possession on submit and upload. ([#82](https://github.com/nextcloud/formvox/issues/82))

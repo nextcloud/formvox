@@ -1,89 +1,26 @@
 <template>
 	<div class="support-settings">
-		<!-- Section 1: About FormVox -->
+		<!-- Section 1: About FormVox + CTA -->
 		<div class="settings-section">
 			<h2>{{ t('Support FormVox') }}</h2>
 			<p class="settings-section-desc">
-				{{ t('FormVox is free and open source (AGPL-3.0). You can use all features without a subscription — no limits on functionality, no restrictions, no catch.') }}
+				{{ t('FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support.') }}
 			</p>
-			<p class="settings-section-desc">
-				{{ t('If FormVox is valuable to your organization, consider subscribing. Your subscription funds active development, guaranteed Nextcloud compatibility, and email support.') }}
+			<p class="settings-section-desc subscription-includes">
+				{{ t('A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development.') }}
 			</p>
-		</div>
-
-		<!-- Section 2: What's included -->
-		<div class="settings-section">
-			<h2>{{ t('What a subscription includes') }}</h2>
-
-			<div class="includes-list">
-				<div class="includes-item">
-					<span class="includes-check">&#x2705;</span>
-					<div class="includes-text">
-						<span class="includes-label">{{ t('Guaranteed compatibility') }}</span>
-						<span class="includes-desc">{{ t('Tested with every new Nextcloud release') }}</span>
-					</div>
-				</div>
-				<div class="includes-item">
-					<span class="includes-check">&#x2705;</span>
-					<div class="includes-text">
-						<span class="includes-label">{{ t('Email support') }}</span>
-						<span class="includes-desc">{{ t('Direct support from the developers') }}</span>
-					</div>
-				</div>
-				<div class="includes-item">
-					<span class="includes-check">&#x2705;</span>
-					<div class="includes-text">
-						<span class="includes-label">{{ t('Priority bug fixes') }}</span>
-						<span class="includes-desc">{{ t('Your issues get priority attention') }}</span>
-					</div>
-				</div>
-				<div class="includes-item">
-					<span class="includes-check">&#x2705;</span>
-					<div class="includes-text">
-						<span class="includes-label">{{ t('Active development') }}</span>
-						<span class="includes-desc">{{ t('New features and improvements') }}</span>
-					</div>
-				</div>
+			<div class="cta-block">
+				<NcButton type="primary"
+					:href="pricingUrl"
+					target="_blank"
+					rel="noopener noreferrer">
+					{{ t('View pricing & plans') }}
+				</NcButton>
+				<p class="cta-contact">
+					{{ t('Questions?') }}
+					<a href="mailto:info@voxcloud.nl">info@voxcloud.nl</a>
+				</p>
 			</div>
-		</div>
-
-		<!-- Section 3: Pricing -->
-		<div class="settings-section">
-			<h2>{{ t('Pricing') }}</h2>
-
-			<div class="pricing-table">
-				<div class="pricing-row pricing-row--free">
-					<span class="pricing-tier">{{ t('Free') }}</span>
-					<span class="pricing-price pricing-price--free">{{ t('Free — 25 forms, 500 responses per form') }}</span>
-				</div>
-				<div class="pricing-row">
-					<span class="pricing-tier">{{ t('1–50 users') }}</span>
-					<span class="pricing-price">{{ t('€19/year') }}</span>
-				</div>
-				<div class="pricing-row">
-					<span class="pricing-tier">{{ t('51–250 users') }}</span>
-					<span class="pricing-price">{{ t('€59/year') }}</span>
-				</div>
-				<div class="pricing-row">
-					<span class="pricing-tier">{{ t('251–1000 users') }}</span>
-					<span class="pricing-price">{{ t('€139/year') }}</span>
-				</div>
-				<div class="pricing-row">
-					<span class="pricing-tier">{{ t('1000+ users') }}</span>
-					<span class="pricing-price">{{ t('Contact us') }}</span>
-				</div>
-			</div>
-
-			<p class="pricing-note">
-				{{ t('Excl. VAT, per instance, per year. All paid tiers include unlimited forms and responses.') }}
-			</p>
-
-			<NcButton type="primary"
-				:href="pricingUrl"
-				target="_blank"
-				rel="noopener noreferrer">
-				{{ t('View pricing & subscribe') }}
-			</NcButton>
 		</div>
 
 		<!-- Section 4: Your installation -->
@@ -182,20 +119,6 @@
 			</div>
 		</div>
 
-		<!-- Section 7: Contact -->
-		<div class="settings-section">
-			<div class="contact-info-block">
-				<p>
-					{{ t('Learn more about FormVox') }}:
-					<a href="https://voxcloud.nl" target="_blank" rel="noopener noreferrer">voxcloud.nl</a>
-				</p>
-				<p>
-					{{ t('Questions or feedback?') }}
-					<a href="mailto:info@voxcloud.nl">info@voxcloud.nl</a>
-				</p>
-			</div>
-		</div>
-
 		<!-- Section 8: Anonymous Usage Statistics -->
 		<div class="settings-section">
 			<h2>{{ t('Anonymous Usage Statistics') }}</h2>
@@ -236,10 +159,12 @@
 				<div class="telemetry-details">
 					<h4>{{ t('What we collect') }}:</h4>
 					<ul>
-						<li>{{ t('Number of forms and responses') }}</li>
-						<li>{{ t('Number of active users') }}</li>
+						<li>{{ t('Total form and response counts') }}</li>
+						<li>{{ t('Total user count and active users') }}</li>
 						<li>{{ t('FormVox, Nextcloud, and PHP version numbers') }}</li>
 						<li>{{ t('A unique hash of your instance URL (privacy-friendly identifier)') }}</li>
+						<li>{{ t('Organization name and contact email (only if you filled these in above)') }}</li>
+						<li>{{ t('Whether your Nextcloud has an Extended Support / Enterprise subscription (a single yes/no, sourced from Nextcloud\'s public API)') }}</li>
 					</ul>
 					<h4>{{ t('What we never collect') }}:</h4>
 					<ul class="not-collected">
@@ -247,6 +172,7 @@
 						<li>{{ t('Response data or answers') }}</li>
 						<li>{{ t('User names or email addresses') }}</li>
 						<li>{{ t('Your actual server URL') }}</li>
+						<li>{{ t('Any personal or sensitive data') }}</li>
 					</ul>
 				</div>
 			</div>
@@ -514,85 +440,34 @@ export default {
 	margin-bottom: 20px;
 }
 
-/* What's included list */
-.includes-list {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	margin-bottom: 24px;
-}
-
-.includes-item {
-	display: flex;
-	align-items: flex-start;
-	gap: 12px;
-	padding: 12px 20px;
-	background: var(--color-background-hover);
-	border-radius: var(--border-radius-large);
-}
-
-.includes-check {
-	font-size: 1.2em;
-	flex-shrink: 0;
-}
-
-.includes-text {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-}
-
-.includes-label {
-	font-weight: 600;
-	color: var(--color-main-text);
-}
-
-.includes-desc {
+.subscription-includes {
 	font-size: 13px;
 	color: var(--color-text-maxcontrast);
 }
 
-/* Pricing table */
-.pricing-table {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	margin-bottom: 16px;
-}
-
-.pricing-row {
+/* CTA block */
+.cta-block {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	padding: 12px 20px;
-	background: var(--color-background-hover);
-	border-radius: var(--border-radius-large);
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-top: 16px;
 }
 
-.pricing-row--free {
-	border: 2px solid var(--color-primary-element-light);
-}
-
-.pricing-tier {
-	font-weight: 500;
-	color: var(--color-main-text);
-}
-
-.pricing-price {
-	font-size: 16px;
-	font-weight: 700;
-	color: var(--color-primary);
-}
-
-.pricing-price--free {
-	font-weight: 500;
-	font-size: 14px;
-}
-
-.pricing-note {
+.cta-contact {
+	margin: 0;
 	color: var(--color-text-maxcontrast);
-	margin-bottom: 16px;
 	font-size: 14px;
+}
+
+.cta-contact a {
+	color: var(--color-primary-element);
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.cta-contact a:hover {
+	text-decoration: underline;
 }
 
 /* Stats overview */
@@ -628,33 +503,6 @@ export default {
 	font-size: 16px;
 	font-weight: 700;
 	color: var(--color-primary);
-}
-
-/* Contact info block */
-.contact-info-block {
-	margin-bottom: 20px;
-	padding: 16px 20px;
-	background: var(--color-background-hover);
-	border-radius: var(--border-radius-large);
-}
-
-.contact-info-block p {
-	margin: 0 0 8px 0;
-	line-height: 1.5;
-}
-
-.contact-info-block p:last-child {
-	margin-bottom: 0;
-}
-
-.contact-info-block a {
-	color: var(--color-primary-element);
-	font-weight: 500;
-	text-decoration: none;
-}
-
-.contact-info-block a:hover {
-	text-decoration: underline;
 }
 
 .contact-fields h2 {
