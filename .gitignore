@@ -26,6 +26,9 @@ npm-debug.log*
 *.tmp
 *.temp
 
+# Release artifacts (uploaded to GitHub releases, not in git)
+formvox-*.tar.gz
+
 # Certificates and private keys (NEVER commit to GitHub!)
 *.key
 *.pem
