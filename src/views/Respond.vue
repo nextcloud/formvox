@@ -190,6 +190,23 @@ import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
+
+// Open all links in a new tab so respondents don't lose their in-progress
+// form when clicking a description link (#87). rel=noopener+noreferrer
+// is the standard hardening for target=_blank.
+const defaultLinkOpen = md.renderer.rules.link_open || function (tokens, idx, options, env, self) {
+  return self.renderToken(tokens, idx, options);
+};
+md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
+  const token = tokens[idx];
+  const tIdx = token.attrIndex('target');
+  if (tIdx < 0) token.attrPush(['target', '_blank']);
+  else token.attrs[tIdx][1] = '_blank';
+  const rIdx = token.attrIndex('rel');
+  if (rIdx < 0) token.attrPush(['rel', 'noopener noreferrer']);
+  else token.attrs[rIdx][1] = 'noopener noreferrer';
+  return defaultLinkOpen(tokens, idx, options, env, self);
+};
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { solveChallengeWorkers } from 'altcha-lib';

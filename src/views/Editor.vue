@@ -190,18 +190,21 @@
               @end="onQuestionDragEnd"
             >
               <template #item="{ element }">
-                <QuestionEditor
-                  :question="element"
-                  :index="getQuestionIndex(element.id)"
-                  :questions="form.questions"
-                  :pages="form.pages"
-                  :current-page-index="currentPageIndex"
-                  :readonly="!canEdit"
-                  @update="updateQuestionById(element.id, $event)"
-                  @delete="deleteQuestionById(element.id)"
-                  @duplicate="duplicateQuestionById(element.id)"
-                  @move="moveQuestionToPage(element.id, $event)"
-                />
+                <div :class="{ 'section-header-wrapper': element.type === 'section', 'in-section-wrapper': element.sectionId && element.type !== 'section' }">
+                  <QuestionEditor
+                    :question="element"
+                    :index="getQuestionIndex(element.id)"
+                    :questions="form.questions"
+                    :pages="form.pages"
+                    :current-page-index="currentPageIndex"
+                    :readonly="!canEdit"
+                    @update="updateQuestionById(element.id, $event)"
+                    @delete="deleteQuestionById(element.id)"
+                    @duplicate="duplicateQuestionById(element.id)"
+                    @move="moveQuestionToPage(element.id, $event)"
+                    @move-to-section="moveQuestionToSection(getQuestionIndex(element.id), $event)"
+                  />
+                </div>
               </template>
             </draggable>
 
@@ -787,8 +790,68 @@ export default {
       }
     };
 
-    const onQuestionDragEnd = () => {
-      // The v-model on currentPageQuestions already handles updating page.questions
+    const onQuestionDragEnd = (evt) => {
+      // The v-model on currentPageQuestions already updates page.questions
+      // ordering, but it doesn't touch sectionId — so dragging a question
+      // under a section header on a paged form didn't visually nest it (#88).
+      // Mirror the section-detect logic from onDragEnd, scoped to this page.
+      const newIndex = evt?.newIndex;
+      const page = form.pages[currentPageIndex.value];
+      const pageQuestions = currentPageQuestions.value;
+
+      if (newIndex === undefined || newIndex < 0 || newIndex >= pageQuestions.length) {
+        debouncedSave();
+        return;
+      }
+
+      const movedItem = pageQuestions[newIndex];
+      if (!movedItem) {
+        debouncedSave();
+        return;
+      }
+
+      // If a section was moved, bring its children along (they may have
+      // been scattered across the page by the drag).
+      if (movedItem.type === 'section' && page) {
+        const sectionId = movedItem.id;
+        const childIds = pageQuestions
+          .filter(q => q.sectionId === sectionId && q.id !== sectionId)
+          .map(q => q.id);
+
+        // Remove children from their current positions in the page.
+        page.questions = page.questions.filter(id => !childIds.includes(id));
+
+        // Re-insert children right after the section header.
+        const sectionPos = page.questions.indexOf(sectionId);
+        if (sectionPos !== -1) {
+          page.questions.splice(sectionPos + 1, 0, ...childIds);
+        }
+        debouncedSave();
+        return;
+      }
+
+      // Walk back through the page to find the nearest section header.
+      let sectionId = null;
+      for (let i = newIndex - 1; i >= 0; i--) {
+        const above = pageQuestions[i];
+        if (above.type === 'section') {
+          sectionId = above.id;
+          break;
+        }
+        if (above.sectionId) {
+          sectionId = above.sectionId;
+          break;
+        }
+        // Hit a standalone question — not in any section
+        break;
+      }
+
+      if (sectionId) {
+        movedItem.sectionId = sectionId;
+      } else {
+        delete movedItem.sectionId;
+      }
+
       debouncedSave();
     };
 

@@ -2,6 +2,18 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.2.1] - 2026-05-12
+
+### Added
+- **Description links open in a new tab** — Links in form, section and question descriptions now open in a new browser tab with `rel="noopener noreferrer"`, so respondents don't lose their in-progress form when they click a reference link. ([#87](https://github.com/nextcloud/formvox/issues/87))
+
+### Fixed
+- **Submit failed on password-protected public forms** — After entering the share password the user could open the form but every submit was rejected with "Password required" because the frontend never replays the password on subsequent requests. The authenticate flow now sets a signed, HMAC-protected `formvox_pw_<fileId>` cookie (1 h validity, `SameSite=Lax`) which the share-gate accepts as proof of password possession on submit and upload. ([#82](https://github.com/nextcloud/formvox/issues/82))
+- **Date picker selected the day before in non-UTC time zones** — Picking 17 May in CEST was serialised as `2026-05-16` because the previous implementation called `toISOString()` (UTC) on a `Date` constructed at local midnight. Date questions now serialise using local Y-M-D and parse `YYYY-MM-DD` strings into a local-midnight `Date` so the displayed date always matches the picked date. ([#80](https://github.com/nextcloud/formvox/issues/80), [#89](https://github.com/nextcloud/formvox/issues/89))
+- **CSV export still fragmented in Excel** — `fputcsv()` used PHP's default `\n` record separator while in-cell newlines were normalised to `\r\n`, producing mixed line endings that some Excel versions interpreted as a new row inside a quoted cell. Both writes now use the explicit `eol: "\r\n"` argument so record terminators and in-cell newlines are consistent CRLF. ([#83](https://github.com/nextcloud/formvox/issues/83))
+- **Question labels shoved sideways in Microsoft Edge** — The flex container holding a question label and the TTS button could grow horizontally beyond its parent in Edge when the label was long. The label is now a shrinkable flex item (`flex: 1 1 auto; min-width: 0`) with `overflow-wrap: break-word` and the row allows wrapping, matching the layout other browsers already produced. ([#84](https://github.com/nextcloud/formvox/issues/84))
+- **"Move to section" did nothing when Pages were enabled** — The pages-mode draggable did not listen for the `move-to-section` event from the question overflow menu, and questions dragged under a section header did not become visually nested because the wrapper that applies the indent style was only rendered in single-page mode. Both code paths now match: dropdown moves work, drag-into-section auto-assigns the `sectionId`, and dragging a section header carries its children with it on the same page. ([#88](https://github.com/nextcloud/formvox/issues/88))
+
 ## [1.2.0] - 2026-05-05
 
 ### Added

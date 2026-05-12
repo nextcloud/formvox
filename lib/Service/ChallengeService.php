@@ -25,6 +25,9 @@ class ChallengeService
     /** Single-use challenge expiry, in seconds. */
     private const EXPIRY_SECONDS = 600;
 
+    /** Password-verification token TTL, in seconds. */
+    private const PASSWORD_TOKEN_TTL = 3600;
+
     /** Difficulty rungs (max number to search). Higher = more work. */
     private const DIFFICULTY_LOW = 50_000;
     private const DIFFICULTY_MID = 250_000;
@@ -174,6 +177,37 @@ class ChallengeService
     private function rateKey(int $fileId): string
     {
         return "submit_rate_{$fileId}_" . $this->currentHourBucket();
+    }
+
+    /**
+     * Issue a signed token proving the bearer has correctly entered the
+     * share password for $fileId. Format: "<expiryUnix>.<hmac>". Validity
+     * is 1 hour. The token is HMAC'd with the same key as ALTCHA, scoped
+     * by fileId and a fixed purpose tag so it can't be reused as an ALTCHA
+     * signature (or vice versa).
+     */
+    public function issuePasswordToken(int $fileId): string
+    {
+        $expiry = time() + self::PASSWORD_TOKEN_TTL;
+        $sig = hash_hmac('sha256', "pw:{$fileId}:{$expiry}", $this->hmacKey());
+        return "{$expiry}.{$sig}";
+    }
+
+    public function verifyPasswordToken(?string $token, int $fileId): bool
+    {
+        if ($token === null || $token === '') {
+            return false;
+        }
+        $parts = explode('.', $token, 2);
+        if (\count($parts) !== 2) {
+            return false;
+        }
+        [$expiry, $sig] = $parts;
+        if (!ctype_digit($expiry) || (int)$expiry < time()) {
+            return false;
+        }
+        $expected = hash_hmac('sha256', "pw:{$fileId}:{$expiry}", $this->hmacKey());
+        return hash_equals($expected, $sig);
     }
 
     private function currentHourBucket(): string

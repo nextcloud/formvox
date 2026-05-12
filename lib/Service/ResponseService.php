@@ -302,7 +302,9 @@ class ResponseService
         foreach ($form['questions'] ?? [] as $question) {
             $headers[] = $question['question'];
         }
-        fputcsv($output, $headers);
+        // eol: "\r\n" so the record separator matches Excel's CSV expectation
+        // and is consistent with the \r\n we normalise within cells (#83).
+        fputcsv($output, $headers, eol: "\r\n");
 
         // Data rows
         foreach ($responses as $response) {
@@ -395,7 +397,7 @@ class ResponseService
                 $v = str_replace(["\r\n", "\r"], ["\n", "\n"], $v);
                 return str_replace("\n", "\r\n", $v);
             }, $row);
-            fputcsv($output, $row);
+            fputcsv($output, $row, eol: "\r\n");
         }
 
         rewind($output);

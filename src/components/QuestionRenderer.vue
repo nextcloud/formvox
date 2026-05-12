@@ -139,12 +139,12 @@
     <!-- Date -->
     <NcDateTimePickerNative
       v-else-if="question.type === 'date'"
-      :model-value="value ? new Date(value) : null"
+      :model-value="parseDateLocal(value)"
       type="date"
       :label="question.question"
       hide-label
-      :min="question.dateMin ? new Date(question.dateMin) : null"
-      :max="question.dateMax ? new Date(question.dateMax) : null"
+      :min="parseDateLocal(question.dateMin)"
+      :max="parseDateLocal(question.dateMax)"
       @update:model-value="$emit('update:value', formatDate($event))"
     />
 
@@ -154,8 +154,8 @@
         :model-value="value ? new Date(value) : null"
         type="date"
         :label="t('Date')"
-        :min="question.dateMin ? new Date(question.dateMin) : null"
-        :max="question.dateMax ? new Date(question.dateMax) : null"
+        :min="parseDateLocal(question.dateMin)"
+        :max="parseDateLocal(question.dateMax)"
         @update:model-value="onDateTimeDateChange"
       />
       <NcDateTimePickerNative
@@ -447,6 +447,23 @@ import DOMPurify from 'dompurify';
 import StarIcon from './icons/StarIcon.vue';
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
+
+// Open all links in a new tab so respondents don't lose their in-progress
+// form when clicking a description link (#87). rel=noopener+noreferrer
+// is the standard hardening for target=_blank.
+const defaultLinkOpen = md.renderer.rules.link_open || function (tokens, idx, options, env, self) {
+  return self.renderToken(tokens, idx, options);
+};
+md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
+  const token = tokens[idx];
+  const tIdx = token.attrIndex('target');
+  if (tIdx < 0) token.attrPush(['target', '_blank']);
+  else token.attrs[tIdx][1] = '_blank';
+  const rIdx = token.attrIndex('rel');
+  if (rIdx < 0) token.attrPush(['rel', 'noopener noreferrer']);
+  else token.attrs[rIdx][1] = 'noopener noreferrer';
+  return defaultLinkOpen(tokens, idx, options, env, self);
+};
 import SpeakerIcon from './icons/SpeakerIcon.vue';
 
 export default {
@@ -756,7 +773,23 @@ export default {
 
     const formatDate = (date) => {
       if (!date) return '';
-      return date.toISOString().split('T')[0];
+      // Use LOCAL year/month/day instead of toISOString(): a date the user
+      // picks as 17 May in CEST would otherwise be serialised as 2026-05-16
+      // because toISOString converts to UTC midnight first (#80, #89).
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    // Parse a YYYY-MM-DD string into a Date at LOCAL midnight (not UTC).
+    // `new Date('2026-05-17')` treats the string as UTC and would render as
+    // 16 May for users west of UTC — see formatDate for the matching reason.
+    const parseDateLocal = (s) => {
+      if (!s || typeof s !== 'string') return null;
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!m) return null;
+      return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
     };
 
     const formatDateTime = (date) => {
@@ -940,6 +973,7 @@ export default {
       addTableRow,
       removeTableRow,
       formatDate,
+      parseDateLocal,
       formatDateTime,
       onDateTimeDateChange,
       onDateTimeTimeChange,
@@ -1067,12 +1101,16 @@ export default {
 .question-label-row {
   display: flex;
   align-items: flex-start;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
 
   .question-label {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     margin-bottom: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 }
 

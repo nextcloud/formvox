@@ -161,7 +161,7 @@ class PublicController extends Controller
      *   - share password (if set)
      * Returns an error DataResponse when blocked, or null when allowed.
      */
-    private function enforceShareGate(array $form): ?DataResponse
+    private function enforceShareGate(array $form, ?int $fileId = null): ?DataResponse
     {
         if (!empty($form['settings']['share_starts_at'])) {
             try {
@@ -192,12 +192,23 @@ class PublicController extends Controller
         }
 
         if (!empty($form['settings']['share_password_hash'])) {
-            $providedPassword = (string)$this->request->getParam('password', '');
-            if ($providedPassword === '' || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-                return new DataResponse(
-                    ['error' => 'Password required'],
-                    Http::STATUS_UNAUTHORIZED
-                );
+            // Accept either a fresh password param (legacy) OR a valid
+            // password cookie issued by showForm/authenticate after a
+            // successful password entry. Without this fallback, every submit
+            // on a password-protected form would fail because the frontend
+            // doesn't replay the password on every request (#82).
+            $cookieValid = $fileId !== null && $this->challengeService->verifyPasswordToken(
+                $this->request->getCookie("formvox_pw_{$fileId}"),
+                $fileId,
+            );
+            if (!$cookieValid) {
+                $providedPassword = (string)$this->request->getParam('password', '');
+                if ($providedPassword === '' || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
+                    return new DataResponse(
+                        ['error' => 'Password required'],
+                        Http::STATUS_UNAUTHORIZED
+                    );
+                }
             }
         }
 
@@ -278,14 +289,22 @@ class PublicController extends Controller
             }
 
             // Check if form is password protected (only check after login requirement is satisfied)
+            $passwordVerified = false;
             if (!empty($form['settings']['share_password_hash'])) {
-                $providedPassword = $this->request->getParam('password');
-                if (empty($providedPassword)) {
-                    // Show password form
-                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form');
-                }
-                if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-                    return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
+                // A previously-issued password cookie counts as proof of
+                // password possession (avoids re-prompting on refresh).
+                $cookieToken = $this->request->getCookie("formvox_pw_{$fileId}");
+                if ($this->challengeService->verifyPasswordToken($cookieToken, $fileId)) {
+                    $passwordVerified = true;
+                } else {
+                    $providedPassword = $this->request->getParam('password');
+                    if (empty($providedPassword)) {
+                        return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form');
+                    }
+                    if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
+                        return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
+                    }
+                    $passwordVerified = true;
                 }
             }
 
@@ -315,7 +334,7 @@ class PublicController extends Controller
             Util::addScript(Application::APP_ID, 'formvox-public');
             Util::addStyle(Application::APP_ID, 'public');
 
-            return new TemplateResponse(
+            $response = new TemplateResponse(
                 Application::APP_ID,
                 'public/respond',
                 [
@@ -323,6 +342,10 @@ class PublicController extends Controller
                 ],
                 'public'
             );
+            if ($passwordVerified) {
+                $this->setPasswordCookie($response, $fileId);
+            }
+            return $response;
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
@@ -393,7 +416,7 @@ class PublicController extends Controller
                 return $response;
             }
 
-            $gateError = $this->enforceShareGate($form);
+            $gateError = $this->enforceShareGate($form, $fileId);
             if ($gateError !== null) {
                 return $gateError;
             }
@@ -610,6 +633,7 @@ class PublicController extends Controller
             }
 
             // Check password
+            $passwordVerified = false;
             if (!empty($form['settings']['share_password_hash'])) {
                 $providedPassword = $this->request->getParam('password');
                 if (empty($providedPassword) || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
@@ -617,6 +641,7 @@ class PublicController extends Controller
                     $response->throttle();
                     return $response;
                 }
+                $passwordVerified = true;
             }
 
             // Password correct - show the form
@@ -646,7 +671,7 @@ class PublicController extends Controller
             Util::addScript(Application::APP_ID, 'formvox-public');
             Util::addStyle(Application::APP_ID, 'public');
 
-            return new TemplateResponse(
+            $response = new TemplateResponse(
                 Application::APP_ID,
                 'public/respond',
                 [
@@ -654,9 +679,29 @@ class PublicController extends Controller
                 ],
                 'public'
             );
+
+            // Issue a signed password-verification cookie so subsequent API
+            // calls (submit, upload) can prove the bearer entered the correct
+            // password without resubmitting it. Without this, the share-gate
+            // would reject every submit with "Password required" (#82).
+            if ($passwordVerified) {
+                $this->setPasswordCookie($response, $fileId);
+            }
+            return $response;
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
+    }
+
+    private function setPasswordCookie(\OCP\AppFramework\Http\Response $response, int $fileId): void
+    {
+        $token = $this->challengeService->issuePasswordToken($fileId);
+        $response->addCookie(
+            "formvox_pw_{$fileId}",
+            $token,
+            new \DateTime('@' . (time() + 3600)),
+            'Lax',
+        );
     }
 
     /**
@@ -712,7 +757,7 @@ class PublicController extends Controller
                 );
             }
 
-            $gateError = $this->enforceShareGate($form);
+            $gateError = $this->enforceShareGate($form, $fileId);
             if ($gateError !== null) {
                 return $gateError;
             }
