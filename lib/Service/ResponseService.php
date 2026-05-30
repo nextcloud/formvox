@@ -601,7 +601,7 @@ class ResponseService
         // must not be enforced — the respondent never saw the field.
         if (!empty($question['sectionId']) && isset($questionsById[$question['sectionId']])) {
             $section = $questionsById[$question['sectionId']];
-            if (isset($section['showIf']) && !$this->evaluateCondition($section['showIf'], $answers)) {
+            if (isset($section['showIf']) && !$this->evaluateCondition($section['showIf'], $answers, $questionsById)) {
                 return true;
             }
         }
@@ -610,19 +610,48 @@ class ResponseService
             return false;
         }
 
-        return !$this->evaluateCondition($question['showIf'], $answers);
+        return !$this->evaluateCondition($question['showIf'], $answers, $questionsById);
     }
 
     /**
      * Evaluate a conditional expression
      */
-    private function evaluateCondition(array $condition, array $answers): bool
+    /**
+     * Build a list of values to match against for a choice/multiple/dropdown
+     * question. The answer is stored as option.value (e.g. "optdca45095")
+     * but historically the routing/showIf editor saved option.label (e.g.
+     * "Ja"). Accept either form so existing forms with label-based rules
+     * keep working alongside new value-based ones. (#99)
+     *
+     * @return list<mixed>
+     */
+    private function choiceCompareCandidates(string $questionId, $compareValue, array $questionsById): array
+    {
+        $question = $questionsById[$questionId] ?? null;
+        if ($question === null || !in_array($question['type'] ?? '', ['choice', 'multiple', 'dropdown'], true)) {
+            return [$compareValue];
+        }
+        $opts = $question['options'] ?? [];
+        foreach ($opts as $o) {
+            $v = $o['value'] ?? $o['id'] ?? null;
+            $label = $o['label'] ?? null;
+            if ($label === $compareValue || $v === $compareValue) {
+                $out = [];
+                if ($v !== null) $out[] = $v;
+                if ($label !== null && $label !== $v) $out[] = $label;
+                return $out;
+            }
+        }
+        return [$compareValue];
+    }
+
+    private function evaluateCondition(array $condition, array $answers, array $questionsById = []): bool
     {
         // Combined conditions (AND/OR)
         if (isset($condition['operator']) && isset($condition['conditions'])) {
             $op = strtolower($condition['operator']);
             $results = array_map(
-                fn($c) => $this->evaluateCondition($c, $answers),
+                fn($c) => $this->evaluateCondition($c, $answers, $questionsById),
                 $condition['conditions']
             );
 
@@ -631,28 +660,47 @@ class ResponseService
             } elseif ($op === 'or') {
                 return in_array(true, $results, true);
             }
+            return false;
         }
 
         // Simple condition
-        if (isset($condition['questionId'])) {
+        if (isset($condition['questionId'], $condition['operator'])) {
             $questionId = $condition['questionId'];
             $operator = $condition['operator'];
             $value = $condition['value'] ?? null;
             $answer = $answers[$questionId] ?? null;
             $isArrayAnswer = is_array($answer);
+            $candidates = $this->choiceCompareCandidates($questionId, $value, $questionsById);
 
             switch ($operator) {
                 case 'equals':
-                    // For multiple-choice (array answer), match if the array contains the expected value
-                    return $isArrayAnswer ? in_array($value, $answer, true) : $answer === $value;
+                    if ($isArrayAnswer) {
+                        foreach ($candidates as $c) if (in_array($c, $answer, true)) return true;
+                        return false;
+                    }
+                    return in_array($answer, $candidates, true);
                 case 'notEquals':
-                    return $isArrayAnswer ? !in_array($value, $answer, true) : $answer !== $value;
+                    if ($isArrayAnswer) {
+                        foreach ($candidates as $c) if (in_array($c, $answer, true)) return false;
+                        return true;
+                    }
+                    return !in_array($answer, $candidates, true);
                 case 'contains':
-                    if ($isArrayAnswer) return in_array($value, $answer, true);
-                    return is_string($answer) && str_contains($answer, (string)$value);
+                    if ($isArrayAnswer) {
+                        foreach ($candidates as $c) if (in_array($c, $answer, true)) return true;
+                        return false;
+                    }
+                    if (!is_string($answer)) return false;
+                    foreach ($candidates as $c) if (str_contains($answer, (string)$c)) return true;
+                    return false;
                 case 'notContains':
-                    if ($isArrayAnswer) return !in_array($value, $answer, true);
-                    return !is_string($answer) || !str_contains($answer, (string)$value);
+                    if ($isArrayAnswer) {
+                        foreach ($candidates as $c) if (in_array($c, $answer, true)) return false;
+                        return true;
+                    }
+                    if (!is_string($answer)) return true;
+                    foreach ($candidates as $c) if (str_contains($answer, (string)$c)) return false;
+                    return true;
                 case 'isEmpty':
                     return $answer === null || $answer === '' || $answer === [];
                 case 'isNotEmpty':
@@ -682,7 +730,10 @@ class ResponseService
             }
         }
 
-        return true;
+        // Unknown / unset operator → don't match. Returning true used to
+        // silently fire showIf and page-routing rules when a rule was
+        // half-configured (#99).
+        return false;
     }
 
     /**

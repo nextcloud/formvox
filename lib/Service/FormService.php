@@ -338,8 +338,20 @@ class FormService
                     $this->indexService->updateIndex($form, $response, \count($form['responses']) - 1);
                     $form['modified_at'] = date('c');
 
-                    // Write directly to storage (bypasses versioning)
-                    $storage->file_put_contents($internalPath, json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                    // Write directly to storage (bypasses versioning).
+                    // Check the return value — some storage backends (object
+                    // store, AIO Docker volume) silently return false on
+                    // failure instead of throwing, which would otherwise
+                    // leave the response lost while submit() still reports
+                    // success and fires the owner notification (#97).
+                    $payload = json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                    $written = $storage->file_put_contents($internalPath, $payload);
+                    if ($written === false || $written < strlen($payload)) {
+                        throw new \RuntimeException(
+                            'Storage write returned false or short write for fileId ' . $file->getId()
+                            . ' (wrote ' . var_export($written, true) . ' of ' . strlen($payload) . ' bytes)'
+                        );
+                    }
 
                     // Touch the file to update mtime in cache
                     $storage->touch($internalPath);
@@ -352,12 +364,21 @@ class FormService
                     // Always release lock
                     $this->releaseLock($lockKey);
                 }
-            } catch (\Exception $e) {
-                // Lock acquisition failed (duplicate key), retry
+            } catch (\OCP\DB\Exception $e) {
+                // Lock acquisition failed (unique violation) → retry. Use
+                // Nextcloud's typed reason codes where available; fall back
+                // to string matching for older NC versions that don't
+                // populate the reason. Covers MySQL ("Duplicate entry"),
+                // SQLite ("UNIQUE constraint") and Postgres ("duplicate key").
+                if ($e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+                    usleep($retryDelay * ($retry + 1));
+                    continue;
+                }
                 $msg = $e->getMessage();
                 if (strpos($msg, 'Duplicate') !== false ||
                     strpos($msg, 'UNIQUE constraint') !== false ||
-                    strpos($msg, 'duplicate key') !== false) {
+                    strpos($msg, 'duplicate key') !== false ||
+                    strpos($msg, '23505') !== false) {
                     usleep($retryDelay * ($retry + 1));
                     continue;
                 }

@@ -342,6 +342,7 @@ class PublicController extends Controller
                 ],
                 'public'
             );
+            $this->allowBlobWorker($response);
             if ($passwordVerified) {
                 $this->setPasswordCookie($response, $fileId);
             }
@@ -349,6 +350,21 @@ class PublicController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
+    }
+
+    /**
+     * Allow loading the ALTCHA proof-of-work Web Worker from a Blob URL.
+     *
+     * Without this, Nextcloud instances that don't explicitly set
+     * `worker-src` in their CSP fall back to the strict nonce-based
+     * `script-src` and block the Blob worker — meaning the submit hangs
+     * on "Submitting…" and the form can't be filled in at all (#95).
+     */
+    private function allowBlobWorker(TemplateResponse $response): void
+    {
+        $csp = new \OCP\AppFramework\Http\ContentSecurityPolicy();
+        $csp->addAllowedWorkerSrcDomain('blob:');
+        $response->setContentSecurityPolicy($csp);
     }
 
     /**
@@ -679,6 +695,7 @@ class PublicController extends Controller
                 ],
                 'public'
             );
+            $this->allowBlobWorker($response);
 
             // Issue a signed password-verification cookie so subsequent API
             // calls (submit, upload) can prove the bearer entered the correct

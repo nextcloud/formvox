@@ -132,7 +132,7 @@
       <div class="form-actions">
         <NcButton
           v-if="hasPreviousPage"
-          native-type="button"
+          type="button"
           @click="previousPage"
         >
           {{ t('Previous') }}
@@ -140,8 +140,8 @@
 
         <NcButton
           v-if="hasNextPage"
-          type="primary"
-          native-type="button"
+          type="button"
+          variant="primary"
           @click="nextPage"
         >
           {{ t('Next') }}
@@ -149,8 +149,8 @@
 
         <NcButton
           v-else
-          type="primary"
-          native-type="submit"
+          type="submit"
+          variant="primary"
           :disabled="submitting || isPreview"
           :style="submitButtonStyles"
         >
@@ -567,6 +567,26 @@ export default {
       return items;
     });
 
+    // For choice/multiple/dropdown questions the answer is stored as the
+    // option *value* (typically an internal id like "optdca45095") while
+    // historically the page-routing editor and showIf editor saved the
+    // option *label* (e.g. "Ja"). Accept either form so existing forms
+    // with label-based rules keep working alongside new value-based ones (#99).
+    const normaliseChoiceCompare = (questionId, compareValue) => {
+      const question = (props.form.questions || []).find(q => q.id === questionId);
+      if (!question || !['choice', 'multiple', 'dropdown'].includes(question.type)) {
+        return [compareValue];
+      }
+      const opts = question.options || [];
+      const matched = opts.find(o => o.label === compareValue || (o.value || o.id) === compareValue);
+      if (!matched) return [compareValue];
+      const result = [];
+      const v = matched.value || matched.id;
+      if (v !== undefined && v !== null) result.push(v);
+      if (matched.label !== undefined && matched.label !== null && matched.label !== v) result.push(matched.label);
+      return result;
+    };
+
     const evaluateCondition = (condition, answers) => {
       // Combined conditions
       if (condition.operator === 'and' || condition.operator === 'or') {
@@ -580,19 +600,26 @@ export default {
       const answer = answers[condition.questionId];
       const value = condition.value;
       const isArrayAnswer = Array.isArray(answer);
+      // For choice/multiple/dropdown: accept rule value matching by either
+      // option.value or option.label.
+      const candidates = normaliseChoiceCompare(condition.questionId, value);
 
       switch (condition.operator) {
         case 'equals':
-          // For multiple-choice (array answer), match if the array contains the expected value
-          return isArrayAnswer ? answer.includes(value) : answer === value;
+          // For multiple-choice (array answer), match if the array contains any candidate
+          return isArrayAnswer
+            ? candidates.some(c => answer.includes(c))
+            : candidates.includes(answer);
         case 'notEquals':
-          return isArrayAnswer ? !answer.includes(value) : answer !== value;
+          return isArrayAnswer
+            ? !candidates.some(c => answer.includes(c))
+            : !candidates.includes(answer);
         case 'contains':
-          if (isArrayAnswer) return answer.includes(value);
-          return typeof answer === 'string' && answer.includes(value);
+          if (isArrayAnswer) return candidates.some(c => answer.includes(c));
+          return typeof answer === 'string' && candidates.some(c => answer.includes(c));
         case 'notContains':
-          if (isArrayAnswer) return !answer.includes(value);
-          return typeof answer !== 'string' || !answer.includes(value);
+          if (isArrayAnswer) return !candidates.some(c => answer.includes(c));
+          return typeof answer !== 'string' || !candidates.some(c => answer.includes(c));
         case 'isEmpty':
           return !answer || answer === '' || (isArrayAnswer && answer.length === 0);
         case 'isNotEmpty':
@@ -616,7 +643,10 @@ export default {
           if (isArrayAnswer) return !answer.some(a => value.includes(a));
           return !value.includes(answer);
         default:
-          return true;
+          // Unknown / unset operator → don't match. Returning true used to
+          // silently fire page-routing rules and showIf jumps when a rule
+          // was half-configured (#99).
+          return false;
       }
     };
 
@@ -811,6 +841,13 @@ export default {
         return null;
       }
       for (const rule of page.routing) {
+        // Skip malformed routing rules — half-configured rules in the
+        // editor could otherwise match by accident (evaluateCondition's
+        // default branch used to return true) and silently skip pages
+        // the user expected to see (#99).
+        if (!rule || !rule.operator || !rule.questionId || !rule.targetPageId) {
+          continue;
+        }
         const condition = {
           questionId: rule.questionId,
           operator: rule.operator,

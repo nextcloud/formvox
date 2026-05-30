@@ -2,6 +2,17 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.2.3] - 2026-05-30
+
+### Added
+- **Catalan translation** — Full Catalan (ca) translation added, contributed by @NefixEstrada. ([#96](https://github.com/nextcloud/formvox/pull/96))
+
+### Fixed
+- **Public form submit stuck on "Submitting…" on default Nextcloud installs** — The browser blocked the anti-bot Web Worker because the default Nextcloud CSP did not allow it. Public form pages now explicitly allow it. ([#95](https://github.com/nextcloud/formvox/issues/95))
+- **Form submitted "successfully" but the response disappeared** — Some storage backends silently rejected the response write while the UI still showed "Thank you!". The write result is now verified and a real error surfaces instead of a false success. ([#97](https://github.com/nextcloud/formvox/issues/97))
+- **Multi-page forms skipped pages on "Next"** — Clicking Next jumped from page 1 to page 3 because the button accidentally also triggered the form submit. The button type is now correct so each click moves exactly one page. ([#99](https://github.com/nextcloud/formvox/issues/99))
+- **Page-routing rules on choice questions didn't match** — A rule like "if answer = Ja → go to page 3" never fired because the routing editor saved labels while the form stored option ids. Both forms of rule now match correctly. ([#99](https://github.com/nextcloud/formvox/issues/99))
+
 ## [1.2.2] - 2026-05-18
 
 ### Fixed
