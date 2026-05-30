@@ -15,7 +15,7 @@ const CONFIG = {
   phpExtensions: ['.php'],
   l10nDir: 'l10n',
   sourceLocale: 'en',
-  targetLocales: ['nl', 'de', 'fr'],
+  targetLocales: ['nl', 'de', 'fr', 'ca'],
   needsTranslationPrefix: '__NEEDS_TRANSLATION__',
   // Strings that are extracted but shouldn't be translated (code artifacts)
   ignorePatterns: [
