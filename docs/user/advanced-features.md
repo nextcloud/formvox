@@ -6,7 +6,7 @@ FormVox includes powerful features for creating dynamic, intelligent forms.
 
 Conditional logic allows you to show or hide questions based on previous answers. This creates a personalized experience for respondents.
 
-![Conditional Logic](../../screenshots/Question%20-%20Conditional.png)
+![Conditional Logic](../../screenshots/Question-Conditional.png)
 
 ### How It Works
 
@@ -39,7 +39,7 @@ You can add multiple conditions with AND/OR logic:
 
 Transform your form into a quiz with automatic scoring.
 
-![Quiz Mode](../../screenshots/Question%20-%20Quiz.png)
+![Quiz Mode](../../screenshots/Question-Quiz.png)
 
 ### Enabling Quiz Mode
 

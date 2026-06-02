@@ -20,7 +20,7 @@ This guide explains how to create, edit, and manage forms in FormVox.
 
 4. In the dialog, configure your form:
 
-![New Form Dialog](../../screenshots/New%20form.png)
+![New Form Dialog](../../screenshots/New-form.png)
 
    - **Title** - Name of your form
    - **Location** - Folder where the .fvform file will be saved
@@ -38,7 +38,7 @@ You can also create forms directly from Nextcloud Files:
 
 ## The Form Editor
 
-![Form Editor](../../screenshots/Edit%20form.png)
+![Form Editor](../../screenshots/Edit-form.png)
 
 The form editor is divided into three sections:
 

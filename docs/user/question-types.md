@@ -7,7 +7,7 @@ FormVox supports a wide variety of question types to collect different kinds of 
 ### Short Text
 Single-line text input for brief answers like names or titles.
 
-![Text Question](../../screenshots/Question%20-%20Text.png)
+![Text Question](../../screenshots/Question-Text.png)
 
 **Use for:** Names, titles, short answers
 **Validation:** Optional character limit
@@ -15,7 +15,7 @@ Single-line text input for brief answers like names or titles.
 ### Email
 Text input with email validation.
 
-![Email Question](../../screenshots/Question%20-%20Email.png)
+![Email Question](../../screenshots/Question-Email.png)
 
 **Use for:** Collecting email addresses
 **Validation:** Must be a valid email format
@@ -23,7 +23,7 @@ Text input with email validation.
 ### Multi-line Text (Textarea)
 Large text area for longer responses.
 
-![Multi-line Question](../../screenshots/Question%20-%20Multi-line.png)
+![Multi-line Question](../../screenshots/Question-Multi-line.png)
 
 **Use for:** Comments, feedback, detailed answers
 **Settings:** Adjustable number of rows
@@ -33,7 +33,7 @@ Large text area for longer responses.
 ### Single Choice (Radio)
 Select one option from a list.
 
-![Single Choice Question](../../screenshots/Question%20-%20Single%20choice.png)
+![Single Choice Question](../../screenshots/Question-Single-choice.png)
 
 **Use for:** Yes/no questions, selecting one option
 **Settings:**
@@ -44,7 +44,7 @@ Select one option from a list.
 ### Multiple Choice (Checkbox)
 Select multiple options from a list.
 
-![Multiple Choice Question](../../screenshots/Question%20-%20Multiple%20choice.png)
+![Multiple Choice Question](../../screenshots/Question-Multiple-choice.png)
 
 **Use for:** Selecting multiple items, multi-select preferences
 **Settings:**
@@ -55,7 +55,7 @@ Select multiple options from a list.
 ### Dropdown Select
 Select one option from a dropdown menu.
 
-![Dropdown Question](../../screenshots/Question%20-%20Dropdown%20select.png)
+![Dropdown Question](../../screenshots/Question-Dropdown-select.png)
 
 **Use for:** Long lists of options, saving space
 **Settings:** Same as single choice
@@ -65,7 +65,7 @@ Select one option from a dropdown menu.
 ### Date Picker
 Select a date from a calendar.
 
-![Date Picker Question](../../screenshots/Question%20-%20Date%20picker.png)
+![Date Picker Question](../../screenshots/Question-Date-picker.png)
 
 **Use for:** Birthdates, event dates, deadlines
 **Settings:**
@@ -75,7 +75,7 @@ Select a date from a calendar.
 ### Time Picker
 Select a time.
 
-![Time Picker Question](../../screenshots/Question%20-%20Time%20picker.png)
+![Time Picker Question](../../screenshots/Question-Time-picker.png)
 
 **Use for:** Appointment times, schedules
 **Settings:** 12-hour or 24-hour format
@@ -83,7 +83,7 @@ Select a time.
 ### DateTime Picker
 Select both date and time.
 
-![DateTime Picker Question](../../screenshots/Question%20-%20Datetime%20picker.png)
+![DateTime Picker Question](../../screenshots/Question-Datetime-picker.png)
 
 **Use for:** Event scheduling, appointments with specific times
 
@@ -92,7 +92,7 @@ Select both date and time.
 ### Linear Scale
 Rate on a numeric scale (e.g., 1-5, 1-10).
 
-![Linear Scale Question](../../screenshots/Question%20-%20Linear%20scale.png)
+![Linear Scale Question](../../screenshots/Question-Linear-scale.png)
 
 **Use for:** Satisfaction ratings, agreement scales, NPS
 **Settings:**
@@ -102,7 +102,7 @@ Rate on a numeric scale (e.g., 1-5, 1-10).
 ### Star Rating
 Visual star-based rating.
 
-![Star Rating Question](../../screenshots/Question%20-%20Star%20rating.png)
+![Star Rating Question](../../screenshots/Question-Star-rating.png)
 
 **Use for:** Product reviews, experience ratings
 **Settings:** Number of stars (typically 5)
@@ -130,7 +130,7 @@ Allow respondents to upload files with their response.
 ### Matrix
 Grid of questions with shared answer options.
 
-![Matrix Question](../../screenshots/Question%20-%20Matrix.png)
+![Matrix Question](../../screenshots/Question-Matrix.png)
 
 **Use for:** Rating multiple items on the same scale, comparing options
 **Settings:**
@@ -157,7 +157,7 @@ Show or hide the question based on previous answers. See [Advanced Features](adv
 ### Quiz Scoring
 Assign points to correct answers for quiz mode. See [Quiz Mode](advanced-features.md#quiz-mode).
 
-![Quiz Settings](../../screenshots/Question%20-%20Quiz.png)
+![Quiz Settings](../../screenshots/Question-Quiz.png)
 
 ## Tips for Choosing Question Types
 

@@ -29,7 +29,7 @@ Click on any template card to get started.
 
 ### Step 3: Configure Your Form
 
-![New Form Dialog](../screenshots/New%20form.png)
+![New Form Dialog](../screenshots/New-form.png)
 
 1. Enter a **title** for your form
 2. Choose a **location** where the form file will be saved
@@ -37,7 +37,7 @@ Click on any template card to get started.
 
 ### Step 4: Add Questions
 
-![Form Editor](../screenshots/Edit%20form.png)
+![Form Editor](../screenshots/Edit-form.png)
 
 The form editor has three sections:
 
