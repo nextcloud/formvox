@@ -789,7 +789,7 @@ class ResponseService
             foreach ($question['options'] as $option) {
                 $optionScore = $option['score'] ?? 0;
                 if ($question['type'] === 'multiple') {
-                    $questionMaxScore += max($optionScore, 0);
+                    $questionMaxScore += $optionScore;
                     if (is_array($answer) && in_array($option['value'], $answer)) {
                         $questionScore += $optionScore;
                     }
