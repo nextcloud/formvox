@@ -115,7 +115,6 @@ class LicenseService {
 				'json' => [
 					'licenseKey' => $licenseKey,
 					'instanceUrlHash' => $this->getInstanceUrlHash(),
-					'instanceName' => $this->config->getAppValue(Application::APP_ID, 'organization_name', ''),
 					'appType' => 'formvox',
 					'currentForms' => $stats['totalForms'],
 					'totalResponses' => $stats['totalResponses'],

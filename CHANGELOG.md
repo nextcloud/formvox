@@ -2,6 +2,14 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.2.4] - 2026-06-08
+
+### Changed
+- **Telemetry no longer sends organization name or contact email** — These two fields were the only PII in the FormVox telemetry payload and were inconsistent with MetaVox/IntraVox, which never sent them. The "Your organization (optional)" form on the Support tab and the underlying `/api/settings` GET/POST endpoints have been removed; previously stored values stay in `appconfig` but are no longer read or transmitted.
+
+### Fixed
+- **Telemetry reports missing host/country fields** — FormVox's telemetry payload didn't include `defaultTimezone`, `defaultLanguage`, `databaseType`, `osFamily`, `webServer`, `isDocker` or `countryCode`, so the license server's All Instances dashboard showed "—" for country and OS on almost every FormVox install. The payload now matches MetaVox/RoomVox and includes the same fields, letting the server populate country via `default_phone_region` or the timezone fallback.
+
 ## [1.2.3] - 2026-05-30
 
 ### Added

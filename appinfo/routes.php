@@ -89,8 +89,6 @@ return [
         ['name' => 'statistics#sendTelemetry', 'url' => '/api/statistics/telemetry/send', 'verb' => 'POST'],
 
         // Settings routes (admin only)
-        ['name' => 'settings#get', 'url' => '/api/settings', 'verb' => 'GET'],
-        ['name' => 'settings#saveContact', 'url' => '/api/settings', 'verb' => 'POST'],
         ['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
         ['name' => 'settings#saveMsForms', 'url' => '/api/settings/ms-forms', 'verb' => 'POST'],
 

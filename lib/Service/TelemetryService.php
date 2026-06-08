@@ -157,8 +157,13 @@ class TelemetryService
                 'totalUsers' => $stats['totalUsers'],
                 'activeUsers30d' => $stats['activeUsers30d'],
             ],
-            'organizationName' => $this->config->getAppValue(Application::APP_ID, 'organization_name', ''),
-            'contactEmail' => $this->config->getAppValue(Application::APP_ID, 'contact_email', ''),
+            'countryCode' => $this->getCountryCode(),
+            'databaseType' => $this->config->getSystemValue('dbtype', 'sqlite'),
+            'defaultLanguage' => $this->config->getSystemValue('default_language', 'en'),
+            'defaultTimezone' => $this->getDefaultTimezone(),
+            'osFamily' => PHP_OS_FAMILY,
+            'webServer' => $this->getWebServer(),
+            'isDocker' => $this->isDocker(),
             'hasExtendedSupport' => $this->hasExtendedSupport(),
             // Sent so the license server can verify hasExtendedSupport claims —
             // the boolean alone is unauthenticated and could be spoofed by anyone
@@ -216,6 +221,71 @@ class TelemetryService
     private function getNextcloudVersion(): string
     {
         return $this->config->getSystemValue('version', 'unknown');
+    }
+
+    /**
+     * Best-effort ISO-3166-1 alpha-2 country code from Nextcloud's
+     * `default_phone_region` system setting. Server falls back to a
+     * timezone→country lookup when this is null.
+     */
+    private function getCountryCode(): ?string
+    {
+        $region = $this->config->getSystemValue('default_phone_region', '');
+        if (!empty($region) && preg_match('/^[A-Z]{2}$/', strtoupper($region))) {
+            return strtoupper($region);
+        }
+        return null;
+    }
+
+    /**
+     * Default timezone — Nextcloud config first, then PHP, fallback UTC.
+     */
+    private function getDefaultTimezone(): string
+    {
+        $tz = $this->config->getSystemValue('default_timezone', '');
+        if (!empty($tz) && $tz !== 'UTC') {
+            return $tz;
+        }
+        $phpTz = date_default_timezone_get();
+        if (!empty($phpTz) && $phpTz !== 'UTC') {
+            return $phpTz;
+        }
+        return 'UTC';
+    }
+
+    /**
+     * Detect web server from SERVER_SOFTWARE header.
+     */
+    private function getWebServer(): ?string
+    {
+        $software = $_SERVER['SERVER_SOFTWARE'] ?? null;
+        if ($software === null) {
+            return null;
+        }
+        if (stripos($software, 'apache') !== false) {
+            return 'Apache';
+        }
+        if (stripos($software, 'nginx') !== false) {
+            return 'nginx';
+        }
+        return explode('/', $software)[0];
+    }
+
+    /**
+     * Detect Docker container by /.dockerenv or cgroup hint.
+     */
+    private function isDocker(): bool
+    {
+        if (file_exists('/.dockerenv')) {
+            return true;
+        }
+        if (file_exists('/proc/1/cgroup')) {
+            $cgroup = @file_get_contents('/proc/1/cgroup');
+            if ($cgroup !== false && str_contains($cgroup, 'docker')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

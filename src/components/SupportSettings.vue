@@ -60,38 +60,6 @@
 			</NcNoteCard>
 		</div>
 
-		<!-- Section 5: Your organization -->
-		<div class="settings-section">
-			<div class="contact-fields">
-				<h2>{{ t('Your organization (optional)') }}</h2>
-				<p class="field-desc">{{ t('These details help us reach you if needed. They are never shared.') }}</p>
-
-				<div class="field-row">
-					<label for="organization-name">{{ t('Organization name') }}</label>
-					<input id="organization-name"
-						v-model="organizationName"
-						type="text"
-						:placeholder="t('e.g. Acme Corporation')"
-						class="contact-input">
-				</div>
-
-				<div class="field-row">
-					<label for="contact-email">{{ t('Contact email') }}</label>
-					<input id="contact-email"
-						v-model="contactEmail"
-						type="email"
-						:placeholder="t('e.g. admin@example.com')"
-						class="contact-input">
-				</div>
-
-				<NcButton type="primary"
-					:disabled="savingContact"
-					@click="saveContactInfo">
-					{{ savingContact ? t('Saving...') : t('Save') }}
-				</NcButton>
-			</div>
-		</div>
-
 		<!-- Section 6: Subscription key -->
 		<div class="settings-section">
 			<h2>{{ t('Subscription key') }}</h2>
@@ -134,7 +102,7 @@
 						@update:model-value="toggleTelemetry($event)">
 						<div class="option-info">
 							<span class="option-label">{{ t('Share anonymous usage statistics') }}</span>
-							<span class="option-desc">{{ t('We collect: form counts, response counts, user counts, and version info (FormVox, Nextcloud, PHP). No personal data or form content is shared.') }}</span>
+							<span class="option-desc">{{ t('We collect: form counts, response counts, user counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared.') }}</span>
 						</div>
 					</NcCheckboxRadioSwitch>
 				</div>
@@ -163,7 +131,7 @@
 						<li>{{ t('Total user count and active users') }}</li>
 						<li>{{ t('FormVox, Nextcloud, and PHP version numbers') }}</li>
 						<li>{{ t('A unique hash of your instance URL (privacy-friendly identifier)') }}</li>
-						<li>{{ t('Organization name and contact email (only if you filled these in above)') }}</li>
+						<li>{{ t('Basic server configuration (database, OS, web server, language, timezone, country)') }}</li>
 						<li>{{ t('Whether your Nextcloud has an Extended Support / Enterprise subscription (a single yes/no, sourced from Nextcloud\'s public API)') }}</li>
 					</ul>
 					<h4>{{ t('What we never collect') }}:</h4>
@@ -218,9 +186,6 @@ export default {
 			licenseKey: '',
 			savingLicense: false,
 			_userEditedLicenseKey: false,
-			organizationName: '',
-			contactEmail: '',
-			savingContact: false,
 			telemetryEnabled: this.initialTelemetryEnabled,
 			telemetryLastReport: this.initialTelemetryLastReport,
 			sendingTelemetry: false,
@@ -239,23 +204,10 @@ export default {
 	},
 
 	mounted() {
-		this.loadSettings()
 		this.loadLicenseStats()
 	},
 
 	methods: {
-		async loadSettings() {
-			try {
-				const res = await axios.get(generateUrl('/apps/formvox/api/settings'))
-				if (res.data.success) {
-					this.organizationName = res.data.settings.organization_name || ''
-					this.contactEmail = res.data.settings.contact_email || ''
-				}
-			} catch (error) {
-				console.error('Failed to load settings:', error)
-			}
-		},
-
 		async loadLicenseStats() {
 			try {
 				const response = await axios.get(generateUrl('/apps/formvox/api/license/stats'))
@@ -319,22 +271,6 @@ export default {
 				this.showMessage(this.t('Failed to remove subscription key'), 'error')
 			} finally {
 				this.savingLicense = false
-			}
-		},
-
-		async saveContactInfo() {
-			this.savingContact = true
-			try {
-				await axios.post(generateUrl('/apps/formvox/api/settings'), {
-					organizationName: this.organizationName,
-					contactEmail: this.contactEmail,
-				})
-				this.showMessage(this.t('Contact information saved.'), 'success')
-			} catch (error) {
-				console.error('Failed to save contact info:', error)
-				this.showMessage(this.t('Failed to save contact information'), 'error')
-			} finally {
-				this.savingContact = false
 			}
 		},
 
