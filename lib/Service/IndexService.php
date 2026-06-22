@@ -70,6 +70,11 @@ class IndexService
                         $val = (string)$val;
                         $idx['answer_counts'][$questionId][$val] = ($idx['answer_counts'][$questionId][$val] ?? 0) + 1;
                     }
+                } elseif (is_bool($answer)) {
+                    // Consent: index as Yes/No so the results summary
+                    // shows a sensible breakdown instead of "" vs "1" (#94).
+                    $key = $answer ? 'Yes' : 'No';
+                    $idx['answer_counts'][$questionId][$key] = ($idx['answer_counts'][$questionId][$key] ?? 0) + 1;
                 } else {
                     $answer = (string)$answer;
                     $idx['answer_counts'][$questionId][$answer] = ($idx['answer_counts'][$questionId][$answer] ?? 0) + 1;
@@ -154,6 +159,10 @@ class IndexService
                             $form['_index']['answer_counts'][$questionId][$val] =
                                 ($form['_index']['answer_counts'][$questionId][$val] ?? 0) + 1;
                         }
+                    } elseif (is_bool($answer)) {
+                        $key = $answer ? 'Yes' : 'No';
+                        $form['_index']['answer_counts'][$questionId][$key] =
+                            ($form['_index']['answer_counts'][$questionId][$key] ?? 0) + 1;
                     } else {
                         $answer = (string)$answer;
                         $form['_index']['answer_counts'][$questionId][$answer] =

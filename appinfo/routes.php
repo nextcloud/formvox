@@ -92,6 +92,13 @@ return [
         ['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
         ['name' => 'settings#saveMsForms', 'url' => '/api/settings/ms-forms', 'verb' => 'POST'],
 
+        // Admin-managed templates (#100)
+        ['name' => 'settings#listAdminTemplates', 'url' => '/api/admin/templates', 'verb' => 'GET'],
+        ['name' => 'settings#addAdminTemplate', 'url' => '/api/admin/templates', 'verb' => 'POST'],
+        ['name' => 'settings#deleteAdminTemplate', 'url' => '/api/admin/templates/{id}', 'verb' => 'DELETE'],
+        ['name' => 'settings#listAvailableTemplates', 'url' => '/api/templates', 'verb' => 'GET'],
+        ['name' => 'api#saveAsTemplate', 'url' => '/api/form/{fileId}/save-as-template', 'verb' => 'POST'],
+
         // License routes (admin only)
         ['name' => 'license#getStats', 'url' => '/api/license/stats', 'verb' => 'GET'],
         ['name' => 'license#saveSettings', 'url' => '/api/settings/license', 'verb' => 'POST'],

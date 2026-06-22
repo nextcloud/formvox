@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCA\FormVox\AppInfo\Application;
+use OCP\App\IAppManager;
 use OCP\Files\File;
 use OCP\Files\IRootFolder;
 use OCP\IConfig;
@@ -29,13 +30,20 @@ class AiFormGeneratorService
     private ITaskManager $taskManager;
     private IRootFolder $rootFolder;
     private IConfig $config;
+    private IAppManager $appManager;
     private LoggerInterface $logger;
 
-    public function __construct(ITaskManager $taskManager, IRootFolder $rootFolder, IConfig $config, LoggerInterface $logger)
-    {
+    public function __construct(
+        ITaskManager $taskManager,
+        IRootFolder $rootFolder,
+        IConfig $config,
+        IAppManager $appManager,
+        LoggerInterface $logger,
+    ) {
         $this->taskManager = $taskManager;
         $this->rootFolder = $rootFolder;
         $this->config = $config;
+        $this->appManager = $appManager;
         $this->logger = $logger;
     }
 
@@ -623,7 +631,7 @@ PROMPT;
     private function extractViaAssistant(File $file): string
     {
         try {
-            $assistantPath = \OC::$server->getAppManager()->getAppPath('assistant');
+            $assistantPath = $this->appManager->getAppPath('assistant');
         } catch (\Exception $e) {
             $this->logger->debug('FormVox AI: assistant app not installed; cannot parse document');
             return '';

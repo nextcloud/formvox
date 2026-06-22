@@ -153,11 +153,17 @@ class FormService
 
         // Update allowed fields
         // Use array_key_exists instead of isset to allow null values (e.g., branding: null)
-        $allowedFields = ['title', 'description', 'settings', 'questions', 'pages', 'permissions', '_index', 'branding', 'favorite'];
+        $allowedFields = ['title', 'description', 'descriptionAlign', 'settings', 'questions', 'pages', 'permissions', '_index', 'branding', 'favorite'];
         foreach ($allowedFields as $field) {
             if (array_key_exists($field, $data)) {
                 $form[$field] = $data[$field];
             }
+        }
+
+        // Sanitize descriptionAlign to a known value to prevent CSS-class
+        // injection through the API (#98).
+        if (isset($form['descriptionAlign']) && !in_array($form['descriptionAlign'], ['left', 'center', 'right'], true)) {
+            $form['descriptionAlign'] = 'left';
         }
 
         // Handle public_token being cleared - also clear related share settings

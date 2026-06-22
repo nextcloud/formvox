@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { NcButton } from '@nextcloud/vue'
 import { useRouter } from 'vue-router'
 import { t } from '@/utils/l10n'
@@ -114,7 +114,7 @@ export default {
 		// killed when the browser disconnected) — clear the stale flag.
 		try { sessionStorage.removeItem('formvox_ai_generating') } catch (e) { /* ignore */ }
 
-		const templates = [
+		const builtinTemplates = [
 			{
 				id: 'survey',
 				name: t('Survey'),
@@ -151,6 +151,22 @@ export default {
 				color: '#2196F3',
 			},
 		]
+		// Templates is a reactive computed: built-in templates + any admin
+		// templates loaded from /api/templates (#100).
+		const adminTemplates = ref([])
+		const templates = computed(() => {
+			return [
+				...builtinTemplates,
+				...adminTemplates.value.map(t => ({
+					id: 'admin:' + t.id,
+					name: t.title,
+					description: t.description || '',
+					icon: FormIcon,
+					color: '#607D8B',
+					adminTemplateId: t.id,
+				})),
+			]
+		})
 
 		const toggleCollapsed = () => {
 			isCollapsed.value = !isCollapsed.value
@@ -181,6 +197,12 @@ export default {
 				aiAvailable.value = !!resp.data?.available
 			} catch (e) {
 				aiAvailable.value = false
+			}
+			try {
+				const resp = await axios.get(generateUrl('/apps/formvox/api/templates'))
+				adminTemplates.value = resp.data?.templates || []
+			} catch (e) {
+				adminTemplates.value = []
 			}
 			refreshAiBusy()
 			window.addEventListener('formvox-ai-state-change', refreshAiBusy)

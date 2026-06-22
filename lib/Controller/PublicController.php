@@ -313,6 +313,10 @@ class PublicController extends Controller
 
             // Preserve response count for limit checking before removing _index
             $responseCount = $form['_index']['response_count'] ?? 0;
+            // Preserve per-option counts ONLY for questions that have a
+            // capacity limit configured, so the public form can show
+            // remaining slots without leaking counts for other questions (#104).
+            $capacityCounts = $this->extractCapacityCounts($form);
 
             // Remove sensitive data for public view
             unset($form['responses']);
@@ -322,8 +326,11 @@ class PublicController extends Controller
             unset($form['settings']['share_password']);
             unset($form['branding']); // Don't expose branding in form data
 
-            // Add response count back for limit checking (without exposing full index)
-            $form['_index'] = ['response_count' => $responseCount];
+            // Add response count + capacity-only counts back
+            $form['_index'] = [
+                'response_count' => $responseCount,
+                'answer_counts' => $capacityCounts,
+            ];
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);
@@ -365,6 +372,41 @@ class PublicController extends Controller
         $csp = new \OCP\AppFramework\Http\ContentSecurityPolicy();
         $csp->addAllowedWorkerSrcDomain('blob:');
         $response->setContentSecurityPolicy($csp);
+    }
+
+    /**
+     * Build a minimal answer_counts map containing ONLY questions that
+     * have at least one option with a capacity limit. Used so the public
+     * form can render "Full" / "N left" badges without leaking the full
+     * voting tally for every question on the form (#104).
+     *
+     * @return array<string, array<string, int>>
+     */
+    private function extractCapacityCounts(array $form): array
+    {
+        $all = $form['_index']['answer_counts'] ?? [];
+        $out = [];
+        foreach ($form['questions'] ?? [] as $question) {
+            if (!in_array($question['type'] ?? '', ['choice', 'multiple', 'dropdown'], true)) {
+                continue;
+            }
+            $hasCapacity = false;
+            foreach ($question['options'] ?? [] as $opt) {
+                $cap = $opt['capacity'] ?? null;
+                if ($cap !== null && $cap !== '' && (int)$cap > 0) {
+                    $hasCapacity = true;
+                    break;
+                }
+            }
+            if (!$hasCapacity) {
+                continue;
+            }
+            $qid = $question['id'] ?? null;
+            if ($qid !== null && isset($all[$qid])) {
+                $out[$qid] = $all[$qid];
+            }
+        }
+        return $out;
     }
 
     /**
@@ -666,6 +708,10 @@ class PublicController extends Controller
 
             // Preserve response count for limit checking before removing _index
             $responseCount = $form['_index']['response_count'] ?? 0;
+            // Preserve per-option counts ONLY for questions that have a
+            // capacity limit configured, so the public form can show
+            // remaining slots without leaking counts for other questions (#104).
+            $capacityCounts = $this->extractCapacityCounts($form);
 
             // Remove sensitive data for public view
             unset($form['responses']);
@@ -675,8 +721,11 @@ class PublicController extends Controller
             unset($form['settings']['share_password']);
             unset($form['branding']); // Don't expose branding in form data
 
-            // Add response count back for limit checking (without exposing full index)
-            $form['_index'] = ['response_count' => $responseCount];
+            // Add response count + capacity-only counts back
+            $form['_index'] = [
+                'response_count' => $responseCount,
+                'answer_counts' => $capacityCounts,
+            ];
 
             // Provide initial state to JavaScript
             $this->initialState->provideInitialState('fileId', $fileId);

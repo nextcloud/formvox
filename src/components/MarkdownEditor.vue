@@ -2,7 +2,7 @@
   <div ref="wrapperEl" class="md-editor">
     <div class="md-editor__toolbar" role="toolbar" :aria-label="t('Formatting')">
       <button v-for="a in actions" :key="a.id" type="button" class="md-editor__btn"
-              :class="{ active: activeStates[a.id] }"
+              :class="{ active: a.align ? align === a.align : activeStates[a.id] }"
               :title="a.title" :aria-label="a.title" @click="run(a)">
         <component :is="a.icon" :size="18" />
       </button>
@@ -24,6 +24,9 @@ import OrderedIcon from 'vue-material-design-icons/FormatListNumbered.vue';
 import LinkIcon from 'vue-material-design-icons/Link.vue';
 import ImageIcon from 'vue-material-design-icons/Image.vue';
 import EyeIcon from 'vue-material-design-icons/Eye.vue';
+import AlignLeftIcon from 'vue-material-design-icons/FormatAlignLeft.vue';
+import AlignCenterIcon from 'vue-material-design-icons/FormatAlignCenter.vue';
+import AlignRightIcon from 'vue-material-design-icons/FormatAlignRight.vue';
 import { t } from '@/utils/l10n';
 
 export default {
@@ -49,8 +52,13 @@ export default {
       type: String,
       default: '90px',
     },
+    align: {
+      type: String,
+      default: 'left',
+      validator: (v) => ['left', 'center', 'right'].includes(v),
+    },
   },
-  emits: ['update:model-value'],
+  emits: ['update:model-value', 'update:align'],
   setup(props, { emit }) {
     const textareaEl = ref(null);
     const wrapperEl = ref(null);
@@ -156,10 +164,20 @@ export default {
       { id: 'ol', title: t('Numbered list'), icon: OrderedIcon, fn: 'toggleOrderedList' },
       { id: 'link', title: t('Link'), icon: LinkIcon, fn: 'drawLink' },
       { id: 'image', title: t('Image'), icon: ImageIcon, fn: 'drawImage' },
+      { id: 'align-left', title: t('Align left'), icon: AlignLeftIcon, align: 'left' },
+      { id: 'align-center', title: t('Align center'), icon: AlignCenterIcon, align: 'center' },
+      { id: 'align-right', title: t('Align right'), icon: AlignRightIcon, align: 'right' },
       { id: 'preview', title: t('Toggle preview'), icon: EyeIcon, fn: 'togglePreview' },
     ];
 
     const run = (a) => {
+      // Alignment buttons don't mutate the markdown — they emit an update
+      // event so the parent can persist the choice on the form/section
+      // alongside the description text (#98).
+      if (a.align) {
+        emit('update:align', a.align);
+        return;
+      }
       if (!mde) return;
       const fn = EasyMDE[a.fn];
       if (typeof fn === 'function') fn(mde);

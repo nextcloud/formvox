@@ -21,12 +21,14 @@ use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\IndexService;
+use OCA\FormVox\Service\TemplateService;
 class ApiController extends Controller
 {
     private FormService $formService;
     private ResponseService $responseService;
     private PermissionService $permissionService;
     private IndexService $indexService;
+    private TemplateService $templateService;
     private IUserSession $userSession;
     private IUserManager $userManager;
     private IGroupManager $groupManager;
@@ -39,6 +41,7 @@ class ApiController extends Controller
         ResponseService $responseService,
         PermissionService $permissionService,
         IndexService $indexService,
+        TemplateService $templateService,
         IUserSession $userSession,
         IUserManager $userManager,
         IGroupManager $groupManager,
@@ -50,6 +53,7 @@ class ApiController extends Controller
         $this->responseService = $responseService;
         $this->permissionService = $permissionService;
         $this->indexService = $indexService;
+        $this->templateService = $templateService;
         $this->userSession = $userSession;
         $this->userManager = $userManager;
         $this->groupManager = $groupManager;
@@ -77,10 +81,43 @@ class ApiController extends Controller
     /**
      * Create a new form
      */
-    #[NoAdminRequired]
-    public function create(string $title, string $path = '', ?string $template = null, array $prefilled = [], bool $notifyOnReady = false): DataResponse
+    /**
+     * Save an existing form as an admin-managed template (admin only). #100
+     */
+    public function saveAsTemplate(int $fileId, string $title = '', string $description = ''): DataResponse
     {
         try {
+            $form = $this->formService->load($fileId);
+            $entry = $this->templateService->addTemplate(
+                $title !== '' ? $title : ($form['title'] ?? 'Untitled template'),
+                $description !== '' ? $description : ($form['description'] ?? ''),
+                $form
+            );
+            return new DataResponse(['template' => $entry]);
+        } catch (\Throwable $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+        }
+    }
+
+    #[NoAdminRequired]
+    public function create(string $title, string $path = '', ?string $template = null, array $prefilled = [], bool $notifyOnReady = false, ?string $adminTemplateId = null): DataResponse
+    {
+        try {
+            // If an admin template id is supplied, load its structure and
+            // pass it as prefilled content so the new form starts as a copy
+            // of the admin template (#100).
+            if ($adminTemplateId !== null && $adminTemplateId !== '') {
+                $tplForm = $this->templateService->getTemplate($adminTemplateId);
+                if ($tplForm !== null) {
+                    if (!empty($tplForm['description']) && !isset($prefilled['description'])) {
+                        $prefilled['description'] = $tplForm['description'];
+                    }
+                    if (!empty($tplForm['questions']) && !isset($prefilled['questions'])) {
+                        $prefilled['questions'] = $tplForm['questions'];
+                    }
+                }
+            }
+
             $result = $this->formService->create($title, $path, $template, $prefilled);
 
             if ($notifyOnReady) {

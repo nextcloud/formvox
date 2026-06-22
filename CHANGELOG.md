@@ -2,6 +2,26 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.3.0] - 2026-06-22
+
+### Added
+- **Nextcloud 34 support.** `info.xml` now declares `max-version="34"` and the app has been tested end-to-end on a clean NC 34.0.0 install.
+- **Markdown alignment toolbar.** Description fields now have left / center / right alignment buttons that persist with the form and apply on the public page. ([#98](https://github.com/nextcloud/formvox/issues/98))
+- **Info block question type.** New non-input question type that renders markdown content (heading, lists, links, etc.) anywhere in a form. Skipped in validation, results summary, table, and CSV export — mirrors how section headers already behave. ([#64](https://github.com/nextcloud/formvox/issues/64))
+- **Consent question type.** Single-checkbox question type that requires an explicit tick when marked required — useful for GDPR consent, terms acceptance and similar. Stored as boolean, rendered as "Yes" / "No" in results and CSV. ([#94](https://github.com/nextcloud/formvox/issues/94))
+- **Per-option capacity limits.** Choice / multiple-choice / dropdown options can now have an optional maximum number of selections. Reached options show a "Full" badge on the public form and the server rejects further selections. The "{n} left" badge updates after each submit. Only counts for questions with a capacity are exposed in the public payload — counts of other questions stay private. ([#104](https://github.com/nextcloud/formvox/issues/104))
+- **Email confirmation to respondent.** A toggle in the share dialog automatically adds a hidden email question to the form and sends the respondent a plain-text confirmation after each submit. Subject and body can be customised; failures are logged and never block the submit. ([#103](https://github.com/nextcloud/formvox/issues/103))
+- **Admin-managed form templates.** New "Templates" tab in admin settings lets administrators snapshot any existing form into an instance-wide template. Templates appear in the "New form" gallery for every user alongside the built-in ones, with shared / responses / lock state stripped from the snapshot. ([#100](https://github.com/nextcloud/formvox/issues/100))
+
+### Changed
+- **Minimum Nextcloud version raised from 28 to 30.** NC 28 and 29 have reached end-of-life. This unlocks `@nextcloud/vue` v9, `@nextcloud/files` v4 and the modern attribute-based controller API.
+- **Frontend dependency bumps.** `@nextcloud/vue` 9.8, `@nextcloud/dialogs` 7.4, `@nextcloud/axios` 2.6, `@nextcloud/router` 3.1, `@nextcloud/files` v4 (migrated to the v4 plain-object `IFileAction`).
+
+### Fixed
+- **NC 34: removed `OC::$server->getX()` getter calls.** Replaced with constructor DI on every call site (`AiFormGeneratorService`, `BrandingService`, `RegisterMimeType`) — without these, the AI extraction, branding image route and `RegisterMimeType` repair step would have fataled on NC 34.
+- **NC 34: `Notifier::prepare()` now throws `UnknownNotificationException`** instead of `\InvalidArgumentException`, removing the deprecation warning that NC 33/34 emit on every notifications poll.
+- **NC 34: `ImportController` annotations migrated to PHP attributes** (`@NoAdminRequired` → `#[NoAdminRequired]`).
+
 ## [1.2.5] - 2026-06-22
 
 ### Fixed

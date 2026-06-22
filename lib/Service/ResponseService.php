@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCP\IRequest;
+use OCP\IURLGenerator;
+use OCP\IL10N;
+use OCP\Mail\IMailer;
 use OCP\Notification\IManager as INotificationManager;
 use OCP\IGroupManager;
 use OCA\FormVox\AppInfo\Application;
+use Psr\Log\LoggerInterface;
 
 class ResponseService
 {
@@ -16,19 +20,31 @@ class ResponseService
     private WebhookService $webhookService;
     private INotificationManager $notificationManager;
     private IGroupManager $groupManager;
+    private IMailer $mailer;
+    private IURLGenerator $urlGenerator;
+    private IL10N $l;
+    private LoggerInterface $logger;
 
     public function __construct(
         FormService $formService,
         IndexService $indexService,
         WebhookService $webhookService,
         INotificationManager $notificationManager,
-        IGroupManager $groupManager
+        IGroupManager $groupManager,
+        IMailer $mailer,
+        IURLGenerator $urlGenerator,
+        IL10N $l,
+        LoggerInterface $logger
     ) {
         $this->formService = $formService;
         $this->indexService = $indexService;
         $this->webhookService = $webhookService;
         $this->notificationManager = $notificationManager;
         $this->groupManager = $groupManager;
+        $this->mailer = $mailer;
+        $this->urlGenerator = $urlGenerator;
+        $this->l = $l;
+        $this->logger = $logger;
     }
 
     /**
@@ -86,6 +102,9 @@ class ResponseService
         // Send notification to form owner
         $this->notifyFormOwner($fileId, $form, $response);
 
+        // Confirmation email to respondent (best-effort, #103)
+        $this->sendConfirmationEmail($form, $answers);
+
         return $result;
     }
 
@@ -139,7 +158,67 @@ class ResponseService
         // Send notification to form owner
         $this->notifyFormOwner($fileId, $form, $response);
 
+        // Confirmation email to respondent (best-effort, #103)
+        $this->sendConfirmationEmail($form, $answers);
+
         return $result;
+    }
+
+    /**
+     * Send a plain-text confirmation email to the respondent (best-effort).
+     *
+     * Conditions: form has `settings.sendConfirmationEmail` true, exactly
+     * one question is flagged `useAsRespondentEmail` (and has validation
+     * type email), the respondent filled in a syntactically valid email.
+     * All failures are logged and swallowed — never break the submit (#103).
+     */
+    private function sendConfirmationEmail(array $form, array $answers): void
+    {
+        try {
+            if (empty($form['settings']['sendConfirmationEmail'])) {
+                return;
+            }
+            // Find the question flagged as respondent email
+            $emailField = null;
+            foreach ($form['questions'] ?? [] as $q) {
+                if (!empty($q['useAsRespondentEmail']) && in_array($q['type'] ?? '', ['text', 'textarea'], true)) {
+                    $emailField = $q;
+                    break;
+                }
+            }
+            if ($emailField === null) {
+                return;
+            }
+            $to = trim((string)($answers[$emailField['id']] ?? ''));
+            if ($to === '' || !$this->mailer->validateMailAddress($to)) {
+                return;
+            }
+
+            $formTitle = $form['title'] ?? $this->l->t('Form');
+            $subject = trim((string)($form['settings']['confirmationEmailSubject'] ?? ''));
+            if ($subject === '') {
+                $subject = $this->l->t('Confirmation: %s', [$formTitle]);
+            }
+            $body = trim((string)($form['settings']['confirmationEmailBody'] ?? ''));
+            if ($body === '') {
+                $body = $this->l->t(
+                    "Thank you for filling in \"%s\".\n\nWe have received your response.",
+                    [$formTitle]
+                );
+            }
+
+            $message = $this->mailer->createMessage();
+            $message->setTo([$to]);
+            $message->setSubject($subject);
+            $message->setPlainBody($body);
+
+            $failed = $this->mailer->send($message);
+            if (!empty($failed)) {
+                $this->logger->warning('FormVox confirmation email partly failed', ['failed' => $failed]);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('FormVox confirmation email failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -240,7 +319,7 @@ class ResponseService
         // so they don't show up as empty "questions" in the results summary.
         $questions = array_values(array_filter(
             $form['questions'] ?? [],
-            fn($q) => ($q['type'] ?? '') !== 'section',
+            fn($q) => !in_array($q['type'] ?? '', ['section', 'descriptor'], true),
         ));
 
         foreach ($questions as $question) {
@@ -307,7 +386,7 @@ class ResponseService
         // the actual answer columns.
         $questions = array_values(array_filter(
             $form['questions'] ?? [],
-            fn($q) => ($q['type'] ?? '') !== 'section',
+            fn($q) => !in_array($q['type'] ?? '', ['section', 'descriptor'], true),
         ));
 
         $output = fopen('php://temp', 'r+');
@@ -332,6 +411,11 @@ class ResponseService
 
             foreach ($questions as $question) {
                 $answer = $response['answers'][$question['id']] ?? '';
+
+                // Consent: render boolean as Yes/No so CSV is human-readable (#94).
+                if (($question['type'] ?? '') === 'consent') {
+                    $answer = $answer === true ? 'Yes' : ($answer === false ? 'No' : '');
+                }
 
                 // Matrix questions: format as "Row: Column" pairs
                 if (($question['type'] ?? '') === 'matrix' && is_array($answer)) {
@@ -487,13 +571,26 @@ class ResponseService
         foreach ($form['questions'] ?? [] as $question) {
             $questionId = $question['id'];
 
+            // Skip non-answerable UI items (section headers, info blocks).
+            // They never store an answer so a stray required flag should
+            // not reject the submit (#64).
+            if (in_array($question['type'] ?? '', ['section', 'descriptor'], true)) {
+                continue;
+            }
+
             // Skip if question is conditionally hidden
             if ($this->isQuestionHidden($question, $answers, $questionsById)) {
                 continue;
             }
 
             if ($question['required'] ?? false) {
-                if (!isset($answers[$questionId]) || $answers[$questionId] === '' || $answers[$questionId] === []) {
+                $a = $answers[$questionId] ?? null;
+                $missing = $a === null || $a === '' || $a === [];
+                // Consent: only an explicit `true` counts as answered (#94).
+                if (($question['type'] ?? '') === 'consent') {
+                    $missing = $a !== true;
+                }
+                if ($missing) {
                     throw new \RuntimeException("Question '{$question['question']}' is required");
                 }
             }
@@ -507,6 +604,44 @@ class ResponseService
 
             $question = $questionsById[$questionId];
             $this->validateAnswerType($question, $answer);
+        }
+
+        // Capacity limits per option (#104)
+        $this->validateCapacity($form, $answers);
+    }
+
+    /**
+     * Reject submission if any selected option has reached its capacity.
+     * Counts come from the existing _index.answer_counts aggregator.
+     */
+    private function validateCapacity(array $form, array $answers): void
+    {
+        $counts = $form['_index']['answer_counts'] ?? [];
+        foreach ($form['questions'] ?? [] as $question) {
+            if (!in_array($question['type'] ?? '', ['choice', 'multiple', 'dropdown'], true)) {
+                continue;
+            }
+            $qid = $question['id'];
+            $selected = $answers[$qid] ?? null;
+            if ($selected === null || $selected === '' || $selected === []) {
+                continue;
+            }
+            $selectedValues = is_array($selected) ? $selected : [$selected];
+            foreach ($question['options'] ?? [] as $option) {
+                $capacity = $option['capacity'] ?? null;
+                if ($capacity === null || $capacity === '' || (int)$capacity <= 0) {
+                    continue; // unlimited
+                }
+                $optValue = $option['value'] ?? $option['id'] ?? null;
+                if ($optValue === null || !in_array($optValue, $selectedValues, true)) {
+                    continue;
+                }
+                $used = (int)($counts[$qid][$optValue] ?? 0);
+                if ($used >= (int)$capacity) {
+                    $label = $option['label'] ?? $optValue;
+                    throw new \RuntimeException("The option '{$label}' is no longer available — capacity reached");
+                }
+            }
         }
     }
 
@@ -529,6 +664,14 @@ class ResponseService
             case 'multiple':
                 if (!is_array($answer)) {
                     throw new \RuntimeException("Multiple choice question requires array answer");
+                }
+                break;
+
+            case 'consent':
+                // Accept boolean true/false. The required-check enforces
+                // that 'true' is mandatory when the question is required.
+                if (!is_bool($answer) && $answer !== '' && $answer !== null) {
+                    throw new \RuntimeException("Consent question requires boolean answer");
                 }
                 break;
 

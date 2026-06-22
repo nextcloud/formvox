@@ -7,6 +7,7 @@ namespace OCA\FormVox\Controller;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\AiFormGeneratorService;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
+use OCA\FormVox\Service\TemplateService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -19,17 +20,59 @@ class SettingsController extends Controller
     private IConfig $config;
     private MicrosoftFormsAuthService $msFormsAuthService;
     private AiFormGeneratorService $aiService;
+    private TemplateService $templateService;
 
     public function __construct(
         IRequest $request,
         IConfig $config,
         MicrosoftFormsAuthService $msFormsAuthService,
-        AiFormGeneratorService $aiService
+        AiFormGeneratorService $aiService,
+        TemplateService $templateService
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->config = $config;
         $this->msFormsAuthService = $msFormsAuthService;
         $this->aiService = $aiService;
+        $this->templateService = $templateService;
+    }
+
+    /**
+     * List admin-managed templates (admin only) — #100
+     */
+    public function listAdminTemplates(): DataResponse
+    {
+        return new DataResponse(['templates' => $this->templateService->listTemplates()]);
+    }
+
+    /**
+     * Add a new template — `form` is the full form JSON snapshot (admin only)
+     */
+    public function addAdminTemplate(string $title, string $description, array $form): DataResponse
+    {
+        try {
+            $entry = $this->templateService->addTemplate($title, $description, $form);
+            return new DataResponse(['template' => $entry]);
+        } catch (\Throwable $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Delete a template by id (admin only)
+     */
+    public function deleteAdminTemplate(string $id): DataResponse
+    {
+        $ok = $this->templateService->removeTemplate($id);
+        return new DataResponse(['success' => $ok]);
+    }
+
+    /**
+     * List templates available to the user (admin-managed). Non-admin endpoint.
+     */
+    #[NoAdminRequired]
+    public function listAvailableTemplates(): DataResponse
+    {
+        return new DataResponse(['templates' => $this->templateService->listTemplates()]);
     }
 
     /**

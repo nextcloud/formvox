@@ -464,7 +464,7 @@ export default {
     // Sections are UI grouping containers, not questions — skip them in the
     // results table so they don't show up as empty columns.
     const answerableQuestions = computed(() => {
-      return (props.form.questions || []).filter(q => q.type !== 'section');
+      return (props.form.questions || []).filter(q => !['section', 'descriptor'].includes(q.type));
     });
 
     const getChartType = (questionId) => {
@@ -492,7 +492,7 @@ export default {
     };
 
     const isChoiceType = (type) => {
-      return ['choice', 'multiple', 'dropdown'].includes(type);
+      return ['choice', 'multiple', 'dropdown', 'consent'].includes(type);
     };
 
     const isNumericType = (type) => {
@@ -616,6 +616,12 @@ export default {
     };
 
     const formatAnswer = (answer, question = null) => {
+      // Consent: show Yes/No instead of raw boolean (#94)
+      if (question && question.type === 'consent') {
+        if (answer === true) return t('Yes');
+        if (answer === false) return t('No');
+        return t('Not answered');
+      }
       if (Array.isArray(answer)) {
         // For multiple choice, try to show labels instead of values
         if (question && question.options) {

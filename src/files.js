@@ -3,7 +3,7 @@
  * Opens .fvform files in FormVox and adds "New form" menu entry
  */
 
-import { registerFileAction, FileAction, addNewFileMenuEntry, NewMenuEntryCategory, DefaultType } from '@nextcloud/files';
+import { registerFileAction, addNewFileMenuEntry, NewMenuEntryCategory, DefaultType } from '@nextcloud/files';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 
@@ -25,7 +25,11 @@ const formvoxIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100
  */
 function registerFvformFileAction() {
     try {
-        const openAction = new FileAction({
+        // @nextcloud/files v4 expects a plain object (IFileAction) — the
+        // FileAction class was removed. exec receives the single node
+        // (and the file list passes nodes one-by-one); return true on
+        // success, false to show an error toast, null for silent no-op.
+        registerFileAction({
             id: 'formvox-open',
             displayName: () => 'Edit with FormVox',
             iconSvgInline: () => formvoxIconSvg,
@@ -48,8 +52,6 @@ function registerFvformFileAction() {
             default: DefaultType.DEFAULT,
             order: -50,
         });
-
-        registerFileAction(openAction);
     } catch (e) {
         console.error('FormVox: Failed to register file action', e);
     }

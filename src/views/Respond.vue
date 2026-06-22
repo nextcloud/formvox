@@ -68,7 +68,7 @@
 
       <div class="form-header">
         <h1>{{ form.title }}</h1>
-        <div v-if="form.description" class="form-description" v-html="renderMarkdown(form.description)" />
+        <div v-if="form.description" class="form-description" :class="`align-${form.descriptionAlign || 'left'}`" v-html="renderMarkdown(form.description)" />
       </div>
 
       <div
@@ -97,6 +97,7 @@
                 :value="answers[question.id]"
                 :all-answers="answers"
                 :all-questions="form.questions"
+                :answer-counts="(form._index?.answer_counts || {})[question.id] || {}"
                 :tts-supported="ttsIsSupported"
                 :speaking-question-id="speakingQuestionId"
                 :validation-error-external="validationErrors[question.id] || ''"
@@ -118,6 +119,7 @@
               :value="answers[item.question.id]"
               :all-answers="answers"
               :all-questions="form.questions"
+              :answer-counts="(form._index?.answer_counts || {})[item.question.id] || {}"
               :tts-supported="ttsIsSupported"
               :speaking-question-id="speakingQuestionId"
               :validation-error-external="validationErrors[item.question.id] || ''"
@@ -312,7 +314,11 @@ export default {
 
     // Initialize answers
     props.form.questions?.forEach(q => {
-      if (q.type === 'section') return; // Sections have no answers
+      if (q.type === 'section' || q.type === 'descriptor') return; // No answer-bearing types
+      if (q.type === 'consent') {
+        answers[q.id] = false;
+        return;
+      }
       if (q.type === 'multiple') {
         answers[q.id] = [];
       } else if (q.type === 'matrix') {
@@ -434,8 +440,8 @@ export default {
       let visibleCount = 0;
       let answeredCount = 0;
       for (const question of questions) {
-        // Skip section headers (they have no answers)
-        if (question.type === 'section') continue;
+        // Skip non-answerable UI items (section headers, info blocks)
+        if (question.type === 'section' || question.type === 'descriptor') continue;
         // Skip questions in hidden sections
         if (question.sectionId && hiddenSectionIds.value.has(question.sectionId)) continue;
         // Skip questions hidden by showIf conditions
@@ -750,6 +756,10 @@ export default {
             isEmpty = answer.length === 0;
           } else if (typeof answer === 'object' && answer !== null) {
             isEmpty = Object.keys(answer).length === 0;
+          }
+          // Consent: only an explicit `true` counts as answered (#94).
+          if (question.type === 'consent') {
+            isEmpty = answer !== true;
           }
 
           if (isEmpty) {
@@ -1266,6 +1276,10 @@ export default {
     color: var(--color-text-maxcontrast);
     font-size: 16px;
     margin: 0;
+
+    &.align-left { text-align: left; }
+    &.align-center { text-align: center; }
+    &.align-right { text-align: right; }
 
     h1 { font-size: 1.6em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
     h2 { font-size: 1.35em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }

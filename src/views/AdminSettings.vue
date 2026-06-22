@@ -43,6 +43,12 @@
         {{ t('formvox', 'AI') }}
       </button>
       <button
+        :class="['tab-button', { active: activeTab === 'templates' }]"
+        @click="activeTab = 'templates'">
+        <FileDocumentIcon :size="16" />
+        {{ t('formvox', 'Templates') }}
+      </button>
+      <button
         :class="['tab-button', { active: activeTab === 'support' }]"
         @click="activeTab = 'support'">
         <HeartIcon :size="16" />
@@ -52,6 +58,11 @@
 
     <div v-if="activeTab === 'ai'" class="tab-content">
       <AiSettings />
+    </div>
+
+    <!-- Templates Tab (#100) -->
+    <div v-if="activeTab === 'templates'" class="tab-content">
+      <AdminTemplates />
     </div>
 
     <!-- Branding Tab -->
@@ -220,6 +231,8 @@ import { showSuccess, showError } from '@nextcloud/dialogs';
 import PageBuilder from '../components/pagebuilder/PageBuilder.vue';
 import SupportSettings from '../components/SupportSettings.vue';
 import AiSettings from '../components/AiSettings.vue';
+import AdminTemplates from '../components/AdminTemplates.vue';
+import FileDocumentIcon from 'vue-material-design-icons/FileDocumentMultiple.vue';
 import CreationIcon from 'vue-material-design-icons/Creation.vue';
 import Palette from 'vue-material-design-icons/Palette.vue';
 import ChartBox from 'vue-material-design-icons/ChartBox.vue';
@@ -237,6 +250,8 @@ export default {
     PageBuilder,
     SupportSettings,
     AiSettings,
+    AdminTemplates,
+    FileDocumentIcon,
     CreationIcon,
     Palette,
     ChartBox,

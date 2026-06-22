@@ -154,8 +154,20 @@ export default {
 		})
 
 		onMounted(async () => {
-			// Set default title based on template
-			title.value = t(TEMPLATE_TITLES[props.initialTemplate] || TEMPLATE_TITLES.blank)
+			// Set default title based on template. Admin templates use their
+			// stored title; built-in templates use the localised default. (#100)
+			if (props.initialTemplate?.startsWith?.('admin:')) {
+				try {
+					const resp = await axios.get(generateUrl('/apps/formvox/api/templates'))
+					const id = props.initialTemplate.substring('admin:'.length)
+					const tpl = (resp.data?.templates || []).find(t => t.id === id)
+					title.value = tpl?.title || t('New form')
+				} catch (e) {
+					title.value = t('New form')
+				}
+			} else {
+				title.value = t(TEMPLATE_TITLES[props.initialTemplate] || TEMPLATE_TITLES.blank)
+			}
 			// Respect the admin toggle for source-document uploads
 			if (isAi.value) {
 				try {
@@ -242,10 +254,24 @@ export default {
       }
 
       try {
+        // Admin templates use id 'admin:<uuid>' — split it out so the
+        // backend can load the stored template (#100). Built-in templates
+        // remain a plain string id.
+        const tpl = props.initialTemplate;
+        let template = null;
+        let adminTemplateId = null;
+        if (tpl && tpl !== 'blank') {
+          if (tpl.startsWith('admin:')) {
+            adminTemplateId = tpl.substring('admin:'.length);
+          } else {
+            template = tpl;
+          }
+        }
         const response = await axios.post(generateUrl('/apps/formvox/api/forms'), {
           title: title.value,
           path: selectedPath.value || '',
-          template: props.initialTemplate === 'blank' ? null : props.initialTemplate,
+          template,
+          adminTemplateId,
         });
         emit('created', response.data);
       } catch (error) {

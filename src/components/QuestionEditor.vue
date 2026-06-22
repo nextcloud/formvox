@@ -1,11 +1,57 @@
 <template>
   <div
     class="question-editor"
-    :class="{ collapsed, 'has-color': localQuestion.color, 'is-section': localQuestion.type === 'section' }"
+    :class="{ collapsed, 'has-color': localQuestion.color, 'is-section': localQuestion.type === 'section', 'is-descriptor': localQuestion.type === 'descriptor' }"
     :style="localQuestion.color ? { '--question-color': localQuestion.color } : {}"
   >
+    <!-- Descriptor / info block — markdown content only, no answer (#64) -->
+    <template v-if="localQuestion.type === 'descriptor'">
+      <div class="section-editor-header">
+        <span class="drag-handle" :class="{ disabled: readonly }">
+          <DragIcon :size="20" />
+        </span>
+        <span class="section-badge">{{ t('Info block') }}</span>
+        <div class="question-actions">
+          <NcButton v-if="!readonly" type="error" @click="$emit('delete')">
+            <template #icon>
+              <CloseIcon :size="20" />
+            </template>
+          </NcButton>
+        </div>
+      </div>
+
+      <div class="section-editor-body">
+        <MarkdownEditor
+          v-model="localQuestion.description"
+          :align="localQuestion.descriptorAlign || 'left'"
+          :disabled="readonly"
+          :placeholder="t('Markdown content shown to respondents (no answer required)')"
+          @update:model-value="emitUpdate"
+          @update:align="updateDescriptorAlign"
+        />
+
+        <div v-if="localQuestion.showIf && !showConditions" class="condition-section">
+          <div class="condition-display">
+            <span class="condition-label">{{ t('Condition active') }}</span>
+            <NcButton type="tertiary" @click="showConditions = true">{{ t('Edit') }}</NcButton>
+            <NcButton type="tertiary" @click="updateCondition(null)">{{ t('Remove') }}</NcButton>
+          </div>
+        </div>
+        <ConditionEditor
+          v-if="showConditions"
+          :condition="localQuestion.showIf"
+          :questions="questions.filter(q => q.id !== localQuestion.id && q.type !== 'section' && q.type !== 'descriptor')"
+          @update="(val) => { updateCondition(val); showConditions = false; }"
+          @close="showConditions = false"
+        />
+        <NcButton v-else-if="!localQuestion.showIf && !readonly" type="tertiary" @click="showConditions = true">
+          {{ t('Add condition') }}
+        </NcButton>
+      </div>
+    </template>
+
     <!-- Section header (special rendering for type=section) -->
-    <template v-if="localQuestion.type === 'section'">
+    <template v-else-if="localQuestion.type === 'section'">
       <div class="section-editor-header">
         <span class="drag-handle" :class="{ disabled: readonly }">
           <DragIcon :size="20" />
@@ -79,6 +125,7 @@
           <option value="choice">{{ t('Single choice') }}</option>
           <option value="multiple">{{ t('Multiple choice') }}</option>
           <option value="dropdown">{{ t('Dropdown') }}</option>
+          <option value="consent">{{ t('Consent (single checkbox)') }}</option>
         </optgroup>
         <optgroup :label="t('Date & Time')">
           <option value="date">{{ t('Date') }}</option>
@@ -237,6 +284,16 @@
                 :disabled="readonly"
                 :placeholder="t('Score')"
                 class="score-input"
+                @update:model-value="emitUpdate"
+              />
+              <NcTextField
+                v-model.number="option.capacity"
+                type="number"
+                min="0"
+                :disabled="readonly"
+                :placeholder="t('Max')"
+                :title="t('Maximum times this option can be selected — leave empty for unlimited (#104)')"
+                class="capacity-input"
                 @update:model-value="emitUpdate"
               />
               <NcButton
@@ -575,6 +632,7 @@
               @update:model-value="emitUpdate"
             />
           </div>
+
         </div>
       </div>
 
@@ -840,6 +898,16 @@ export default {
     const emitUpdate = () => {
       // Deep copy to preserve nested objects like validation
       emit('update', JSON.parse(JSON.stringify(localQuestion)));
+    };
+
+    const updateDescriptorAlign = (align) => {
+      localQuestion.descriptorAlign = align;
+      emitUpdate();
+    };
+
+    const onToggleRespondentEmail = (val) => {
+      localQuestion.useAsRespondentEmail = !!val;
+      emitUpdate();
     };
 
     const onTypeChange = () => {
@@ -1125,6 +1193,8 @@ export default {
       removeFromSection,
       SectionIcon,
       emitUpdate,
+      updateDescriptorAlign,
+      onToggleRespondentEmail,
       onTypeChange,
       onFileTypePresetChange,
       onCustomTypesChange,
@@ -1366,6 +1436,10 @@ export default {
     }
 
     .score-input {
+      width: 80px;
+    }
+
+    .capacity-input {
       width: 80px;
     }
   }

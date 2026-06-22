@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\FormVox\Migration;
 
 use OCP\App\IAppManager;
+use OCP\Files\IMimeTypeLoader;
+use OCP\IDBConnection;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
@@ -16,10 +18,14 @@ use OCP\Migration\IRepairStep;
 class RegisterMimeType implements IRepairStep
 {
     private IAppManager $appManager;
+    private IMimeTypeLoader $mimeTypeLoader;
+    private IDBConnection $db;
 
-    public function __construct(IAppManager $appManager)
+    public function __construct(IAppManager $appManager, IMimeTypeLoader $mimeTypeLoader, IDBConnection $db)
     {
         $this->appManager = $appManager;
+        $this->mimeTypeLoader = $mimeTypeLoader;
+        $this->db = $db;
     }
 
     public function getName(): string
@@ -37,8 +43,7 @@ class RegisterMimeType implements IRepairStep
         // The appinfo/mimetypemapping.json and config/mimetypemapping.json are sufficient.
 
         // Register MIME type in database
-        $mimeTypeLoader = \OC::$server->getMimeTypeLoader();
-        $mimeTypeLoader->getId('application/x-fvform');
+        $this->mimeTypeLoader->getId('application/x-fvform');
 
         // Update core config files for icon mapping
         $this->updateMimeTypeMappingConfig($output);
@@ -117,11 +122,9 @@ class RegisterMimeType implements IRepairStep
      */
     private function updateFilecacheMimeTypes(IOutput $output): void
     {
-        $mimeTypeLoader = \OC::$server->getMimeTypeLoader();
-        $mimeTypeId = $mimeTypeLoader->getId('application/x-fvform');
+        $mimeTypeId = $this->mimeTypeLoader->getId('application/x-fvform');
 
-        $db = \OC::$server->getDatabaseConnection();
-        $qb = $db->getQueryBuilder();
+        $qb = $this->db->getQueryBuilder();
 
         $qb->update('filecache')
             ->set('mimetype', $qb->createNamedParameter($mimeTypeId))

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCP\IConfig;
+use OCP\IURLGenerator;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFolder;
@@ -15,6 +16,7 @@ class BrandingService
     private IConfig $config;
     private IAppData $appData;
     private FormService $formService;
+    private IURLGenerator $urlGenerator;
 
     private const DEFAULT_LAYOUT = [
         'header' => [],
@@ -46,11 +48,12 @@ class BrandingService
         'fontFamily' => 'default',
     ];
 
-    public function __construct(IConfig $config, IAppData $appData, FormService $formService)
+    public function __construct(IConfig $config, IAppData $appData, FormService $formService, IURLGenerator $urlGenerator)
     {
         $this->config = $config;
         $this->appData = $appData;
         $this->formService = $formService;
+        $this->urlGenerator = $urlGenerator;
     }
 
     /**
@@ -194,7 +197,7 @@ class BrandingService
      */
     private function getBlockImageUrl(string $blockId): string
     {
-        return \OC::$server->getURLGenerator()->linkToRoute('formvox.branding.blockImage', ['blockId' => $blockId]);
+        return $this->urlGenerator->linkToRoute('formvox.branding.blockImage', ['blockId' => $blockId]);
     }
 
     /**

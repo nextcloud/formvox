@@ -1,5 +1,13 @@
 <template>
+  <!-- Descriptor (info block): markdown content, no input, no label (#64) -->
   <div
+    v-if="question.type === 'descriptor'"
+    class="question-renderer descriptor"
+    :class="`align-${question.descriptorAlign || 'left'}`"
+    v-html="renderedDescriptionHtml"
+  />
+  <div
+    v-else
     class="question-renderer"
     :class="{ 'has-color': question.color }"
     :style="question.color ? { '--question-color': question.color } : {}"
@@ -92,9 +100,28 @@
         :value="option.value"
         type="radio"
         :name="`question-${question.id}`"
+        :disabled="isOptionFull(option) && value !== option.value"
         @update:model-value="$emit('update:value', $event)"
       >
         {{ renderPiping(option.label) }}
+        <span v-if="isOptionFull(option) && value !== option.value" class="option-badge option-badge--full">{{ t('Full') }}</span>
+        <span v-else-if="optionRemaining(option) !== null" class="option-badge">{{ t('{n} left', { n: optionRemaining(option) }) }}</span>
+      </NcCheckboxRadioSwitch>
+    </div>
+
+    <!-- Consent (single checkbox — must be ticked when required, #94) -->
+    <div
+      v-else-if="question.type === 'consent'"
+      class="consent-option"
+      :aria-required="question.required || undefined"
+    >
+      <NcCheckboxRadioSwitch
+        :model-value="!!value"
+        type="checkbox"
+        :name="`question-${question.id}`"
+        @update:model-value="$emit('update:value', $event)"
+      >
+        {{ renderPiping(question.consentLabel || question.question || t('I agree')) }}
       </NcCheckboxRadioSwitch>
     </div>
 
@@ -113,9 +140,12 @@
         :value="option.value"
         :name="`question-${question.id}`"
         type="checkbox"
+        :disabled="isOptionFull(option) && !(value || []).includes(option.value)"
         @update:model-value="$emit('update:value', $event)"
       >
         {{ renderPiping(option.label) }}
+        <span v-if="isOptionFull(option) && !(value || []).includes(option.value)" class="option-badge option-badge--full">{{ t('Full') }}</span>
+        <span v-else-if="optionRemaining(option) !== null" class="option-badge">{{ t('{n} left', { n: optionRemaining(option) }) }}</span>
       </NcCheckboxRadioSwitch>
     </div>
 
@@ -131,8 +161,13 @@
       @change="$emit('update:value', $event.target.value)"
     >
       <option value="">{{ t('Select...') }}</option>
-      <option v-for="option in normalizedOptions" :key="option.id" :value="option.value">
-        {{ renderPiping(option.label) }}
+      <option
+        v-for="option in normalizedOptions"
+        :key="option.id"
+        :value="option.value"
+        :disabled="isOptionFull(option) && value !== option.value"
+      >
+        {{ renderPiping(option.label) }}<template v-if="isOptionFull(option) && value !== option.value"> — {{ t('Full') }}</template><template v-else-if="optionRemaining(option) !== null"> — {{ t('{n} left', { n: optionRemaining(option) }) }}</template>
       </option>
     </select>
 
@@ -494,6 +529,13 @@ export default {
       type: Array,
       default: () => [],
     },
+    answerCounts: {
+      // Map of { [optionValue]: count } for this question, sourced from
+      // form._index.answer_counts. Used to disable options that have
+      // reached their capacity (#104).
+      type: Object,
+      default: () => ({}),
+    },
     ttsSupported: {
       type: Boolean,
       default: false,
@@ -687,6 +729,23 @@ export default {
         value: opt.value || opt.id,
       }));
     });
+
+    // Capacity helpers (#104). isOptionFull is true when the option has a
+    // capacity set AND the current count from form._index has reached it.
+    // A user who already selected a full option keeps their choice valid —
+    // only NEW selections of a full option are blocked.
+    const isOptionFull = (option) => {
+      const cap = Number(option.capacity);
+      if (!cap || cap <= 0) return false;
+      const used = Number(props.answerCounts?.[option.value] ?? 0);
+      return used >= cap;
+    };
+    const optionRemaining = (option) => {
+      const cap = Number(option.capacity);
+      if (!cap || cap <= 0) return null;
+      const used = Number(props.answerCounts?.[option.value] ?? 0);
+      return Math.max(0, cap - used);
+    };
 
     const renderedQuestion = computed(() => applyPiping(props.question.question || ''));
     const renderedDescription = computed(() => applyPiping(props.question.description || ''));
@@ -960,6 +1019,8 @@ export default {
 
     return {
       normalizedOptions,
+      isOptionFull,
+      optionRemaining,
       renderedQuestion,
       renderedDescription,
       renderedDescriptionHtml,
@@ -1023,6 +1084,25 @@ export default {
 
 .question-renderer {
   max-width: 100%;
+
+  &.descriptor {
+    color: var(--color-text-maxcontrast);
+    background: var(--color-background-hover);
+    border-radius: var(--border-radius-large, 8px);
+    padding: 12px 16px;
+
+    &.align-left { text-align: left; }
+    &.align-center { text-align: center; }
+    &.align-right { text-align: right; }
+
+    h1 { font-size: 1.6em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
+    h2 { font-size: 1.35em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
+    h3 { font-size: 1.15em; font-weight: 700; margin: 0.5em 0 0.3em; color: var(--color-main-text); }
+    p { margin: 0.4em 0; }
+    ul { list-style: disc; padding-left: 1.5em; margin: 0.4em 0; }
+    ol { list-style: decimal; padding-left: 1.5em; margin: 0.4em 0; }
+    a { color: var(--color-primary-element); text-decoration: underline; }
+  }
 
   &.has-color {
     padding-left: 16px;
@@ -1192,6 +1272,21 @@ export default {
   color: white;
   border-radius: var(--border-radius);
   font-size: 13px;
+}
+
+.option-badge {
+  margin-left: 8px;
+  font-size: 0.85em;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-background-hover);
+  color: var(--color-text-maxcontrast);
+
+  &--full {
+    background: #c0392b;
+    color: #fff;
+  }
 }
 
 .choice-options {

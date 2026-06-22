@@ -10,6 +10,8 @@ use OCA\FormVox\Service\MicrosoftFormsApiClient;
 use OCA\FormVox\Service\MSFormsImportService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\IRequest;
@@ -45,9 +47,8 @@ class ImportController extends Controller
 
     /**
      * Get the Microsoft OAuth authorization URL
-     *
-     * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function getMsAuthUrl(): DataResponse
     {
         if (!$this->authService->isConfigured()) {
@@ -65,10 +66,9 @@ class ImportController extends Controller
 
     /**
      * Handle OAuth callback from Microsoft
-     *
-     * @NoAdminRequired
-     * @NoCSRFRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function msAuthCallback(?string $code = null, ?string $state = null, ?string $error = null): RedirectResponse
     {
         $baseUrl = $this->urlGenerator->linkToRouteAbsolute('formvox.page.index');
@@ -105,8 +105,8 @@ class ImportController extends Controller
     /**
      * Check if user is connected to Microsoft
      *
-     * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function checkMsConnection(): DataResponse
     {
         return new DataResponse([
@@ -118,8 +118,8 @@ class ImportController extends Controller
     /**
      * Disconnect from Microsoft
      *
-     * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function disconnectMs(): DataResponse
     {
         $this->authService->deleteUserTokens($this->userId);
@@ -132,8 +132,8 @@ class ImportController extends Controller
     /**
      * List user's Microsoft Forms
      *
-     * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function listMsForms(): DataResponse
     {
         if ($this->apiClient === null) {
@@ -166,8 +166,8 @@ class ImportController extends Controller
     /**
      * Preview a Microsoft Form (get structure before import)
      *
-     * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function previewMsForm(string $msFormId): DataResponse
     {
         if ($this->apiClient === null) {
@@ -209,8 +209,8 @@ class ImportController extends Controller
     /**
      * Import a Microsoft Form
      *
-     * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function importMsForm(
         string $msFormId,
         string $path = '/',
