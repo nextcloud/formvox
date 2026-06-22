@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.2.5] - 2026-06-22
+
+### Fixed
+- **Nextcloud Enterprise instances were never recognised in telemetry.** The telemetry instance hash was computed differently from the license `instance_url_hash` (different fallback source and/or no URL normalisation), so the license server's enterprise-claim validation could never match the two. `TelemetryService::getInstanceHash()` now delegates to `LicenseService::getInstanceUrlHash()`, guaranteeing both are byte-for-byte identical. Existing instances will report under a new (correct) instance hash on their next telemetry run.
+
 ## [1.2.4] - 2026-06-08
 
 ### Changed
