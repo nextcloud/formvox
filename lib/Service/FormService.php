@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\File;
 use OCP\Files\Folder;
+use OCP\Files\IMimeTypeLoader;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\IUserSession;
@@ -15,24 +17,32 @@ use OCA\FormVox\AppInfo\Application;
 
 class FormService
 {
+    /**
+     * Chunk size for IN() clauses — stays below SQLite's 999 bound-parameter limit.
+     */
+    private const STORAGE_ID_CHUNK = 500;
+
     private IRootFolder $rootFolder;
     private IUserSession $userSession;
     private IndexService $indexService;
     private IDBConnection $db;
     private IL10N $l;
+    private IMimeTypeLoader $mimeTypeLoader;
 
     public function __construct(
         IRootFolder $rootFolder,
         IUserSession $userSession,
         IndexService $indexService,
         IDBConnection $db,
-        IL10N $l
+        IL10N $l,
+        IMimeTypeLoader $mimeTypeLoader
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->indexService = $indexService;
         $this->db = $db;
         $this->l = $l;
+        $this->mimeTypeLoader = $mimeTypeLoader;
     }
 
     /**
@@ -226,7 +236,12 @@ class FormService
 
     /**
      * List all forms accessible to the current user
-     * Uses database query for fast lookups instead of recursive folder scanning
+     *
+     * Only queries filecache rows on storages the user actually has mounted
+     * (matched by mimetype, which is indexed), instead of a name-LIKE scan
+     * over the whole instance. The old scan returned every user's forms and
+     * made getById() initialize foreign mounts — with slow external storage
+     * that stalled for minutes (#110).
      */
     public function listForms(): array
     {
@@ -234,23 +249,15 @@ class FormService
         if ($user === null) {
             return [];
         }
-        $userId = $user->getUID();
 
-        // Query database directly for .fvform files - much faster than recursive scan
-        // Just search by filename extension, mimetype may not be registered yet
-        $qb = $this->db->getQueryBuilder();
-        $qb->select('fc.fileid', 'fc.name', 'fc.path', 'fc.mtime', 'fc.size')
-            ->from('filecache', 'fc')
-            ->where($qb->expr()->like('fc.name', $qb->createNamedParameter('%.fvform')));
-
-        $result = $qb->executeQuery();
-        $forms = [];
         $userFolder = $this->getUserFolder();
+        $fileIds = $this->findFormFileIds($user->getUID(), $userFolder);
 
-        while ($row = $result->fetch()) {
+        $forms = [];
+        foreach ($fileIds as $fileId) {
             try {
                 // Check if user has access to this file
-                $nodes = $userFolder->getById((int)$row['fileid']);
+                $nodes = $userFolder->getById($fileId);
                 if (empty($nodes)) {
                     continue;
                 }
@@ -283,9 +290,90 @@ class FormService
                 continue;
             }
         }
-        $result->closeCursor();
 
         return $forms;
+    }
+
+    /**
+     * Find fileids of .fvform files on the user's own mounts.
+     *
+     * Filecache is only filtered by (storage, mimetype) — both indexed, and no
+     * join against filecache, so this stays valid on sharded instances.
+     *
+     * @return int[]
+     */
+    private function findFormFileIds(string $userId, Folder $userFolder): array
+    {
+        // Storages mounted for this user: home, received shares (owner's
+        // storage), group folders and external mounts.
+        $qb = $this->db->getQueryBuilder();
+        $qb->selectDistinct('storage_id')
+            ->from('mounts')
+            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+        $result = $qb->executeQuery();
+        $storageIds = array_map('intval', $result->fetchAll(\PDO::FETCH_COLUMN));
+        $result->closeCursor();
+
+        if ($storageIds === []) {
+            return [];
+        }
+
+        $mimeTypeId = $this->mimeTypeLoader->getId(Application::MIME_TYPE);
+
+        $fileIds = [];
+        foreach (array_chunk($storageIds, self::STORAGE_ID_CHUNK) as $chunk) {
+            $qb = $this->db->getQueryBuilder();
+            $qb->select('fileid')
+                ->from('filecache')
+                ->where($qb->expr()->in('storage', $qb->createNamedParameter($chunk, IQueryBuilder::PARAM_INT_ARRAY)))
+                ->andWhere($qb->expr()->eq('mimetype', $qb->createNamedParameter($mimeTypeId, IQueryBuilder::PARAM_INT)))
+                // Version and trash copies keep the form mimetype but must
+                // not surface in the list (they would be discarded by
+                // getById() anyway — this just avoids the wasted lookups)
+                ->andWhere($qb->expr()->notLike('path', $qb->createNamedParameter($this->db->escapeLikeParameter('files_versions/') . '%')))
+                ->andWhere($qb->expr()->notLike('path', $qb->createNamedParameter($this->db->escapeLikeParameter('files_trashbin/') . '%')));
+            $result = $qb->executeQuery();
+            while ($row = $result->fetch()) {
+                $fileIds[(int)$row['fileid']] = true;
+            }
+            $result->closeCursor();
+        }
+
+        // Safety net for .fvform files whose mimetype was never registered
+        // (uploaded before the app was installed, or copied in from outside
+        // Nextcloud). Restricted to the home storage so it can never touch
+        // foreign or external mounts, and self-healing: found rows get their
+        // mimetype fixed so they move to the fast path above.
+        try {
+            $homeStorageId = $userFolder->getStorage()->getCache()->getNumericStorageId();
+
+            $qb = $this->db->getQueryBuilder();
+            $qb->select('fileid')
+                ->from('filecache')
+                ->where($qb->expr()->eq('storage', $qb->createNamedParameter($homeStorageId, IQueryBuilder::PARAM_INT)))
+                ->andWhere($qb->expr()->like('name', $qb->createNamedParameter('%.' . Application::FILE_EXTENSION)))
+                ->andWhere($qb->expr()->neq('mimetype', $qb->createNamedParameter($mimeTypeId, IQueryBuilder::PARAM_INT)));
+            $result = $qb->executeQuery();
+            $unregistered = [];
+            while ($row = $result->fetch()) {
+                $unregistered[] = (int)$row['fileid'];
+                $fileIds[(int)$row['fileid']] = true;
+            }
+            $result->closeCursor();
+
+            foreach (array_chunk($unregistered, self::STORAGE_ID_CHUNK) as $chunk) {
+                $qb = $this->db->getQueryBuilder();
+                $qb->update('filecache')
+                    ->set('mimetype', $qb->createNamedParameter($mimeTypeId, IQueryBuilder::PARAM_INT))
+                    ->where($qb->expr()->in('fileid', $qb->createNamedParameter($chunk, IQueryBuilder::PARAM_INT_ARRAY)));
+                $qb->executeStatement();
+            }
+        } catch (\Exception $e) {
+            // The fallback is best-effort; the fast path already returned
+            // every properly registered form.
+        }
+
+        return array_keys($fileIds);
     }
 
     /**

@@ -60,6 +60,47 @@ function formatAnswerForOdt(answer, question) {
 }
 
 /**
+ * Build table rows (header first) for table/matrix answers, or null when the
+ * answer should be rendered as plain text (#111).
+ */
+function buildOdtTableRows(answer, question) {
+	if (!question || answer === undefined || answer === null || answer === '') {
+		return null;
+	}
+
+	// Table (dynamic rows): one row per answer entry, columns as defined
+	if (question.type === 'table' && Array.isArray(answer)
+		&& answer.length > 0 && typeof answer[0] === 'object' && !answer[0]?.filename) {
+		const columns = question.columns || [];
+		if (columns.length === 0) {
+			return null;
+		}
+		return [
+			columns.map(col => col.label || ''),
+			...answer.map(row => columns.map(col => String(row[col.id] ?? '-'))),
+		];
+	}
+
+	// Matrix: grid of question rows × columns with a mark in the chosen cell
+	if (question.type === 'matrix' && typeof answer === 'object' && !Array.isArray(answer)
+		&& Array.isArray(question.rows) && Array.isArray(question.columns)) {
+		const isSelected = (rowId, col) => {
+			const value = answer[rowId];
+			return Array.isArray(value) ? value.includes(col.value) : value === col.value;
+		};
+		return [
+			['', ...question.columns.map(col => col.label || String(col.value))],
+			...question.rows.map(row => [
+				row.label || row.id,
+				...question.columns.map(col => (isSelected(row.id, col) ? '✕' : '')),
+			]),
+		];
+	}
+
+	return null;
+}
+
+/**
  * Check if a filename has an image extension.
  */
 function isImageFile(filename) {
@@ -114,12 +155,27 @@ export async function generateResponseOdt(form, response, fileId) {
 	// Questions and answers
 	for (const question of form.questions) {
 		const answer = response.answers[question.id];
-		const displayValue = formatAnswerForOdt(answer, question);
 
 		doc.addParagraph(question.question, { spaceBefore: '0.3cm' });
-		doc.addParagraph((p) => {
-			p.addText(displayValue, { color: '#444444' });
-		});
+
+		// Table/matrix answers become real tables (#111), everything else text
+		const tableRows = buildOdtTableRows(answer, question);
+		if (tableRows) {
+			doc.addTable((t) => {
+				tableRows.forEach((cells, rowIndex) => {
+					t.addRow((r) => {
+						cells.forEach(cell => r.addCell(cell, rowIndex === 0
+							? { bold: true, backgroundColor: '#EEEEEE' }
+							: {}));
+					});
+				});
+			});
+		} else {
+			const displayValue = formatAnswerForOdt(answer, question);
+			doc.addParagraph((p) => {
+				p.addText(displayValue, { color: '#444444' });
+			});
+		}
 
 		// Embed uploaded images if fileId is available
 		if (fileId && question.type === 'file' && answer) {

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCA\FormVox\AppInfo\Application;
+use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\Files\IMimeTypeLoader;
 use OCP\Files\IRootFolder;
 use OCP\IDBConnection;
 use OCP\IUserManager;
@@ -19,17 +21,20 @@ class StatisticsService
     private IDBConnection $db;
     private IUserManager $userManager;
     private LoggerInterface $logger;
+    private IMimeTypeLoader $mimeTypeLoader;
 
     public function __construct(
         IRootFolder $rootFolder,
         IDBConnection $db,
         IUserManager $userManager,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        IMimeTypeLoader $mimeTypeLoader
     ) {
         $this->rootFolder = $rootFolder;
         $this->db = $db;
         $this->userManager = $userManager;
         $this->logger = $logger;
+        $this->mimeTypeLoader = $mimeTypeLoader;
     }
 
     /**
@@ -51,10 +56,16 @@ class StatisticsService
     public function getFormCount(): int
     {
         try {
+            $mimeTypeId = $this->mimeTypeLoader->getId(Application::MIME_TYPE);
+
             $qb = $this->db->getQueryBuilder();
             $qb->select($qb->createFunction('COUNT(*)'))
                 ->from('filecache', 'fc')
-                ->where($qb->expr()->like('fc.name', $qb->createNamedParameter('%.fvform')));
+                ->where($qb->expr()->eq('fc.mimetype', $qb->createNamedParameter($mimeTypeId, IQueryBuilder::PARAM_INT)))
+                // Version and trash copies keep the form mimetype — count
+                // only the live files
+                ->andWhere($qb->expr()->notLike('fc.path', $qb->createNamedParameter($this->db->escapeLikeParameter('files_versions/') . '%')))
+                ->andWhere($qb->expr()->notLike('fc.path', $qb->createNamedParameter($this->db->escapeLikeParameter('files_trashbin/') . '%')));
 
             $result = $qb->executeQuery();
             $count = (int)$result->fetchOne();
@@ -76,18 +87,31 @@ class StatisticsService
     public function getTotalResponseCount(): int
     {
         try {
+            $mimeTypeId = $this->mimeTypeLoader->getId(Application::MIME_TYPE);
+
             $qb = $this->db->getQueryBuilder();
-            $qb->select('fc.fileid', 'fc.storage', 's.id')
+            $qb->select('fc.fileid', 'fc.storage')
                 ->from('filecache', 'fc')
-                ->innerJoin('fc', 'storages', 's', 'fc.storage = s.numeric_id')
-                ->where($qb->expr()->like('fc.name', $qb->createNamedParameter('%.fvform')));
+                ->where($qb->expr()->eq('fc.mimetype', $qb->createNamedParameter($mimeTypeId, IQueryBuilder::PARAM_INT)))
+                ->andWhere($qb->expr()->notLike('fc.path', $qb->createNamedParameter($this->db->escapeLikeParameter('files_versions/') . '%')))
+                ->andWhere($qb->expr()->notLike('fc.path', $qb->createNamedParameter($this->db->escapeLikeParameter('files_trashbin/') . '%')));
 
             $result = $qb->executeQuery();
+            $rows = $result->fetchAll();
+            $result->closeCursor();
+
+            // Resolve numeric storage ids to string ids separately — a join
+            // against filecache is not allowed on sharded instances.
+            $storageNames = $this->getStorageNames(array_map(
+                static fn (array $row): int => (int)$row['storage'],
+                $rows
+            ));
+
             $totalResponses = 0;
 
-            while ($row = $result->fetch()) {
+            foreach ($rows as $row) {
                 try {
-                    $storageId = $row['id'];
+                    $storageId = $storageNames[(int)$row['storage']] ?? '';
                     $fileId = (int)$row['fileid'];
 
                     // Only process personal folders for now (home::username)
@@ -112,7 +136,6 @@ class StatisticsService
                     continue;
                 }
             }
-            $result->closeCursor();
 
             return $totalResponses;
         } catch (\Exception $e) {
@@ -121,6 +144,29 @@ class StatisticsService
             ]);
             return 0;
         }
+    }
+
+    /**
+     * Map numeric storage ids to their string ids (e.g. "home::alice")
+     *
+     * @param int[] $numericIds
+     * @return array<int, string>
+     */
+    private function getStorageNames(array $numericIds): array
+    {
+        $names = [];
+        foreach (array_chunk(array_unique($numericIds), 500) as $chunk) {
+            $qb = $this->db->getQueryBuilder();
+            $qb->select('numeric_id', 'id')
+                ->from('storages')
+                ->where($qb->expr()->in('numeric_id', $qb->createNamedParameter($chunk, IQueryBuilder::PARAM_INT_ARRAY)));
+            $result = $qb->executeQuery();
+            while ($row = $result->fetch()) {
+                $names[(int)$row['numeric_id']] = (string)$row['id'];
+            }
+            $result->closeCursor();
+        }
+        return $names;
     }
 
     /**

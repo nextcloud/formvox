@@ -2,6 +2,14 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.3.1] - 2026-07-07
+
+### Fixed
+- **Forms list could take minutes to load on instances with slow external storage.** The forms overview scanned the file index of the entire instance and touched every user's storage — including slow SMB/network mounts of other users. It now only looks at storages you actually have access to, using an indexed lookup. On large instances this brings the overview from minutes back to milliseconds. The admin statistics panel got the same treatment. ([#110](https://github.com/nextcloud/formvox/issues/110))
+- **Table and matrix answers now export as real tables in ODT.** The per-response ODT export rendered table/matrix questions as flat "Row 1: …" text lines; they are now proper formatted tables with a header row. Note: custom ODT templates use plain-text placeholders, so answers stay flat text there. ([#111](https://github.com/nextcloud/formvox/issues/111))
+
+Note: forms that were copied onto external storage outside of Nextcloud may need a rescan (`occ maintenance:mimetype:update-db` or the automatic one during app upgrade) before they show up in the list.
+
 ## [1.3.0] - 2026-06-22
 
 ### Added
