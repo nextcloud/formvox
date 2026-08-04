@@ -82,10 +82,6 @@ class MicrosoftFormsApiClient
             $response = $this->requestForms('GET', "/forms('{$formId}')/questions", $accessToken);
             $this->logger->debug('MS Forms getQuestions response', ['response' => $response]);
 
-            // Debug: Write raw response to file
-            $debugFile = '/tmp/ms_forms_questions_raw.json';
-            file_put_contents($debugFile, json_encode($response, JSON_PRETTY_PRINT));
-
             $questions = $response['value'] ?? $response ?? [];
             if (!empty($questions)) {
                 return array_map(function ($question) {
@@ -99,10 +95,6 @@ class MicrosoftFormsApiClient
         // Fallback: get form with expanded questions
         $formResponse = $this->requestForms('GET', "/forms('{$formId}')?expand=questions", $accessToken);
         $this->logger->debug('MS Forms expanded form response', ['response' => $formResponse]);
-
-        // Debug: Write raw response to file
-        $debugFile = '/tmp/ms_forms_expanded_raw.json';
-        file_put_contents($debugFile, json_encode($formResponse, JSON_PRETTY_PRINT));
 
         $questions = $formResponse['questions'] ?? [];
         return array_map(function ($question) {

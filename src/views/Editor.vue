@@ -780,8 +780,16 @@ export default {
 
     const deletePage = (pageIndex) => {
       if (!hasPages.value || form.pages.length <= 1) return;
-      // Remove the page (questions remain in form.questions but are unassigned)
+      // Move this page's questions onto a neighbouring page instead of leaving
+      // them unassigned — an orphaned question is invisible to respondents yet
+      // still enforced by the server if required, breaking submission (#6).
+      const removed = form.pages[pageIndex];
+      const targetIndex = pageIndex > 0 ? pageIndex - 1 : 1; // prev page, or next when deleting the first
       form.pages.splice(pageIndex, 1);
+      const target = form.pages[Math.min(targetIndex, form.pages.length - 1)];
+      if (target && Array.isArray(removed?.questions) && removed.questions.length) {
+        target.questions.push(...removed.questions);
+      }
       // Adjust current page index if needed
       if (currentPageIndex.value >= form.pages.length) {
         currentPageIndex.value = form.pages.length - 1;

@@ -20,6 +20,9 @@
               <NcActionButton @click="exportCsv">
                 {{ t('Export CSV') }}
               </NcActionButton>
+              <NcActionButton @click="exportExcel">
+                {{ t('Export Excel') }}
+              </NcActionButton>
               <NcActionButton @click="exportJson">
                 {{ t('Export JSON') }}
               </NcActionButton>
@@ -265,16 +268,36 @@
           <table class="responses-table">
             <thead>
               <tr>
+                <th class="actions-col"></th>
                 <th>{{ t('Date') }}</th>
                 <th>{{ t('Respondent') }}</th>
                 <th v-for="question in answerableQuestions" :key="question.id">
                   {{ truncate(question.question, 30) }}
                 </th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="response in paginatedResponses" :key="response.id">
+                <td class="response-actions">
+                  <NcButton
+                    type="tertiary"
+                    :title="t('Export ODT')"
+                    @click="exportResponseOdt(response)"
+                  >
+                    <template #icon>
+                      <DownloadIcon :size="20" />
+                    </template>
+                  </NcButton>
+                  <NcButton
+                    v-if="permissions.deleteResponses"
+                    type="error"
+                    @click="deleteResponse(response.id)"
+                  >
+                    <template #icon>
+                      <DeleteIcon :size="20" />
+                    </template>
+                  </NcButton>
+                </td>
                 <td>{{ formatDate(response.submitted_at) }}</td>
                 <td>
                   <span v-if="response.respondent.type === 'user'">
@@ -314,26 +337,6 @@
                   <template v-else>
                     {{ formatAnswer(response.answers[question.id], question) }}
                   </template>
-                </td>
-                <td class="response-actions">
-                  <NcButton
-                    type="tertiary"
-                    :title="t('Export ODT')"
-                    @click="exportResponseOdt(response)"
-                  >
-                    <template #icon>
-                      <DownloadIcon :size="20" />
-                    </template>
-                  </NcButton>
-                  <NcButton
-                    v-if="permissions.deleteResponses"
-                    type="error"
-                    @click="deleteResponse(response.id)"
-                  >
-                    <template #icon>
-                      <DeleteIcon :size="20" />
-                    </template>
-                  </NcButton>
                 </td>
               </tr>
             </tbody>
@@ -666,6 +669,10 @@ export default {
       window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/export/csv', { fileId: props.fileId });
     };
 
+    const exportExcel = () => {
+      window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/export/xlsx', { fileId: props.fileId });
+    };
+
     const exportJson = () => {
       window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/export/json', { fileId: props.fileId });
     };
@@ -815,6 +822,7 @@ export default {
       truncate,
       goToEditor,
       exportCsv,
+      exportExcel,
       exportJson,
       exportAllOdt,
       exportResponseOdt,
@@ -1090,6 +1098,21 @@ export default {
 
   th {
     font-weight: bold;
+    background: var(--color-background-hover);
+  }
+
+  // Actions are the leading column so the download/delete buttons stay next
+  // to the respondent name instead of scrolling off to the right on wide
+  // forms (#121). Sticky-left keeps them in view during horizontal scroll.
+  .actions-col,
+  .response-actions {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-main-background);
+  }
+
+  th.actions-col {
     background: var(--color-background-hover);
   }
 

@@ -22,6 +22,13 @@ class FormService
      */
     private const STORAGE_ID_CHUNK = 500;
 
+    /**
+     * How long (seconds) a response-write lock row may live before it is
+     * considered stale and reclaimed. Guards against a worker dying mid-write
+     * (timeout/OOM) leaving a lock that would otherwise DoS the form forever.
+     */
+    private const LOCK_TTL_SECONDS = 60;
+
     private IRootFolder $rootFolder;
     private IUserSession $userSession;
     private IndexService $indexService;
@@ -155,57 +162,56 @@ class FormService
     public function update(int $fileId, array $data): array
     {
         $file = $this->getFileById($fileId);
-        $form = json_decode($file->getContent(), true);
 
-        if ($form === null) {
-            throw new \RuntimeException('Invalid form file format');
-        }
-
-        // Update allowed fields
-        // Use array_key_exists instead of isset to allow null values (e.g., branding: null)
-        $allowedFields = ['title', 'description', 'descriptionAlign', 'settings', 'questions', 'pages', 'permissions', '_index', 'branding', 'favorite'];
-        foreach ($allowedFields as $field) {
-            if (array_key_exists($field, $data)) {
-                $form[$field] = $data[$field];
-            }
-        }
-
-        // Sanitize descriptionAlign to a known value to prevent CSS-class
-        // injection through the API (#98).
-        if (isset($form['descriptionAlign']) && !in_array($form['descriptionAlign'], ['left', 'center', 'right'], true)) {
-            $form['descriptionAlign'] = 'left';
-        }
-
-        // Handle public_token being cleared - also clear related share settings
-        if (isset($form['settings']) && array_key_exists('public_token', $form['settings'])) {
-            if (empty($form['settings']['public_token'])) {
-                // Public link was deleted, also clear password hash and expiration
-                unset($form['settings']['share_password_hash']);
-                $form['settings']['share_expires_at'] = null;
-            }
-        }
-
-        // Hash the share password if provided (store hash, never plaintext)
-        // Use array_key_exists because isset() returns false for null values
-        if (isset($form['settings']) && array_key_exists('share_password', $form['settings'])) {
-            $password = $form['settings']['share_password'];
-            if (!empty($password)) {
-                // Only hash if it's not already hashed (new password)
-                // Hashed passwords start with $2y$ (bcrypt)
-                if (strpos($password, '$2y$') !== 0) {
-                    $form['settings']['share_password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+        // Apply the edit under the shared lock, against the freshly-read form,
+        // so a response submitted concurrently is preserved rather than
+        // overwritten with a stale snapshot (#3). Note: 'responses' is NOT in
+        // $allowedFields, so the live responses array read here is kept intact.
+        $form = $this->mutateFormFileWithLock($file, function (array &$form) use ($data) {
+            // Update allowed fields
+            // Use array_key_exists instead of isset to allow null values (e.g., branding: null)
+            $allowedFields = ['title', 'description', 'descriptionAlign', 'settings', 'questions', 'pages', 'permissions', '_index', 'branding', 'favorite'];
+            foreach ($allowedFields as $field) {
+                if (array_key_exists($field, $data)) {
+                    $form[$field] = $data[$field];
                 }
-            } else {
-                // Password was cleared (null or empty string)
-                unset($form['settings']['share_password_hash']);
             }
-            // Never store plaintext password
-            unset($form['settings']['share_password']);
-        }
 
-        $form['modified_at'] = date('c');
+            // Sanitize descriptionAlign to a known value to prevent CSS-class
+            // injection through the API (#98).
+            if (isset($form['descriptionAlign']) && !in_array($form['descriptionAlign'], ['left', 'center', 'right'], true)) {
+                $form['descriptionAlign'] = 'left';
+            }
 
-        $file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            // Handle public_token being cleared - also clear related share settings
+            if (isset($form['settings']) && array_key_exists('public_token', $form['settings'])) {
+                if (empty($form['settings']['public_token'])) {
+                    // Public link was deleted, also clear password hash and expiration
+                    unset($form['settings']['share_password_hash']);
+                    $form['settings']['share_expires_at'] = null;
+                }
+            }
+
+            // Hash the share password if provided (store hash, never plaintext)
+            // Use array_key_exists because isset() returns false for null values
+            if (isset($form['settings']) && array_key_exists('share_password', $form['settings'])) {
+                $password = $form['settings']['share_password'];
+                if (!empty($password)) {
+                    // Only hash if it's not already hashed (new password)
+                    // Hashed passwords start with $2y$ (bcrypt)
+                    if (strpos($password, '$2y$') !== 0) {
+                        $form['settings']['share_password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+                    }
+                } else {
+                    // Password was cleared (null or empty string)
+                    unset($form['settings']['share_password_hash']);
+                }
+                // Never store plaintext password
+                unset($form['settings']['share_password']);
+            }
+
+            return $form;
+        });
 
         // Rename file if title changed
         if (array_key_exists('title', $data)) {
@@ -391,13 +397,53 @@ class FormService
      * Append response with database-based locking to prevent race conditions
      * Uses direct storage access to avoid creating new file versions for each response
      */
-    private function appendResponseWithLock(File $file, array $response): array
+    private function appendResponseWithLock(File $file, array $response, ?callable $guard = null): array
+    {
+        $this->mutateFormFileWithLock($file, function (array &$form) use ($response, $guard) {
+            // Re-validate limits (capacity / max_responses / duplicates) against
+            // the fresh, locked form state before appending, so concurrent
+            // submissions can't each pass a pre-lock snapshot check and blow
+            // past the limit (#4 TOCTOU). The guard throws to abort the write.
+            if ($guard !== null) {
+                $guard($form);
+            }
+            if (!isset($form['responses'])) {
+                $form['responses'] = [];
+            }
+            $form['responses'][] = $response;
+            $this->indexService->updateIndex($form, $response, \count($form['responses']) - 1);
+        });
+        return $response;
+    }
+
+    /**
+     * Serialize a read-modify-write of a form file behind the per-file lock.
+     *
+     * This is the single mutual-exclusion point for every writer of a .fvform
+     * file (append, update, delete): they all go through here so concurrent
+     * writes to the same form can never clobber each other (last-writer-wins was
+     * a real data-loss bug for update()/delete* which used to write unlocked).
+     *
+     * The $mutator receives the freshly-read form array by reference and mutates
+     * it in place; it runs UNDER the lock against current on-disk state, so any
+     * capacity / duplicate / limit re-checks it performs are race-free. Throwing
+     * from the mutator aborts the write (nothing is persisted) and the exception
+     * propagates to the caller.
+     *
+     * @param callable $mutator function(array &$form): void
+     * @return mixed whatever $mutator returns (usually null)
+     */
+    private function mutateFormFileWithLock(File $file, callable $mutator)
     {
         $lockKey = 'formvox_response_' . $file->getId();
         $maxRetries = 30;
         $retryDelay = 100000; // 100ms in microseconds
 
         for ($retry = 0; $retry < $maxRetries; $retry++) {
+            // Reclaim a stale lock before trying to take it, so a worker that
+            // died mid-write (timeout/OOM) can't DoS the form forever (#7).
+            $this->reclaimStaleLock($lockKey);
+
             // Try to acquire lock via database using unique constraint
             $qb = $this->db->getQueryBuilder();
             $qb->insert('preferences')
@@ -424,12 +470,9 @@ class FormService
                         throw new \RuntimeException('Invalid form file format');
                     }
 
-                    if (!isset($form['responses'])) {
-                        $form['responses'] = [];
-                    }
-
-                    $form['responses'][] = $response;
-                    $this->indexService->updateIndex($form, $response, \count($form['responses']) - 1);
+                    // Apply the caller's mutation under the lock, against the
+                    // freshly-read form. May throw to abort the write.
+                    $result = $mutator($form);
                     $form['modified_at'] = date('c');
 
                     // Write directly to storage (bypasses versioning).
@@ -453,7 +496,7 @@ class FormService
                     // Delete any versions created during this write
                     $this->deleteVersionsForFile($file);
 
-                    return $response;
+                    return $result;
                 } finally {
                     // Always release lock
                     $this->releaseLock($lockKey);
@@ -481,6 +524,37 @@ class FormService
         }
 
         throw new \RuntimeException('Could not acquire lock after ' . $maxRetries . ' retries');
+    }
+
+    /**
+     * Delete the lock row for $lockKey if its stored timestamp is older than
+     * LOCK_TTL_SECONDS. The timestamp is written at acquisition time; without
+     * this reclaim a crashed worker's row would live forever and block every
+     * future submission for that form (#7).
+     */
+    private function reclaimStaleLock(string $lockKey): void
+    {
+        try {
+            $qb = $this->db->getQueryBuilder();
+            $qb->select('configvalue')
+                ->from('preferences')
+                ->where($qb->expr()->eq('userid', $qb->createNamedParameter('__formvox_lock__')))
+                ->andWhere($qb->expr()->eq('appid', $qb->createNamedParameter('formvox')))
+                ->andWhere($qb->expr()->eq('configkey', $qb->createNamedParameter($lockKey)));
+            $row = $qb->executeQuery()->fetch();
+            if ($row === false) {
+                return; // no lock held
+            }
+            $acquiredAt = (int)($row['configvalue'] ?? 0);
+            if ($acquiredAt > 0 && (time() - $acquiredAt) < self::LOCK_TTL_SECONDS) {
+                return; // lock is fresh, leave it
+            }
+            // Stale (or unparseable timestamp) → reclaim.
+            $this->releaseLock($lockKey);
+        } catch (\Exception $e) {
+            // Best-effort; if the reclaim probe fails we just fall through to
+            // the normal insert-and-retry path.
+        }
     }
 
     /**
@@ -543,46 +617,32 @@ class FormService
     public function deleteResponse(int $fileId, string $responseId): void
     {
         $file = $this->getFileById($fileId);
-        $storage = $file->getStorage();
-        $internalPath = $file->getInternalPath();
 
-        $form = json_decode($storage->file_get_contents($internalPath), true);
-
-        // Find and remove response
-        $found = false;
-        $fileUploadResponseIds = [];
-        foreach ($form['responses'] as $index => $response) {
-            if ($response['id'] === $responseId) {
-                // Collect file upload responseIds from answers before deleting
-                if (isset($response['answers'])) {
-                    foreach ($response['answers'] as $answer) {
-                        $fileUploadResponseIds = array_merge(
-                            $fileUploadResponseIds,
-                            $this->extractFileResponseIds($answer)
-                        );
+        // Serialize with the shared lock so a concurrent public submit can't be
+        // lost, and so the storage write is return-value-checked (#3, #8).
+        $fileUploadResponseIds = $this->mutateFormFileWithLock($file, function (array &$form) use ($responseId) {
+            $collected = [];
+            $found = false;
+            foreach ($form['responses'] ?? [] as $index => $response) {
+                if (($response['id'] ?? null) === $responseId) {
+                    // Collect file upload responseIds from answers before deleting
+                    if (isset($response['answers'])) {
+                        foreach ($response['answers'] as $answer) {
+                            $collected = array_merge($collected, $this->extractFileResponseIds($answer));
+                        }
                     }
+                    array_splice($form['responses'], $index, 1);
+                    $found = true;
+                    break;
                 }
-                array_splice($form['responses'], $index, 1);
-                $found = true;
-                break;
             }
-        }
-
-        if (!$found) {
-            throw new NotFoundException('Response not found');
-        }
-
-        // Rebuild index after deletion
-        $this->indexService->rebuildIndex($form);
-
-        $form['modified_at'] = date('c');
-
-        // Write directly to storage (bypasses versioning)
-        $storage->file_put_contents($internalPath, json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $storage->touch($internalPath);
-
-        // Delete any versions created during this write
-        $this->deleteVersionsForFile($file);
+            if (!$found) {
+                throw new NotFoundException('Response not found');
+            }
+            // Rebuild index after deletion
+            $this->indexService->rebuildIndex($form);
+            return $collected;
+        });
 
         // Delete uploaded files for this response
         foreach (array_unique($fileUploadResponseIds) as $uploadResponseId) {
@@ -597,25 +657,13 @@ class FormService
     public function deleteAllResponses(int $fileId): void
     {
         $file = $this->getFileById($fileId);
-        $storage = $file->getStorage();
-        $internalPath = $file->getInternalPath();
 
-        $form = json_decode($storage->file_get_contents($internalPath), true);
-
-        // Clear all responses
-        $form['responses'] = [];
-
-        // Rebuild index (will be empty)
-        $this->indexService->rebuildIndex($form);
-
-        $form['modified_at'] = date('c');
-
-        // Write directly to storage (bypasses versioning)
-        $storage->file_put_contents($internalPath, json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $storage->touch($internalPath);
-
-        // Delete any versions created during this write
-        $this->deleteVersionsForFile($file);
+        // Serialize with the shared lock + checked write (#3, #8).
+        $this->mutateFormFileWithLock($file, function (array &$form) {
+            $form['responses'] = [];
+            // Rebuild index (will be empty)
+            $this->indexService->rebuildIndex($form);
+        });
 
         // Delete all uploaded files for this form
         $this->deleteAllUploads($fileId);
@@ -794,11 +842,33 @@ class FormService
      * Append a response to a form (public access - no user context needed)
      * Uses same locking mechanism as appendResponse to prevent race conditions
      */
-    public function appendResponsePublic(int $fileId, array $response): array
+    public function appendResponsePublic(int $fileId, array $response, ?callable $guard = null): array
     {
         $file = $this->getFileByIdPublic($fileId);
 
-        return $this->appendResponseWithLock($file, $response);
+        return $this->appendResponseWithLock($file, $response, $guard);
+    }
+
+    /**
+     * Persist a form's responses from an external-API mutation (create/update/
+     * delete a response). Used by ExternalApiController, which reads the form,
+     * mutates $form['responses'] in memory, and hands the result here to save.
+     *
+     * The External API replaces the whole responses array, so we apply exactly
+     * that under the shared lock (with a checked write and index rebuild), which
+     * both makes the write actually happen — it previously called a nonexistent
+     * savePublic() and silently lost every write — and serializes it against
+     * concurrent public submissions.
+     */
+    public function savePublic(int $fileId, array $form): void
+    {
+        $file = $this->getFileByIdPublic($fileId);
+        $newResponses = $form['responses'] ?? [];
+
+        $this->mutateFormFileWithLock($file, function (array &$current) use ($newResponses) {
+            $current['responses'] = $newResponses;
+            $this->indexService->rebuildIndex($current);
+        });
     }
 
     /**

@@ -216,6 +216,31 @@ class PublicController extends Controller
     }
 
     /**
+     * Strip every owner-only / secret settings field before a form is handed to
+     * an anonymous visitor. Without this the whole `settings` sub-array — which
+     * holds webhook signing secrets, hashed API keys, share allowlists and the
+     * public token — would be serialized into the public page's initialState and
+     * be readable via View Source. Mutates $form in place.
+     */
+    private function stripSensitiveSettings(array &$form): void
+    {
+        if (!isset($form['settings']) || !is_array($form['settings'])) {
+            return;
+        }
+        foreach ([
+            'share_password_hash',
+            'share_password',
+            'webhooks',        // each carries a plaintext HMAC signing secret + target URL
+            'api_keys',        // bcrypt hashes + creator usernames
+            'allowed_users',   // username allowlist (PII)
+            'allowed_groups',  // group allowlist (PII)
+            'public_token',    // the share token itself
+        ] as $key) {
+            unset($form['settings'][$key]);
+        }
+    }
+
+    /**
      * Show public form for anonymous submission
      * @return TemplateResponse|RedirectResponse
      */
@@ -322,9 +347,8 @@ class PublicController extends Controller
             unset($form['responses']);
             unset($form['_index']);
             unset($form['permissions']);
-            unset($form['settings']['share_password_hash']);
-            unset($form['settings']['share_password']);
             unset($form['branding']); // Don't expose branding in form data
+            $this->stripSensitiveSettings($form);
 
             // Add response count + capacity-only counts back
             $form['_index'] = [
@@ -717,9 +741,8 @@ class PublicController extends Controller
             unset($form['responses']);
             unset($form['_index']);
             unset($form['permissions']);
-            unset($form['settings']['share_password_hash']);
-            unset($form['settings']['share_password']);
             unset($form['branding']); // Don't expose branding in form data
+            $this->stripSensitiveSettings($form);
 
             // Add response count + capacity-only counts back
             $form['_index'] = [

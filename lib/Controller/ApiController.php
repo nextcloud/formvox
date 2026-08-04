@@ -490,6 +490,33 @@ class ApiController extends Controller
     }
 
     /**
+     * Export to XLSX (real Excel spreadsheet — no CSV encoding/separator
+     * ambiguity, so umlauts and columns are correct in every locale, #114).
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function exportExcel(int $fileId): DataDownloadResponse
+    {
+        $file = $this->formService->getFileById($fileId);
+        $form = $this->formService->load($fileId);
+        $userId = $this->userSession->getUser()?->getUID() ?? '';
+        $role = $this->permissionService->getRoleFromFile($file, $userId);
+
+        if (!$this->permissionService->canViewResponses($role)) {
+            throw new \Exception('Permission denied');
+        }
+
+        $xlsx = $this->responseService->exportXlsx($fileId);
+        $filename = $this->sanitizeFilename($form['title']) . '-responses.xlsx';
+
+        return new DataDownloadResponse(
+            $xlsx,
+            $filename,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+    }
+
+    /**
      * Export to JSON
      */
     #[NoAdminRequired]

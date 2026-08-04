@@ -469,6 +469,51 @@
         </div>
       </div>
 
+      <!-- Multiple-choice selection limits (#113) -->
+      <div v-if="localQuestion.type === 'multiple'" class="scale-settings">
+        <div class="scale-inline">
+          <div class="form-field">
+            <label class="form-label">{{ t('Minimum selections') }}</label>
+            <NcTextField
+              v-model.number="localQuestion.minSelections"
+              type="number"
+              :disabled="readonly"
+              :min="0"
+              :placeholder="t('No minimum')"
+              @update:model-value="emitUpdate"
+            />
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t('Maximum selections') }}</label>
+            <NcTextField
+              v-model.number="localQuestion.maxSelections"
+              type="number"
+              :disabled="readonly"
+              :min="0"
+              :placeholder="t('No maximum')"
+              @update:model-value="emitUpdate"
+            />
+          </div>
+        </div>
+        <small class="hint">{{ t('Leave empty for no limit. Respondents cannot submit fewer than the minimum or more than the maximum.') }}</small>
+      </div>
+
+      <!-- Long text character limit (#113) -->
+      <div v-if="localQuestion.type === 'textarea'" class="scale-settings">
+        <div class="form-field">
+          <label class="form-label">{{ t('Maximum characters') }}</label>
+          <NcTextField
+            v-model.number="localQuestion.maxLength"
+            type="number"
+            :disabled="readonly"
+            :min="0"
+            :placeholder="t('No limit')"
+            @update:model-value="emitUpdate"
+          />
+          <small class="hint">{{ t('Leave empty for no limit. A live counter is shown to respondents.') }}</small>
+        </div>
+      </div>
+
       <!-- Matrix settings -->
       <div v-if="localQuestion.type === 'matrix'" class="matrix-settings">
         <div class="matrix-section">

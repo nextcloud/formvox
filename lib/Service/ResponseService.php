@@ -93,8 +93,21 @@ class ResponseService
             $response['score'] = $this->calculateScore($form, $answers);
         }
 
+        // Re-check limits under the write lock against the fresh form state, so
+        // parallel submissions can't each pass the pre-lock snapshot check and
+        // oversell capacity / exceed max_responses / bypass no-duplicate (#4).
+        $guard = function (array $freshForm) use ($fingerprint, $answers) {
+            $this->validateFormAcceptsResponses($freshForm);
+            if (!($freshForm['settings']['allow_multiple'] ?? false)) {
+                if ($this->indexService->hasFingerprint($freshForm, $fingerprint)) {
+                    throw new \RuntimeException('You have already submitted a response to this form');
+                }
+            }
+            $this->validateCapacity($freshForm, $answers);
+        };
+
         // Append response (use public method since no user is logged in)
-        $result = $this->formService->appendResponsePublic($fileId, $response);
+        $result = $this->formService->appendResponsePublic($fileId, $response, $guard);
 
         // Trigger webhook
         $this->webhookService->trigger($form, 'response.created', $response);
@@ -149,8 +162,19 @@ class ResponseService
             $response['score'] = $this->calculateScore($form, $answers);
         }
 
+        // Re-check limits under the write lock against the fresh form state (#4).
+        $guard = function (array $freshForm) use ($userId, $answers) {
+            $this->validateFormAcceptsResponses($freshForm);
+            if (!($freshForm['settings']['allow_multiple'] ?? false)) {
+                if ($this->indexService->hasUserResponse($freshForm, $userId)) {
+                    throw new \RuntimeException('You have already submitted a response to this form');
+                }
+            }
+            $this->validateCapacity($freshForm, $answers);
+        };
+
         // Append response (use public method so respondent doesn't need file permissions)
-        $result = $this->formService->appendResponsePublic($fileId, $response);
+        $result = $this->formService->appendResponsePublic($fileId, $response, $guard);
 
         // Trigger webhook
         $this->webhookService->trigger($form, 'response.created', $response);
@@ -370,37 +394,55 @@ class ResponseService
     }
 
     /**
-     * Export responses to CSV format
+     * Neutralise CSV formula injection. A respondent (including anonymous) can
+     * submit an answer beginning with =, +, -, @, or a tab/CR; when the form
+     * owner opens the export in Excel/LibreOffice such a cell is evaluated as a
+     * formula (DDE command execution, HYPERLINK/WEBSERVICE data exfiltration).
+     * Prefixing with a single quote forces the cell to be treated as text.
      */
-    public function exportCsv(int $fileId): string
+    private function sanitizeCsvCell($value)
+    {
+        if (!is_string($value) || $value === '') {
+            return $value;
+        }
+        if (in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'" . $value;
+        }
+        return $value;
+    }
+
+    /**
+     * Build the shared export table (header + data rows) used by both the CSV
+     * and XLSX exporters, so the two formats stay identical in content.
+     *
+     * Every string cell is run through sanitizeCsvCell() — formula injection
+     * applies to XLSX just as much as CSV. Returns ['headers' => string[],
+     * 'rows' => array<array<string>>], or null when there are no responses.
+     */
+    private function buildExportData(int $fileId): ?array
     {
         $form = $this->formService->load($fileId);
         $responses = $form['responses'] ?? [];
 
         if (empty($responses)) {
-            return '';
+            return null;
         }
 
         // Sections are UI grouping containers, not questions — exclude them
-        // from CSV columns so they don't appear as empty columns next to
-        // the actual answer columns.
+        // so they don't appear as empty columns next to the answer columns.
         $questions = array_values(array_filter(
             $form['questions'] ?? [],
             fn($q) => !in_array($q['type'] ?? '', ['section', 'descriptor'], true),
         ));
 
-        $output = fopen('php://temp', 'r+');
-
-        // Header row
+        // Header row (question titles are sanitised too — a title beginning
+        // with a formula char would otherwise inject on the owner's export).
         $headers = ['Response ID', 'Submitted At', 'Respondent Type', 'Respondent ID'];
         foreach ($questions as $question) {
-            $headers[] = $question['question'];
+            $headers[] = $this->sanitizeCsvCell($question['question'] ?? '');
         }
-        // eol: "\r\n" so the record separator matches Excel's CSV expectation
-        // and is consistent with the \r\n we normalise within cells (#83).
-        fputcsv($output, $headers, eol: "\r\n");
 
-        // Data rows
+        $rows = [];
         foreach ($responses as $response) {
             $row = [
                 $response['id'],
@@ -412,17 +454,17 @@ class ResponseService
             foreach ($questions as $question) {
                 $answer = $response['answers'][$question['id']] ?? '';
 
-                // Consent: render boolean as Yes/No so CSV is human-readable (#94).
+                // Consent: render boolean as Yes/No so it is human-readable (#94).
                 if (($question['type'] ?? '') === 'consent') {
                     $answer = $answer === true ? 'Yes' : ($answer === false ? 'No' : '');
                 }
 
                 // Matrix questions: format as "Row: Column" pairs
                 if (($question['type'] ?? '') === 'matrix' && is_array($answer)) {
-                    $rows = $question['rows'] ?? [];
+                    $rowsDef = $question['rows'] ?? [];
                     $columns = $question['columns'] ?? [];
                     $rowMap = [];
-                    foreach ($rows as $r) {
+                    foreach ($rowsDef as $r) {
                         $rowMap[$r['id']] = $r['label'] ?? $r['id'];
                     }
                     $colMap = [];
@@ -485,31 +527,169 @@ class ResponseService
                         }
                     }
                 }
-                $row[] = $answer;
+                // Formula-injection safety, applied uniformly to every cell.
+                $row[] = is_string($answer) ? $this->sanitizeCsvCell($answer) : $answer;
             }
 
-            // Normalise embedded newlines so Excel recognises them as line
-            // breaks within a cell instead of starting a new row.
+            $rows[] = $row;
+        }
+
+        return ['headers' => $headers, 'rows' => $rows];
+    }
+
+    /**
+     * Export responses to CSV format
+     */
+    public function exportCsv(int $fileId): string
+    {
+        $data = $this->buildExportData($fileId);
+        if ($data === null) {
+            return '';
+        }
+
+        $output = fopen('php://temp', 'r+');
+
+        // Semicolon separator + BOM (no sep= directive) — see the return
+        // statement below for why. eol: "\r\n" matches Excel's record
+        // separator and the \r\n we normalise within cells (#83).
+        fputcsv($output, $data['headers'], separator: ';', eol: "\r\n");
+
+        foreach ($data['rows'] as $row) {
+            // Normalise embedded newlines so Excel renders them as in-cell
+            // line breaks instead of new rows (cells are already sanitised).
             $row = array_map(function ($v) {
                 if (!is_string($v)) return $v;
-                // Convert standalone \n / lone \r to \r\n
                 $v = str_replace(["\r\n", "\r"], ["\n", "\n"], $v);
                 return str_replace("\n", "\r\n", $v);
             }, $row);
-            fputcsv($output, $row, eol: "\r\n");
+            fputcsv($output, $row, separator: ';', eol: "\r\n");
         }
 
         rewind($output);
         $csv = stream_get_contents($output);
         fclose($output);
 
-        // Prepend UTF-8 BOM so Excel on Windows recognises the encoding,
-        // and a `sep=,` directive so Excel honours the comma separator
-        // regardless of the user's locale — Dutch/German/French Excel
-        // defaults to `;` and would otherwise dump the whole row into a
-        // single cell. RFC 4180 parsers (Pandas, R, LibreOffice) ignore
-        // the directive as a non-data line. (#91)
-        return "\xEF\xBB\xBF" . "sep=,\r\n" . $csv;
+        // Prepend a UTF-8 BOM so Excel on Windows detects UTF-8 and renders
+        // umlauts correctly. We deliberately do NOT emit a `sep=` directive:
+        // in Excel a `sep=` line forces the legacy ANSI-codepage parser, which
+        // ignores the BOM and corrupts umlauts (ö → Ã¶) on German Windows
+        // (#114). Columns are delimited with `;`, matching the Excel list-
+        // separator default in DE/NL/FR locales (our primary audience, #91).
+        // RFC 4180 tools (Pandas/R/LibreOffice) read the BOM/delimiter fine.
+        // Users needing comma-delimited or guaranteed columns everywhere can
+        // use the .xlsx export instead.
+        return "\xEF\xBB\xBF" . $csv;
+    }
+
+    /**
+     * Export responses as a real .xlsx (Office Open XML) file.
+     *
+     * Unlike CSV, xlsx has no BOM/separator/codepage ambiguity: umlauts and
+     * columns are correct in every Excel locale by construction (#114). Built
+     * by hand with \ZipArchive — no external dependency — writing the five
+     * minimal parts of a workbook with inline-string cells. Returns the raw
+     * xlsx bytes, or '' when there are no responses.
+     */
+    public function exportXlsx(int $fileId): string
+    {
+        $data = $this->buildExportData($fileId);
+        if ($data === null) {
+            return '';
+        }
+
+        // Build the single worksheet: header row + data rows, inline strings.
+        $allRows = array_merge([$data['headers']], $data['rows']);
+        $sheetRows = '';
+        foreach ($allRows as $r => $row) {
+            $rowNum = $r + 1;
+            $cells = '';
+            $col = 0;
+            foreach ($row as $value) {
+                $ref = $this->xlsxColumnLetter($col) . $rowNum;
+                $col++;
+                if ($value === null || $value === '') {
+                    continue; // empty cell — omit entirely
+                }
+                if (is_int($value) || is_float($value)) {
+                    $cells .= '<c r="' . $ref . '"><v>' . $value . '</v></c>';
+                } else {
+                    // Inline string; xml:space="preserve" keeps leading/trailing spaces
+                    // (e.g. our formula-injection guard prefixes a value with an apostrophe).
+                    $cells .= '<c r="' . $ref . '" t="inlineStr"><is><t xml:space="preserve">'
+                        . $this->xmlEscape((string)$value) . '</t></is></c>';
+                }
+            }
+            $sheetRows .= '<row r="' . $rowNum . '">' . $cells . '</row>';
+        }
+
+        $sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . '<sheetData>' . $sheetRows . '</sheetData></worksheet>';
+
+        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            . '<Default Extension="xml" ContentType="application/xml"/>'
+            . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            . '</Types>';
+
+        $rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            . '</Relationships>';
+
+        $workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+            . ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<sheets><sheet name="Responses" sheetId="1" r:id="rId1"/></sheets></workbook>';
+
+        $workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            . '</Relationships>';
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'formvox_xlsx_');
+        $zip = new \ZipArchive();
+        if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Failed to create XLSX file');
+        }
+        $zip->addFromString('[Content_Types].xml', $contentTypes);
+        $zip->addFromString('_rels/.rels', $rootRels);
+        $zip->addFromString('xl/workbook.xml', $workbook);
+        $zip->addFromString('xl/_rels/workbook.xml.rels', $workbookRels);
+        $zip->addFromString('xl/worksheets/sheet1.xml', $sheetXml);
+        $zip->close();
+
+        $content = file_get_contents($tempFile);
+        unlink($tempFile);
+
+        return $content === false ? '' : $content;
+    }
+
+    /**
+     * Convert a 0-based column index to an Excel column letter (0→A, 26→AA).
+     */
+    private function xlsxColumnLetter(int $index): string
+    {
+        $letter = '';
+        $index++;
+        while ($index > 0) {
+            $rem = ($index - 1) % 26;
+            $letter = chr(65 + $rem) . $letter;
+            $index = intdiv($index - 1, 26);
+        }
+        return $letter;
+    }
+
+    /**
+     * XML-escape a value for inclusion in a worksheet cell, stripping control
+     * characters that are illegal in XML 1.0 (which would corrupt the file).
+     */
+    private function xmlEscape(string $value): string
+    {
+        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $value);
+        return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
     }
 
     /**
@@ -664,6 +844,27 @@ class ResponseService
             case 'multiple':
                 if (!is_array($answer)) {
                     throw new \RuntimeException("Multiple choice question requires array answer");
+                }
+                // Min/max selection limits (#113). Empty answers are handled by
+                // the required-check; only enforce bounds on a non-empty answer.
+                $count = count($answer);
+                $min = (int)($question['minSelections'] ?? 0);
+                $max = (int)($question['maxSelections'] ?? 0);
+                if ($count > 0 && $min > 0 && $count < $min) {
+                    throw new \RuntimeException("Select at least {$min} option(s) for question '{$question['question']}'");
+                }
+                if ($max > 0 && $count > $max) {
+                    throw new \RuntimeException("Select at most {$max} option(s) for question '{$question['question']}'");
+                }
+                break;
+
+            case 'textarea':
+            case 'text':
+                // Character limit (#113). mb_strlen counts characters, so a
+                // multi-byte umlaut counts as one, matching the browser counter.
+                $maxLength = (int)($question['maxLength'] ?? 0);
+                if ($maxLength > 0 && is_string($answer) && mb_strlen($answer) > $maxLength) {
+                    throw new \RuntimeException("Answer for question '{$question['question']}' exceeds the {$maxLength}-character limit");
                 }
                 break;
 
@@ -931,13 +1132,21 @@ class ResponseService
 
             foreach ($question['options'] as $option) {
                 $optionScore = $option['score'] ?? 0;
-                $questionMaxScore = max($questionMaxScore, $optionScore);
 
                 if ($question['type'] === 'multiple') {
+                    // Multiple-choice sums the score of every ticked option, so
+                    // the best possible score is the sum of all positively
+                    // scored options — not the single highest one (#118).
+                    if ($optionScore > 0) {
+                        $questionMaxScore += $optionScore;
+                    }
                     if (is_array($answer) && in_array($option['value'], $answer)) {
                         $questionScore += $optionScore;
                     }
                 } else {
+                    // Single-choice: only one option can be picked, so the best
+                    // possible score is the highest-scoring option.
+                    $questionMaxScore = max($questionMaxScore, $optionScore);
                     if ($answer === $option['value']) {
                         $questionScore = $optionScore;
                     }

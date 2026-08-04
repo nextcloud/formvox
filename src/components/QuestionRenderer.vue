@@ -75,6 +75,9 @@
         @input="$emit('update:value', $event.target.value); clearValidationError()"
         @blur="validatePattern"
       />
+      <p v-if="question.maxLength > 0" class="char-counter" :class="{ 'over-limit': textareaCharCount > question.maxLength }" aria-live="polite">
+        {{ t('{n} / {max} characters', { n: textareaCharCount, max: question.maxLength }) }}
+      </p>
       <p
         v-if="effectiveError"
         :id="`question-error-${question.id}`"
@@ -140,13 +143,16 @@
         :value="option.value"
         :name="`question-${question.id}`"
         type="checkbox"
-        :disabled="isOptionFull(option) && !(value || []).includes(option.value)"
-        @update:model-value="$emit('update:value', $event)"
+        :disabled="isOptionDisabled(option)"
+        @update:model-value="onMultipleUpdate($event)"
       >
         {{ renderPiping(option.label) }}
         <span v-if="isOptionFull(option) && !(value || []).includes(option.value)" class="option-badge option-badge--full">{{ t('Full') }}</span>
         <span v-else-if="optionRemaining(option) !== null" class="option-badge">{{ t('{n} left', { n: optionRemaining(option) }) }}</span>
       </NcCheckboxRadioSwitch>
+      <p v-if="question.maxSelections > 0" class="selection-counter" aria-live="polite">
+        {{ t('{n} of max {max} selected', { n: (value || []).length, max: question.maxSelections }) }}
+      </p>
     </div>
 
     <!-- Dropdown -->
@@ -747,6 +753,35 @@ export default {
       return Math.max(0, cap - used);
     };
 
+    // Disable a multiple-choice option when its capacity is full OR when the
+    // max-selections limit is reached and this option isn't already ticked (#113).
+    const isOptionDisabled = (option) => {
+      const selected = props.value || [];
+      const alreadyChecked = selected.includes(option.value);
+      if (isOptionFull(option) && !alreadyChecked) return true;
+      const max = Number(props.question.maxSelections);
+      if (max > 0 && selected.length >= max && !alreadyChecked) return true;
+      return false;
+    };
+
+    // Guard against exceeding maxSelections even if two boxes are toggled fast
+    // (the :disabled binding is the primary guard; this is belt-and-braces).
+    const onMultipleUpdate = (next) => {
+      const max = Number(props.question.maxSelections);
+      let value = Array.isArray(next) ? next : [];
+      if (max > 0 && value.length > max) {
+        value = value.slice(0, max);
+      }
+      emit('update:value', value);
+      clearValidationError();
+    };
+
+    // Count code points (like the backend's mb_strlen), not UTF-16 code units,
+    // so the counter matches the server-side maxLength check for emoji/astral
+    // characters. The server is the authoritative gate (native maxlength was
+    // dropped because it counts code units and would disagree) (#10).
+    const textareaCharCount = computed(() => [...(props.value || '')].length);
+
     const renderedQuestion = computed(() => applyPiping(props.question.question || ''));
     const renderedDescription = computed(() => applyPiping(props.question.description || ''));
     const renderedDescriptionHtml = computed(() => {
@@ -1021,6 +1056,9 @@ export default {
       normalizedOptions,
       isOptionFull,
       optionRemaining,
+      isOptionDisabled,
+      onMultipleUpdate,
+      textareaCharCount,
       renderedQuestion,
       renderedDescription,
       renderedDescriptionHtml,

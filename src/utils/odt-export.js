@@ -207,6 +207,59 @@ export async function generateResponseOdt(form, response, fileId) {
 }
 
 /**
+ * Build the array form of a table/matrix answer for template loops (#112).
+ *
+ * Returns an array of plain objects a `{#…}` section can iterate, or null when
+ * the answer isn't a table/matrix. Each object exposes the values keyed by the
+ * user-facing column label AND by the internal column id, plus a 1-based
+ * `_index`, so a template can write either `{#q1__rows}{Price}{/q1__rows}` or
+ * `{#q1__rows}{col_2}{/q1__rows}`.
+ */
+function buildTemplateRows(answer, question) {
+	if (!question || answer === undefined || answer === null || answer === '') {
+		return null;
+	}
+
+	// Table: one entry per submitted row.
+	if (question.type === 'table' && Array.isArray(answer)
+		&& answer.length > 0 && typeof answer[0] === 'object' && !answer[0]?.filename) {
+		const columns = question.columns || [];
+		// Reserved keys the template engine relies on; user column labels/ids
+		// must not clobber them (e.g. a column literally labelled "_index") (#11).
+		const RESERVED = new Set(['_index']);
+		return answer.map((row, i) => {
+			const obj = {};
+			columns.forEach(col => {
+				const val = String(row[col.id] ?? '');
+				if (col.id && !RESERVED.has(col.id)) obj[col.id] = val;
+				if (col.label && !RESERVED.has(col.label)) obj[col.label] = val;
+			});
+			// Set last so a colliding column key can never overwrite it.
+			obj._index = i + 1;
+			return obj;
+		});
+	}
+
+	// Matrix: one entry per question row, with the chosen column's label.
+	if (question.type === 'matrix' && typeof answer === 'object' && !Array.isArray(answer)
+		&& Array.isArray(question.rows) && Array.isArray(question.columns)) {
+		return question.rows.map((row, i) => {
+			const value = answer[row.id];
+			const chosen = question.columns.find(c => (
+				Array.isArray(value) ? value.includes(c.value) : c.value === value
+			));
+			return {
+				_index: i + 1,
+				row: row.label || row.id,
+				column: chosen ? (chosen.label || String(chosen.value)) : '',
+			};
+		});
+	}
+
+	return null;
+}
+
+/**
  * Build a data object for template placeholder substitution.
  * Maps question IDs and Q1/Q2 aliases to answer values.
  */
@@ -226,6 +279,14 @@ function buildTemplateData(form, response) {
 		const displayValue = formatAnswerForOdt(answer, question);
 		data[question.id] = displayValue;
 		data[`Q${index + 1}`] = displayValue;
+
+		// Structured rows for table/matrix so `{#q_id__rows}…{/q_id__rows}`
+		// loops have data to iterate — flat text alone can't drive a loop (#112).
+		const rows = buildTemplateRows(answer, question);
+		if (rows) {
+			data[`${question.id}__rows`] = rows;
+			data[`Q${index + 1}__rows`] = rows;
+		}
 	});
 
 	return data;

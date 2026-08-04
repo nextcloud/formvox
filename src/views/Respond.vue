@@ -420,7 +420,23 @@ export default {
     // Pages support
     const pages = computed(() => {
       if (props.form.pages && Array.isArray(props.form.pages) && props.form.pages.length > 0) {
-        return props.form.pages;
+        // Safety net: a question that is in form.questions but assigned to NO
+        // page (orphaned by deleting its page, reordering, an auto-generated
+        // email question, or legacy data) would otherwise never render — yet
+        // the server still enforces it if required, making the form
+        // unsubmittable. Append any such orphans to the last page at render
+        // time so they are always visible. (#6 + general robustness)
+        const assigned = new Set();
+        props.form.pages.forEach(p => (p.questions || []).forEach(id => assigned.add(id)));
+        const orphans = (props.form.questions || [])
+          .map(q => q.id)
+          .filter(id => !assigned.has(id));
+        if (orphans.length === 0) {
+          return props.form.pages;
+        }
+        const cloned = props.form.pages.map(p => ({ ...p, questions: [...(p.questions || [])] }));
+        cloned[cloned.length - 1].questions.push(...orphans);
+        return cloned;
       }
       // No pages defined - show all questions on a single page
       return [{ id: 'default', questions: props.form.questions?.map(q => q.id) || [] }];

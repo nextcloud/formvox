@@ -2,6 +2,26 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.4.0] - 2026-07-14
+
+### Added
+- **Excel (.xlsx) export.** Results can now be downloaded as a real Excel spreadsheet alongside CSV. Because .xlsx has no encoding or separator guesswork, umlauts and columns are always correct in every Excel language — the definitive fix for spreadsheet display issues. Built without any new dependencies. ([#114](https://github.com/nextcloud/formvox/issues/114))
+- **Selection and character limits.** Multiple-choice questions can be given a minimum and maximum number of selections, and long-text questions a maximum character count, with a live counter shown to respondents. Both are enforced on the server. ([#113](https://github.com/nextcloud/formvox/issues/113))
+- **Ukrainian translation.** FormVox is now available in Ukrainian. ([#115](https://github.com/nextcloud/formvox/issues/115))
+
+### Fixed
+- **German umlauts were corrupted in the CSV export when opened in Excel.** The export combined a UTF-8 marker with a separator directive that Excel treats as mutually exclusive, so accented characters like "ö" showed as garbled text. The CSV now keeps characters intact across locales; for guaranteed-correct columns everywhere, use the new Excel export. ([#114](https://github.com/nextcloud/formvox/issues/114))
+- **Quiz score could exceed 100%.** For multiple-choice questions with partial points, the maximum possible score was miscalculated, so results like "15 out of 12.75" appeared. The maximum is now the sum of all correct options. ([#118](https://github.com/nextcloud/formvox/issues/118), thanks to @taigi100 for the report and fix)
+- **Table and matrix answers now fill custom ODT template tables.** Using the `{#…}` loop syntax in a template table now repeats a row per answer entry, so custom templates get real tables instead of flat text. ([#112](https://github.com/nextcloud/formvox/issues/112))
+- **Download and delete buttons on the results page moved to the left**, next to respondent names, and stay in view when scrolling wide forms with many questions. ([#121](https://github.com/nextcloud/formvox/issues/121))
+- **Multi-page forms could become unsubmittable.** A question that ended up assigned to no page (e.g. after deleting its page, or from an auto-generated confirmation-email field) was invisible to respondents but still required by the server. Such questions are now always shown, and forms stay submittable.
+- **Missing translations filled in.** Around 70 interface strings added in recent releases were not translatable; they are now translated across all supported languages.
+- **Hardened performance and security across the app.** A full review of the codebase led to fixes for response-handling under concurrency, form-data write safety, public-page data exposure, and spreadsheet-formula safety in exports.
+
+### Changed
+- **Document toolkit updated** (`odf-kit` 0.9.4 → 0.13.10), which brings the table-row repetition needed for ODT template loops ([#112](https://github.com/nextcloud/formvox/issues/112)).
+- **Dependency updates.** Bumped axios, dompurify, markdown-it, postcss, fast-xml-parser, fast-uri, linkify-it, immutable and form-data to their latest patch/minor releases, including security fixes.
+
 ## [1.3.1] - 2026-07-07
 
 ### Fixed
