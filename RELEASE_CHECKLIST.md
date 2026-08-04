@@ -14,7 +14,8 @@ Follow this checklist for every release to the Nextcloud App Store.
   openssl rsa -in formvox.key -pubout 2>/dev/null | openssl md5
 
   # Hash of App Store certificate (must be IDENTICAL!)
-  curl -s "https://apps.nextcloud.com/api/v1/apps.json" | \
+  # NOTE: use -sL — the API now 302-redirects, and send an Accept header.
+  curl -sL -H "Accept: application/json" "https://apps.nextcloud.com/api/v1/apps.json" | \
     python3 -c "import json,sys; [print(a['certificate']) for a in json.load(sys.stdin) if a['id']=='formvox']" | \
     openssl x509 -pubkey -noout 2>/dev/null | openssl md5
   ```
@@ -263,7 +264,9 @@ mv formvox-X.Y.Z.tar.gz /path/to/project/ && \
 rm -rf "$TEMP_DIR"
 ```
 
-**Exclude:** src/, node_modules/, screenshots/, .git/, *.key
+**Exclude:** src/, node_modules/, docs/, screenshots/, .git/, *.key
+
+> **Do NOT ship `docs/`.** The App Store tarball has never included it (v1.3.1 and earlier), and it contains `.nl.md` translation sources that should not be published.
 
 ### 5. GitHub Release
 ```bash
