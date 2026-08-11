@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.4.1] - 2026-08-11
+
+### Fixed
+- **Code-integrity error on the FormVox file icon.** Earlier versions copied a file-type icon into Nextcloud's signed `core/` directory, which raised an `EXTRA_FILE` integrity warning and could stop Nextcloud AIO from starting. FormVox no longer writes into core, and the upgrade now removes the leftover file automatically so existing installs self-heal. The `.fvform` icon is unchanged — it's served from the app itself. ([#128](https://github.com/nextcloud/formvox/issues/128))
+
 ## [1.4.0] - 2026-07-14
 
 ### Added

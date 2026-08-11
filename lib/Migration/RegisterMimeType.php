@@ -48,7 +48,8 @@ class RegisterMimeType implements IRepairStep
         // Update core config files for icon mapping
         $this->updateMimeTypeMappingConfig($output);
         $this->updateMimeTypeAliasesConfig($output);
-        $this->copyFileTypeIcon($output);
+        // Clean up the icon we used to copy into signed core (integrity error #128).
+        $this->removeStaleCoreIcon($output);
 
         // Update filecache for existing .fvform files
         $this->updateFilecacheMimeTypes($output);
@@ -99,21 +100,23 @@ class RegisterMimeType implements IRepairStep
     }
 
     /**
-     * Copy the FormVox filetype icon to Nextcloud core
+     * Remove the filetype icon that older versions copied into Nextcloud core.
+     *
+     * Writing into the signed core/img/filetypes directory triggers a
+     * code-integrity EXTRA_FILE error (and can block Nextcloud AIO startup) —
+     * see #128. The icon is not needed there: css/filetypes.css already styles
+     * .fvform files from the app's own img directory, which is integrity-safe.
+     * This deletes any leftover file so existing installs self-heal on upgrade.
      */
-    private function copyFileTypeIcon(IOutput $output): void
+    private function removeStaleCoreIcon(IOutput $output): void
     {
-        $appPath = $this->appManager->getAppPath('formvox');
-        $sourceIcon = $appPath . '/img/filetypes/application-x-fvform.svg';
-        $targetDir = \OC::$SERVERROOT . '/core/img/filetypes';
-        $targetIcon = $targetDir . '/formvox.svg';
-
-        if (file_exists($sourceIcon) && !file_exists($targetIcon)) {
-            if (!is_dir($targetDir)) {
-                mkdir($targetDir, 0755, true);
+        $staleIcon = \OC::$SERVERROOT . '/core/img/filetypes/formvox.svg';
+        if (file_exists($staleIcon)) {
+            if (@unlink($staleIcon)) {
+                $output->info('Removed stale FormVox icon from core (fixes integrity check #128)');
+            } else {
+                $output->warning('Could not remove ' . $staleIcon . ' — delete it manually and run: occ integrity:check-core');
             }
-            copy($sourceIcon, $targetIcon);
-            $output->info('Copied FormVox filetype icon to core');
         }
     }
 
