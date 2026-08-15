@@ -1,6 +1,6 @@
 # Externe API & webhooks
 
-> **Let op:** de complete externe-API-referentie is uitvoerig technisch en wordt in zijn geheel onderhouden in het Engels in de FormVox-repository. Voor de actuele endpoint-specificatie, request-/response-schema's en webhook-payload-formats, raadpleeg de [Engelse externe-API-documentatie](external-api.en.md).
+> **Let op:** de complete externe-API-referentie is uitvoerig technisch en wordt in zijn geheel onderhouden in het Engels in de FormVox-repository. Voor de actuele endpoint-specificatie, request-/response-schema's en webhook-payload-formats, raadpleeg de [Engelse externe-API-documentatie](external-api.md).
 
 ## Inleiding
 
@@ -82,7 +82,7 @@ Verifieer de handtekening in je endpoint om te bevestigen dat de request van For
 
 ## Voor de complete referentie
 
-Zie de [Engelse externe-API-documentatie](external-api.en.md) voor:
+Zie de [Engelse externe-API-documentatie](external-api.md) voor:
 
 - Volledige request-/response-schema's per endpoint
 - Webhook-payload-voorbeelden voor alle events

@@ -75,7 +75,7 @@ Nadat mensen antwoorden hebben ingediend:
 
 - Leer alle [Vraagtypen](user/question-types.md) kennen
 - Stel [Conditionele logica](user/advanced-features.md) in voor dynamische formulieren
-- Configureer [Quiz-modus](user/advanced-features.md#quiz-mode) voor beoordelingen
+- Configureer [Quiz-modus](user/advanced-features.md#quiz-modus) voor beoordelingen
 - [Exporteer je data](user/exporting-data.md) naar CSV, JSON of Excel
 
 ## Hulp nodig?
