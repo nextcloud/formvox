@@ -7,10 +7,6 @@
         "* (all domains)": "* (all domains)",
         "+ Add condition": "+ Додати умову",
         "/ (root folder)": "/ (root folder)",
-        "1000+ users": "1000+ людей",
-        "1–50 users": "1–50 людей",
-        "251–1000 users": "251–1000 людей",
-        "51–250 users": "51–250 людей",
         "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development.": "Передплата включає: гарантовану сумісність із Nextcloud, підтримку електронною поштою, пріоритетне виправлення помилок та активну розробку.",
         "A unique hash of your instance URL (privacy-friendly identifier)": "Унікальний хеш URL вашого екземляра (ідентифікатор конфіденційності)",
         "AI Form Generation": "ШІ генерація форм",
@@ -160,7 +156,6 @@
         "Contact email": "Контактний email",
         "Contact information saved.": "Контактна інформація збережена",
         "Contact the form owner if you believe this is an error.": "Зв’яжіться з власником форми, якщо вважаєте, що це помилка.",
-        "Contact us": "Звяжіться з нами",
         "Content": "Зміст",
         "Continue": "Продовжити",
         "Control who can do what with this form.": "Керуйте хто і що може робити з цією формою",
@@ -569,7 +564,6 @@
         "Postal code (NL)": "Поштовий індекс (NL)",
         "Preview": "Попередній перегляд",
         "Previous": "Назад",
-        "Pricing": "Тарифи",
         "Primary color": "Основний колір",
         "Priority bug fixes": "Пріоритетне виправлення помилок",
         "Privacy / Self-hosted": "Конфіденційність / Локальний хостинг",
@@ -799,7 +793,6 @@
         "Video call": "Відеодзвінок",
         "View Results": "Переглянути результати",
         "View pricing & plans": "Переглянути ціни та плани",
-        "View pricing & subscribe": "Переглянути тарифи та підписатися",
         "View results": "Переглянути результати",
         "View subscription options": "Переглянути варіанти підписки",
         "Viewer": "Глядач",
@@ -941,10 +934,7 @@
         "{n} / {max} characters": "{n} / {max} символів",
         "{n} left": "Залишилось {n}",
         "{n} of max {max} selected": "{n} з макс. {max} вибрано",
-        "{n} stars": "зірок: {n}",
-        "€139/year": "139 €/рік",
-        "€19/year": "19 €/рік",
-        "€59/year": "59 €/рік"
+        "{n} stars": "зірок: {n}"
     },
     "pluralForm": "nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 }

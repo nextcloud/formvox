@@ -7,10 +7,6 @@
         "* (all domains)": "* (tous les domaines)",
         "+ Add condition": "+ Ajouter une condition",
         "/ (root folder)": "/ (dossier racine)",
-        "1000+ users": "1000+ utilisateurs",
-        "1–50 users": "1–50 utilisateurs",
-        "251–1000 users": "251–1000 utilisateurs",
-        "51–250 users": "51–250 utilisateurs",
         "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development.": "Un abonnement comprend : une compatibilité Nextcloud garantie, une assistance par e-mail, des corrections de bugs prioritaires et un développement actif.",
         "A unique hash of your instance URL (privacy-friendly identifier)": "Un hash unique de l'URL de votre instance (identifiant respectueux de la vie privée)",
         "AI Form Generation": "Génération de formulaires par IA",
@@ -160,7 +156,6 @@
         "Contact email": "E-mail de contact",
         "Contact information saved.": "Informations de contact enregistrées.",
         "Contact the form owner if you believe this is an error.": "Contactez le propriétaire du formulaire si vous pensez qu'il s'agit d'une erreur.",
-        "Contact us": "Contactez-nous",
         "Content": "Contenu",
         "Continue": "Continuer",
         "Control who can do what with this form.": "Contrôlez qui peut faire quoi avec ce formulaire.",
@@ -569,7 +564,6 @@
         "Postal code (NL)": "Code postal (NL)",
         "Preview": "Aperçu",
         "Previous": "Précédent",
-        "Pricing": "Tarifs",
         "Primary color": "Couleur primaire",
         "Priority bug fixes": "Corrections de bugs prioritaires",
         "Privacy / Self-hosted": "Confidentialité / Auto-hébergé",
@@ -799,7 +793,6 @@
         "Video call": "Appel vidéo",
         "View Results": "Voir les résultats",
         "View pricing & plans": "Voir les tarifs et formules",
-        "View pricing & subscribe": "Voir les tarifs et s'abonner",
         "View results": "Voir les résultats",
         "View subscription options": "Voir les options d'abonnement",
         "Viewer": "Lecteur",
@@ -941,10 +934,7 @@
         "{n} / {max} characters": "{n} / {max} caractères",
         "{n} left": "{n} restant(s)",
         "{n} of max {max} selected": "{n} sur {max} maximum sélectionné(s)",
-        "{n} stars": "{n} étoiles",
-        "€139/year": "€139/an",
-        "€19/year": "€19/an",
-        "€59/year": "€59/an"
+        "{n} stars": "{n} étoiles"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }
