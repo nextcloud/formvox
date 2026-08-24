@@ -25,7 +25,8 @@ case "${1:-dev}" in
         ;;
     hetzner|dev|"")
         REMOTE_HOST="178.63.205.103"
-        REMOTE_USER="root"
+        # Hetzner AX42 hardening: root SSH is disabled, login as rik with sudo
+        REMOTE_USER="rik"
         SSH_KEY="~/.ssh/hetzner_ed25519"
         SERVER_NAME="dev.rikdekker.nl"
         DOCKER_DEPLOY=true
@@ -124,31 +125,31 @@ if [ "${DOCKER_DEPLOY:-false}" = true ]; then
         set -e
 
         # Ensure custom_apps directory exists
-        mkdir -p $REMOTE_PATH
+        sudo mkdir -p $REMOTE_PATH
 
         # Backup existing installation if present
         if [ -d "$REMOTE_PATH/$APP_NAME" ]; then
             echo "  💾 Backing up existing installation..."
             BACKUP_NAME="${APP_NAME}.backup.\$(date +%Y%m%d_%H%M%S)"
-            mv $REMOTE_PATH/$APP_NAME "/tmp/\$BACKUP_NAME" || true
+            sudo mv $REMOTE_PATH/$APP_NAME "/tmp/\$BACKUP_NAME" || true
             echo "  📦 Backup saved to /tmp/\$BACKUP_NAME"
         fi
 
         # Extract new version
         echo "  📦 Extracting new version..."
-        tar -xzf /tmp/${APP_NAME}.tar.gz -C $REMOTE_PATH
+        sudo tar -xzf /tmp/${APP_NAME}.tar.gz -C $REMOTE_PATH
 
         # Set permissions (www-data in container is uid 33)
         echo "  🔐 Setting permissions..."
-        chown -R 33:33 $REMOTE_PATH/$APP_NAME
-        chmod -R 755 $REMOTE_PATH/$APP_NAME
+        sudo chown -R 33:33 $REMOTE_PATH/$APP_NAME
+        sudo chmod -R 755 $REMOTE_PATH/$APP_NAME
 
         # Clean up
-        rm /tmp/${APP_NAME}.tar.gz
+        sudo rm -f /tmp/${APP_NAME}.tar.gz
 
         # Remove old backups, keep only the 2 most recent
         echo "  🧹 Cleaning up old backups..."
-        ls -d /tmp/${APP_NAME}.backup.* 2>/dev/null | sort -r | tail -n +3 | xargs -r rm -rf
+        sudo bash -c 'ls -d /tmp/${APP_NAME}.backup.* 2>/dev/null | sort -r | tail -n +3 | xargs -r rm -rf'
 
         echo "  ✅ Files deployed"
 EOF
@@ -197,22 +198,22 @@ if [ "${DOCKER_DEPLOY:-false}" = true ]; then
         set -e
 
         # Ensure custom_apps path is configured in Nextcloud
-        docker exec -u www-data $DOCKER_CONTAINER php occ config:system:set apps_paths 1 path --value="/var/www/html/custom_apps" 2>/dev/null || true
-        docker exec -u www-data $DOCKER_CONTAINER php occ config:system:set apps_paths 1 url --value="/custom_apps" 2>/dev/null || true
-        docker exec -u www-data $DOCKER_CONTAINER php occ config:system:set apps_paths 1 writable --value=true --type=boolean 2>/dev/null || true
+        sudo docker exec -u www-data $DOCKER_CONTAINER php occ config:system:set apps_paths 1 path --value="/var/www/html/custom_apps" 2>/dev/null || true
+        sudo docker exec -u www-data $DOCKER_CONTAINER php occ config:system:set apps_paths 1 url --value="/custom_apps" 2>/dev/null || true
+        sudo docker exec -u www-data $DOCKER_CONTAINER php occ config:system:set apps_paths 1 writable --value=true --type=boolean 2>/dev/null || true
 
         # Disable and re-enable app to force route cache refresh
         echo "  🔌 Re-enabling app (forces route cache refresh)..."
-        docker exec -u www-data $DOCKER_CONTAINER php occ app:disable $APP_NAME 2>/dev/null || true
-        docker exec -u www-data $DOCKER_CONTAINER php occ app:enable $APP_NAME 2>/dev/null || true
+        sudo docker exec -u www-data $DOCKER_CONTAINER php occ app:disable $APP_NAME 2>/dev/null || true
+        sudo docker exec -u www-data $DOCKER_CONTAINER php occ app:enable $APP_NAME 2>/dev/null || true
 
         # Update data fingerprint to bust browser asset cache (prevents chunk mismatch errors)
         echo "  🔄 Updating asset fingerprint..."
-        docker exec -u www-data $DOCKER_CONTAINER php occ maintenance:data-fingerprint 2>/dev/null || true
+        sudo docker exec -u www-data $DOCKER_CONTAINER php occ maintenance:data-fingerprint 2>/dev/null || true
 
         # Restart Apache inside the container to clear OPcache
         echo "  🔄 Restarting Apache in container (OPcache clear)..."
-        docker exec $DOCKER_CONTAINER apache2ctl graceful 2>/dev/null || docker restart $DOCKER_CONTAINER
+        sudo docker exec $DOCKER_CONTAINER apache2ctl graceful 2>/dev/null || sudo docker restart $DOCKER_CONTAINER
 
         echo "  ✅ App deployed"
 EOF
@@ -240,7 +241,7 @@ fi
 echo ""
 echo "🏥 Step 5: Health check..."
 if [ "${DOCKER_DEPLOY:-false}" = true ]; then
-    HEALTH_CHECK=$(ssh -i "$SSH_KEY" "${REMOTE_USER}@${REMOTE_HOST}" "docker exec $DOCKER_CONTAINER curl -s -o /dev/null -w '%{http_code}' http://localhost/apps/formvox/ 2>/dev/null || echo '000'")
+    HEALTH_CHECK=$(ssh -i "$SSH_KEY" "${REMOTE_USER}@${REMOTE_HOST}" "sudo docker exec $DOCKER_CONTAINER curl -s -o /dev/null -w '%{http_code}' http://localhost/apps/formvox/ 2>/dev/null || echo '000'")
 else
     HEALTH_CHECK=$(ssh -i "$SSH_KEY" "${REMOTE_USER}@${REMOTE_HOST}" "curl -s -o /dev/null -w '%{http_code}' http://localhost/apps/formvox/ 2>/dev/null || echo '000'")
 fi
