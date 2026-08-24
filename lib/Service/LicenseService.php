@@ -7,6 +7,7 @@ namespace OCA\FormVox\Service;
 use OCA\FormVox\AppInfo\Application;
 use OCP\Http\Client\IClientService;
 use OCP\IConfig;
+use OCP\IURLGenerator;
 use Psr\Log\LoggerInterface;
 
 class LicenseService {
@@ -17,6 +18,7 @@ class LicenseService {
 	public function __construct(
 		private IClientService $httpClient,
 		private IConfig $config,
+		private IURLGenerator $urlGenerator,
 		private StatisticsService $statisticsService,
 		private LoggerInterface $logger,
 	) {
@@ -40,12 +42,51 @@ class LicenseService {
 		return $this->config->getAppValue(Application::APP_ID, 'license_server_url', self::LICENSE_SERVER_URL);
 	}
 
+	/**
+	 * SHA-256 of the instance URL, so the licence server never sees the URL
+	 * itself.
+	 *
+	 * Falls back to the absolute app URL rather than trusted_domains[0]: that
+	 * yielded a bare hostname where IntraVox and IntroVox hashed a full URL, so
+	 * the same server produced a different hash per app and the licence data
+	 * could not be joined to telemetry.
+	 */
 	public function getInstanceUrlHash(): string {
 		$instanceUrl = $this->config->getSystemValue('overwrite.cli.url', '');
 		if (empty($instanceUrl)) {
-			$instanceUrl = $this->config->getSystemValue('trusted_domains', ['localhost'])[0] ?? 'localhost';
+			$instanceUrl = $this->urlGenerator->getAbsoluteURL('/');
 		}
 		return hash('sha256', strtolower(rtrim($instanceUrl, '/')));
+	}
+
+	/**
+	 * The hash this app used to send, so the server can recognise the instance
+	 * across the change instead of treating it as a second one — which would
+	 * be refused, freezing the seat count at its pre-update value.
+	 *
+	 * Returns an empty string when nothing changed (overwrite.cli.url set),
+	 * so we only send it when it actually differs.
+	 */
+	public function getPreviousInstanceUrlHash(): string {
+		if (!empty($this->config->getSystemValue('overwrite.cli.url', ''))) {
+			return '';
+		}
+
+		$legacy = $this->config->getSystemValue('trusted_domains', ['localhost'])[0] ?? 'localhost';
+		$hash = hash('sha256', strtolower(rtrim($legacy, '/')));
+
+		return $hash === $this->getInstanceUrlHash() ? '' : $hash;
+	}
+
+	/**
+	 * Adds previousInstanceUrlHash only while the two actually differ, so the
+	 * field disappears from the payload once the server has adopted the new
+	 * hash and nothing is sent needlessly.
+	 */
+	private function hashMigrationPayload(): array {
+		$previous = $this->getPreviousInstanceUrlHash();
+
+		return $previous === '' ? [] : ['previousInstanceUrlHash' => $previous];
 	}
 
 	// --- License validation ---
@@ -63,7 +104,7 @@ class LicenseService {
 					'licenseKey' => $licenseKey,
 					'instanceUrlHash' => $this->getInstanceUrlHash(),
 					'appType' => 'formvox',
-				],
+				] + $this->hashMigrationPayload(),
 				'timeout' => 10,
 				'headers' => [
 					'User-Agent' => 'FormVox/' . $this->getAppVersion(),
@@ -120,7 +161,13 @@ class LicenseService {
 					'totalResponses' => $stats['totalResponses'],
 					'currentUsers' => $stats['totalUsers'],
 					'activeUsers30d' => $stats['activeUsers30d'],
-				],
+					'disabledUsers' => $stats['disabledUsers'],
+					// Tells the server how the count was taken, so readings from
+					// releases that counted unreliably stay out of the averages
+					// a contract is measured against.
+					'countMethod' => StatisticsService::COUNT_METHOD,
+					'appVersion' => $this->getAppVersion(),
+				] + $this->hashMigrationPayload(),
 				'timeout' => 15,
 				'headers' => [
 					'User-Agent' => 'FormVox/' . $this->getAppVersion(),

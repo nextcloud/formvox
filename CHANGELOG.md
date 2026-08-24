@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.4.2] - 2026-08-24
+
+### Changed
+- **Licence reporting now counts users the same way everywhere.** FormVox already counted all users correctly; it now also reports how many accounts are disabled, and identifies the instance the same way IntraVox and IntroVox do. Previously each app derived that identifier differently, so the same server looked like several — which made usage impossible to line up across apps. Instances update automatically; nothing needs to be reconfigured.
+
 ## [1.4.1] - 2026-08-11
 
 ### Fixed

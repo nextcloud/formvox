@@ -156,6 +156,7 @@ class TelemetryService
                 'totalResponses' => $stats['totalResponses'],
                 'totalUsers' => $stats['totalUsers'],
                 'activeUsers30d' => $stats['activeUsers30d'],
+                'disabledUsers' => $stats['disabledUsers'],
             ],
             'countryCode' => $this->getCountryCode(),
             'databaseType' => $this->config->getSystemValue('dbtype', 'sqlite'),
