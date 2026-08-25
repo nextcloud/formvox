@@ -285,6 +285,24 @@ openssl dgst -sha512 -sign certificates/formvox.key formvox-X.Y.Z.tar.gz | opens
 
 **Note:** Regenerate signature after any tarball change!
 
+### 8. Archive the release artefacts
+
+The signature and release record belong in the private tooling repo, **not**
+here — this repo mirrors to public GitHub.
+
+```
+~/Documents/Development/voxcloud-infra/app-tooling/formvox/
+  formvox-X.Y.Z.sig        # App Store signature
+  RELEASE-X.Y.Z.md         # SHA256, tag, download URL, what was verified,
+                           # remaining upload steps
+```
+
+Remote: `ssh://git@forgejo.voxcloud.nl:2222/voxcloud-infra/app-tooling.git`
+(private). The tarball itself stays in this working directory — too large for
+the repo; `RELEASE-X.Y.Z.md` records its path and SHA256.
+
+Use `formvox/RELEASE-1.4.3.md` as the template.
+
 ---
 
 ## Notes
