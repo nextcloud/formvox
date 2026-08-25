@@ -2,6 +2,12 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.4.3] - 2026-08-25
+
+### Fixed
+- **The subscription notice said "invalid or expired" whatever was actually wrong.** The licence server distinguishes four refusals — the key expired, it is unknown, it is already registered to another Nextcloud instance, or it was deactivated — but FormVox collapsed all of them into one message. Each needs a different response: a renewal, a typo check, or a call to us about a server move. Every reason now gets its own message, and an expired subscription names the date it lapsed instead of only saying that it did.
+- **"View subscription options" did nothing when already on the Support tab.** The licence notice sits above the tab bar and stays visible everywhere, so on Support its button pointed at the tab you were already looking at. It is now shown only where it has somewhere to go.
+
 ## [1.4.2] - 2026-08-25
 
 ### Fixed
