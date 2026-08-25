@@ -7,7 +7,6 @@ namespace OCA\FormVox\Service;
 use OCA\FormVox\AppInfo\Application;
 use OCP\Http\Client\IClientService;
 use OCP\IConfig;
-use OCP\IURLGenerator;
 use Psr\Log\LoggerInterface;
 
 class LicenseService {
@@ -18,7 +17,6 @@ class LicenseService {
 	public function __construct(
 		private IClientService $httpClient,
 		private IConfig $config,
-		private IURLGenerator $urlGenerator,
 		private StatisticsService $statisticsService,
 		private LoggerInterface $logger,
 	) {
@@ -46,26 +44,48 @@ class LicenseService {
 	 * SHA-256 of the instance URL, so the licence server never sees the URL
 	 * itself.
 	 *
-	 * Falls back to the absolute app URL rather than trusted_domains[0]: that
-	 * yielded a bare hostname where IntraVox and IntroVox hashed a full URL, so
-	 * the same server produced a different hash per app and the licence data
-	 * could not be joined to telemetry.
+	 * The URL is hashed as a full URL (scheme + host) to match how IntraVox and
+	 * IntroVox identify the instance, so licence data lines up across apps.
+	 *
+	 * The source must be request-context-independent: the daily cron job and an
+	 * admin web request both compute this hash, and if they disagreed the server
+	 * would see two instances for one customer and freeze the seat count. We
+	 * therefore use overwrite.cli.url when set, otherwise trusted_domains[0]
+	 * promoted to a full URL — both are identical from cron and web. We do NOT
+	 * use getAbsoluteURL(), whose result derives from the current request host
+	 * and so differs between web and CLI.
 	 */
 	public function getInstanceUrlHash(): string {
-		$instanceUrl = $this->config->getSystemValue('overwrite.cli.url', '');
-		if (empty($instanceUrl)) {
-			$instanceUrl = $this->urlGenerator->getAbsoluteURL('/');
-		}
-		return hash('sha256', strtolower(rtrim($instanceUrl, '/')));
+		return hash('sha256', $this->normalizedInstanceUrl());
 	}
 
 	/**
-	 * The hash this app used to send, so the server can recognise the instance
-	 * across the change instead of treating it as a second one — which would
-	 * be refused, freezing the seat count at its pre-update value.
+	 * Request-independent instance URL, lower-cased and without a trailing
+	 * slash. overwrite.cli.url wins; otherwise trusted_domains[0] is promoted
+	 * to https:// so it is a full URL rather than a bare hostname.
+	 */
+	private function normalizedInstanceUrl(): string {
+		$url = $this->config->getSystemValue('overwrite.cli.url', '');
+		if (empty($url)) {
+			$domain = $this->config->getSystemValue('trusted_domains', ['localhost'])[0] ?? 'localhost';
+			// Promote a bare hostname to a full URL; leave an already-qualified
+			// value (someone put a scheme in trusted_domains) untouched.
+			$url = preg_match('#^https?://#i', $domain) ? $domain : 'https://' . $domain;
+		}
+		return strtolower(rtrim($url, '/'));
+	}
+
+	/**
+	 * The bare-hostname hash this app used to send before the full-URL change,
+	 * so the server can recognise the instance across the change instead of
+	 * treating it as a second one — which would be refused, freezing the seat
+	 * count at its pre-update value.
 	 *
-	 * Returns an empty string when nothing changed (overwrite.cli.url set),
-	 * so we only send it when it actually differs.
+	 * Returns '' when overwrite.cli.url is set (the hash never changed for those
+	 * instances) or when the legacy hash equals the current one (nothing to
+	 * migrate). Otherwise it keeps returning the legacy hash: we have no local
+	 * signal that the server has adopted the new hash, so we keep sending it —
+	 * the server is idempotent and ignores it once adopted.
 	 */
 	public function getPreviousInstanceUrlHash(): string {
 		if (!empty($this->config->getSystemValue('overwrite.cli.url', ''))) {
@@ -79,9 +99,9 @@ class LicenseService {
 	}
 
 	/**
-	 * Adds previousInstanceUrlHash only while the two actually differ, so the
-	 * field disappears from the payload once the server has adopted the new
-	 * hash and nothing is sent needlessly.
+	 * Includes previousInstanceUrlHash while the legacy hash differs from the
+	 * current one, so the server can adopt the new hash. The field is omitted
+	 * for instances whose hash never changed (overwrite.cli.url set).
 	 */
 	private function hashMigrationPayload(): array {
 		$previous = $this->getPreviousInstanceUrlHash();
