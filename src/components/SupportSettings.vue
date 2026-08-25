@@ -31,21 +31,21 @@
 				<div class="stat-row">
 					<div class="stat-info">
 						<span class="stat-icon">📋</span>
-						<span class="stat-label">{{ t('Total Forms') }}</span>
+						<span class="stat-label">{{ t('Total forms') }}</span>
 					</div>
 					<span class="stat-value">{{ licenseStats.totalForms }}</span>
 				</div>
 				<div class="stat-row">
 					<div class="stat-info">
 						<span class="stat-icon">📝</span>
-						<span class="stat-label">{{ t('Total Responses') }}</span>
+						<span class="stat-label">{{ t('Total responses') }}</span>
 					</div>
 					<span class="stat-value">{{ licenseStats.totalResponses }}</span>
 				</div>
 				<div class="stat-row">
 					<div class="stat-info">
 						<span class="stat-icon">👥</span>
-						<span class="stat-label">{{ t('Total Users') }}</span>
+						<span class="stat-label">{{ t('Total users') }}</span>
 					</div>
 					<span class="stat-value">{{ licenseStats.totalUsers }}</span>
 				</div>
@@ -76,7 +76,7 @@
 				<NcButton type="primary"
 					:disabled="savingLicense"
 					@click="saveLicenseKey">
-					{{ savingLicense ? t('Saving...') : t('Save & activate') }}
+					{{ savingLicense ? t('Saving …') : t('Save & activate') }}
 				</NcButton>
 				<NcButton v-if="licenseStats && licenseStats.hasLicense"
 					type="tertiary"
@@ -89,7 +89,7 @@
 
 		<!-- Section 8: Anonymous Usage Statistics -->
 		<div class="settings-section">
-			<h2>{{ t('Anonymous Usage Statistics') }}</h2>
+			<h2>{{ t('Anonymous usage statistics') }}</h2>
 			<p class="settings-section-desc">
 				{{ t('Help improve FormVox by sharing anonymous usage statistics.') }}
 			</p>
@@ -116,7 +116,7 @@
 						<NcButton type="secondary"
 							:disabled="sendingTelemetry"
 							@click="sendTelemetryNow">
-							{{ sendingTelemetry ? t('Sending...') : t('Send report now') }}
+							{{ sendingTelemetry ? t('Sending …') : t('Send report now') }}
 						</NcButton>
 					</NcNoteCard>
 					<NcNoteCard v-if="telemetryMessage" :type="telemetryMessageType" class="telemetry-result">

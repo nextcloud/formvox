@@ -30,7 +30,7 @@
                 {{ t('Export ODT') }}
               </NcActionButton>
               <NcActionButton @click="showTemplateDialog = true">
-                {{ t('ODT template...') }}
+                {{ t('ODT template …') }}
               </NcActionButton>
             </NcActions>
           </div>

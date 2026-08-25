@@ -76,27 +76,27 @@
     <div v-if="activeTab === 'statistics'" class="tab-content">
       <!-- Form Statistics Section -->
       <div class="settings-section">
-        <h2>{{ t('formvox', 'Form Statistics') }}</h2>
+        <h2>{{ t('formvox', 'Form statistics') }}</h2>
         <p class="settings-section-desc">
           {{ t('formvox', 'Overview of forms and responses in your FormVox installation.') }}
         </p>
 
         <div v-if="loadingStatistics" class="stats-loading">
           <NcLoadingIcon :size="32" />
-          <span>{{ t('formvox', 'Loading statistics...') }}</span>
+          <span>{{ t('formvox', 'Loading statistics …') }}</span>
         </div>
         <div v-else class="stats-overview">
           <div class="stat-row">
             <div class="stat-info">
               <span class="stat-icon">📋</span>
-              <span class="stat-label">{{ t('formvox', 'Total Forms') }}</span>
+              <span class="stat-label">{{ t('formvox', 'Total forms') }}</span>
             </div>
             <span class="stat-value">{{ stats.totalForms }}</span>
           </div>
           <div class="stat-row">
             <div class="stat-info">
               <span class="stat-icon">📝</span>
-              <span class="stat-label">{{ t('formvox', 'Total Responses') }}</span>
+              <span class="stat-label">{{ t('formvox', 'Total responses') }}</span>
             </div>
             <span class="stat-value">{{ stats.totalResponses }}</span>
           </div>
@@ -115,7 +115,7 @@
     <!-- Settings Tab -->
     <div v-if="activeTab === 'settings'" class="tab-content">
       <div class="settings-section">
-        <h2>{{ t('formvox', 'Embed Settings') }}</h2>
+        <h2>{{ t('formvox', 'Embed settings') }}</h2>
         <p class="settings-section-desc">
           {{ t('formvox', 'Configure which external websites can embed FormVox forms.') }}
         </p>
@@ -133,7 +133,7 @@
               :placeholder="t('formvox', '* (all domains)')"
             />
             <NcButton type="primary" @click="saveEmbedSettings" :disabled="savingEmbedSettings">
-              {{ savingEmbedSettings ? t('formvox', 'Saving...') : t('formvox', 'Save') }}
+              {{ savingEmbedSettings ? t('formvox', 'Saving …') : t('formvox', 'Save') }}
             </NcButton>
           </div>
         </div>
@@ -152,7 +152,7 @@
     <!-- Integrations Tab -->
     <div v-if="activeTab === 'integrations'" class="tab-content">
       <div class="settings-section">
-        <h2>{{ t('formvox', 'Microsoft Forms Import') }}</h2>
+        <h2>{{ t('formvox', 'Microsoft Forms import') }}</h2>
         <p class="settings-section-desc">
           {{ t('formvox', 'Configure Microsoft Azure AD credentials to enable importing forms from Microsoft Forms.') }}
         </p>
@@ -199,7 +199,7 @@
         </div>
 
         <div class="setting-row">
-          <label class="setting-label">{{ t('formvox', 'Client Secret') }}</label>
+          <label class="setting-label">{{ t('formvox', 'Client secret') }}</label>
           <p class="setting-help">
             {{ t('formvox', 'Leave empty to keep existing secret. Enter a new value to update.') }}
           </p>
@@ -213,7 +213,7 @@
 
         <div class="setting-actions">
           <NcButton type="primary" @click="saveMsFormsSettings" :disabled="savingMsFormsSettings">
-            {{ savingMsFormsSettings ? t('formvox', 'Saving...') : t('formvox', 'Save') }}
+            {{ savingMsFormsSettings ? t('formvox', 'Saving …') : t('formvox', 'Save') }}
           </NcButton>
           <span v-if="msFormsSettings.isConfigured" class="configured-badge">
             {{ t('formvox', 'Configured') }}

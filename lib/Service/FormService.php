@@ -1100,7 +1100,7 @@ class FormService
                             ['id' => 'opt2', 'label' => $this->l->t('Good'), 'value' => '4'],
                             ['id' => 'opt3', 'label' => $this->l->t('Average'), 'value' => '3'],
                             ['id' => 'opt4', 'label' => $this->l->t('Poor'), 'value' => '2'],
-                            ['id' => 'opt5', 'label' => $this->l->t('Very Poor'), 'value' => '1'],
+                            ['id' => 'opt5', 'label' => $this->l->t('Very poor'), 'value' => '1'],
                         ],
                     ],
                     [
@@ -1179,7 +1179,7 @@ class FormService
                         'question' => $this->l->t('Tell us about yourself'),
                         'description' => $this->l->t('Multi-line text area for longer responses'),
                         'required' => false,
-                        'placeholder' => $this->l->t('Write a short bio...'),
+                        'placeholder' => $this->l->t('Write a short bio …'),
                     ],
                     // Section 2: Choice Questions
                     [
@@ -1393,7 +1393,7 @@ class FormService
                         'question' => $this->l->t('Any final thoughts or feedback?'),
                         'description' => $this->l->t('Thank you for trying this demo form!'),
                         'required' => false,
-                        'placeholder' => $this->l->t('Share your thoughts...'),
+                        'placeholder' => $this->l->t('Share your thoughts …'),
                     ],
                 ],
                 'settings' => [

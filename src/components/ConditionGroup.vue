@@ -27,7 +27,7 @@
           v-model="localCondition.value"
           @change="emitUpdate"
         >
-          <option value="">{{ t('Select...') }}</option>
+          <option value="">{{ t('Select …') }}</option>
           <option v-for="opt in selectedQuestionOptions" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>

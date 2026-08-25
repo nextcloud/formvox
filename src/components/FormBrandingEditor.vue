@@ -2,7 +2,7 @@
   <NcModal :show="true" size="large" @close="$emit('close')">
     <div class="form-branding-editor">
       <div class="modal-header">
-        <h2>{{ t('Form Theme') }}</h2>
+        <h2>{{ t('Form theme') }}</h2>
         <p class="description">{{ t('Customize the look and feel of this form. Leave disabled to use the admin defaults.') }}</p>
       </div>
 

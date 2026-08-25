@@ -41,7 +41,7 @@
           <p v-if="canShare">{{ t('No link yet. Create one to start collecting responses.') }}</p>
           <p v-else>{{ t('You do not have permission to create a response link.') }}</p>
           <NcButton type="primary" :disabled="creatingLink || !canShare" @click="createShareLink">
-            {{ creatingLink ? t('Creating...') : t('Create response link') }}
+            {{ creatingLink ? t('Creating …') : t('Create response link') }}
           </NcButton>
         </div>
       </div>
@@ -114,7 +114,7 @@
               <NcTextField
                 v-model="notifySearchTerm"
                 :label="t('Search users and groups')"
-                :placeholder="t('Type to search...')"
+                :placeholder="t('Type to search …')"
                 @input="searchNotifySharees"
               />
             </div>
@@ -256,7 +256,7 @@
               <NcTextField
                 v-model="searchTerm"
                 :label="t('Search users and groups')"
-                :placeholder="t('Type to search...')"
+                :placeholder="t('Type to search …')"
                 @input="searchSharees"
               />
             </div>

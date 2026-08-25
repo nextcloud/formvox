@@ -166,7 +166,7 @@
       :aria-label="renderedQuestion"
       @change="$emit('update:value', $event.target.value)"
     >
-      <option value="">{{ t('Select...') }}</option>
+      <option value="">{{ t('Select …') }}</option>
       <option
         v-for="option in normalizedOptions"
         :key="option.id"

@@ -77,7 +77,7 @@
           </div>
         </div>
         <NcButton type="primary" @click="createApiKey" :disabled="!newKeyName || creatingKey">
-          {{ creatingKey ? t('Creating...') : t('Create API Key') }}
+          {{ creatingKey ? t('Creating …') : t('Create API key') }}
         </NcButton>
       </div>
     </div>
@@ -138,7 +138,7 @@
         <NcTextField
           v-model="newWebhookUrl"
           :label="t('Webhook URL')"
-          :placeholder="t('https://your-server.com/webhook')"
+          placeholder="https://your-server.com/webhook"
         />
         <div class="events-select">
           <label class="events-label">{{ t('Events') }}</label>
@@ -164,7 +164,7 @@
           </div>
         </div>
         <NcButton type="primary" @click="createWebhook" :disabled="!newWebhookUrl || creatingWebhook">
-          {{ creatingWebhook ? t('Creating...') : t('Create Webhook') }}
+          {{ creatingWebhook ? t('Creating …') : t('Create webhook') }}
         </NcButton>
       </div>
     </div>

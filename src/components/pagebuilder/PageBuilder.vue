@@ -1,7 +1,7 @@
 <template>
   <div class="page-builder">
     <div class="builder-header">
-      <h2>{{ t('Page Builder') }}</h2>
+      <h2>{{ t('Page builder') }}</h2>
       <p class="description">{{ t('Customize the appearance of your public forms.') }}</p>
     </div>
 
@@ -21,7 +21,7 @@
         @click="activeZone = 'styles'"
       >
         <CogIcon :size="16" />
-        {{ t('Global Styles') }}
+        {{ t('Global styles') }}
       </button>
     </div>
 
@@ -126,7 +126,7 @@
           </div>
 
           <div v-if="selectedBlock" class="block-editor">
-            <h3>{{ t('Block Settings') }}</h3>
+            <h3>{{ t('Block settings') }}</h3>
 
             <!-- Alignment -->
             <div class="editor-field">
@@ -356,7 +356,7 @@
 
             <template v-else-if="selectedBlock.type === 'socialLinks'">
               <div class="editor-field">
-                <label>{{ t('Social Links') }}</label>
+                <label>{{ t('Social links') }}</label>
                 <div
                   v-for="platform in socialPlatforms"
                   :key="platform.id"
@@ -428,7 +428,7 @@
           <BlockRenderer :block="block" :edit-mode="true" :global-styles="globalStyles" />
         </div>
         <div class="preview-form-placeholder">
-          <div class="form-title">{{ t('Form Title') }}</div>
+          <div class="form-title">{{ t('Form title') }}</div>
           <div class="form-question">{{ t('Sample question') }}</div>
           <div class="form-input"></div>
           <div class="form-button" :style="{ backgroundColor: globalStyles.primaryColor }">
@@ -442,7 +442,7 @@
     </div>
 
     <div v-if="saving" class="saving-indicator">
-      {{ t('Saving...') }}
+      {{ t('Saving …') }}
     </div>
   </div>
 </template>
@@ -518,7 +518,7 @@ export default {
     const zones = [
       { id: 'header', label: t('Header') },
       { id: 'footer', label: t('Footer') },
-      { id: 'thankYou', label: t('Thank You Page') },
+      { id: 'thankYou', label: t('Thank you page') },
     ];
 
     const blockTypes = [
@@ -529,9 +529,9 @@ export default {
       { type: 'spacer', label: t('Spacer'), icon: TextIcon },
       { type: 'divider', label: t('Divider'), icon: TextIcon },
       { type: 'button', label: t('Button'), icon: TextIcon },
-      { type: 'socialLinks', label: t('Social Links'), icon: TextIcon },
+      { type: 'socialLinks', label: t('Social links'), icon: TextIcon },
       { type: 'html', label: t('HTML'), icon: TextIcon },
-      { type: 'progressBar', label: t('Progress Bar'), icon: TextIcon },
+      { type: 'progressBar', label: t('Progress bar'), icon: TextIcon },
     ];
 
     const headingLevels = [

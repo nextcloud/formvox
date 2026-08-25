@@ -21,7 +21,7 @@
 					<TemplateCard
 						v-if="aiAvailable"
 						key="ai"
-						:name="aiBusy ? t('AI is generating…') : t('Generate with AI')"
+						:name="aiBusy ? t('AI is generating …') : t('Generate with AI')"
 						:description="aiBusy ? t('Wait until current generation finishes') : t('Describe and let AI build it')"
 						:icon="AiIcon"
 						color="#7C4DFF"
@@ -138,7 +138,7 @@ export default {
 			},
 			{
 				id: 'demo',
-				name: t('Demo Form'),
+				name: t('Demo form'),
 				description: t('All features showcase'),
 				icon: DemoIcon,
 				color: '#E91E63',
@@ -179,7 +179,7 @@ export default {
 
 		const onFormImported = (result) => {
 			// Don't close modal automatically - let user see warnings first
-			// Modal will close when user clicks "Open Form" or "Close"
+			// Modal will close when user clicks "Open form" or "Close"
 			// Navigation happens via openImportedForm in ImportModal
 		}
 

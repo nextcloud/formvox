@@ -8,7 +8,7 @@
     <div class="template-add">
       <h3>{{ t('Snapshot a form as a template') }}</h3>
       <p class="hint">{{ t('Pick a form you already created — its structure (questions, settings, branding) is copied. Responses and share links are stripped.') }}</p>
-      <div v-if="loadingForms">{{ t('Loading your forms…') }}</div>
+      <div v-if="loadingForms">{{ t('Loading your forms …') }}</div>
       <div v-else-if="ownedForms.length === 0" class="empty">
         {{ t('You have no forms yet. Create one first.') }}
       </div>
@@ -30,14 +30,14 @@
           :disabled="!snapshotFormId || saving"
           @click="snapshotTemplate"
         >
-          {{ saving ? t('Saving…') : t('Save as template') }}
+          {{ saving ? t('Saving …') : t('Save as template') }}
         </NcButton>
       </div>
     </div>
 
     <div class="template-list">
       <h3>{{ t('Available templates') }}</h3>
-      <div v-if="loading">{{ t('Loading…') }}</div>
+      <div v-if="loading">{{ t('Loading …') }}</div>
       <div v-else-if="templates.length === 0" class="empty">
         {{ t('No custom templates yet.') }}
       </div>

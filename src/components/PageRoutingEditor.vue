@@ -22,7 +22,7 @@
           <div class="rule-field">
             <label>{{ t('If question') }}</label>
             <select v-model="rule.questionId" @change="onRuleChange">
-              <option value="">{{ t('Select question...') }}</option>
+              <option value="">{{ t('Select question …') }}</option>
               <option v-for="q in availableQuestions" :key="q.id" :value="q.id">
                 {{ q.question || t('(untitled)') }}
               </option>
@@ -46,19 +46,19 @@
             <label>{{ t('Value') }}</label>
             <template v-if="getQuestionOptions(rule.questionId).length > 0">
               <select v-model="rule.value" @change="onRuleChange">
-                <option value="">{{ t('Select value...') }}</option>
+                <option value="">{{ t('Select value …') }}</option>
                 <option v-for="opt in getQuestionOptions(rule.questionId)" :key="opt" :value="opt">
                   {{ opt }}
                 </option>
               </select>
             </template>
-            <input v-else type="text" v-model="rule.value" :placeholder="t('Enter value...')" @input="onRuleChange">
+            <input v-else type="text" v-model="rule.value" :placeholder="t('Enter value …')" @input="onRuleChange">
           </div>
 
           <div class="rule-field">
             <label>{{ t('Go to page') }}</label>
             <select v-model="rule.targetPageId" @change="onRuleChange">
-              <option value="">{{ t('Select page...') }}</option>
+              <option value="">{{ t('Select page …') }}</option>
               <option v-for="(page, pIndex) in otherPages" :key="page.id" :value="page.id">
                 {{ page.title || t('Page {n}', { n: getPageDisplayIndex(page.id) }) }}
               </option>

@@ -40,7 +40,7 @@
           :disabled="uploading"
           @click="uploadTemplate"
         >
-          {{ uploading ? t('Uploading...') : t('Upload') }}
+          {{ uploading ? t('Uploading …') : t('Upload') }}
         </NcButton>
       </div>
 

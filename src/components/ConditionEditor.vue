@@ -1,7 +1,7 @@
 <template>
   <NcModal @close="$emit('close')">
     <div class="condition-editor">
-      <h2>{{ t('Show this question when...') }}</h2>
+      <h2>{{ t('Show this question when …') }}</h2>
 
       <div v-if="!localCondition" class="no-condition">
         <p>{{ t('This question will always be shown.') }}</p>

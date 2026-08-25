@@ -1,7 +1,7 @@
 <template>
   <div class="block-text" :class="alignmentClass">
     <p v-if="block.settings.content" :style="textStyle">{{ block.settings.content }}</p>
-    <p v-else-if="editMode" class="placeholder">{{ t('Enter text...') }}</p>
+    <p v-else-if="editMode" class="placeholder">{{ t('Enter text …') }}</p>
   </div>
 </template>
 

@@ -3,7 +3,7 @@
     :show="show"
     @close="$emit('close')"
     size="large"
-    :title="t('formvox', 'Import Form')"
+    :title="t('formvox', 'Import form')"
   >
     <div class="import-modal">
       <!-- Step Indicator -->
@@ -46,7 +46,7 @@
               disabled
             >
               <FileExcelIcon :size="32" />
-              <span class="option-title">{{ t('formvox', 'Excel File') }}</span>
+              <span class="option-title">{{ t('formvox', 'Excel file') }}</span>
               <span class="option-desc">{{ t('formvox', 'Import responses only (coming soon)') }}</span>
             </button>
           </div>
@@ -77,7 +77,7 @@
               <template #icon>
                 <MicrosoftIcon :size="20" />
               </template>
-              {{ connecting ? t('formvox', 'Connecting...') : t('formvox', 'Connect Microsoft Account') }}
+              {{ connecting ? t('formvox', 'Connecting …') : t('formvox', 'Connect Microsoft account') }}
             </NcButton>
           </div>
         </div>
@@ -88,7 +88,7 @@
 
           <div v-if="loadingForms" class="loading">
             <NcLoadingIcon :size="32" />
-            <span>{{ t('formvox', 'Loading your forms...') }}</span>
+            <span>{{ t('formvox', 'Loading your forms …') }}</span>
           </div>
 
           <div v-else-if="msFormsList.length === 0" class="no-forms">
@@ -153,11 +153,11 @@
 
         <!-- Step 4: Importing -->
         <div v-if="currentStep === 4" class="step-panel">
-          <h2>{{ t('formvox', 'Importing...') }}</h2>
+          <h2>{{ t('formvox', 'Importing …') }}</h2>
 
           <div v-if="importing" class="importing">
             <NcLoadingIcon :size="48" />
-            <p>{{ t('formvox', 'Please wait while we import your form...') }}</p>
+            <p>{{ t('formvox', 'Please wait while we import your form …') }}</p>
           </div>
 
           <div v-else-if="importError" class="import-error">
@@ -165,7 +165,7 @@
               {{ importError }}
             </NcNoteCard>
             <NcButton @click="currentStep = 3">
-              {{ t('formvox', 'Go Back') }}
+              {{ t('formvox', 'Go back') }}
             </NcButton>
           </div>
 
@@ -191,7 +191,7 @@
 
             <div class="import-actions">
               <NcButton type="primary" @click="openImportedForm">
-                {{ t('formvox', 'Open Form') }}
+                {{ t('formvox', 'Open form') }}
               </NcButton>
               <NcButton @click="$emit('close')">
                 {{ t('formvox', 'Close') }}

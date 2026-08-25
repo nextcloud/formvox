@@ -156,13 +156,13 @@
           :disabled="submitting || isPreview"
           :style="submitButtonStyles"
         >
-          {{ uploadProgress || (submitting ? t('Submitting...') : t('Submit')) }}
+          {{ uploadProgress || (submitting ? t('Submitting …') : t('Submit')) }}
         </NcButton>
       </div>
 
       <!-- Submission status for screen readers -->
       <div class="sr-only" aria-live="polite" role="status">
-        <span v-if="submitting">{{ t('Submitting your response...') }}</span>
+        <span v-if="submitting">{{ t('Submitting your response …') }}</span>
         <span v-if="uploadProgress">{{ uploadProgress }}</span>
       </div>
 
@@ -953,7 +953,7 @@ export default {
 
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          uploadProgress.value = t('Uploading {name}...', { name: file.name });
+          uploadProgress.value = t('Uploading {name} …', { name: file.name });
 
           const formData = new FormData();
           formData.append('file', file);

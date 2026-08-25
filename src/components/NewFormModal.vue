@@ -95,7 +95,7 @@ const TEMPLATE_NAMES = {
 	survey: 'Survey',
 	poll: 'Poll',
 	registration: 'Registration',
-	demo: 'Demo Form',
+	demo: 'Demo form',
 	ai: 'Generate with AI',
 };
 
@@ -104,7 +104,7 @@ const TEMPLATE_TITLES = {
 	survey: 'New Survey',
 	poll: 'New Poll',
 	registration: 'New Registration',
-	demo: 'Demo Form',
+	demo: 'Demo form',
 	ai: 'AI-generated form',
 };
 
@@ -150,7 +150,7 @@ export default {
 
 		const submitLabel = computed(() => {
 			if (!creating.value) return isAi.value ? t('Generate') : t('Create')
-			return isAi.value ? t('Generating...') : t('Creating...')
+			return isAi.value ? t('Generating …') : t('Creating …')
 		})
 
 		onMounted(async () => {

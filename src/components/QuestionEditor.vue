@@ -127,9 +127,9 @@
           <option value="dropdown">{{ t('Dropdown') }}</option>
           <option value="consent">{{ t('Consent (single checkbox)') }}</option>
         </optgroup>
-        <optgroup :label="t('Date & Time')">
+        <optgroup :label="t('Date & time')">
           <option value="date">{{ t('Date') }}</option>
-          <option value="datetime">{{ t('Date & Time') }}</option>
+          <option value="datetime">{{ t('Date & time') }}</option>
           <option value="time">{{ t('Time') }}</option>
         </optgroup>
         <optgroup :label="t('Rating')">
