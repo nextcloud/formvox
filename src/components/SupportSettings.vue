@@ -55,8 +55,8 @@
 				{{ t('Subscription active — thank you for supporting FormVox!') }}
 			</NcNoteCard>
 
-			<NcNoteCard v-if="licenseStats && licenseStats.hasLicense && !licenseStats.licenseValid" type="warning">
-				{{ t('Subscription key is invalid or expired.') }}
+			<NcNoteCard v-if="licenseProblem" type="warning">
+				{{ licenseProblem }}
 			</NcNoteCard>
 		</div>
 
@@ -201,6 +201,46 @@ export default {
 			const lang = (window.document?.documentElement?.lang || '').split('-')[0]
 			return lang === 'nl' ? 'https://voxcloud.nl/pricing/#formvox' : 'https://voxcloud.nl/en/pricing/#formvox'
 		},
+
+		/**
+		 * The licence server tells us *why* a key was refused -- expired,
+		 * unknown, already bound elsewhere, deactivated. Each needs a different
+		 * response from the admin, so map them to distinct messages instead of
+		 * one "invalid or expired" that fits all four and helps with none.
+		 */
+		licenseProblem() {
+			const s = this.licenseStats
+			if (!s || !s.hasLicense || s.licenseValid) return null
+
+			const reason = s.licenseReason || ''
+
+			if (reason === 'License has expired') {
+				const until = this.formatIsoDate(s.licenseValidUntil)
+				return until
+					? this.t('Your subscription expired on {date}. Renew it to keep receiving support.', { date: until })
+					: this.t('Your subscription has expired. Renew it to keep receiving support.')
+			}
+			if (reason === 'License not found') {
+				return this.t('This subscription key is not known to the licence server. Check it for typos.')
+			}
+			if (reason.startsWith('License already in use')) {
+				return this.t('This subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one.')
+			}
+			if (reason === 'License is inactive') {
+				return this.t('This subscription key has been deactivated. Contact us to reactivate it.')
+			}
+			if (reason === 'License not yet valid') {
+				return this.t('This subscription key is not valid yet.')
+			}
+			if (reason === 'Could not connect to license server') {
+				return this.t('Could not reach the licence server, so the subscription status could not be confirmed.')
+			}
+
+			// An unrecognised reason still beats saying nothing specific.
+			return reason
+				? this.t('Subscription key was refused: {reason}', { reason })
+				: this.t('Subscription key is invalid or expired.')
+		},
 	},
 
 	mounted() {
@@ -326,6 +366,18 @@ export default {
 			setTimeout(() => {
 				this.message = ''
 			}, 5000)
+		},
+
+		/** validUntil arrives as an ISO string, not the unix stamp formatDate takes. */
+		formatIsoDate(iso) {
+			if (!iso) return ''
+			const date = new Date(iso)
+			if (Number.isNaN(date.getTime())) return ''
+			return date.toLocaleDateString(undefined, {
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric',
+			})
 		},
 
 		formatDate(timestamp) {

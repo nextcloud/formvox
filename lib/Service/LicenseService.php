@@ -34,6 +34,7 @@ class LicenseService {
 		$this->config->deleteAppValue(Application::APP_ID, 'license_valid');
 		$this->config->deleteAppValue(Application::APP_ID, 'license_info');
 		$this->config->deleteAppValue(Application::APP_ID, 'license_limits');
+		$this->config->deleteAppValue(Application::APP_ID, 'license_reason');
 	}
 
 	public function getLicenseServerUrl(): string {
@@ -137,10 +138,21 @@ class LicenseService {
 				$this->config->setAppValue(Application::APP_ID, 'license_valid', 'true');
 				$this->config->setAppValue(Application::APP_ID, 'license_info', json_encode($data));
 				$this->config->setAppValue(Application::APP_ID, 'license_last_check', (string)time());
+				$this->config->deleteAppValue(Application::APP_ID, 'license_reason');
 				return $data;
 			}
 
+			// The server distinguishes expired from not-found, already-in-use
+			// and inactive; getStats() reads from cache, so keep the reason or
+			// the admin only ever learns that something is wrong.
 			$this->config->setAppValue(Application::APP_ID, 'license_valid', 'false');
+			$this->config->setAppValue(
+				Application::APP_ID,
+				'license_reason',
+				(string)($data['reason'] ?? '')
+			);
+			// Retains validUntil, so an expired licence can still name its date.
+			$this->config->setAppValue(Application::APP_ID, 'license_info', json_encode($data));
 			return $data;
 		} catch (\Exception $e) {
 			$this->logger->warning('LicenseService: Failed to validate license', [
@@ -226,13 +238,24 @@ class LicenseService {
 
 		$licenseValid = false;
 		$licenseInfo = [];
+		$licenseReason = '';
+		$licenseValidUntil = null;
 		if ($hasLicense) {
 			$cachedValid = $this->config->getAppValue(Application::APP_ID, 'license_valid', '');
 			$licenseValid = $cachedValid === 'true';
 			$licenseInfo = json_decode(
 				$this->config->getAppValue(Application::APP_ID, 'license_info', '{}'),
 				true
-			);
+			) ?: [];
+			if (!$licenseValid) {
+				$licenseReason = $this->config->getAppValue(Application::APP_ID, 'license_reason', '');
+			}
+			// A valid response nests the dates under 'license'; a refused one
+			// carries only validUntil, and only when the key expired. Either
+			// way the admin sees the date it lapsed, not just that it did.
+			$licenseValidUntil = $licenseInfo['license']['validUntil']
+				?? $licenseInfo['validUntil']
+				?? null;
 		}
 
 		// Mask license key for frontend display
@@ -254,6 +277,8 @@ class LicenseService {
 			'hasLicense' => $hasLicense,
 			'licenseValid' => $licenseValid,
 			'licenseInfo' => $licenseInfo,
+			'licenseReason' => $licenseReason,
+			'licenseValidUntil' => $licenseValidUntil,
 			'licenseKeyMasked' => $maskedKey,
 			'needsLicense' => $this->needsLicense(),
 			'freeFormsLimit' => self::FREE_FORMS_LIMIT,

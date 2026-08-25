@@ -5,7 +5,9 @@
       :type="licenseBanner.type"
       class="license-banner">
       {{ licenseBanner.message }}
-      <NcButton type="tertiary" @click="activeTab = 'support'">
+      <!-- Pointless on the tab it targets: the banner sits above the tabs and
+           stays visible everywhere, so on Support it would do nothing. -->
+      <NcButton v-if="activeTab !== 'support'" type="tertiary" @click="activeTab = 'support'">
         {{ t('formvox', 'View subscription options') }}
       </NcButton>
     </NcNoteCard>
@@ -281,6 +283,18 @@ export default {
     const activeTab = ref('branding');
     const branding = props.initialBranding;
 
+    /** validUntil arrives from the licence server as an ISO string. */
+    const formatIsoDate = (iso) => {
+      if (!iso) return '';
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '';
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    };
+
     const loadingStatistics = ref(true);
     const stats = reactive({
       totalForms: 0,
@@ -406,10 +420,34 @@ export default {
       if (s.hasLicense && s.licenseValid) return null;
       if (!s.needsLicense) return null;
       if (s.hasLicense && !s.licenseValid) {
-        return {
-          type: 'warning',
-          message: t('formvox', 'Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.'),
-        };
+        // Mirrors licenseProblem() in SupportSettings.vue: the licence server
+        // says why the key was refused, and each reason needs a different
+        // response from the admin.
+        const reason = s.licenseReason || '';
+        let message;
+
+        if (reason === 'License has expired') {
+          const until = formatIsoDate(s.licenseValidUntil);
+          message = until
+            ? t('formvox', 'Your FormVox subscription expired on {date}. Renew it to keep receiving support.', { date: until })
+            : t('formvox', 'Your FormVox subscription has expired. Renew it to keep receiving support.');
+        } else if (reason === 'License not found') {
+          message = t('formvox', 'This FormVox subscription key is not known to the licence server. Check it for typos.');
+        } else if (reason.startsWith('License already in use')) {
+          message = t('formvox', 'This FormVox subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one.');
+        } else if (reason === 'License is inactive') {
+          message = t('formvox', 'This FormVox subscription key has been deactivated. Contact us to reactivate it.');
+        } else if (reason === 'License not yet valid') {
+          message = t('formvox', 'This FormVox subscription key is not valid yet.');
+        } else if (reason === 'Could not connect to license server') {
+          message = t('formvox', 'Could not reach the licence server, so the FormVox subscription status could not be confirmed.');
+        } else if (reason) {
+          message = t('formvox', 'FormVox subscription key was refused: {reason}', { reason });
+        } else {
+          message = t('formvox', 'Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.');
+        }
+
+        return { type: 'warning', message };
       }
       return {
         type: 'info',
