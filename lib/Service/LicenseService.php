@@ -250,9 +250,12 @@ class LicenseService {
 			if (!$licenseValid) {
 				$licenseReason = $this->config->getAppValue(Application::APP_ID, 'license_reason', '');
 			}
-			// Present on both a valid and an expired response, so an expired
-			// licence can show the date it lapsed rather than just "expired".
-			$licenseValidUntil = $licenseInfo['license']['validUntil'] ?? null;
+			// A valid response nests the dates under 'license'; a refused one
+			// carries only validUntil, and only when the key expired. Either
+			// way the admin sees the date it lapsed, not just that it did.
+			$licenseValidUntil = $licenseInfo['license']['validUntil']
+				?? $licenseInfo['validUntil']
+				?? null;
 		}
 
 		// Mask license key for frontend display
