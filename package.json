@@ -5,7 +5,14 @@
   "scripts": {
     "build": "webpack",
     "build:dev": "NODE_ENV=development webpack",
-    "watch": "webpack --watch"
+    "watch": "webpack --watch",
+    "l10n:extract": "node scripts/extract-en-json.js",
+    "l10n:lint": "node scripts/lint-l10n-strings.js",
+    "l10n:check": "node scripts/check-l10n-sync.js",
+    "l10n:js": "node scripts/generate-l10n-js.js",
+    "pot": "npm run l10n:extract && node scripts/generate-pot.js",
+    "l10n:push": "npm run l10n:extract && node scripts/lint-l10n-strings.js && node scripts/generate-pot.js",
+    "prebuild": "node scripts/check-l10n-sync.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",

@@ -1,0 +1,2487 @@
+# FormVox nl translation.
+# Carried over from the pre-Transifex l10n/nl.json bundle.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: FormVox 1.4.2\n"
+"Report-Msgid-Bugs-To: translations@nextcloud.com\n"
+"PO-Revision-Date: 2026-08-25 00:00+0000\n"
+"Last-Translator: FormVox <translations@nextcloud.com>\n"
+"Language-Team: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: nl\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "\"{question}\" does not match the required format"
+msgstr "\"{question}\" komt niet overeen met de vereiste indeling"
+
+msgid "(required)"
+msgstr "(verplicht)"
+
+msgid "(untitled)"
+msgstr "(zonder titel)"
+
+msgid "{count} others editing"
+msgstr "{count} anderen aan het bewerken"
+
+msgid "{count} responses"
+msgstr "{count} reacties"
+
+msgid "{count} responses collected"
+msgstr "{count} verzamelde reacties"
+
+msgid "{count} rows total across all responses"
+msgstr "{count} rijen totaal over alle antwoorden"
+
+msgid "{n} / {max} characters"
+msgstr "{n} / {max} tekens"
+
+msgid "{n} left"
+msgstr "Nog {n}"
+
+msgid "{n} of max {max} selected"
+msgstr "{n} van max {max} geselecteerd"
+
+msgid "{n} stars"
+msgstr "{n} sterren"
+
+msgid "* (all domains)"
+msgstr "* (alle domeinen)"
+
+msgid "/ (root folder)"
+msgstr "/ (hoofdmap)"
+
+msgid "+ Add condition"
+msgstr "+ Voorwaarde toevoegen"
+
+msgid "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development."
+msgstr "Een abonnement omvat: gegarandeerde Nextcloud-compatibiliteit, e-mailondersteuning, prioriteit bij bugfixes en actieve ontwikkeling."
+
+msgid "A unique hash of your instance URL (privacy-friendly identifier)"
+msgstr "Een unieke hash van je instance-URL (privacy-vriendelijke identificatie)"
+
+msgid "Access control"
+msgstr "Toegangsbeheer"
+
+msgid "Access restrictions saved"
+msgstr "Toegangsbeperkingen opgeslagen"
+
+msgid "Active Users (30 days)"
+msgstr "Actieve gebruikers (30 dagen)"
+
+msgid "Add a description or instructions"
+msgstr "Een beschrijving of instructies toevoegen"
+
+msgid "Add column"
+msgstr "Kolom toevoegen"
+
+msgid "Add condition"
+msgstr "Voorwaarde toevoegen"
+
+msgid "Add info block"
+msgstr "Infoblok toevoegen"
+
+msgid "Add more"
+msgstr "Meer toevoegen"
+
+msgid "Add option"
+msgstr "Optie toevoegen"
+
+msgid "Add page"
+msgstr "Pagina toevoegen"
+
+msgid "Add question"
+msgstr "Vraag toevoegen"
+
+msgid "Add row"
+msgstr "Rij toevoegen"
+
+msgid "Add rule"
+msgstr "Regel toevoegen"
+
+msgid "Add section"
+msgstr "Sectie toevoegen"
+
+msgid "Add social links in settings"
+msgstr "Sociale links toevoegen in instellingen"
+
+msgid "Add source document (optional)"
+msgstr "Brondocument toevoegen (optioneel)"
+
+msgid "Add your expenses below. Click \"+ Add row\" to add more items."
+msgstr ""
+
+msgid "Add your expenses below. Click \\\"+ Add row\\\" to add more items."
+msgstr ""
+
+msgid "Added"
+msgstr "Toegevoegd"
+
+msgid "Advanced"
+msgstr "Geavanceerd"
+
+msgid "AI"
+msgstr ""
+
+msgid "AI could not generate \"{formTitle}\""
+msgstr "AI kon \"{formTitle}\" niet genereren"
+
+msgid "AI could not generate \"%1$s\""
+msgstr "AI kon \"%1$s\" niet genereren"
+
+msgid "AI could not generate \\\"{formTitle}\\\""
+msgstr ""
+
+msgid "AI could not generate \\\"%1$s\\\""
+msgstr ""
+
+msgid "AI finished generating \"{formTitle}\""
+msgstr "AI is klaar met het genereren van \"{formTitle}\""
+
+msgid "AI finished generating \"%1$s\""
+msgstr "AI is klaar met het genereren van \"%1$s\""
+
+msgid "AI finished generating \\\"{formTitle}\\\""
+msgstr ""
+
+msgid "AI finished generating \\\"%1$s\\\""
+msgstr ""
+
+msgid "AI form created. Check your notifications to open it."
+msgstr "AI-formulier aangemaakt. Bekijk je meldingen om het te openen."
+
+msgid "AI Form Generation"
+msgstr "AI-formuliergeneratie"
+
+msgid "AI generation failed."
+msgstr "AI-generatie mislukt."
+
+msgid "AI generation failed. No task returned."
+msgstr "AI-generatie mislukt. Geen taak geretourneerd."
+
+msgid "AI generation failed. Try a different description."
+msgstr "AI-generatie mislukt. Probeer een andere beschrijving."
+
+msgid "AI is generating …"
+msgstr "AI genereert …"
+
+msgid "AI is still generating. You will be notified when ready."
+msgstr "AI is nog aan het genereren. Je krijgt een melding wanneer het klaar is."
+
+msgid "AI provider available"
+msgstr "AI-provider beschikbaar"
+
+msgid "AI settings saved"
+msgstr "AI-instellingen opgeslagen"
+
+msgid "AI will base questions on the document and your description. Generation can take up to 2 minutes."
+msgstr "De AI baseert vragen op het document en jouw beschrijving. Genereren kan tot 2 minuten duren."
+
+msgid "Align center"
+msgstr "Centreren"
+
+msgid "Align left"
+msgstr "Links uitlijnen"
+
+msgid "Align right"
+msgstr "Rechts uitlijnen"
+
+msgid "Alignment"
+msgstr "Uitlijning"
+
+msgid "All changes saved"
+msgstr "Alle wijzigingen opgeslagen"
+
+msgid "All events"
+msgstr "Alle evenementen"
+
+msgid "All features showcase"
+msgstr "Alle functies demonstratie"
+
+msgid "All files"
+msgstr "Alle bestanden"
+
+msgid "All forms"
+msgstr "Alle formulieren"
+
+msgid "ALL of the following"
+msgstr "ALLE van de volgende"
+
+msgid "All responses deleted"
+msgstr "Alle reacties verwijderd"
+
+msgid "Allow AI to add conditional logic (showIf) to generated questions"
+msgstr "AI toestaan voorwaardelijke logica (showIf) toe te voegen aan gegenereerde vragen"
+
+msgid "Allow multiple files"
+msgstr "Meerdere bestanden toestaan"
+
+msgid "Allow multiple submissions"
+msgstr "Meerdere inzendingen toestaan"
+
+msgid "Allow users to upload a source document (PDF/DOCX/ODT)"
+msgstr "Gebruikers toestaan een brondocument te uploaden (PDF/DOCX/ODT)"
+
+msgid "Allowed domains for embedding"
+msgstr "Toegestane domeinen voor insluiten"
+
+msgid "Allowed file types"
+msgstr "Toegestane bestandstypen"
+
+msgid "Allowed groups"
+msgstr "Toegestane groepen"
+
+msgid "Allowed users"
+msgstr "Toegestane gebruikers"
+
+msgid "Alt text"
+msgstr "Alt-tekst"
+
+msgid "Amount"
+msgstr "Bedrag"
+
+msgid "An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there."
+msgstr "Er wordt automatisch een e-mailvraag aan je formulier toegevoegd. De respondent ontvangt een bevestiging op het adres dat daar wordt ingevuld."
+
+msgid "Anonymous"
+msgstr "Anoniem"
+
+msgid "Anonymous usage statistics"
+msgstr "Anonieme gebruiksstatistieken"
+
+msgid "Another quiz question - correct answer: In Nextcloud files"
+msgstr "Nog een quizvraag - correct antwoord: In Nextcloud-bestanden"
+
+msgid "Any final thoughts or feedback?"
+msgstr "Nog laatste gedachten of feedback?"
+
+msgid "ANY of the following"
+msgstr "EEN van de volgende"
+
+msgid "Any personal or sensitive data"
+msgstr "Persoonlijke of gevoelige gegevens"
+
+msgid "API & Webhooks"
+msgstr "API en webhooks"
+
+msgid "API Access"
+msgstr "API-toegang"
+
+msgid "API Documentation"
+msgstr "API-documentatie"
+
+msgid "API key created"
+msgstr "API-sleutel aangemaakt"
+
+msgid "API key deleted"
+msgstr "API-sleutel verwijderd"
+
+msgid "Are you sure you want to delete ALL responses? This action cannot be undone."
+msgstr "Weet je zeker dat je ALLE reacties wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+
+msgid "Are you sure you want to delete the template?"
+msgstr "Weet je zeker dat je het sjabloon wilt verwijderen?"
+
+msgid "Are you sure you want to delete this API key? Any integrations using it will stop working."
+msgstr "Weet je zeker dat je deze API-sleutel wilt verwijderen? Alle integraties die deze gebruiken zullen niet meer werken."
+
+msgid "Are you sure you want to delete this form? This action cannot be undone."
+msgstr "Weet je zeker dat je dit formulier wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+
+msgid "Are you sure you want to delete this link? Anyone with this link will no longer be able to submit responses."
+msgstr "Weet je zeker dat je deze link wilt verwijderen? Iedereen met deze link kan dan geen reacties meer verzenden."
+
+msgid "Are you sure you want to delete this response?"
+msgstr "Weet je zeker dat je deze reactie wilt verwijderen?"
+
+msgid "Are you sure you want to delete this webhook?"
+msgstr "Weet je zeker dat je deze webhook wilt verwijderen?"
+
+msgid "Available placeholders"
+msgstr "Beschikbare placeholders"
+
+msgid "Available templates"
+msgstr "Beschikbare sjablonen"
+
+msgid "Average"
+msgstr "Gemiddelde"
+
+msgid "Back"
+msgstr "Terug"
+
+msgid "Background color"
+msgstr "Achtergrondkleur"
+
+msgid "Bar"
+msgstr "Staaf"
+
+msgid "Bar color"
+msgstr "Balkkleur"
+
+msgid "Basic server configuration (database, OS, web server, language, timezone, country)"
+msgstr "Basisserverconfiguratie (database, besturingssysteem, webserver, taal, tijdzone, land)"
+
+msgid "Beginner - Just getting started"
+msgstr "Beginner - Net begonnen"
+
+msgid "Blank form"
+msgstr "Leeg formulier"
+
+msgid "Block settings"
+msgstr "Blokinstellingen"
+
+msgid "Blue"
+msgstr "Blauw"
+
+msgid "Body (optional, default thanks the respondent)"
+msgstr "Inhoud (optioneel, standaard wordt de respondent bedankt)"
+
+msgid "Bold"
+msgstr "Vet"
+
+msgid "Branding"
+msgstr "Huisstijl"
+
+msgid "Brown"
+msgstr "Bruin"
+
+msgid "Bulleted list"
+msgstr "Opsommingslijst"
+
+msgid "Button"
+msgstr "Knop"
+
+msgid "Button text"
+msgstr "Knoptekst"
+
+msgid "Can delete"
+msgstr "Kan verwijderen"
+
+msgid "Can edit"
+msgstr "Kan bewerken"
+
+msgid "Can fill in and view the form"
+msgstr "Kan het formulier invullen en bekijken"
+
+msgid "Can modify questions and settings"
+msgstr "Vragen en instellingen aanpassen"
+
+msgid "Can view"
+msgstr "Kan bekijken"
+
+msgid "Cancel"
+msgstr "Annuleren"
+
+msgid "Category"
+msgstr "Categorie"
+
+msgid "Center"
+msgstr "Midden"
+
+msgid "Change source document"
+msgstr "Brondocument wijzigen"
+
+msgid "Choice"
+msgstr "Keuze"
+
+msgid "Choose folder"
+msgstr "Map kiezen"
+
+msgid "Choose import source"
+msgstr "Kies importbron"
+
+msgid "Choose save location"
+msgstr "Kies opslaglocatie"
+
+msgid "Choose source document"
+msgstr "Kies brondocument"
+
+msgid "Click \"Grant admin consent\" for your organization"
+msgstr ""
+
+msgid "Client ID (Application ID)"
+msgstr "Klant-ID (applicatie-ID)"
+
+msgid "Client secret"
+msgstr "Geheim van de klant"
+
+msgid "Close"
+msgstr "Sluiten"
+
+msgid "Collaboration"
+msgstr "Samenwerking"
+
+msgid "Collect anonymously"
+msgstr "Anoniem verzamelen"
+
+msgid "Collect contact info"
+msgstr "Contactgegevens verzamelen"
+
+msgid "Color"
+msgstr "Kleur"
+
+msgid "Column {n}"
+msgstr "Kolom {n}"
+
+msgid "Columns"
+msgstr "Kolommen"
+
+msgid "Comma-separated list of extensions (.pdf) or MIME types (image/*)"
+msgstr "Door komma's gescheiden lijst van extensies (.pdf) of MIME-types (image/*)"
+
+msgid "Condition active"
+msgstr "Voorwaarde actief"
+
+msgid "Conditional logic / Branching"
+msgstr "Voorwaardelijke logica / Vertakking"
+
+msgid "Conditions"
+msgstr "Voorwaarden"
+
+msgid "Configure Microsoft Azure AD credentials to enable importing forms from Microsoft Forms."
+msgstr "Configureer Microsoft Azure AD referenties om het importeren van formulieren van Microsoft Forms mogelijk te maken."
+
+msgid "Configure which external websites can embed FormVox forms."
+msgstr "Configureer welke externe websites FormVox-formulieren kunnen insluiten."
+
+msgid "Configured"
+msgstr "Geconfigureerd"
+
+msgid "Confirmation: %s"
+msgstr ""
+
+msgid "Connect"
+msgstr "Maak verbinding met"
+
+msgid "Connect Microsoft account"
+msgstr "Verbinding maken met Microsoft-account"
+
+msgid "Connect to Microsoft"
+msgstr "Verbinding maken met Microsoft"
+
+msgid "Connect your Microsoft account to access your forms."
+msgstr "Maak verbinding met je Microsoft-account om toegang te krijgen tot je formulieren."
+
+msgid "Connecting …"
+msgstr "Aansluiten …"
+
+msgid "Consent (single checkbox)"
+msgstr "Toestemming (enkel selectievakje)"
+
+msgid "contains"
+msgstr "bevat"
+
+msgid "Content"
+msgstr "Inhoud"
+
+msgid "Continue"
+msgstr "Doorgaan"
+
+msgid "Control who can edit this form using Nextcloud's native sharing."
+msgstr "Bepaal wie dit formulier kan bewerken via de ingebouwde deelfunctie van Nextcloud."
+
+msgid "Copied!"
+msgstr "Gekopieerd!"
+
+msgid "Copy"
+msgstr "Kopiëren"
+
+msgid "Copy the Application (client) ID and the client secret value below"
+msgstr "Kopieer de applicatie- (client-) ID en de clientgeheime waarde hieronder"
+
+msgid "Copy this code to embed the form in your website, SharePoint, or intranet."
+msgstr "Kopieer deze code om het formulier in te sluiten in je website, SharePoint of intranet."
+
+msgid "Cost"
+msgstr "Kosten"
+
+msgid "Could not reach the licence server, so the FormVox subscription status could not be confirmed."
+msgstr "Kon de licentieserver niet bereiken, dus de FormVox-abonnementsstatus kon niet worden bevestigd."
+
+msgid "Could not reach the licence server, so the subscription status could not be confirmed."
+msgstr "Kon de licentieserver niet bereiken, dus de abonnementsstatus kon niet worden bevestigd."
+
+msgid "Could not reach the telemetry server. Please try again later."
+msgstr "Kan de telemetrieserver niet bereiken. Probeer het later opnieuw."
+
+msgid "Could not resolve the selected file."
+msgstr "Kon het geselecteerde bestand niet vinden."
+
+msgid "Create"
+msgstr "Maken"
+
+msgid "Create a new registration with a name like \"FormVox Import\""
+msgstr ""
+
+msgid "Create a public link first to preview the form."
+msgstr "Maak eerst een openbare link om het formulier te bekijken."
+
+msgid "Create API key"
+msgstr "API-sleutel aanmaken"
+
+msgid "Create API keys to integrate this form with external systems like Power Automate, Zapier, or custom applications."
+msgstr "Maak API-sleutels om dit formulier te integreren met externe systemen zoals Power Automate, Zapier of aangepaste toepassingen."
+
+msgid "Create form"
+msgstr "Formulier maken"
+
+msgid "Create new form"
+msgstr "Nieuw formulier maken"
+
+msgid "Create public link"
+msgstr "Openbare link maken"
+
+msgid "Create response"
+msgstr "Reactie maken"
+
+msgid "Create response link"
+msgstr "Reactielink maken"
+
+msgid "Create webhook"
+msgstr "Webhook maken"
+
+msgid "Create your first form to get started."
+msgstr "Maak je eerste formulier om te beginnen."
+
+msgid "Created"
+msgstr "Gemaakt"
+
+msgid "Creating …"
+msgstr "Aanmaken …"
+
+msgid "Current responses: {current} / {max}"
+msgstr "Huidige reacties: {current} / {max}"
+
+msgid "Custom"
+msgstr "Aangepast"
+
+msgid "Custom (advanced)"
+msgstr "Aangepast (geavanceerd)"
+
+msgid "Custom MIME types or extensions"
+msgstr "Aangepaste MIME-typen of -extensies"
+
+msgid "Customize the appearance of your public forms."
+msgstr "Pas het uiterlijk van je openbare formulieren aan."
+
+msgid "Customize the look and feel of this form. Leave disabled to use the admin defaults."
+msgstr "Pas het uiterlijk van dit formulier aan. Laat uitgeschakeld om de standaardinstellingen te gebruiken."
+
+msgid "Cyan"
+msgstr "Cyaan"
+
+msgid "Dashed"
+msgstr "Gestreept"
+
+msgid "Date"
+msgstr "Datum"
+
+msgid "Date & time"
+msgstr "Datum & tijd"
+
+msgid "Date and time picker"
+msgstr "Datum- en tijdkiezer"
+
+msgid "Date must be on or after {min}"
+msgstr "Datum moet op of na {min} zijn"
+
+msgid "Date must be on or before {max}"
+msgstr "Datum moet op of voor {max} zijn"
+
+msgid "Date picker"
+msgstr "Datumkiezer"
+
+msgid "Default"
+msgstr "Standaard"
+
+msgid "Define rules to skip to a specific page based on answers. If no rule matches, the next page is shown."
+msgstr "Definieer regels om naar een specifieke pagina te gaan op basis van antwoorden. Als geen regel overeenkomt, wordt de volgende pagina getoond."
+
+msgid "Delete"
+msgstr "Verwijderen"
+
+msgid "Delete all responses"
+msgstr "Alle reacties verwijderen"
+
+msgid "Delete form"
+msgstr "Formulier verwijderen"
+
+msgid "Delete response"
+msgstr "Reactie verwijderen"
+
+msgid "Delete response link"
+msgstr "Reactielink verwijderen"
+
+msgid "Delete responses"
+msgstr "Antwoorden verwijderen"
+
+msgid "Delete template"
+msgstr "Sjabloon verwijderen"
+
+msgid "Deleted"
+msgstr "Verwijderd"
+
+msgid "Demo form"
+msgstr "Demoformulier"
+
+msgid "Demo progress (%)"
+msgstr "Demo-voortgang (%)"
+
+msgid "Describe and let AI build it"
+msgstr "Beschrijf en laat AI het bouwen"
+
+msgid "Describe the form you want to create"
+msgstr "Beschrijf het formulier dat je wilt maken"
+
+msgid "Description"
+msgstr "Beschrijving"
+
+msgid "Description (optional)"
+msgstr "Beschrijving (optioneel)"
+
+msgid "Design"
+msgstr "Ontwerp"
+
+msgid "Design your own document layout in LibreOffice or Word, and use placeholders where you want answers to appear. When you export responses as ODT, each response will be filled into your template."
+msgstr "Ontwerp je eigen documentindeling in LibreOffice of Word en gebruik placeholders waar je antwoorden wilt laten verschijnen. Wanneer je antwoorden exporteert als ODT, wordt elk antwoord in je sjabloon ingevuld."
+
+msgid "Digits only"
+msgstr "Alleen cijfers"
+
+msgid "Disable pages"
+msgstr "Pagina's uitschakelen"
+
+msgid "Disconnect"
+msgstr "Ontkoppelen"
+
+msgid "Divider"
+msgstr "Scheidingslijn"
+
+msgid "Do you have any additional comments?"
+msgstr "Heb je nog aanvullende opmerkingen?"
+
+msgid "Documents"
+msgstr "Documenten"
+
+msgid "Documents (PDF, Word, Excel)"
+msgstr "Documenten (PDF, Word, Excel)"
+
+msgid "does not contain"
+msgstr "bevat niet"
+
+msgid "does not equal"
+msgstr "is niet gelijk aan"
+
+msgid "Done"
+msgstr "Klaar"
+
+msgid "Dotted"
+msgstr "Gestippeld"
+
+msgid "Doughnut"
+msgstr "Donut"
+
+msgid "Download all"
+msgstr "Alles downloaden"
+
+msgid "Download QR code"
+msgstr "QR-code downloaden"
+
+msgid "Download template"
+msgstr "Sjabloon downloaden"
+
+msgid "Drag to resize"
+msgstr "Sleep om het formaat te wijzigen"
+
+msgid "Drop files here or click to upload"
+msgstr "Drop bestanden hier of klik om te uploaden"
+
+msgid "Dropdown"
+msgstr "Dropdown"
+
+msgid "Dropdown select for longer option lists"
+msgstr "Dropdown selectie voor langere optielijsten"
+
+msgid "Duplicate"
+msgstr "Dupliceren"
+
+msgid "e.g. .pdf, .docx, image/*"
+msgstr "bijv. .pdf, .docx, afbeelding/*"
+
+msgid "e.g. ^[0-9]{4}[A-Z]{2}$"
+msgstr "bijv. ^[0-9]{4}[A-Z]{2}$"
+
+msgid "e.g. A customer satisfaction survey with 8 questions about service quality, food, and value for money."
+msgstr "bijv. Een klanttevredenheidsonderzoek met 8 vragen over servicekwaliteit, eten en prijs-kwaliteitverhouding."
+
+msgid "e.g. FVOX-XXXX-XXXX-XXXX-XXXX"
+msgstr "bijv. FVOX-XXXX-XXXX-XXXX-XXXX"
+
+msgid "e.g. Not at all"
+msgstr "bijv. Helemaal niet"
+
+msgid "e.g. Please enter a valid value"
+msgstr "voer bijvoorbeeld een geldige waarde in"
+
+msgid "e.g. Very much"
+msgstr "bijv. Heel erg"
+
+msgid "e.g., 12345678-1234-1234-1234-123456789012"
+msgstr "e.g., 12345678-1234-1234-1234-123456789012"
+
+msgid "e.g., Notify on submission"
+msgstr "bijv"
+
+msgid "e.g., Power Automate"
+msgstr "bijv. Power Automate"
+
+msgid "Earliest time"
+msgstr "Vroegste tijd"
+
+msgid "Ease of use"
+msgstr "Gebruiksgemak"
+
+msgid "Easy to use interface"
+msgstr "Gebruiksvriendelijke interface"
+
+msgid "Edit"
+msgstr "Bewerken"
+
+msgid "Edit form"
+msgstr "Formulier bewerken"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "Email address"
+msgstr "E-mailadres"
+
+msgid "Email confirmation to respondent"
+msgstr "E-mailbevestiging naar respondent"
+
+msgid "Embed code"
+msgstr "Code insluiten"
+
+msgid "Embed code copied to clipboard"
+msgstr "Insluitcode gekopieerd naar klembord"
+
+msgid "Embed settings"
+msgstr "Instellingen insluiten"
+
+msgid "Embed settings saved"
+msgstr "Instellingen insluiten opgeslagen"
+
+msgid "Enable AI form generation for all users"
+msgstr "AI-formuliergeneratie voor alle gebruikers inschakelen"
+
+msgid "Enable pages"
+msgstr "Pagina's inschakelen"
+
+msgid "Enter * to allow all domains, or a comma-separated list of domains (e.g., sharepoint.com, intranet.company.nl). Forms can only be embedded on these domains."
+msgstr "Voer * in om alle domeinen toe te staan, of een door komma's gescheiden lijst met domeinen (bijv. sharepoint.com, intranet.bedrijf.nl). Formulieren kunnen alleen op deze domeinen worden ingesloten."
+
+msgid "Enter a title for your form"
+msgstr "Voer een titel in voor je formulier"
+
+msgid "Enter client secret"
+msgstr "Clientgeheim invoeren"
+
+msgid "Enter description (optional)"
+msgstr "Beschrijving invoeren (optioneel)"
+
+msgid "Enter form title"
+msgstr "Titel van formulier invoeren"
+
+msgid "Enter HTML in settings"
+msgstr "Voer HTML in via instellingen"
+
+msgid "Enter new password"
+msgstr "Voer nieuw wachtwoord in"
+
+msgid "Enter page title:"
+msgstr "Voer paginatitel in:"
+
+msgid "Enter text …"
+msgstr "Voer tekst in …"
+
+msgid "Enter value …"
+msgstr "Voer waarde in …"
+
+msgid "Enter your full name"
+msgstr "Vul je volledige naam in"
+
+msgid "Enter your question"
+msgstr "Voer uw vraag in"
+
+msgid "equals"
+msgstr "is gelijk aan"
+
+msgid "Error message"
+msgstr "Foutmelding"
+
+msgid "Events"
+msgstr "Evenementen"
+
+msgid "Examples: ^[A-Z]{2}[0-9]{4}$ (license plate), ^\\d{10}$ (10 digits)"
+msgstr "Voorbeelden: ^[A-Z]{2}[0-9]{4}$ (nummerplaat), ^d{10}$ (10 cijfers)"
+
+msgid "Excel file"
+msgstr "Excel-bestand"
+
+msgid "Excellent"
+msgstr "Uitstekend"
+
+msgid "Expense declaration"
+msgstr "Onkostendeclaratie"
+
+msgid "Expert - I create forms daily"
+msgstr "Expert - Ik maak dagelijks formulieren"
+
+msgid "Export CSV"
+msgstr "Exporteren als CSV"
+
+msgid "Export Excel"
+msgstr "Exporteren naar Excel"
+
+msgid "Export JSON"
+msgstr "Exporteren als JSON"
+
+msgid "Export ODT"
+msgstr "Exporteer ODT"
+
+msgid "Export options"
+msgstr "Exportopties"
+
+msgid "Failed to connect to Microsoft"
+msgstr "Verbinding met Microsoft mislukt"
+
+msgid "Failed to copy"
+msgstr "Kopiëren mislukt"
+
+msgid "Failed to copy embed code"
+msgstr "Insluitcode niet gekopieerd"
+
+msgid "Failed to create API key"
+msgstr "API-sleutel niet aangemaakt"
+
+msgid "Failed to create form"
+msgstr "Aanmaken van formulier mislukt"
+
+msgid "Failed to create response link"
+msgstr "Aanmaken van reactielink mislukt"
+
+msgid "Failed to create webhook"
+msgstr "Webhook niet aangemaakt"
+
+msgid "Failed to delete API key"
+msgstr "API-sleutel niet verwijderd"
+
+msgid "Failed to delete form"
+msgstr "Verwijderen van formulier mislukt"
+
+msgid "Failed to delete response"
+msgstr "Verwijderen van reactie mislukt"
+
+msgid "Failed to delete response link"
+msgstr "Verwijderen van reactielink mislukt"
+
+msgid "Failed to delete responses"
+msgstr "Verwijderen van reacties mislukt"
+
+msgid "Failed to delete template"
+msgstr "Sjabloon verwijderen mislukt"
+
+msgid "Failed to delete webhook"
+msgstr "Webhook niet verwijderd"
+
+msgid "Failed to export ODT"
+msgstr "ODT exporteren mislukt"
+
+msgid "Failed to export ODT from template"
+msgstr "ODT exporteren vanuit sjabloon mislukt"
+
+msgid "Failed to load AI settings"
+msgstr "Kon AI-instellingen niet laden"
+
+msgid "Failed to load forms"
+msgstr "Laden van formulieren mislukt"
+
+msgid "Failed to load responses"
+msgstr "Laden van reacties mislukt"
+
+msgid "Failed to load templates"
+msgstr "Sjablonen laden mislukt"
+
+msgid "Failed to remove subscription key"
+msgstr "Kan abonnementssleutel niet verwijderen"
+
+msgid "Failed to remove template"
+msgstr "Sjabloon verwijderen mislukt"
+
+msgid "Failed to save access restrictions"
+msgstr "Toegangsbeperkingen zijn niet opgeslagen"
+
+msgid "Failed to save AI settings"
+msgstr "Kon AI-instellingen niet opslaan"
+
+msgid "Failed to save embed settings"
+msgstr "Instellingen insluiten niet opgeslagen"
+
+msgid "Failed to save form"
+msgstr "Opslaan van formulier mislukt"
+
+msgid "Failed to save layout"
+msgstr "Opslaan van layout mislukt"
+
+msgid "Failed to save Microsoft Forms settings"
+msgstr "Microsoft Forms-instellingen zijn niet opgeslagen"
+
+msgid "Failed to save notification recipients"
+msgstr "Opslaan van notificatieontvangers mislukt"
+
+msgid "Failed to save settings"
+msgstr "Opslaan van instellingen mislukt"
+
+msgid "Failed to save styles"
+msgstr "Opslaan van stijlen mislukt"
+
+msgid "Failed to save subscription key"
+msgstr "Kan abonnementssleutel niet opslaan"
+
+msgid "Failed to save template"
+msgstr "Sjabloon opslaan mislukt"
+
+msgid "Failed to send report"
+msgstr "Rapport versturen mislukt"
+
+msgid "Failed to submit response"
+msgstr "Verzenden van reactie mislukt"
+
+msgid "Failed to update telemetry settings"
+msgstr "Kan telemetrie-instellingen niet bijwerken"
+
+msgid "Failed to update webhook"
+msgstr "Webhook niet bijgewerkt"
+
+msgid "Failed to upload image"
+msgstr "Uploaden van afbeelding mislukt"
+
+msgid "Failed to upload template"
+msgstr "Sjabloon uploaden mislukt"
+
+msgid "Fair"
+msgstr "Matig"
+
+msgid "Feature set"
+msgstr "Functieset"
+
+msgid "Feedback and opinions"
+msgstr "Feedback en meningen"
+
+msgid "File \"{name}\" is not an allowed file type"
+msgstr "Bestand \"{name}\" is geen toegestaan bestandstype"
+
+msgid "File \"{name}\" is too large. Maximum size is {size} MB"
+msgstr "Bestand \"{name}\" is te groot. Maximale grootte is {size} MB"
+
+msgid "File upload"
+msgstr "Bestand uploaden"
+
+msgid "File-based storage"
+msgstr "Bestandsgebaseerde opslag"
+
+msgid "files uploaded"
+msgstr "geüploade bestanden"
+
+msgid "Flexibility"
+msgstr "Flexibiliteit"
+
+msgid "Footer"
+msgstr "Voettekst"
+
+msgid "Form"
+msgstr ""
+
+msgid "Form content or titles"
+msgstr "Formulierinhoud of titels"
+
+msgid "Form deleted"
+msgstr "Formulier verwijderd"
+
+msgid "Form imported successfully!"
+msgstr "Formulier succesvol geïmporteerd!"
+
+msgid "Form statistics"
+msgstr "Formulierstatistieken"
+
+msgid "Form templates"
+msgstr "Formuliersjablonen"
+
+msgid "Form theme"
+msgstr "Formulierthema"
+
+msgid "Form title"
+msgstr "Formuliertitel"
+
+msgid "Formatting"
+msgstr "Opmaak"
+
+msgid "FormVox"
+msgstr "FormVox"
+
+msgid "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support."
+msgstr "FormVox is gratis en opensource (AGPL-3.0). Alle functies werken zonder abonnement. Als FormVox waardevol is voor je organisatie, ondersteunt een abonnement de actieve ontwikkeling en krijg je gegarandeerde Nextcloud-compatibiliteit en e-mailondersteuning."
+
+msgid "FormVox subscription key was refused: {reason}"
+msgstr "FormVox-abonnementssleutel is geweigerd: {reason}"
+
+msgid "FormVox, Nextcloud, and PHP version numbers"
+msgstr "FormVox, Nextcloud en PHP-versienummers"
+
+msgid "From Microsoft Forms"
+msgstr "Van Microsoft-formulieren"
+
+msgid "Full"
+msgstr "Vol"
+
+msgid "Full admin access"
+msgstr "Volledige beheerderstoegang"
+
+msgid "Full name"
+msgstr "Volledige naam"
+
+msgid "Generate"
+msgstr "Genereren"
+
+msgid "Generate with AI"
+msgstr "Genereren met AI"
+
+msgid "Generating …"
+msgstr "Bezig met genereren …"
+
+msgid "Generation failed"
+msgstr "Genereren mislukt"
+
+msgid "Get all responses"
+msgstr "Krijg alle reacties"
+
+msgid "Get form definition"
+msgstr "Formulierdefinitie ophalen"
+
+msgid "Get JSON schema"
+msgstr "JSON schema ophalen"
+
+msgid "Get notified when responses are submitted. Webhooks send data to your URL in real-time."
+msgstr "Ontvang een melding wanneer reacties worden ingediend. Webhooks verzenden gegevens in realtime naar je URL."
+
+msgid "Get single response"
+msgstr "Enkel antwoord krijgen"
+
+msgid "Global styles"
+msgstr "Algemene stijlen"
+
+msgid "Go back"
+msgstr "Ga terug"
+
+msgid "Go to \"API permissions\" and add the following:"
+msgstr ""
+
+msgid "Go to \"Certificates & secrets\" and create a new client secret"
+msgstr ""
+
+msgid "Go to Azure Portal > Microsoft Entra ID > App registrations"
+msgstr "Ga naar Azure Portal > Microsoft Entra ID > App-registraties"
+
+msgid "Go to page"
+msgstr "Ga naar pagina"
+
+msgid "Good"
+msgstr "Goed"
+
+msgid "greater than"
+msgstr "groter dan"
+
+msgid "Green"
+msgstr "Groen"
+
+msgid "Groups"
+msgstr "Groepen"
+
+msgid "Header"
+msgstr "Koptekst"
+
+msgid "Heading"
+msgstr "Kop"
+
+msgid "Height"
+msgstr "Hoogte"
+
+msgid "Help improve FormVox by sharing anonymous usage statistics."
+msgstr "Help FormVox te verbeteren door anonieme gebruiksstatistieken te delen."
+
+msgid "Hide templates"
+msgstr "Sjablonen verbergen"
+
+msgid "How likely are you to recommend FormVox?"
+msgstr "Hoe waarschijnlijk is het dat je FormVox aanbeveelt?"
+
+msgid "How many forms do you create per month?"
+msgstr "Hoeveel formulieren maak je per maand?"
+
+msgid "How much experience do you have with forms?"
+msgstr "Hoeveel ervaring heb je met formulieren?"
+
+msgid "How would you prefer to be contacted?"
+msgstr "Hoe zou je het liefst gecontacteerd worden?"
+
+msgid "How would you rate your overall experience?"
+msgstr "Hoe zou je je algehele ervaring beoordelen?"
+
+msgid "HTML"
+msgstr "HTML"
+
+msgid "HTML Content"
+msgstr "HTML-inhoud"
+
+msgid "I agree"
+msgstr "Ik ga akkoord"
+
+msgid "If question"
+msgstr "Als vraag"
+
+msgid "Image"
+msgstr "Afbeelding"
+
+msgid "Image description"
+msgstr "Afbeeldingsbeschrijving"
+
+msgid "Image uploaded"
+msgstr "Afbeelding geüpload"
+
+msgid "Images"
+msgstr "Afbeeldingen"
+
+msgid "Images only"
+msgstr "Alleen afbeeldingen"
+
+msgid "Import"
+msgstr "Importeren"
+
+msgid "Import existing responses"
+msgstr "Bestaande reacties importeren"
+
+msgid "Import failed. Please try again."
+msgstr "Importeren mislukt. Probeer het opnieuw."
+
+msgid "Import form"
+msgstr "Importformulier"
+
+msgid "Import form structure and responses"
+msgstr "Formulierstructuur en antwoorden importeren"
+
+msgid "Import options"
+msgstr "Importopties"
+
+msgid "Import responses only (coming soon)"
+msgstr "Alleen reacties importeren (verschijnt binnenkort)"
+
+msgid "Importing …"
+msgstr "Importeren …"
+
+msgid "In a separate database"
+msgstr "In een aparte database"
+
+msgid "In Nextcloud files"
+msgstr "In Nextcloud-bestanden"
+
+msgid "In the cloud"
+msgstr "In de cloud"
+
+msgid "Include your API key in the X-FormVox-API-Key header."
+msgstr "Neem je API-sleutel op in de X-FormVox-API-Key header."
+
+msgid "Individual responses"
+msgstr "Individuele reacties"
+
+msgid "Info block"
+msgstr "Infoblok"
+
+msgid "Install an AI provider app (e.g. Integration OpenAI) to enable form generation."
+msgstr "Installeer een AI-provider-app (bijv. Integration OpenAI) om formuliergeneratie in te schakelen."
+
+msgid "Integration"
+msgstr "Integratie"
+
+msgid "Integrations"
+msgstr "Integraties"
+
+msgid "Intermediate - Some experience"
+msgstr "Gemiddeld - Enige ervaring"
+
+msgid "is currently editing this form"
+msgstr "bewerkt dit formulier momenteel"
+
+msgid "is empty"
+msgstr "is leeg"
+
+msgid "is greater than"
+msgstr "is groter dan"
+
+msgid "is less than"
+msgstr "is kleiner dan"
+
+msgid "is not empty"
+msgstr "is niet leeg"
+
+msgid "is not one of"
+msgstr "is niet een van"
+
+msgid "is one of"
+msgstr "is een van"
+
+msgid "Italic"
+msgstr "Cursief"
+
+msgid "Key name"
+msgstr "Naam"
+
+msgid "Large (64px)"
+msgstr "Groot (64px)"
+
+msgid "Last report sent"
+msgstr "Laatste rapport verzonden"
+
+msgid "Latest time"
+msgstr "Laatste tijd"
+
+msgid "Leave empty for no limit. A live counter is shown to respondents."
+msgstr "Laat leeg voor geen limiet. Respondenten zien een live teller."
+
+msgid "Leave empty for no limit. Respondents cannot submit fewer than the minimum or more than the maximum."
+msgstr "Laat leeg voor geen limiet. Respondenten kunnen niet minder dan het minimum of meer dan het maximum indienen."
+
+msgid "Leave empty to keep existing secret. Enter a new value to update."
+msgstr "Leeg laten om bestaand geheim te houden. Voer een nieuwe waarde in om bij te werken."
+
+msgid "Left"
+msgstr "Links"
+
+msgid "less than"
+msgstr "kleiner dan"
+
+msgid "Let FormVox use the built-in Nextcloud AI (TaskProcessing) to generate forms from a description or uploaded document."
+msgstr "Laat FormVox de ingebouwde Nextcloud AI (TaskProcessing) gebruiken om formulieren te genereren op basis van een beschrijving of geüpload document."
+
+msgid "Letters and numbers"
+msgstr "Letters en cijfers"
+
+msgid "Letters only"
+msgstr "Alleen brieven"
+
+msgid "Level"
+msgstr "Niveau"
+
+msgid "Limit total responses"
+msgstr "Totaal aantal reacties beperken"
+
+msgid "Linear scale (1-10)"
+msgstr "Lineaire schaal (1-10)"
+
+msgid "Link"
+msgstr "Link"
+
+msgid "Link settings"
+msgstr "Linkinstellingen"
+
+msgid "Loading …"
+msgstr "Laden …"
+
+msgid "Loading statistics …"
+msgstr "Statistieken worden geladen …"
+
+msgid "Loading your forms …"
+msgstr "Je formulieren worden geladen …"
+
+msgid "Logo"
+msgstr "Logo"
+
+msgid "Long text"
+msgstr "Lange tekst"
+
+msgid "Manage sharing"
+msgstr "Delen beheren"
+
+msgid "Map"
+msgstr "Kaart"
+
+msgid "Markdown content shown to respondents (no answer required)"
+msgstr "Markdown-inhoud die aan respondenten wordt getoond (geen antwoord vereist)"
+
+msgid "Matrix"
+msgstr "Matrix"
+
+msgid "Matrix/grid question with multiple rows and columns"
+msgstr "Matrix/rastervraag met meerdere rijen en kolommen"
+
+msgid "Max"
+msgstr "Max"
+
+msgid "Max {size} MB"
+msgstr "Max {size} MB"
+
+msgid "Max label"
+msgstr "Max label"
+
+msgid "Maximum {n} files allowed"
+msgstr "Maximaal {n} toegestane bestanden"
+
+msgid "Maximum characters"
+msgstr "Maximumaantal tekens"
+
+msgid "Maximum file size (MB)"
+msgstr "Maximale bestandsgrootte (MB)"
+
+msgid "Maximum number of files"
+msgstr "Maximum aantal bestanden"
+
+msgid "Maximum questions per generated form"
+msgstr "Maximaal aantal vragen per gegenereerd formulier"
+
+msgid "Maximum responses"
+msgstr "Maximale reacties"
+
+msgid "Maximum selections"
+msgstr "Maximumaantal selecties"
+
+msgid "Maximum source document size"
+msgstr "Maximale grootte brondocument"
+
+msgid "Maximum stars"
+msgstr "Maximaal sterren"
+
+msgid "Maximum times this option can be selected — leave empty for unlimited (#104)"
+msgstr "Maximumaantal keren dat deze optie kan worden gekozen — laat leeg voor onbeperkt (#104)"
+
+msgid "Medium (32px)"
+msgstr "Middel (32px)"
+
+msgid "Message when full"
+msgstr "Bericht bij vol"
+
+msgid "Microsoft Forms"
+msgstr "Microsoft formulieren"
+
+msgid "Microsoft Forms import"
+msgstr "Microsoft-formulieren importeren"
+
+msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Settings > FormVox > Integrations."
+msgstr "Microsoft Forms import is niet geconfigureerd. Vraag uw beheerder om dit te configureren bij Instellingen > FormVox > Integraties."
+
+msgid "Microsoft Forms settings saved"
+msgstr "Microsoft Forms instellingen opgeslagen"
+
+msgid "Min"
+msgstr "Min"
+
+msgid "Min label"
+msgstr "Min label"
+
+msgid "Minimum selections"
+msgstr "Minimumaantal selecties"
+
+msgid "Move to \"{section}\""
+msgstr "Verplaats naar \"{section}\""
+
+msgid "Move to {page}"
+msgstr "Ga naar {page}"
+
+msgid "Multi-line text area for longer responses"
+msgstr "Tekstveld met meerdere regels voor langere antwoorden"
+
+msgid "Multiple choice"
+msgstr "Meerkeuze"
+
+msgid "Multiple choice (checkboxes) - select all that apply"
+msgstr "Meerkeuze (selectievakjes) - selecteer alle toepasselijke opties"
+
+msgid "My forms"
+msgstr "Mijn formulieren"
+
+msgid "Never"
+msgstr "Nooit"
+
+msgid "New form"
+msgstr "Nieuw formulier"
+
+msgid "New response to \"{formTitle}\" from {respondentName}"
+msgstr ""
+
+msgid "New response to \"%1$s\" from %2$s"
+msgstr ""
+
+msgid "New response to \\\"{formTitle}\\\" from {respondentName}"
+msgstr ""
+
+msgid "New response to \\\"%1$s\\\" from %2$s"
+msgstr ""
+
+msgid "Next"
+msgstr "Volgende"
+
+msgid "No"
+msgstr "Nee"
+
+msgid "No AI provider configured"
+msgstr "Geen AI-provider geconfigureerd"
+
+msgid "No blocks yet. Add one below."
+msgstr "Nog geen blokken. Voeg er hieronder een toe."
+
+msgid "No color"
+msgstr "Geen kleur"
+
+msgid "No custom templates yet."
+msgstr "Nog geen eigen sjablonen."
+
+msgid "No forms found in your Microsoft Forms account."
+msgstr "Geen formulieren gevonden in uw Microsoft Forms-account."
+
+msgid "No forms found."
+msgstr "Geen formulieren gevonden."
+
+msgid "No forms yet"
+msgstr "Nog geen formulieren"
+
+msgid "No limit"
+msgstr "Geen limiet"
+
+msgid "No link yet. Create one to start collecting responses."
+msgstr "Nog geen link. Maak er een om reacties te verzamelen."
+
+msgid "No maximum"
+msgstr "Geen maximum"
+
+msgid "No minimum"
+msgstr "Geen minimum"
+
+msgid "No previous questions available. Conditions can only reference questions that appear before this one."
+msgstr "Geen eerdere vragen beschikbaar. Voorwaarden kunnen alleen verwijzen naar vragen die voor deze komen."
+
+msgid "No questions on this page. Click \"Add question\" to add one."
+msgstr "Geen vragen op deze pagina. Klik op \"Vraag toevoegen\" om er een toe te voegen."
+
+msgid "No questions yet. Click \"Add question\" to get started."
+msgstr "Nog geen vragen. Klik op \"Vraag toevoegen\" om te beginnen."
+
+msgid "No responses to export"
+msgstr "Geen antwoorden om te exporteren"
+
+msgid "No routing rules yet. Add one to get started."
+msgstr "Nog geen routeringsregels. Voeg er een toe om te beginnen."
+
+msgid "No, thanks"
+msgstr "Nee, bedankt"
+
+msgid "Not answered"
+msgstr "Niet beantwoord"
+
+msgid "not equals"
+msgstr "is niet gelijk aan"
+
+msgid "Not likely"
+msgstr "Niet waarschijnlijk"
+
+msgid "Note: Search for \"Microsoft Forms\" under \"APIs my organization uses\""
+msgstr ""
+
+msgid "Notes"
+msgstr "Opmerkingen"
+
+msgid "Notify on new responses"
+msgstr "Melden bij nieuwe antwoorden"
+
+msgid "Number"
+msgstr "Nummer"
+
+msgid "Numbered list"
+msgstr "Genummerde lijst"
+
+msgid "Numeric input"
+msgstr "Numerieke invoer"
+
+msgid "ODT Template"
+msgstr "ODT-sjabloon"
+
+msgid "ODT template …"
+msgstr "ODT-sjabloon …"
+
+msgid "On external servers"
+msgstr "Op externe servers"
+
+msgid "Only selected users and group members can access this form. They will need to log in."
+msgstr "Alleen geselecteerde gebruikers en groepsleden hebben toegang tot dit formulier. Zij moeten inloggen."
+
+msgid "Open form"
+msgstr "Open formulier"
+
+msgid "Open in new tab"
+msgstr "Openen in nieuw tabblad"
+
+msgid "Open the form to review the AI-generated questions."
+msgstr "Open het formulier om de door AI gegenereerde vragen te bekijken."
+
+msgid "Operator"
+msgstr "Operator"
+
+msgid "Option {n}"
+msgstr "Optie {n}"
+
+msgid "Option A"
+msgstr "Optie A"
+
+msgid "Option B"
+msgstr "Optie B"
+
+msgid "Option C"
+msgstr "Optie C"
+
+msgid "Options"
+msgstr "Opties"
+
+msgid "Options (comma separated)"
+msgstr "Opties (kommagescheiden)"
+
+msgid "Orange"
+msgstr "Oranje"
+
+msgid "Other"
+msgstr "Anders"
+
+msgid "Overview of forms and responses in your FormVox installation."
+msgstr "Overzicht van formulieren en reacties in je FormVox-installatie."
+
+msgid "Page {current} of {total}"
+msgstr "Pagina {current} van {total}"
+
+msgid "Page {n}"
+msgstr "Pagina {n}"
+
+msgid "Page builder"
+msgstr "Paginabouwer"
+
+msgid "Page routing"
+msgstr "Paginaroutering"
+
+msgid "Password"
+msgstr "Wachtwoord"
+
+msgid "Password protect"
+msgstr "Wachtwoordbeveiliging"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "PDF only"
+msgstr "Alleen PDF"
+
+msgid "Per page:"
+msgstr "Per pagina:"
+
+msgid "Performance"
+msgstr "Prestaties"
+
+msgid "Permissions"
+msgstr "Rechten"
+
+msgid "Phone"
+msgstr "Telefoon"
+
+msgid "Phone number"
+msgstr "Telefoonnummer"
+
+msgid "Phone number (international)"
+msgstr "Telefoonnummer (internationaal)"
+
+msgid "Phone number (NL)"
+msgstr "Telefoonnummer (NL)"
+
+msgid "Pick a form you already created — its structure (questions, settings, branding) is copied. Responses and share links are stripped."
+msgstr "Kies een formulier dat je al hebt gemaakt — de structuur (vragen, instellingen, branding) wordt gekopieerd. Reacties en deellinks worden verwijderd."
+
+msgid "Pie"
+msgstr "Taart"
+
+msgid "Please answer all required questions"
+msgstr "Beantwoord alle verplichte vragen"
+
+msgid "Please answer all rows in this question"
+msgstr "Beantwoord alle rijen in deze vraag"
+
+msgid "Please enter a subscription key"
+msgstr "Voer een abonnementssleutel in"
+
+msgid "Please enter a valid Belgian postal code (e.g. 1000)"
+msgstr "Voer een geldige Belgische postcode in (bijv. 1000)"
+
+msgid "Please enter a valid Dutch phone number"
+msgstr "Voer een geldig Nederlands telefoonnummer in"
+
+msgid "Please enter a valid Dutch postal code (e.g. 1234 AB)"
+msgstr "Voer een geldige Nederlandse postcode in (bijv. 1234 AB)"
+
+msgid "Please enter a valid email address"
+msgstr "Voer een geldig e-mailadres in"
+
+msgid "Please enter a valid phone number"
+msgstr "Voer een geldig telefoonnummer in"
+
+msgid "Please enter a valid URL"
+msgstr "Voer een geldige URL in"
+
+msgid "Please enter only digits"
+msgstr "Voer alleen cijfers in"
+
+msgid "Please enter only letters"
+msgstr "Voer alleen letters in"
+
+msgid "Please enter only letters and numbers"
+msgstr "Voer alleen letters en cijfers in"
+
+msgid "Please fill in at least one row"
+msgstr "Vul ten minste één rij in"
+
+msgid "Please wait while we import your form …"
+msgstr "Even geduld terwijl we uw formulier importeren …"
+
+msgid "PNG, JPEG, SVG, GIF or WebP. Max 2MB."
+msgstr "PNG, JPEG, SVG, GIF of WebP. Max 2MB."
+
+msgid "Poll"
+msgstr "Peiling"
+
+msgid "Poor"
+msgstr "Slecht"
+
+msgid "Postal code (BE)"
+msgstr "Postcode (BE)"
+
+msgid "Postal code (NL)"
+msgstr "Postcode (NL)"
+
+msgid "Preview"
+msgstr "Voorbeeld"
+
+msgid "Previous"
+msgstr "Vorige"
+
+msgid "Primary color"
+msgstr "Primaire kleur"
+
+msgid "Privacy / Self-hosted"
+msgstr "Privacy / Zelf gehost"
+
+msgid "Progress bar"
+msgstr "Voortgangsbalk"
+
+msgid "Purple"
+msgstr "Paars"
+
+msgid "Question"
+msgstr "Vraag"
+
+msgid "Questions"
+msgstr "Vragen"
+
+msgid "questions imported"
+msgstr "geïmporteerde vragen"
+
+msgid "Questions?"
+msgstr "Vragen?"
+
+msgid "Quick voting form"
+msgstr "Snel stemformulier"
+
+msgid "Quiz mode (with scores)"
+msgstr "Quizmodus (met scores)"
+
+msgid "Quiz: What file extension does FormVox use?"
+msgstr "Quiz: Welke bestandsextensie gebruikt FormVox?"
+
+msgid "Quiz: Where does FormVox store form data?"
+msgstr "Quiz: Waar slaat FormVox formuliergegevens op?"
+
+msgid "Rate these aspects of FormVox"
+msgstr "Beoordeel deze aspecten van FormVox"
+
+msgid "Rate this demo form"
+msgstr "Beoordeel dit demoformulier"
+
+msgid "Rating"
+msgstr "Beoordeling"
+
+msgid "Read"
+msgstr "Lees"
+
+msgid "Read form"
+msgstr "Lees formulier"
+
+msgid "Read question aloud"
+msgstr "Vraag voorlezen"
+
+msgid "Read responses"
+msgstr "Reacties lezen"
+
+msgid "Recent"
+msgstr "Recent"
+
+msgid "Red"
+msgstr "Rood"
+
+msgid "Registration"
+msgstr "Registratie"
+
+msgid "Regular expression"
+msgstr "Reguliere expressie"
+
+msgid "Remove"
+msgstr "Verwijderen"
+
+msgid "Remove file {name}"
+msgstr "Bestand {name} verwijderen"
+
+msgid "Remove from section"
+msgstr "Verwijder uit sectie"
+
+msgid "Remove row"
+msgstr "Rij verwijderen"
+
+msgid "Remove rule"
+msgstr "Regel verwijderen"
+
+msgid "Remove source"
+msgstr "Bron verwijderen"
+
+msgid "Remove subscription key"
+msgstr "Abonnementssleutel verwijderen"
+
+msgid "Rename"
+msgstr "Hernoemen"
+
+msgid "Replace template"
+msgstr "Sjabloon vervangen"
+
+msgid "Report sent successfully"
+msgstr "Rapport succesvol verstuurd"
+
+msgid "Require login to respond"
+msgstr "Inloggen vereist om te reageren"
+
+msgid "Required"
+msgstr "Verplicht"
+
+msgid "Respondent"
+msgstr "Respondent"
+
+msgid "Respondent name"
+msgstr "Naam respondent"
+
+msgid "Response created"
+msgstr "Reactie gemaakt"
+
+msgid "Response data or answers"
+msgstr "Reactiegegevens of antwoorden"
+
+msgid "Response deleted"
+msgstr "Reactie verwijderd"
+
+msgid "Response link"
+msgstr "Reactielink"
+
+msgid "Response link created"
+msgstr "Reactielink aangemaakt"
+
+msgid "Response link deleted"
+msgstr "Reactielink verwijderd"
+
+msgid "Response settings"
+msgstr "Reactie-instellingen"
+
+msgid "Response updated"
+msgstr "Reactie bijgewerkt"
+
+msgid "responses"
+msgstr "reacties"
+
+msgid "Responses"
+msgstr "Reacties"
+
+msgid "responses imported"
+msgstr "geïmporteerde reacties"
+
+msgid "Responsive width"
+msgstr "Aanpasbare breedte"
+
+msgid "Restrict selectable range (optional)"
+msgstr "Selecteerbaar bereik beperken (optioneel)"
+
+msgid "Restrict to specific users/groups"
+msgstr "Beperken tot specifieke gebruikers/groepen"
+
+msgid "Results"
+msgstr "Resultaten"
+
+msgid "Right"
+msgstr "Rechts"
+
+msgid "Routing"
+msgstr "Routering"
+
+msgid "Row {n}"
+msgstr "Rij {n}"
+
+msgid "Rows"
+msgstr "Rijen"
+
+msgid "Sample question"
+msgstr "Voorbeeldvraag"
+
+msgid "Save"
+msgstr "Opslaan"
+
+msgid "Save & activate"
+msgstr "Opslaan en activeren"
+
+msgid "Save as template"
+msgstr "Opslaan als sjabloon"
+
+msgid "Save location"
+msgstr "Opslaglocatie"
+
+msgid "Save this API key now!"
+msgstr "Sla deze API-sleutel nu op!"
+
+msgid "Save this webhook secret now!"
+msgstr "Sla dit webhookgeheim nu op!"
+
+msgid "Saving …"
+msgstr "Opslaan …"
+
+msgid "Scale"
+msgstr "Schaal"
+
+msgid "Schedule opening"
+msgstr "Opening inplannen"
+
+msgid "Score"
+msgstr "Score"
+
+msgid "Search users and groups"
+msgstr "Gebruikers en groepen zoeken"
+
+msgid "Section"
+msgstr "Sectie"
+
+msgid "Section description (optional)"
+msgstr "Sectiebeschrijving (optioneel)"
+
+msgid "Section title"
+msgstr "Sectietitel"
+
+msgid "Security"
+msgstr "Beveiliging"
+
+msgid "Select"
+msgstr "Selecteer"
+
+msgid "Select …"
+msgstr "Selecteer …"
+
+msgid "Select a form"
+msgstr "Selecteer een formulier"
+
+msgid "Select a form to import"
+msgstr "Selecteer een formulier om te importeren"
+
+msgid "Select a validation type"
+msgstr "Selecteer een validatietype"
+
+msgid "Select how you want to import your form."
+msgstr "Selecteer hoe je je formulier wilt importeren."
+
+msgid "Select page …"
+msgstr "Selecteer pagina …"
+
+msgid "Select question …"
+msgstr "Selecteer vraag …"
+
+msgid "Select value …"
+msgstr "Selecteer waarde …"
+
+msgid "Send report now"
+msgstr "Rapport nu versturen"
+
+msgid "Sending …"
+msgstr "Versturen …"
+
+msgid "Set expiration"
+msgstr "Vervaldatum instellen"
+
+msgid "Set the Redirect URI (Web) to:"
+msgstr "Stel de Redirect URI (Web) in op:"
+
+msgid "Settings"
+msgstr "Instellingen"
+
+msgid "Settings saved"
+msgstr "Instellingen opgeslagen"
+
+msgid "Share"
+msgstr "Delen"
+
+msgid "Share anonymous usage statistics"
+msgstr "Deel anonieme gebruiksstatistieken"
+
+msgid "Share form"
+msgstr "Formulier delen"
+
+msgid "Share this form with others to collect responses."
+msgstr "Deel dit formulier met anderen om reacties te verzamelen."
+
+msgid "Share your thoughts …"
+msgstr "Deel je gedachten …"
+
+msgid "Short text"
+msgstr "Korte tekst"
+
+msgid "Show percentage"
+msgstr "Percentage tonen"
+
+msgid "Show templates"
+msgstr "Sjablonen weergeven"
+
+msgid "Show this question when …"
+msgstr "Toon deze vraag wanneer …"
+
+msgid "Showing {start}-{end} of {total}"
+msgstr "{start}-{end} van {total} weergeven"
+
+msgid "Single choice"
+msgstr "Enkele keuze"
+
+msgid "Single choice (radio buttons)"
+msgstr "Enkele keuze (keuzerondjes)"
+
+msgid "Size"
+msgstr "Grootte"
+
+msgid "Skip to form questions"
+msgstr "Ga naar formuliervragen"
+
+msgid "Small (16px)"
+msgstr "Klein (16px)"
+
+msgid "Snapshot a form as a template"
+msgstr "Een formulier als sjabloon vastleggen"
+
+msgid "Social links"
+msgstr "Sociale links"
+
+msgid "Solid"
+msgstr "Doorgetrokken"
+
+msgid "Someone"
+msgstr "Iemand"
+
+msgid "Source"
+msgstr "Bron"
+
+msgid "Spacer"
+msgstr "Ruimte"
+
+msgid "Speed"
+msgstr "Snelheid"
+
+msgid "Star rating (1-5 stars)"
+msgstr "Sterrenbeoordeling (1-5 sterren)"
+
+msgid "Stars"
+msgstr "Sterren"
+
+msgid "Start from scratch"
+msgstr "Begin vanaf nul"
+
+msgid "Start over"
+msgstr "Opnieuw beginnen"
+
+msgid "Statistics"
+msgstr "Statistieken"
+
+msgid "Stop reading question aloud"
+msgstr "Stop met voorlezen"
+
+msgid "Style"
+msgstr "Stijl"
+
+msgid "Subject (optional, default uses form title)"
+msgstr "Onderwerp (optioneel, standaard wordt de formuliertitel gebruikt)"
+
+msgid "Submission date"
+msgstr "Inzenddatum"
+
+msgid "Submit"
+msgstr "Verzenden"
+
+msgid "Submitting …"
+msgstr "Verzenden …"
+
+msgid "Submitting your response …"
+msgstr "Je antwoord wordt verzonden …"
+
+msgid "Subscription activated!"
+msgstr "Abonnement geactiveerd!"
+
+msgid "Subscription active — thank you for supporting FormVox!"
+msgstr "Abonnement actief — bedankt voor uw steun aan FormVox!"
+
+msgid "Subscription key"
+msgstr "Abonnementssleutel"
+
+msgid "Subscription key is invalid or expired."
+msgstr "Abonnementssleutel is ongeldig of verlopen."
+
+msgid "Subscription key removed."
+msgstr "Abonnementssleutel verwijderd."
+
+msgid "Subscription key saved but validation failed: {reason}"
+msgstr "Abonnementssleutel opgeslagen maar validatie mislukt: {reason}"
+
+msgid "Subscription key was refused: {reason}"
+msgstr "Abonnementssleutel is geweigerd: {reason}"
+
+msgid "Summary"
+msgstr "Samenvatting"
+
+msgid "Support"
+msgstr "Ondersteuning"
+
+msgid "Support FormVox"
+msgstr "Ondersteuning FormVox"
+
+msgid "Survey"
+msgstr "Enquête"
+
+msgid "Table"
+msgstr "Tabel"
+
+msgid "Task type:"
+msgstr "Taaktype:"
+
+msgid "Tell us about yourself"
+msgstr "Vertel iets over jezelf"
+
+msgid "Template"
+msgstr "Sjabloon"
+
+msgid "Template active — exports will use this template."
+msgstr "Sjabloon actief — exports gebruiken dit sjabloon."
+
+msgid "Template deleted"
+msgstr "Sjabloon verwijderd"
+
+msgid "Template removed"
+msgstr "Sjabloon verwijderd"
+
+msgid "Template saved"
+msgstr "Sjabloon opgeslagen"
+
+msgid "Template title (optional)"
+msgstr "Sjabloontitel (optioneel)"
+
+msgid "Template uploaded"
+msgstr "Sjabloon geüpload"
+
+msgid "Templates"
+msgstr ""
+
+msgid "Templates appear in the \"New form\" dialog for every user. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
+msgstr "Sjablonen verschijnen in het dialoogvenster \"Nieuw formulier\" voor elke gebruiker. Leg hier een bestaand formulier vast als sjabloon, of verwijder sjablonen die je niet meer wilt aanbieden."
+
+msgid "Tenant ID"
+msgstr "Huurder ID"
+
+msgid "Text"
+msgstr "Tekst"
+
+msgid "Text color"
+msgstr "Tekstkleur"
+
+msgid "Text field with email validation"
+msgstr "Tekstveld met e-mailvalidatie"
+
+msgid "Thank you for helping improve FormVox!"
+msgstr "Bedankt voor het helpen verbeteren van FormVox!"
+
+msgid "Thank you for trying this demo form!"
+msgstr "Bedankt voor het uitproberen van dit demoformulier!"
+
+msgid "Thank you page"
+msgstr "Bedankpagina"
+
+msgid "Thank you!"
+msgstr "Bedankt!"
+
+msgid "The AI will draft questions based on your description. Generation can take up to 2 minutes."
+msgstr "De AI stelt vragen op basis van jouw beschrijving. Genereren kan tot 2 minuten duren."
+
+msgid "The telemetry server returned an error:"
+msgstr "De telemetrieserver gaf een fout:"
+
+msgid "Theme presets"
+msgstr "Themavoorinstellingen"
+
+msgid "This controls whether the next question is shown"
+msgstr "Dit bepaalt of de volgende vraag wordt getoond"
+
+msgid "This demo form showcases all FormVox features including different question types, conditional logic (branching), quiz mode with scoring, and various input validations."
+msgstr "Dit demoformulier toont alle FormVox-functies inclusief verschillende vraagtypen, voorwaardelijke logica (vertakking), quizmodus met scores en diverse invoervalidaties."
+
+msgid "This field does not match the required format"
+msgstr "Dit veld komt niet overeen met het vereiste formaat"
+
+msgid "This form has reached its response limit"
+msgstr "Dit formulier heeft zijn antwoordlimiet bereikt"
+
+msgid "This form is no longer accepting responses."
+msgstr "Dit formulier accepteert geen reacties meer."
+
+msgid "This form uses the default theme. Enable custom theme above to customize."
+msgstr "Dit formulier gebruikt het standaardthema. Schakel aangepast thema hierboven in om aan te passen."
+
+msgid "This FormVox subscription key has been deactivated. Contact us to reactivate it."
+msgstr "Deze FormVox-abonnementssleutel is gedeactiveerd. Neem contact met ons op om hem opnieuw te activeren."
+
+msgid "This FormVox subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
+msgstr "Deze FormVox-abonnementssleutel is al geregistreerd op een andere Nextcloud-omgeving. Neem contact met ons op als deze server die vervangt."
+
+msgid "This FormVox subscription key is not known to the licence server. Check it for typos."
+msgstr "Deze FormVox-abonnementssleutel is niet bekend bij de licentieserver. Controleer op typefouten."
+
+msgid "This FormVox subscription key is not valid yet."
+msgstr "Deze FormVox-abonnementssleutel is nog niet geldig."
+
+msgid "This is a quiz question with scoring - correct answer: .fvform"
+msgstr "Dit is een quizvraag met punten - correct antwoord: .fvform"
+
+msgid "This is a simple text field"
+msgstr "Dit is een eenvoudig tekstveld"
+
+msgid "This is the only time you will see the full key. Copy it and store it securely."
+msgstr "Dit is de enige keer dat je de volledige sleutel te zien krijgt. Kopieer hem en bewaar hem veilig."
+
+msgid "This question has conditions"
+msgstr "Deze vraag heeft voorwaarden"
+
+msgid "This question is required"
+msgstr "Deze vraag is verplicht"
+
+msgid "This question only appears if you selected \"Expert\" above (conditional logic)"
+msgstr "Deze vraag verschijnt alleen als je hierboven \"Expert\" hebt geselecteerd (voorwaardelijke logica)"
+
+msgid "This question only appears if you selected \"Yes\" above"
+msgstr "Deze vraag verschijnt alleen als je hierboven \"Ja\" hebt geselecteerd"
+
+msgid "This question only appears if you selected \\\"Yes\\\" above"
+msgstr ""
+
+msgid "This question will always be shown."
+msgstr "Deze vraag wordt altijd getoond."
+
+msgid "This subscription key has been deactivated. Contact us to reactivate it."
+msgstr "Deze abonnementssleutel is gedeactiveerd. Neem contact met ons op om hem opnieuw te activeren."
+
+msgid "This subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
+msgstr "Deze abonnementssleutel is al geregistreerd op een andere Nextcloud-omgeving. Neem contact met ons op als deze server die vervangt."
+
+msgid "This subscription key is not known to the licence server. Check it for typos."
+msgstr "Deze abonnementssleutel is niet bekend bij de licentieserver. Controleer op typefouten."
+
+msgid "This subscription key is not valid yet."
+msgstr "Deze abonnementssleutel is nog niet geldig."
+
+msgid "Time"
+msgstr "Tijd"
+
+msgid "Time must be at or after {min}"
+msgstr "Tijd moet op of na {min} zijn"
+
+msgid "Time must be at or before {max}"
+msgstr "Tijd moet op of voor {max} zijn"
+
+msgid "Time picker only"
+msgstr "Alleen tijdkiezer"
+
+msgid "Title"
+msgstr "Titel"
+
+msgid "To enable Microsoft Forms import, you need to register an application in Azure AD."
+msgstr "Om Microsoft Forms import in te schakelen, moet je een applicatie registreren in Azure AD."
+
+msgid "Toggle preview"
+msgstr "Voorbeeld in-/uitschakelen"
+
+msgid "Total form and response counts"
+msgstr "Totaalaantal formulieren en reacties"
+
+msgid "Total forms"
+msgstr "Totaal formulieren"
+
+msgid "Total responses"
+msgstr "Totaal reacties"
+
+msgid "Total user count and active users"
+msgstr "Totaalaantal gebruikers en actieve gebruikers"
+
+msgid "Total users"
+msgstr "Totaal gebruikers"
+
+msgid "Type to search …"
+msgstr "Type om te zoeken …"
+
+msgid "unique answers"
+msgstr "unieke antwoorden"
+
+msgid "Untitled section"
+msgstr "Naamloze sectie"
+
+msgid "Update response"
+msgstr "Reactie bijwerken"
+
+msgid "Updated"
+msgstr "Bijgewerkt"
+
+msgid "Upload"
+msgstr "Uploaden"
+
+msgid "Upload an ODT file with placeholders like {Q1}, {Q2}, etc. These will be replaced with the actual answers when exporting."
+msgstr "Upload een ODT-bestand met placeholders zoals {Q1}, {Q2}, enz. Deze worden bij het exporteren vervangen door de daadwerkelijke antwoorden."
+
+msgid "Upload image"
+msgstr "Afbeelding uploaden"
+
+msgid "Upload logo"
+msgstr "Logo uploaden"
+
+msgid "Upload template"
+msgstr "Sjabloon uploaden"
+
+msgid "Uploading …"
+msgstr "Uploaden …"
+
+msgid "Uploading {name} …"
+msgstr "Uploaden {name} …"
+
+msgid "URL"
+msgstr "URL"
+
+msgid "Use \"common\" for multi-tenant, or your specific tenant ID for single-tenant."
+msgstr ""
+
+msgid "Use custom theme for this form"
+msgstr "Gebruik aangepast thema voor dit formulier"
+
+msgid "Use Nextcloud sharing to control access:"
+msgstr "Gebruik Nextcloud delen om toegang te beheren:"
+
+msgid "Use these endpoints to interact with this form programmatically."
+msgstr "Gebruik deze eindpunten voor programmatische interactie met dit formulier."
+
+msgid "Use this secret to verify webhook signatures. It will not be shown again."
+msgstr "Gebruik dit geheim om webhook-handtekeningen te verifiëren. Het wordt niet meer getoond."
+
+msgid "User names or email addresses"
+msgstr "Gebruikersnamen of e-mailadressen"
+
+msgid "Users"
+msgstr "Gebruikers"
+
+msgid "Validation pattern"
+msgstr "Validatiepatroon"
+
+msgid "Validation type"
+msgstr "Type bevestiging"
+
+msgid "Value"
+msgstr "Waarde"
+
+msgid "Very likely"
+msgstr "Zeer waarschijnlijk"
+
+msgid "Very poor"
+msgstr "Zeer slecht"
+
+msgid "Video call"
+msgstr "Videogesprek"
+
+msgid "View pricing & plans"
+msgstr "Bekijk prijzen en abonnementen"
+
+msgid "View subscription options"
+msgstr "Abonnementsopties bekijken"
+
+msgid "Wait until current generation finishes"
+msgstr "Wacht tot de huidige generatie klaar is"
+
+msgid "Warnings"
+msgstr "Waarschuwingen"
+
+msgid "We collect: form counts, response counts, user counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared."
+msgstr "We verzamelen: aantallen formulieren, reacties en gebruikers, versie-informatie (FormVox, Nextcloud, PHP) en basisserverconfiguratie. Er worden geen persoonlijke gegevens of formulierinhoud gedeeld."
+
+msgid "We saved your progress. You can continue where you left off."
+msgstr "We hebben je voortgang opgeslagen. Je kunt verdergaan waar je gebleven was."
+
+msgid "We will send you a confirmation when you submit this form."
+msgstr "We sturen je een bevestiging wanneer je dit formulier indient."
+
+msgid "Webhook created"
+msgstr "Webhook aangemaakt"
+
+msgid "Webhook deleted"
+msgstr "Webhook verwijderd"
+
+msgid "Webhook name"
+msgstr "Naam webhook"
+
+msgid "Webhook URL"
+msgstr "Webhook URL"
+
+msgid "Webhooks"
+msgstr "Webhooks"
+
+msgid "Website"
+msgstr "Website"
+
+msgid "Website URL"
+msgstr "Website URL"
+
+msgid "Welcome back!"
+msgstr "Welkom terug!"
+
+msgid "What is your email address?"
+msgstr "Wat is je e-mailadres?"
+
+msgid "What is your name?"
+msgstr "Wat is je naam?"
+
+msgid "What is your preferred option?"
+msgstr "Wat is je voorkeursoptie?"
+
+msgid "What is your top priority?"
+msgstr "Wat is je hoogste prioriteit?"
+
+msgid "What time works best for you?"
+msgstr "Welke tijd past jou het beste?"
+
+msgid "What we collect"
+msgstr "Wat we verzamelen"
+
+msgid "What we never collect"
+msgstr "Wat we nooit verzamelen"
+
+msgid "When did you start using Nextcloud?"
+msgstr "Wanneer ben je begonnen met Nextcloud?"
+
+msgid "When would you like a demo call?"
+msgstr "Wanneer zou je een demogesprek willen?"
+
+msgid "Whether your Nextcloud has an Extended Support / Enterprise subscription (a single yes/no, sourced from Nextcloud's public API)"
+msgstr "Of je Nextcloud een Extended Support- / Enterprise-abonnement heeft (een enkele ja/nee, afkomstig van de openbare API van Nextcloud)"
+
+msgid "Which features are most important to you?"
+msgstr "Welke functies zijn het belangrijkst voor jou?"
+
+msgid "Which form tools have you used before?"
+msgstr "Welke formuliertools heb je eerder gebruikt?"
+
+msgid "Width"
+msgstr "Breedte"
+
+msgid "Work together"
+msgstr "Samenwerken"
+
+msgid "Would you like us to contact you?"
+msgstr "Wil je dat we contact met je opnemen?"
+
+msgid "Write"
+msgstr "Schrijf"
+
+msgid "Write a short bio …"
+msgstr "Schrijf een korte biografie …"
+
+msgid "Write responses"
+msgstr "Antwoorden schrijven"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "Yes, please contact me"
+msgstr "Ja, neem contact met mij op"
+
+msgid "you"
+msgstr "jij"
+
+msgid "You are connected to Microsoft. Click Next to select a form to import."
+msgstr "U bent verbonden met Microsoft. Klik op Volgende om een formulier te selecteren om te importeren."
+
+msgid "You can view the form but not make changes right now."
+msgstr "Je kunt het formulier bekijken maar nu geen wijzigingen aanbrengen."
+
+msgid "You do not have permission to create a response link."
+msgstr "U hebt geen toestemming om een reactielink te maken."
+
+msgid "You do not have permission to delete this form"
+msgstr "Je hebt geen toestemming om dit formulier te verwijderen"
+
+msgid "You do not have permission to edit this form"
+msgstr "Je hebt geen toestemming om dit formulier te bewerken"
+
+msgid "You have no forms yet. Create one first."
+msgstr "Je hebt nog geen formulieren. Maak er eerst een aan."
+
+msgid "You have read-only access to this form. Contact the owner to request edit permissions."
+msgstr "Je hebt alleen-lezen toegang tot dit formulier. Neem contact op met de eigenaar om wijzigrechten aan te vragen."
+
+msgid "Your actual server URL"
+msgstr "Je werkelijke server-URL"
+
+msgid "Your email address"
+msgstr "Je e-mailadres"
+
+msgid "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development."
+msgstr "Uw FormVox-installatie heeft de gratis limieten overschreden (25 formulieren of 50 gebruikers). Overweeg een abonnement om de verdere ontwikkeling te ondersteunen."
+
+msgid "Your FormVox subscription expired on {date}. Renew it to keep receiving support."
+msgstr "Uw FormVox-abonnement is verlopen op {date}. Verleng het om ondersteuning te blijven ontvangen."
+
+msgid "Your FormVox subscription has expired. Renew it to keep receiving support."
+msgstr "Uw FormVox-abonnement is verlopen. Verleng het om ondersteuning te blijven ontvangen."
+
+msgid "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support."
+msgstr "Uw FormVox-abonnementssleutel is ongeldig of verlopen. Verleng om ondersteuning te blijven ontvangen."
+
+msgid "Your installation"
+msgstr "Uw installatie"
+
+msgid "Your response has been recorded."
+msgstr "Je reactie is opgeslagen."
+
+msgid "Your score"
+msgstr "Je score"
+
+msgid "Your subscription expired on {date}. Renew it to keep receiving support."
+msgstr "Uw abonnement is verlopen op {date}. Verleng het om ondersteuning te blijven ontvangen."
+
+msgid "Your subscription has expired. Renew it to keep receiving support."
+msgstr "Uw abonnement is verlopen. Verleng het om ondersteuning te blijven ontvangen."
