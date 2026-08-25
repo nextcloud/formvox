@@ -17,6 +17,13 @@ use Psr\Log\LoggerInterface;
  */
 class StatisticsService
 {
+    /**
+     * How the user count is taken, reported alongside it so the licence
+     * server can tell reliable readings from those produced by older
+     * releases (which counted oc_users directly and missed LDAP/SSO users).
+     */
+    public const COUNT_METHOD = 'callForAllUsers';
+
     private IRootFolder $rootFolder;
     private IDBConnection $db;
     private IUserManager $userManager;
@@ -47,6 +54,7 @@ class StatisticsService
             'totalResponses' => $this->getTotalResponseCount(),
             'totalUsers' => $this->getUserCount(),
             'activeUsers30d' => $this->getActiveUserCount(30),
+            'disabledUsers' => $this->getDisabledUserCount(),
         ];
     }
 
@@ -195,7 +203,11 @@ class StatisticsService
     }
 
     /**
-     * Get total user count
+     * Get total user count.
+     *
+     * callForAllUsers covers every backend, so LDAP and SSO users are
+     * included whether or not they have logged in yet — this is the figure a
+     * subscription is priced on ("per named user").
      */
     public function getUserCount(): int
     {
@@ -210,6 +222,32 @@ class StatisticsService
                 'error' => $e->getMessage()
             ]);
             return 1;
+        }
+    }
+
+    /**
+     * Users that exist but are disabled.
+     *
+     * They count towards the named-user total, because disabling is how
+     * Nextcloud offboards someone while keeping their file ownership. Reported
+     * separately so the difference is visible when comparing usage against a
+     * contract, rather than looking like the customer never shrank.
+     */
+    public function getDisabledUserCount(): int
+    {
+        try {
+            $count = 0;
+            $this->userManager->callForAllUsers(function ($user) use (&$count) {
+                if (!$user->isEnabled()) {
+                    $count++;
+                }
+            });
+            return $count;
+        } catch (\Exception $e) {
+            $this->logger->warning('StatisticsService: Failed to count disabled users', [
+                'error' => $e->getMessage()
+            ]);
+            return 0;
         }
     }
 }
