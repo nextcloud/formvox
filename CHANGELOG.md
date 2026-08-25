@@ -16,7 +16,7 @@ All notable changes to FormVox will be documented in this file.
 - **Removed an unused dependency.** `vue-easymde` was declared but never imported — the markdown editor uses `easymde` directly. Dropping it clears two high-severity advisories that reached the app only through that unused package.
 
 ### Internal
-- **Translations moved to the Nextcloud community workflow.** FormVox now ships a POT template and per-language PO files so the app can be translated on Transifex alongside the other Nextcloud apps, instead of the translation files being maintained by hand. Dutch, German, French, Catalan and Ukrainian carry over at 96–97%.
+- **Groundwork for community translations.** The translation files are no longer maintained by hand: FormVox now generates a POT template and per-language PO files, the layout the Nextcloud translation bot expects. A request to add FormVox to the community Transifex project is pending; until it is accepted nothing changes for users, and Dutch, German, French, Catalan and Ukrainian ship as before.
 
 ## [1.4.2] - 2026-08-25
 
