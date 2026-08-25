@@ -218,7 +218,7 @@
       class="time-input"
       :aria-required="question.required || undefined"
       :aria-label="renderedQuestion"
-      @input="$emit('update:value', $event.target.value)"
+      @input="$emit('update:value', $event.target.value); trackBadInput($event)"
     >
 
     <!-- Number -->
@@ -233,6 +233,7 @@
       :aria-describedby="ariaDescribedBy"
       @update:model-value="$emit('update:value', $event); clearValidationError()"
       @blur="validatePattern"
+      @input="trackBadInput"
     />
     <p
       v-if="question.type === 'number' && effectiveError"
@@ -461,9 +462,12 @@
       </button>
     </div>
 
-    <!-- External validation error (from parent) -->
+    <!-- External validation error, for the types that do not render one
+         themselves. text/number/textarea show effectiveError next to their own
+         input; without this exclusion they and this block would both render it,
+         producing the message twice and two elements sharing one id. -->
     <p
-      v-if="validationErrorExternal && !validationError"
+      v-if="validationErrorExternal && !validationError && !rendersOwnError"
       :id="`question-error-${question.id}`"
       class="validation-error"
       role="alert"
@@ -555,7 +559,7 @@ export default {
       default: '',
     },
   },
-  emits: ['update:value', 'update:files', 'speak'],
+  emits: ['update:value', 'update:files', 'speak', 'update:badInput'],
   setup(props, { emit }) {
     // File upload state
     const fileInput = ref(null);
@@ -570,6 +574,26 @@ export default {
     const effectiveError = computed(() =>
       validationError.value || props.validationErrorExternal
     );
+
+    // Types whose own markup already prints effectiveError, so the catch-all
+    // block at the end of the template must stay quiet for them.
+    const OWN_ERROR_TYPES = ['text', 'number', 'textarea'];
+    const rendersOwnError = computed(() => OWN_ERROR_TYPES.includes(props.question.type));
+
+    // A native number/time input that cannot parse what was typed reports an
+    // empty value, so the question looks unanswered while the box visibly
+    // holds text. Saying "this question is required" then contradicts what the
+    // user sees. Remember the browser's own verdict (validity.badInput) so the
+    // parent can say what is really wrong.
+    const hasBadInput = ref(false);
+    const trackBadInput = (event) => {
+      const el = event?.target;
+      const bad = !!el?.validity?.badInput;
+      if (bad !== hasBadInput.value) {
+        hasBadInput.value = bad;
+        emit('update:badInput', bad);
+      }
+    };
 
     // Input ID for label association (not for group types)
     const inputId = computed(() => {
@@ -1092,6 +1116,9 @@ export default {
       formatFileSize,
       // Validation
       validationError,
+      rendersOwnError,
+      hasBadInput,
+      trackBadInput,
       effectiveError,
       validatePattern,
       clearValidationError,

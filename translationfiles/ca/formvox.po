@@ -782,8 +782,17 @@ msgstr "Activa les pàgines"
 msgid "Enter * to allow all domains, or a comma-separated list of domains (e.g., sharepoint.com, intranet.company.nl). Forms can only be embedded on these domains."
 msgstr "Introduïu * per a permetre tots els dominis, o una llista de dominis separats per comes (p. ex., sharepoint.com, intranet.company.nl). Els formularis només es poden incrustar en aquests dominis."
 
+msgid "Enter a number"
+msgstr "Introduïu un número"
+
 msgid "Enter a title for your form"
 msgstr "Introduïu un títol per al formulari"
+
+msgid "Enter a valid date"
+msgstr "Introduïu una data vàlida"
+
+msgid "Enter a valid time"
+msgstr "Introduïu una hora vàlida"
 
 msgid "Enter client secret"
 msgstr "Introduïu el secret de client"
@@ -2146,6 +2155,9 @@ msgstr "Això controla si es mostra la pregunta següent"
 
 msgid "This demo form showcases all FormVox features including different question types, conditional logic (branching), quiz mode with scoring, and various input validations."
 msgstr "Aquest formulari de demostració mostra totes les funcions de FormVox, incloent-hi diferents tipus de preguntes, lògica condicional (ramificació), mode qüestionari amb puntuació i diverses validacions d'entrada."
+
+msgid "This entry is not valid"
+msgstr "Aquesta entrada no és vàlida"
 
 msgid "This field does not match the required format"
 msgstr "Aquest camp no coincideix amb el format requerit"

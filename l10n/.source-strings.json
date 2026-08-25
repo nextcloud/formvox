@@ -1,6 +1,6 @@
 {
-    "count": 816,
-    "sha256": "83df5d17e6400fd996ff3651df2d49e286598c84991a3118ba318258ecc5518b",
+    "count": 820,
+    "sha256": "ddff3bdd248e871451bed289c13a7ca200041268541f2f6f1e43c3a21ddb61fb",
     "strings": [
         "\"{question}\" does not match the required format",
         "(required)",
@@ -253,7 +253,10 @@
         "Enable AI form generation for all users",
         "Enable pages",
         "Enter * to allow all domains, or a comma-separated list of domains (e.g., sharepoint.com, intranet.company.nl). Forms can only be embedded on these domains.",
+        "Enter a number",
         "Enter a title for your form",
+        "Enter a valid date",
+        "Enter a valid time",
         "Enter client secret",
         "Enter description (optional)",
         "Enter form title",
@@ -706,6 +709,7 @@
         "Theme presets",
         "This controls whether the next question is shown",
         "This demo form showcases all FormVox features including different question types, conditional logic (branching), quiz mode with scoring, and various input validations.",
+        "This entry is not valid",
         "This field does not match the required format",
         "This form has reached its response limit",
         "This form is no longer accepting responses.",

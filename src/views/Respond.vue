@@ -101,6 +101,7 @@
                 :tts-supported="ttsIsSupported"
                 :speaking-question-id="speakingQuestionId"
                 :validation-error-external="validationErrors[question.id] || ''"
+                @update:bad-input="setBadInput(question.id, $event)"
                 @update:value="updateAnswer(question.id, $event)"
                 @update:files="updatePendingFiles(question.id, $event)"
                 @speak="handleSpeak"
@@ -123,6 +124,7 @@
               :tts-supported="ttsIsSupported"
               :speaking-question-id="speakingQuestionId"
               :validation-error-external="validationErrors[item.question.id] || ''"
+              @update:bad-input="setBadInput(item.question.id, $event)"
               @update:value="updateAnswer(item.question.id, $event)"
               @update:files="updatePendingFiles(item.question.id, $event)"
               @speak="handleSpeak"
@@ -260,6 +262,26 @@ export default {
     const score = ref(null);
     const currentPageIndex = ref(0);
     const validationErrors = reactive({});
+
+    // Question ids whose native input currently holds text the control cannot
+    // parse. Such an input reports an empty value, so the required check would
+    // otherwise call it unanswered while the box visibly holds something.
+    // A plain object rather than a Set: validateForm() reads this during a
+    // click handler, not in a render-tracked computed, and an object keeps the
+    // lookup obvious.
+    const badInputIds = reactive({});
+    const setBadInput = (questionId, isBad) => {
+      if (isBad) badInputIds[questionId] = true;
+      else delete badInputIds[questionId];
+    };
+
+    // Named per type so the message says what the field expects.
+    const invalidEntryMessage = (type) => {
+      if (type === 'number') return t('Enter a number');
+      if (type === 'time') return t('Enter a valid time');
+      if (type === 'date' || type === 'datetime') return t('Enter a valid date');
+      return t('This entry is not valid');
+    };
     const thankYouRef = ref(null);
 
     // Draft autosave
@@ -780,7 +802,11 @@ export default {
 
           if (isEmpty) {
             if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
-            validationErrors[question.id] = t('This question is required');
+            // Empty because the browser rejected what was typed, not because
+            // nothing was entered — say so rather than "required".
+            validationErrors[question.id] = badInputIds[question.id]
+              ? invalidEntryMessage(question.type)
+              : t('This question is required');
           }
 
           // Matrix: require ALL rows to be answered
@@ -1131,6 +1157,7 @@ export default {
       clearDraft,
       // Accessibility
       validationErrors,
+      setBadInput,
       thankYouRef,
       ttsIsSupported,
       speakingQuestionId,

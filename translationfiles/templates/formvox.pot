@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FormVox 1.4.3\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"POT-Creation-Date: 2026-08-25 15:41+0000\n"
+"POT-Creation-Date: 2026-08-25 15:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -783,7 +783,16 @@ msgstr ""
 msgid "Enter * to allow all domains, or a comma-separated list of domains (e.g., sharepoint.com, intranet.company.nl). Forms can only be embedded on these domains."
 msgstr ""
 
+msgid "Enter a number"
+msgstr ""
+
 msgid "Enter a title for your form"
+msgstr ""
+
+msgid "Enter a valid date"
+msgstr ""
+
+msgid "Enter a valid time"
 msgstr ""
 
 msgid "Enter client secret"
@@ -2146,6 +2155,9 @@ msgid "This controls whether the next question is shown"
 msgstr ""
 
 msgid "This demo form showcases all FormVox features including different question types, conditional logic (branching), quiz mode with scoring, and various input validations."
+msgstr ""
+
+msgid "This entry is not valid"
 msgstr ""
 
 msgid "This field does not match the required format"
