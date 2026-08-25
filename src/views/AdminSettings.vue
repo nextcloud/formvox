@@ -5,7 +5,9 @@
       :type="licenseBanner.type"
       class="license-banner">
       {{ licenseBanner.message }}
-      <NcButton type="tertiary" @click="activeTab = 'support'">
+      <!-- Pointless on the tab it targets: the banner sits above the tabs and
+           stays visible everywhere, so on Support it would do nothing. -->
+      <NcButton v-if="activeTab !== 'support'" type="tertiary" @click="activeTab = 'support'">
         {{ t('formvox', 'View subscription options') }}
       </NcButton>
     </NcNoteCard>
