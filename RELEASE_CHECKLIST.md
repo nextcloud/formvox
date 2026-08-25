@@ -258,13 +258,24 @@ TEMP_DIR=$(mktemp -d) && \
 mkdir -p "$TEMP_DIR/formvox" && \
 cp -r appinfo lib l10n templates css img js "$TEMP_DIR/formvox/" && \
 cp CHANGELOG.md LICENSE README.md "$TEMP_DIR/formvox/" && \
+rm -f "$TEMP_DIR/formvox/l10n/en.json" "$TEMP_DIR/formvox/l10n/en.js" \
+      "$TEMP_DIR/formvox/l10n/".source-*.json "$TEMP_DIR/formvox/l10n/.gitkeep" && \
 cd "$TEMP_DIR" && \
 tar -czf formvox-X.Y.Z.tar.gz formvox && \
 mv formvox-X.Y.Z.tar.gz /path/to/project/ && \
 rm -rf "$TEMP_DIR"
 ```
 
-**Exclude:** src/, node_modules/, docs/, screenshots/, .git/, *.key
+**Exclude:** src/, node_modules/, docs/, screenshots/, translationfiles/, .git/, *.key
+
+> **The `rm -f` line is not optional.** `l10n/en.json` and `en.js` are generated
+> — English is the source in the code, so Nextcloud never loads them — and
+> `.source-count.json` / `.source-strings.json` only feed the prebuild guard.
+> They shipped in 1.4.2 and earlier. `translationfiles/` is the vendor source
+> for translators; Nextcloud loads `l10n/*.js|*.json` only.
+>
+> The translations themselves (`nl`, `de`, `fr`, `ca`, `uk`) **do** ship, and
+> still will once Transifex is live — the bot delivers those same files.
 
 > **Do NOT ship `docs/`.** The App Store tarball has never included it (v1.3.1 and earlier), and it contains `.nl.md` translation sources that should not be published.
 
