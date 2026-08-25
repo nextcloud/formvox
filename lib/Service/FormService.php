@@ -32,11 +32,14 @@ class FormService
     /**
      * How many groups / accounts to consider when looking for an account that
      * can open a form on a shared mount. Each candidate costs a filesystem
-     * setup, so the search is bounded; the ordering puts the likely ones first
-     * and in practice the first candidate succeeds (#90).
+     * setup, so the search is bounded; candidates are ordered deterministically
+     * and the caller stops at the first that can actually write. A groupfolders
+     * ACL can grant write on a path to a single member of an otherwise low-
+     * permission group, so the per-group cap is generous rather than tight —
+     * otherwise the only writable account could sit just outside it (#90).
      */
-    private const ACCESS_CANDIDATE_GROUPS = 10;
-    private const ACCESS_CANDIDATE_USERS_PER_GROUP = 5;
+    private const ACCESS_CANDIDATE_GROUPS = 20;
+    private const ACCESS_CANDIDATE_USERS_PER_GROUP = 50;
 
     private IRootFolder $rootFolder;
     private IUserSession $userSession;
@@ -494,6 +497,7 @@ class FormService
                     // instead. Versions created by this write are removed
                     // below, which is what the raw-storage call used to avoid.
                     $payload = json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                    $expectedBytes = strlen($payload);
                     try {
                         $file->putContent($payload);
                     } catch (\Throwable $e) {
@@ -502,6 +506,25 @@ class FormService
                             . ' [' . $this->describeWriteContext($file, $storage, $internalPath) . ']',
                             0,
                             $e
+                        );
+                    }
+
+                    // Verify the write actually persisted in full. putContent()
+                    // turns a false storage return into an exception, but a
+                    // backend that reports a positive-but-truncated write would
+                    // slip through — so confirm the stored size matches, keeping
+                    // the full #97 short-write guarantee. filesize() reflects the
+                    // size putContent() just wrote (object stores update the
+                    // cache synchronously to the real byte count before returning;
+                    // the encryption wrapper reports the plaintext size, which is
+                    // what we compare against). The `!== false` guard tolerates a
+                    // backend that can't report a size rather than false-failing.
+                    $writtenBytes = $storage->filesize($internalPath);
+                    if ($writtenBytes !== false && $writtenBytes < $expectedBytes) {
+                        throw new \RuntimeException(
+                            'Short write for fileId ' . $file->getId()
+                            . ' (stored ' . var_export($writtenBytes, true) . ' of ' . $expectedBytes . ' bytes)'
+                            . ' [' . $this->describeWriteContext($file, $storage, $internalPath) . ']'
                         );
                     }
 
@@ -914,9 +937,14 @@ class FormService
         $userIds = [];
         foreach ($groups as $groupId) {
             $qb = $this->db->getQueryBuilder();
+            // ORDER BY uid so the members we consider are deterministic across
+            // requests — without it the DB returns an arbitrary subset, and if
+            // the only ACL-writable member falls outside that subset the write
+            // is lost even though a valid writer exists (#90).
             $qb->select('uid')
                 ->from('group_user')
                 ->where($qb->expr()->eq('gid', $qb->createNamedParameter($groupId)))
+                ->orderBy('uid', 'ASC')
                 ->setMaxResults(self::ACCESS_CANDIDATE_USERS_PER_GROUP);
 
             $result = $qb->executeQuery();
@@ -930,13 +958,11 @@ class FormService
     }
 
     /**
-     * Find a user who has a given storage mounted (for external storage)
-     */
-    /**
      * Candidate accounts for opening a file on an external storage mount.
      *
      * As with group folders, several accounts may mount the same storage with
-     * differing rights, so return a list and let the caller confirm.
+     * differing rights, so return a list (deterministically ordered) and let
+     * the caller confirm writability. (#90)
      *
      * @return list<string> user ids
      */
@@ -947,6 +973,7 @@ class FormService
             ->from('mounts')
             ->where($qb->expr()->eq('storage_id', $qb->createNamedParameter($storageNumericId, \PDO::PARAM_INT)))
             ->andWhere($qb->expr()->neq('user_id', $qb->createNamedParameter('')))
+            ->orderBy('user_id', 'ASC')
             ->setMaxResults(self::ACCESS_CANDIDATE_USERS_PER_GROUP);
 
         $result = $qb->executeQuery();
@@ -1479,9 +1506,12 @@ class FormService
      * Creates it if it doesn't exist
      * Uses file ID in the folder name so renaming the form doesn't break uploads
      */
-    public function getUploadsFolder(int $fileId): Folder
+    public function getUploadsFolder(int $fileId, bool $requireWrite = false): Folder
     {
-        $formFile = $this->getFileByIdPublic($fileId, true);
+        // Only writing callers need a write-capable account; a read-only caller
+        // (e.g. downloading an upload) must keep working on shares where the
+        // reachable account can read but not write (#90).
+        $formFile = $this->getFileByIdPublic($fileId, $requireWrite);
         $formFolder = $formFile->getParent();
 
         // Hidden folder with file ID - never changes even if form is renamed
@@ -1494,6 +1524,11 @@ class FormService
             }
             return $uploadsFolder;
         } catch (NotFoundException $e) {
+            // Read-only callers must not try to create the folder — signal
+            // "nothing here" so they can 404 cleanly instead of erroring.
+            if (!$requireWrite) {
+                throw $e;
+            }
             return $formFolder->newFolder($uploadsFolderName);
         }
     }
@@ -1503,9 +1538,11 @@ class FormService
      * Sibling of the .fvform file, so it travels along on rename/move and
      * is reachable from public form rendering as well as the editor.
      */
-    public function getBrandingFolder(int $fileId): Folder
+    public function getBrandingFolder(int $fileId, bool $requireWrite = false): Folder
     {
-        $formFile = $this->getFileByIdPublic($fileId, true);
+        // Read-only by default so public form rendering can still show branding
+        // images on shares where the reachable account cannot write (#90).
+        $formFile = $this->getFileByIdPublic($fileId, $requireWrite);
         $formFolder = $formFile->getParent();
         $brandingFolderName = ".formvox-branding-{$fileId}";
 
@@ -1516,6 +1553,9 @@ class FormService
             }
             return $brandingFolder;
         } catch (NotFoundException $e) {
+            if (!$requireWrite) {
+                throw $e;
+            }
             return $formFolder->newFolder($brandingFolderName);
         }
     }
@@ -1530,7 +1570,7 @@ class FormService
      */
     public function storeUpload(int $fileId, string $responseId, array $uploadedFile): array
     {
-        $uploadsFolder = $this->getUploadsFolder($fileId);
+        $uploadsFolder = $this->getUploadsFolder($fileId, true);
 
         // Create response subfolder
         try {
@@ -1630,7 +1670,7 @@ class FormService
     public function deleteResponseUploads(int $formFileId, string $responseId): void
     {
         try {
-            $uploadsFolder = $this->getUploadsFolder($formFileId);
+            $uploadsFolder = $this->getUploadsFolder($formFileId, true);
             $responseFolder = $uploadsFolder->get($responseId);
             if ($responseFolder instanceof Folder) {
                 $responseFolder->delete();
@@ -1775,9 +1815,11 @@ class FormService
      * Get the templates folder for a form
      * Creates it if it doesn't exist
      */
-    public function getTemplatesFolder(int $fileId): Folder
+    public function getTemplatesFolder(int $fileId, bool $requireWrite = false): Folder
     {
-        $formFile = $this->getFileByIdPublic($fileId, true);
+        // Read-only by default so ODT export can find a template on shares
+        // where the reachable account cannot write (#90).
+        $formFile = $this->getFileByIdPublic($fileId, $requireWrite);
         $formFolder = $formFile->getParent();
         $templatesFolderName = ".formvox-templates-{$fileId}";
 
@@ -1788,6 +1830,9 @@ class FormService
             }
             return $templatesFolder;
         } catch (NotFoundException $e) {
+            if (!$requireWrite) {
+                throw $e;
+            }
             return $formFolder->newFolder($templatesFolderName);
         }
     }
@@ -1797,7 +1842,7 @@ class FormService
      */
     public function storeOdtTemplate(int $fileId, array $uploadedFile): void
     {
-        $folder = $this->getTemplatesFolder($fileId);
+        $folder = $this->getTemplatesFolder($fileId, true);
 
         // Remove existing template if present
         try {
@@ -1814,9 +1859,9 @@ class FormService
     /**
      * Get the ODT template file for a form
      */
-    public function getOdtTemplate(int $fileId): File
+    public function getOdtTemplate(int $fileId, bool $requireWrite = false): File
     {
-        $folder = $this->getTemplatesFolder($fileId);
+        $folder = $this->getTemplatesFolder($fileId, $requireWrite);
         $file = $folder->get('template.odt');
         if (!($file instanceof File)) {
             throw new NotFoundException('Template not found');
@@ -1843,7 +1888,8 @@ class FormService
     public function deleteOdtTemplate(int $fileId): void
     {
         try {
-            $file = $this->getOdtTemplate($fileId);
+            // Resolve through a write-capable account so the delete succeeds.
+            $file = $this->getOdtTemplate($fileId, true);
             $file->delete();
         } catch (NotFoundException $e) {
             // No template to delete

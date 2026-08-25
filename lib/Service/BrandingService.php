@@ -207,7 +207,7 @@ class BrandingService
      */
     public function saveFormBlockImage(int $fileId, string $blockId, string $tmpPath, string $mimeType): string
     {
-        $folder = $this->formService->getBrandingFolder($fileId);
+        $folder = $this->formService->getBrandingFolder($fileId, true);
         $extension = $this->getExtensionFromMimeType($mimeType);
         $filename = 'block_' . $blockId . '.' . $extension;
 
@@ -249,7 +249,7 @@ class BrandingService
     public function deleteFormBlockImage(int $fileId, string $blockId): void
     {
         try {
-            $folder = $this->formService->getBrandingFolder($fileId);
+            $folder = $this->formService->getBrandingFolder($fileId, true);
             foreach ($folder->getDirectoryListing() as $node) {
                 if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
                     $node->delete();
