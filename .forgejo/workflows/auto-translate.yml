@@ -1,4 +1,4 @@
-# Gitea Actions: Auto-translate FormVox l10n strings
+# Forgejo Actions: Auto-translate FormVox l10n strings
 # Triggers when Vue/JS files change, extracts new strings and translates with DeepL
 
 name: Auto Translate
@@ -20,7 +20,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITEA_TOKEN }}
+          # Forgejo vult dit secret zelf per run; er hoeft niets
+          # ingesteld te worden. Het oude losse GITEA_TOKEN bestaat niet.
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,8 +58,8 @@ jobs:
       - name: Commit translations
         if: steps.changes.outputs.has_changes == 'true'
         run: |
-          git config user.email "actions@gitea.local"
-          git config user.name "Gitea Auto-Translate"
+          git config user.email "actions@voxcloud.nl"
+          git config user.name "Auto-Translate"
           git add l10n/
           git commit -m "chore(l10n): auto-translate new strings
 

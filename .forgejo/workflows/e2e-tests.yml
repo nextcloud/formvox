@@ -1,5 +1,16 @@
-# Gitea Actions: FormVox E2E Tests with Cypress
-# Runs against a test Nextcloud instance
+# FormVox E2E Tests with Cypress -- UITGEZET op 23-08-2026.
+#
+# Deze workflow kan niet slagen: er is geen Cypress in dit repo. Geen
+# cypress.config.*, geen cypress/-map, geen cypress in package.json. De job
+# doet `npm init -y && npm install cypress` en draait daarna `cypress run`
+# tegen nul testbestanden. Beide runs op Forgejo faalden hierop, en op Gitea
+# gebeurde hetzelfde.
+#
+# Daarom staan NC_URL / NC_USER / NC_PASSWORD ook bewust NIET in Forgejo:
+# secrets overzetten voor een workflow die geen tests heeft is zinloos.
+#
+# Weer aanzetten zodra er echte Cypress-tests zijn: haal onderstaande
+# `if: false` weg en zet de drie secrets op voxcloud-apps/formvox.
 
 name: E2E Tests
 
@@ -12,6 +23,8 @@ on:
 
 jobs:
   cypress:
+    # Zie de kopregels: er zijn geen tests om te draaien.
+    if: false
     runs-on: ubuntu-latest
     container:
       image: cypress/browsers:node-20.18.0-chrome-130.0.6723.69-1-ff-131.0.3-edge-130.0.2849.52-1

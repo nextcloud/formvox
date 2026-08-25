@@ -7,10 +7,6 @@
         "* (all domains)": "* (alle domeinen)",
         "+ Add condition": "+ Voorwaarde toevoegen",
         "/ (root folder)": "/ (hoofdmap)",
-        "1000+ users": "1000+ gebruikers",
-        "1–50 users": "1–50 gebruikers",
-        "251–1000 users": "251–1000 gebruikers",
-        "51–250 users": "51–250 gebruikers",
         "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development.": "Een abonnement omvat: gegarandeerde Nextcloud-compatibiliteit, e-mailondersteuning, prioriteit bij bugfixes en actieve ontwikkeling.",
         "A unique hash of your instance URL (privacy-friendly identifier)": "Een unieke hash van je instance-URL (privacy-vriendelijke identificatie)",
         "AI Form Generation": "AI-formuliergeneratie",
@@ -160,7 +156,6 @@
         "Contact email": "Contacte-mail",
         "Contact information saved.": "Contactgegevens opgeslagen.",
         "Contact the form owner if you believe this is an error.": "Neem contact op met de eigenaar van het formulier als je denkt dat dit een fout is.",
-        "Contact us": "Neem contact op",
         "Content": "Inhoud",
         "Continue": "Doorgaan",
         "Control who can do what with this form.": "Bepaal wie wat kan doen met dit formulier.",
@@ -569,7 +564,6 @@
         "Postal code (NL)": "Postcode (NL)",
         "Preview": "Voorbeeld",
         "Previous": "Vorige",
-        "Pricing": "Prijzen",
         "Primary color": "Primaire kleur",
         "Priority bug fixes": "Prioritaire bugfixes",
         "Privacy / Self-hosted": "Privacy / Zelf gehost",
@@ -799,7 +793,6 @@
         "Video call": "Videogesprek",
         "View Results": "Resultaten bekijken",
         "View pricing & plans": "Bekijk prijzen en abonnementen",
-        "View pricing & subscribe": "Bekijk prijzen en abonneer",
         "View results": "Resultaten bekijken",
         "View subscription options": "Abonnementsopties bekijken",
         "Viewer": "Kijker",
@@ -941,10 +934,7 @@
         "{n} / {max} characters": "{n} / {max} tekens",
         "{n} left": "Nog {n}",
         "{n} of max {max} selected": "{n} van max {max} geselecteerd",
-        "{n} stars": "{n} sterren",
-        "€139/year": "€139/jaar",
-        "€19/year": "€19/jaar",
-        "€59/year": "€59/jaar"
+        "{n} stars": "{n} sterren"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

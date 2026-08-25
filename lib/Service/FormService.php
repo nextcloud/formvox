@@ -29,6 +29,18 @@ class FormService
      */
     private const LOCK_TTL_SECONDS = 60;
 
+    /**
+     * How many groups / accounts to consider when looking for an account that
+     * can open a form on a shared mount. Each candidate costs a filesystem
+     * setup, so the search is bounded; candidates are ordered deterministically
+     * and the caller stops at the first that can actually write. A groupfolders
+     * ACL can grant write on a path to a single member of an otherwise low-
+     * permission group, so the per-group cap is generous rather than tight —
+     * otherwise the only writable account could sit just outside it (#90).
+     */
+    private const ACCESS_CANDIDATE_GROUPS = 20;
+    private const ACCESS_CANDIDATE_USERS_PER_GROUP = 50;
+
     private IRootFolder $rootFolder;
     private IUserSession $userSession;
     private IndexService $indexService;
@@ -475,23 +487,46 @@ class FormService
                     $result = $mutator($form);
                     $form['modified_at'] = date('c');
 
-                    // Write directly to storage (bypasses versioning).
-                    // Check the return value — some storage backends (object
-                    // store, AIO Docker volume) silently return false on
-                    // failure instead of throwing, which would otherwise
-                    // leave the response lost while submit() still reports
-                    // success and fires the owner notification (#97).
+                    // Write through the node API rather than the raw storage.
+                    // Several storage wrappers (the group-folder permission
+                    // mask, the groupfolders ACL wrapper, some object stores)
+                    // return false from file_put_contents() instead of
+                    // throwing, so a refused write looked like success and the
+                    // response was lost while the respondent saw "Thank you!"
+                    // (#90, #97, #101). putContent() raises a typed exception
+                    // instead. Versions created by this write are removed
+                    // below, which is what the raw-storage call used to avoid.
                     $payload = json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                    $written = $storage->file_put_contents($internalPath, $payload);
-                    if ($written === false || $written < strlen($payload)) {
+                    $expectedBytes = strlen($payload);
+                    try {
+                        $file->putContent($payload);
+                    } catch (\Throwable $e) {
                         throw new \RuntimeException(
-                            'Storage write returned false or short write for fileId ' . $file->getId()
-                            . ' (wrote ' . var_export($written, true) . ' of ' . strlen($payload) . ' bytes)'
+                            'Could not write form file (fileId ' . $file->getId() . '): ' . $e->getMessage()
+                            . ' [' . $this->describeWriteContext($file, $storage, $internalPath) . ']',
+                            0,
+                            $e
                         );
                     }
 
-                    // Touch the file to update mtime in cache
-                    $storage->touch($internalPath);
+                    // Verify the write actually persisted in full. putContent()
+                    // turns a false storage return into an exception, but a
+                    // backend that reports a positive-but-truncated write would
+                    // slip through — so confirm the stored size matches, keeping
+                    // the full #97 short-write guarantee. filesize() reflects the
+                    // size putContent() just wrote (object stores update the
+                    // cache synchronously to the real byte count before returning;
+                    // the encryption wrapper reports the plaintext size, which is
+                    // what we compare against). The `!== false` guard tolerates a
+                    // backend that can't report a size rather than false-failing.
+                    $writtenBytes = $storage->filesize($internalPath);
+                    if ($writtenBytes !== false && $writtenBytes < $expectedBytes) {
+                        throw new \RuntimeException(
+                            'Short write for fileId ' . $file->getId()
+                            . ' (stored ' . var_export($writtenBytes, true) . ' of ' . $expectedBytes . ' bytes)'
+                            . ' [' . $this->describeWriteContext($file, $storage, $internalPath) . ']'
+                        );
+                    }
 
                     // Delete any versions created during this write
                     $this->deleteVersionsForFile($file);
@@ -572,6 +607,55 @@ class FormService
         } catch (\Exception $e) {
             // Log but don't throw - lock will expire anyway
         }
+    }
+
+    /**
+     * Describe the storage context of a failed response write (#90, #101).
+     *
+     * Both the group-folder PermissionsMask (built from the group's
+     * permissions column) and the innermost ACLStorageWrapper return false
+     * from file_put_contents() instead of throwing, so a denied write is
+     * indistinguishable from a full disk by the return value alone. This
+     * records which layer refused: an unwritable node points at the mask or
+     * the ACL, a writable one at the backend itself.
+     *
+     * Diagnostics only — must never throw, or it would mask the real error.
+     */
+    private function describeWriteContext(File $file, $storage, string $internalPath): string
+    {
+        $parts = [];
+
+        try {
+            $parts[] = 'storage=' . get_class($storage);
+        } catch (\Throwable $e) {
+            $parts[] = 'storage=?';
+        }
+
+        try {
+            $parts[] = 'updatable=' . var_export($file->isUpdateable(), true);
+        } catch (\Throwable $e) {
+            $parts[] = 'updatable=?';
+        }
+
+        try {
+            $parts[] = 'storagePerms=' . var_export($storage->getPermissions($internalPath), true);
+        } catch (\Throwable $e) {
+            $parts[] = 'storagePerms=?';
+        }
+
+        try {
+            $parts[] = 'freeSpace=' . var_export($storage->free_space($internalPath), true);
+        } catch (\Throwable $e) {
+            $parts[] = 'freeSpace=?';
+        }
+
+        try {
+            $parts[] = 'user=' . ($this->userSession->getUser()?->getUID() ?? 'anonymous');
+        } catch (\Throwable $e) {
+            $parts[] = 'user=?';
+        }
+
+        return implode(' ', $parts);
     }
 
     /**
@@ -693,8 +777,22 @@ class FormService
      * Get file by ID without user context (for public/system access)
      * Uses database lookup to find the owner and then accesses via their folder
      * Supports personal folders, group folders, and external storage
+     *
+     * A public submission has no session of its own, so the file has to be
+     * opened through *some* account that can see it. For shared mounts (group/
+     * team folders, external storage) several accounts qualify, and they do not
+     * all have the same rights: a read-only member, or one blocked by a
+     * groupfolders ACL rule, yields a File whose writes are silently refused —
+     * both the group-folder PermissionsMask and the ACLStorageWrapper return
+     * false from file_put_contents() rather than throwing. That lost responses
+     * while the respondent saw "Thank you!" (#90, #101).
+     *
+     * Callers that intend to write must therefore pass $requireWrite, which
+     * skips candidates that cannot update the file instead of picking the first
+     * one that can merely see it. Read-only callers leave it false so that
+     * viewing a form keeps working even where nobody can write.
      */
-    public function getFileByIdPublic(int $fileId): File
+    public function getFileByIdPublic(int $fileId, bool $requireWrite = false): File
     {
         // Look up the file in the database to find the storage
         $qb = $this->db->getQueryBuilder();
@@ -714,15 +812,15 @@ class FormService
         $storageId = $row['id'];
 
         // Case 1: Personal folder (home::username)
+        // Exactly one account owns the mount, so there is nothing to choose.
         if (str_starts_with($storageId, 'home::')) {
             $userId = substr($storageId, 6);
-            $userFolder = $this->rootFolder->getUserFolder($userId);
-            $nodes = $userFolder->getById($fileId);
-
-            if (!empty($nodes) && $nodes[0] instanceof File) {
-                return $nodes[0];
+            $file = $this->resolveFileAsUser($userId, $fileId, $requireWrite);
+            if ($file !== null) {
+                return $file;
             }
-            throw new NotFoundException('Form not found');
+
+            throw $this->cannotAccessException($fileId, $requireWrite);
         }
 
         // Case 2: Group folder / Team folder
@@ -734,43 +832,100 @@ class FormService
         ) {
             $groupFolderId = (int)$matches[1];
 
-            $userId = $this->findUserWithGroupFolderAccess($groupFolderId);
-            if ($userId !== null) {
-                $userFolder = $this->rootFolder->getUserFolder($userId);
-                $nodes = $userFolder->getById($fileId);
-
-                if (!empty($nodes) && $nodes[0] instanceof File) {
-                    return $nodes[0];
+            foreach ($this->findUsersWithGroupFolderAccess($groupFolderId) as $userId) {
+                $file = $this->resolveFileAsUser($userId, $fileId, $requireWrite);
+                if ($file !== null) {
+                    return $file;
                 }
             }
-            throw new NotFoundException('Form not found');
+
+            throw $this->cannotAccessException($fileId, $requireWrite);
         }
 
         // Case 3: External storage (SMB, SFTP, S3, local mounts, etc.)
-        $userId = $this->findUserWithStorage((int)$row['numeric_id']);
-        if ($userId !== null) {
-            $userFolder = $this->rootFolder->getUserFolder($userId);
-            $nodes = $userFolder->getById($fileId);
-
-            if (!empty($nodes) && $nodes[0] instanceof File) {
-                return $nodes[0];
+        foreach ($this->findUsersWithStorage((int)$row['numeric_id']) as $userId) {
+            $file = $this->resolveFileAsUser($userId, $fileId, $requireWrite);
+            if ($file !== null) {
+                return $file;
             }
         }
 
-        throw new NotFoundException('Form not found');
+        throw $this->cannotAccessException($fileId, $requireWrite);
     }
 
     /**
-     * Find a user who has access to a group folder
+     * Open a file through one account's view of the filesystem.
+     *
+     * Returns null when that account cannot see the file at all, or — when
+     * $requireWrite is set — when it can see but not update it. Checking
+     * isUpdateable() here covers both refusing layers at once: the group
+     * permission mask and the per-path ACL.
      */
-    private function findUserWithGroupFolderAccess(int $groupFolderId): ?string
+    private function resolveFileAsUser(string $userId, int $fileId, bool $requireWrite): ?File
     {
-        // Get groups that have access to this group folder
+        try {
+            $userFolder = $this->rootFolder->getUserFolder($userId);
+        } catch (\Throwable $e) {
+            // Account disabled or otherwise unusable — try the next candidate.
+            return null;
+        }
+
+        $nodes = $userFolder->getById($fileId);
+        if (empty($nodes) || !($nodes[0] instanceof File)) {
+            return null;
+        }
+
+        $file = $nodes[0];
+        if ($requireWrite && !$file->isUpdateable()) {
+            return null;
+        }
+
+        return $file;
+    }
+
+    /**
+     * Build the failure for a form nobody could open.
+     *
+     * Distinguishes "no such form" from "found it, but no account may write to
+     * it", so a misconfigured share surfaces as a real error instead of a
+     * silently dropped response.
+     */
+    private function cannotAccessException(int $fileId, bool $requireWrite): \Exception
+    {
+        if ($requireWrite) {
+            return new \RuntimeException(
+                'No account with write access to the form file (fileId ' . $fileId . ') could be found. '
+                . 'If the form is in a team or group folder, check that the folder grants write permission '
+                . 'and that no advanced-permission rule blocks writing to it.'
+            );
+        }
+
+        return new NotFoundException('Form not found');
+    }
+
+    /**
+     * Candidate accounts for opening a file in a group/team folder.
+     *
+     * Groups whose membership grants write are listed first, so a writable
+     * account is normally found on the first try. The permission column is
+     * only a hint though — a groupfolders ACL rule can still deny writing to
+     * this particular path — so the caller confirms with isUpdateable() and
+     * falls through to the next candidate. Read-only groups stay in the list
+     * because read-only callers must keep working (#90).
+     *
+     * @return list<string> user ids, best candidates first
+     */
+    private function findUsersWithGroupFolderAccess(int $groupFolderId): array
+    {
+        // Get groups that have access to this group folder, most-permissive
+        // first. Members of several groups get their permissions OR'd together
+        // by groupfolders, so a write-capable group is the better bet.
         $qb = $this->db->getQueryBuilder();
-        $qb->select('group_id')
+        $qb->select('group_id', 'permissions')
             ->from('group_folders_groups')
             ->where($qb->expr()->eq('folder_id', $qb->createNamedParameter($groupFolderId, \PDO::PARAM_INT)))
-            ->setMaxResults(10);
+            ->orderBy('permissions', 'DESC')
+            ->setMaxResults(self::ACCESS_CANDIDATE_GROUPS);
 
         $result = $qb->executeQuery();
         $groups = [];
@@ -779,47 +934,56 @@ class FormService
         }
         $result->closeCursor();
 
-        if (empty($groups)) {
-            return null;
-        }
-
-        // Find a user in one of these groups
+        $userIds = [];
         foreach ($groups as $groupId) {
             $qb = $this->db->getQueryBuilder();
+            // ORDER BY uid so the members we consider are deterministic across
+            // requests — without it the DB returns an arbitrary subset, and if
+            // the only ACL-writable member falls outside that subset the write
+            // is lost even though a valid writer exists (#90).
             $qb->select('uid')
                 ->from('group_user')
                 ->where($qb->expr()->eq('gid', $qb->createNamedParameter($groupId)))
-                ->setMaxResults(1);
+                ->orderBy('uid', 'ASC')
+                ->setMaxResults(self::ACCESS_CANDIDATE_USERS_PER_GROUP);
 
             $result = $qb->executeQuery();
-            $row = $result->fetch();
-            $result->closeCursor();
-
-            if ($row !== false) {
-                return $row['uid'];
+            while ($row = $result->fetch()) {
+                $userIds[] = $row['uid'];
             }
+            $result->closeCursor();
         }
 
-        return null;
+        return array_values(array_unique($userIds));
     }
 
     /**
-     * Find a user who has a given storage mounted (for external storage)
+     * Candidate accounts for opening a file on an external storage mount.
+     *
+     * As with group folders, several accounts may mount the same storage with
+     * differing rights, so return a list (deterministically ordered) and let
+     * the caller confirm writability. (#90)
+     *
+     * @return list<string> user ids
      */
-    private function findUserWithStorage(int $storageNumericId): ?string
+    private function findUsersWithStorage(int $storageNumericId): array
     {
         $qb = $this->db->getQueryBuilder();
         $qb->select('user_id')
             ->from('mounts')
             ->where($qb->expr()->eq('storage_id', $qb->createNamedParameter($storageNumericId, \PDO::PARAM_INT)))
             ->andWhere($qb->expr()->neq('user_id', $qb->createNamedParameter('')))
-            ->setMaxResults(1);
+            ->orderBy('user_id', 'ASC')
+            ->setMaxResults(self::ACCESS_CANDIDATE_USERS_PER_GROUP);
 
         $result = $qb->executeQuery();
-        $row = $result->fetch();
+        $userIds = [];
+        while ($row = $result->fetch()) {
+            $userIds[] = $row['user_id'];
+        }
         $result->closeCursor();
 
-        return $row !== false ? $row['user_id'] : null;
+        return array_values(array_unique($userIds));
     }
 
     /**
@@ -844,7 +1008,7 @@ class FormService
      */
     public function appendResponsePublic(int $fileId, array $response, ?callable $guard = null): array
     {
-        $file = $this->getFileByIdPublic($fileId);
+        $file = $this->getFileByIdPublic($fileId, true);
 
         return $this->appendResponseWithLock($file, $response, $guard);
     }
@@ -862,7 +1026,7 @@ class FormService
      */
     public function savePublic(int $fileId, array $form): void
     {
-        $file = $this->getFileByIdPublic($fileId);
+        $file = $this->getFileByIdPublic($fileId, true);
         $newResponses = $form['responses'] ?? [];
 
         $this->mutateFormFileWithLock($file, function (array &$current) use ($newResponses) {
@@ -1342,9 +1506,12 @@ class FormService
      * Creates it if it doesn't exist
      * Uses file ID in the folder name so renaming the form doesn't break uploads
      */
-    public function getUploadsFolder(int $fileId): Folder
+    public function getUploadsFolder(int $fileId, bool $requireWrite = false): Folder
     {
-        $formFile = $this->getFileByIdPublic($fileId);
+        // Only writing callers need a write-capable account; a read-only caller
+        // (e.g. downloading an upload) must keep working on shares where the
+        // reachable account can read but not write (#90).
+        $formFile = $this->getFileByIdPublic($fileId, $requireWrite);
         $formFolder = $formFile->getParent();
 
         // Hidden folder with file ID - never changes even if form is renamed
@@ -1357,6 +1524,11 @@ class FormService
             }
             return $uploadsFolder;
         } catch (NotFoundException $e) {
+            // Read-only callers must not try to create the folder — signal
+            // "nothing here" so they can 404 cleanly instead of erroring.
+            if (!$requireWrite) {
+                throw $e;
+            }
             return $formFolder->newFolder($uploadsFolderName);
         }
     }
@@ -1366,9 +1538,11 @@ class FormService
      * Sibling of the .fvform file, so it travels along on rename/move and
      * is reachable from public form rendering as well as the editor.
      */
-    public function getBrandingFolder(int $fileId): Folder
+    public function getBrandingFolder(int $fileId, bool $requireWrite = false): Folder
     {
-        $formFile = $this->getFileByIdPublic($fileId);
+        // Read-only by default so public form rendering can still show branding
+        // images on shares where the reachable account cannot write (#90).
+        $formFile = $this->getFileByIdPublic($fileId, $requireWrite);
         $formFolder = $formFile->getParent();
         $brandingFolderName = ".formvox-branding-{$fileId}";
 
@@ -1379,6 +1553,9 @@ class FormService
             }
             return $brandingFolder;
         } catch (NotFoundException $e) {
+            if (!$requireWrite) {
+                throw $e;
+            }
             return $formFolder->newFolder($brandingFolderName);
         }
     }
@@ -1393,7 +1570,7 @@ class FormService
      */
     public function storeUpload(int $fileId, string $responseId, array $uploadedFile): array
     {
-        $uploadsFolder = $this->getUploadsFolder($fileId);
+        $uploadsFolder = $this->getUploadsFolder($fileId, true);
 
         // Create response subfolder
         try {
@@ -1493,7 +1670,7 @@ class FormService
     public function deleteResponseUploads(int $formFileId, string $responseId): void
     {
         try {
-            $uploadsFolder = $this->getUploadsFolder($formFileId);
+            $uploadsFolder = $this->getUploadsFolder($formFileId, true);
             $responseFolder = $uploadsFolder->get($responseId);
             if ($responseFolder instanceof Folder) {
                 $responseFolder->delete();
@@ -1511,7 +1688,7 @@ class FormService
     public function deleteAllUploads(int $fileId): void
     {
         try {
-            $formFile = $this->getFileByIdPublic($fileId);
+            $formFile = $this->getFileByIdPublic($fileId, true);
             $formFolder = $formFile->getParent();
 
             // Use file ID based folder name
@@ -1638,9 +1815,11 @@ class FormService
      * Get the templates folder for a form
      * Creates it if it doesn't exist
      */
-    public function getTemplatesFolder(int $fileId): Folder
+    public function getTemplatesFolder(int $fileId, bool $requireWrite = false): Folder
     {
-        $formFile = $this->getFileByIdPublic($fileId);
+        // Read-only by default so ODT export can find a template on shares
+        // where the reachable account cannot write (#90).
+        $formFile = $this->getFileByIdPublic($fileId, $requireWrite);
         $formFolder = $formFile->getParent();
         $templatesFolderName = ".formvox-templates-{$fileId}";
 
@@ -1651,6 +1830,9 @@ class FormService
             }
             return $templatesFolder;
         } catch (NotFoundException $e) {
+            if (!$requireWrite) {
+                throw $e;
+            }
             return $formFolder->newFolder($templatesFolderName);
         }
     }
@@ -1660,7 +1842,7 @@ class FormService
      */
     public function storeOdtTemplate(int $fileId, array $uploadedFile): void
     {
-        $folder = $this->getTemplatesFolder($fileId);
+        $folder = $this->getTemplatesFolder($fileId, true);
 
         // Remove existing template if present
         try {
@@ -1677,9 +1859,9 @@ class FormService
     /**
      * Get the ODT template file for a form
      */
-    public function getOdtTemplate(int $fileId): File
+    public function getOdtTemplate(int $fileId, bool $requireWrite = false): File
     {
-        $folder = $this->getTemplatesFolder($fileId);
+        $folder = $this->getTemplatesFolder($fileId, $requireWrite);
         $file = $folder->get('template.odt');
         if (!($file instanceof File)) {
             throw new NotFoundException('Template not found');
@@ -1706,7 +1888,8 @@ class FormService
     public function deleteOdtTemplate(int $fileId): void
     {
         try {
-            $file = $this->getOdtTemplate($fileId);
+            // Resolve through a write-capable account so the delete succeeds.
+            $file = $this->getOdtTemplate($fileId, true);
             $file->delete();
         } catch (NotFoundException $e) {
             // No template to delete
