@@ -27,7 +27,7 @@
     "immutable": "^5.1.9",
     "linkify-it": "^5.0.2",
     "markdown-it": "^14.2.0",
-    "odf-kit": "^0.13.10",
+    "odf-kit": "^0.14.1",
     "postcss": "^8.5.25",
     "qrcode": "^1.5.4",
     "sortablejs": "^1.15.6",

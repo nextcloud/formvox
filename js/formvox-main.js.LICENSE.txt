@@ -75,27 +75,27 @@
 */
 
 /*!
-* vue-router v5.1.0
+* vue-router v5.2.0
 * (c) 2026 Eduardo San Martin Morote
 * @license MIT
 */
 
-/*! @license DOMPurify 3.4.12 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.12/LICENSE */
+/*! @license DOMPurify 3.4.14 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.14/LICENSE */
 
 /**
-* @vue/reactivity v3.5.38
+* @vue/reactivity v3.5.41
 * (c) 2018-present Yuxi (Evan) You and Vue contributors
 * @license MIT
 **/
 
 /**
-* @vue/runtime-dom v3.5.38
+* @vue/runtime-dom v3.5.41
 * (c) 2018-present Yuxi (Evan) You and Vue contributors
 * @license MIT
 **/
 
 /**
-* @vue/shared v3.5.38
+* @vue/shared v3.5.41
 * (c) 2018-present Yuxi (Evan) You and Vue contributors
 * @license MIT
 **/

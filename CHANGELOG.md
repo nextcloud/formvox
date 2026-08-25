@@ -2,10 +2,14 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [1.4.2] - 2026-08-24
+## [1.4.2] - 2026-08-25
+
+### Fixed
+- **Responses submitted to forms in Team/Group folders could silently disappear.** When a form lived in a shared folder, the public submission was opened through an account that could see the form but not necessarily write to it — so on read-only members or advanced-permission rules the response write was refused without any error, while the respondent still saw "Thank you!". FormVox now resolves the form through an account that can actually write, and surfaces a clear error instead of losing the response if none can. ([#90](https://github.com/nextcloud/formvox/issues/90), [#101](https://github.com/nextcloud/formvox/issues/101))
 
 ### Changed
 - **Licence reporting now counts users the same way everywhere.** FormVox already counted all users correctly; it now also reports how many accounts are disabled, and identifies the instance the same way IntraVox and IntroVox do. Previously each app derived that identifier differently, so the same server looked like several — which made usage impossible to line up across apps. Instances update automatically; nothing needs to be reconfigured.
+- **Dependency updates.** Bumped `odf-kit` 0.13.10 → 0.14.1, `@nextcloud/vue` 9.8.2 → 9.9.0, `vue` 3.5.38 → 3.5.41, `dompurify` 3.4.12 → 3.4.14, `axios` 1.18.1 → 1.19.0, `markdown-it` 14.2.0 → 14.3.0, `fast-xml-parser` 5.10.1 → 5.11.0, `sass` 1.97 → 1.103, `webpack` 5.104 → 5.109 and related build tooling to their latest compatible releases, picking up upstream security and bug fixes.
 
 ## [1.4.1] - 2026-08-11
 
