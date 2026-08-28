@@ -34,3 +34,12 @@ certificates/
 
 # Deploy script (contains server info)
 deploy.sh
+
+# Interne release- en werkdocumentatie (toegevoegd 28-08-2026): bevat
+# deploy-targets, klant-hostnames en werkafspraken.
+RELEASE_CHECKLIST.md
+CLAUDE.md
+ROADMAP.md
+create-release.sh
+push-to-github.sh
+internal-docs/
