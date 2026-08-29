@@ -296,6 +296,21 @@ openssl dgst -sha512 -sign certificates/formvox.key formvox-X.Y.Z.tar.gz | opens
 
 **Note:** Regenerate signature after any tarball change!
 
+**Upload via de API met Riks eigen token** (gemeten 29-08-2026: formvox staat op
+Riks App Store-account):
+
+```bash
+TOKEN=$(tr -d '[:space:]' < ~/Documents/Development/.claude/NextcloudApps/Keys/appstore-api-token-rikdekker.txt)
+SIG=$(tr -d '\r\n' < ~/Documents/Development/voxcloud-infra/app-tooling/formvox/formvox-X.Y.Z.sig)
+curl -s -w "\nHTTP %{http_code}\n" -X POST https://apps.nextcloud.com/api/v1/apps/releases \
+  -H "Authorization: Token $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"download\":\"https://github.com/nextcloud/formvox/releases/download/vX.Y.Z/formvox-X.Y.Z.tar.gz\",\"signature\":\"$SIG\"}"
+```
+
+`201` = gelukt. **`403 You do not have permission` betekent bijna altijd de
+verkeerde token**, niet een verlopen token: `appstore-api-token.txt` is van Sam
+en bezit alleen `metavox`. De rechtencheck komt vóór de signature-check.
+
 ### 8. Archive the release artefacts
 
 The signature and release record belong in the private tooling repo, **not**
