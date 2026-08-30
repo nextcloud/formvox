@@ -492,6 +492,19 @@ export default {
   padding: 20px;
 }
 
+/* Phones. Seven tabs wrap regardless; these rules only decide how many rows
+   that costs, and every row pushes the actual content further down. */
+@media (max-width: 500px) {
+  .formvox-admin-settings {
+    padding: 12px;
+  }
+
+  .tab-button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
 /* License Banner */
 .license-banner {
   margin-bottom: 16px;
@@ -502,13 +515,21 @@ export default {
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 20px;
   display: flex;
-  gap: 10px;
+  /* Wrap to further rows instead of pushing the page sideways. Seven tabs need
+     roughly 900px laid out in a row and a phone offers about 350, so without
+     this the bar grows past the viewport and drags the banner and the content
+     with it. Matches IntraVox/MetaVox/RoomVox. */
+  flex-wrap: wrap;
+  gap: 4px 10px;
 }
 
 .tab-button {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Keep each label on one line so a single tab cannot become several rows
+     tall and drag the row height with it. */
+  white-space: nowrap;
   padding: 12px 20px;
   border: none;
   background: none;
