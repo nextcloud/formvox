@@ -1,6 +1,6 @@
 {
-    "count": 821,
-    "sha256": "d9aaff9f772a10466ae9090d8b25975aa50398988c97a523ca8c1f0922f15aad",
+    "count": 822,
+    "sha256": "d6107db643fcf7fc80c047b690ef4cade79fcd4c4e2b76723774da8f3fdfa5ff",
     "strings": [
         "\"{question}\" does not match the required format",
         "(required)",
@@ -340,6 +340,7 @@
         "Formatting",
         "FormVox",
         "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support.",
+        "FormVox is running for {count} users here and keeps working in full without a subscription. If your organisation gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or sales@nextcloud.com.",
         "FormVox subscription key was refused: {reason}",
         "FormVox, Nextcloud, and PHP version numbers",
         "From Microsoft Forms",
@@ -470,6 +471,7 @@
         "New response to \"{formTitle}\" from {respondentName}",
         "New response to \"%1$s\" from %2$s",
         "Next",
+        "Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or sales@nextcloud.com.",
         "No",
         "No AI provider configured",
         "No blocks yet. Add one below.",
@@ -814,7 +816,6 @@
         "You have read-only access to this form. Contact the owner to request edit permissions.",
         "Your actual server URL",
         "Your email address",
-        "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development.",
         "Your FormVox subscription expired on {date}. Renew it to keep receiving support.",
         "Your FormVox subscription has expired. Renew it to keep receiving support.",
         "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.",

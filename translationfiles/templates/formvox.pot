@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FormVox 1.4.3\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"POT-Creation-Date: 2026-08-30 13:29+0000\n"
+"POT-Creation-Date: 2026-08-30 19:14+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1044,6 +1044,9 @@ msgstr ""
 msgid "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support."
 msgstr ""
 
+msgid "FormVox is running for {count} users here and keeps working in full without a subscription. If your organisation gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or sales@nextcloud.com."
+msgstr ""
+
 msgid "FormVox subscription key was refused: {reason}"
 msgstr ""
 
@@ -1438,6 +1441,9 @@ msgid "New response to \\\"%1$s\\\" from %2$s"
 msgstr ""
 
 msgid "Next"
+msgstr ""
+
+msgid "Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or sales@nextcloud.com."
 msgstr ""
 
 msgid "No"
@@ -2473,9 +2479,6 @@ msgid "Your actual server URL"
 msgstr ""
 
 msgid "Your email address"
-msgstr ""
-
-msgid "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development."
 msgstr ""
 
 msgid "Your FormVox subscription expired on {date}. Renew it to keep receiving support."

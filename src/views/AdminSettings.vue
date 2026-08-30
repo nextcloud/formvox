@@ -241,6 +241,7 @@ import ChartBox from 'vue-material-design-icons/ChartBox.vue';
 import Cog from 'vue-material-design-icons/Cog.vue';
 import MicrosoftIcon from 'vue-material-design-icons/Microsoft.vue';
 import HeartIcon from 'vue-material-design-icons/Heart.vue';
+import { subscriptionNudge as buildSubscriptionNudge } from '../composables/useSubscriptionNudge.js';
 
 export default {
   name: 'AdminSettings',
@@ -418,7 +419,10 @@ export default {
       if (!licenseStats.value) return null;
       const s = licenseStats.value;
       if (s.hasLicense && s.licenseValid) return null;
-      if (!s.needsLicense) return null;
+      // Deliberately not gated on needsLicense: that still measures the old free
+      // tier (25 forms / 50 users), which nothing enforces. An invalid key has to
+      // be reported whatever the size of the installation, and the suggestion
+      // below decides for itself on the user count.
       if (s.hasLicense && !s.licenseValid) {
         // Mirrors licenseProblem() in SupportSettings.vue: the licence server
         // says why the key was refused, and each reason needs a different
@@ -449,10 +453,13 @@ export default {
 
         return { type: 'warning', message };
       }
-      return {
-        type: 'info',
-        message: t('formvox', 'Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development.'),
-      };
+      // The subscription suggestion, shared with the Support tab so the two
+      // cannot drift apart. The old wording said the installation had "exceeded
+      // the free tier limits", but nothing is ever enforced — it described a
+      // restriction that does not exist. The trigger is now the user count,
+      // which is what a subscription is actually priced on.
+      const nudge = buildSubscriptionNudge(s);
+      return nudge ? { type: 'info', message: nudge } : null;
     });
 
     const onLicenseChanged = async () => {
