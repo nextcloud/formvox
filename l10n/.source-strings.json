@@ -1,6 +1,6 @@
 {
-    "count": 822,
-    "sha256": "d6107db643fcf7fc80c047b690ef4cade79fcd4c4e2b76723774da8f3fdfa5ff",
+    "count": 821,
+    "sha256": "31efa566178403286ce66d58055444610f672574fbe98b5b60cf273a11b4cad4",
     "strings": [
         "\"{question}\" does not match the required format",
         "(required)",
@@ -771,7 +771,6 @@
         "Very likely",
         "Very poor",
         "Video call",
-        "View in the Nextcloud App Store",
         "View subscription options",
         "Wait until current generation finishes",
         "Warnings",
