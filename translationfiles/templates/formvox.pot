@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FormVox 1.4.3\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"POT-Creation-Date: 2026-08-25 15:56+0000\n"
+"POT-Creation-Date: 2026-08-30 13:29+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1686,6 +1686,9 @@ msgstr ""
 msgid "Previous"
 msgstr ""
 
+msgid "Pricing details"
+msgstr ""
+
 msgid "Primary color"
 msgstr ""
 
@@ -2337,7 +2340,7 @@ msgstr ""
 msgid "Video call"
 msgstr ""
 
-msgid "View pricing & plans"
+msgid "View in the Nextcloud App Store"
 msgstr ""
 
 msgid "View subscription options"

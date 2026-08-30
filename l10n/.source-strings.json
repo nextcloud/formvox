@@ -1,6 +1,6 @@
 {
-    "count": 820,
-    "sha256": "ddff3bdd248e871451bed289c13a7ca200041268541f2f6f1e43c3a21ddb61fb",
+    "count": 821,
+    "sha256": "d9aaff9f772a10466ae9090d8b25975aa50398988c97a523ca8c1f0922f15aad",
     "strings": [
         "\"{question}\" does not match the required format",
         "(required)",
@@ -552,6 +552,7 @@
         "Postal code (NL)",
         "Preview",
         "Previous",
+        "Pricing details",
         "Primary color",
         "Privacy / Self-hosted",
         "Progress bar",
@@ -768,7 +769,7 @@
         "Very likely",
         "Very poor",
         "Video call",
-        "View pricing & plans",
+        "View in the Nextcloud App Store",
         "View subscription options",
         "Wait until current generation finishes",
         "Warnings",
