@@ -275,6 +275,7 @@
                 v-model="option.label"
                 :disabled="readonly"
                 :placeholder="t('Option {n}', { n: optIndex + 1 })"
+                class="option-label-input"
                 @update:model-value="emitUpdate"
               />
               <NcTextField
@@ -784,15 +785,35 @@ export default {
     const collapsed = ref(false);
     const showConditions = ref(false);
     // Deep copy to preserve nested objects like validation
-    const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
-    // Migrate legacy options with empty values
-    if (localQuestion.options) {
-      localQuestion.options.forEach(opt => {
+    // Normalise legacy option shapes in place. Options are expected to be
+    // objects, but a bare string is a valid shape elsewhere in a .fvform (table
+    // columns store options that way) and the REST API accepts questions
+    // unvalidated, so a string can reach us here. Assigning to a property of a
+    // string throws in strict mode and took down the whole options editor, so
+    // convert those to objects before touching any property.
+    const migrateOptions = (question) => {
+      if (!Array.isArray(question.options)) {
+        return;
+      }
+      question.options.forEach((opt, i) => {
+        if (typeof opt === 'string' || typeof opt === 'number') {
+          const id = `opt${uuidv4().split('-')[0]}`;
+          question.options[i] = { id, label: String(opt), value: id };
+          return;
+        }
+        if (!opt || typeof opt !== 'object') {
+          const id = `opt${uuidv4().split('-')[0]}`;
+          question.options[i] = { id, label: '', value: id };
+          return;
+        }
         if (!opt.value) {
           opt.value = opt.id;
         }
       });
-    }
+    };
+
+    const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
+    migrateOptions(localQuestion);
     const customTypesString = ref('');
 
     // Color options for question highlighting
@@ -821,14 +842,7 @@ export default {
         delete localQuestion[key];
       });
       Object.assign(localQuestion, JSON.parse(JSON.stringify(newVal)));
-      // Migrate legacy options with empty values
-      if (localQuestion.options) {
-        localQuestion.options.forEach(opt => {
-          if (!opt.value) {
-            opt.value = opt.id;
-          }
-        });
-      }
+      migrateOptions(localQuestion);
     }, { deep: true });
 
     const hasOptions = computed(() => {
@@ -1474,18 +1488,47 @@ export default {
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+    flex-wrap: wrap;
 
     .option-handle {
       cursor: grab;
       color: var(--color-text-maxcontrast);
+      flex-shrink: 0;
     }
 
-    .score-input {
-      width: 80px;
+    // The label field is the only one allowed to absorb the free space, so a
+    // long label no longer eats into the fixed-width fields beside it.
+    .option-label-input {
+      flex: 1 1 200px;
+      min-width: 0;
     }
 
+    // Never let these shrink: width alone is only a basis, and the default
+    // flex-shrink: 1 squeezed the Max box down to ~46px on a narrow pane.
+    .score-input,
     .capacity-input {
+      flex: 0 0 80px;
       width: 80px;
+    }
+
+    :deep(.button-vue) {
+      flex-shrink: 0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .options-editor .option-item {
+    // Too narrow to keep everything on one line — let the inputs wrap onto a
+    // second row instead of fighting over the remaining pixels.
+    .option-label-input {
+      flex-basis: 100%;
+      order: 1;
+    }
+
+    .score-input,
+    .capacity-input {
+      order: 2;
     }
   }
 }

@@ -2,6 +2,12 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.4.4] - 2026-08-31
+
+### Fixed
+- **The options editor went blank on some forms.** A form whose choice options were stored as plain text rather than as objects crashed the whole question editor, so no option rows were drawn at all. Such options are now converted to proper options as the question loads, keeping their text as the label. This shape is not something the editor itself produces, but it is accepted by the REST API and is how table columns store their options, so a form built through the API or assembled by hand could carry it.
+- **The [Max] field next to an option could be squeezed.** The field holding the maximum number of times an option may be picked shares one row with the option label, and it was allowed to shrink: with a long label in a narrow editor pane it dropped from 80 to about 46 pixels. It now keeps its width, the label field keeps a sensible minimum, and below 768 pixels the row wraps onto a second line instead of the fields fighting over the space.
+
 ## [1.4.3] - 2026-08-25
 
 ### Fixed
