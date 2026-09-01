@@ -1555,16 +1555,13 @@ export default {
 
 @media (max-width: 768px) {
   .options-editor .option-item {
-    // Too narrow to keep everything on one line — let the inputs wrap onto a
-    // second row instead of fighting over the remaining pixels.
+    // Too narrow for one line. The DOM order is already handle, label, score,
+    // max, delete — so rather than reordering anything, give the label a basis
+    // that fills the first line and let the number fields and the delete button
+    // wrap onto the second, keeping the delete button last where it belongs.
     .option-label-input {
-      flex-basis: 100%;
-      order: 1;
-    }
-
-    .score-input,
-    .capacity-input {
-      order: 2;
+      flex: 1 1 calc(100% - 24px);
+      min-width: 0;
     }
   }
 }

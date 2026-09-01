@@ -2,10 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [1.4.5] - 2026-09-01
+## [1.4.8] - 2026-09-01
 
 ### Fixed
 - **The [Max] field vanished from an option and could not be brought back (#134).** Clearing a maximum you had typed stored `null` rather than removing the limit, and a null value breaks the Nextcloud text field, which renders its value with `.toString()`. The field then failed to render at all: the option kept whatever limit was already saved, but nobody could see or change it. Clearing a maximum now removes the limit properly, and options already holding a null are repaired when the form is opened. The score field in quiz mode had the same flaw, where clearing a score also switched quiz mode off.
+- **Option rows were hard to use on a narrow screen.** The row holding an option's label, its maximum and the delete button never wrapped, so on a phone the fields were squeezed together. It now breaks onto a second line below 768px, with the delete button staying at the end of the row.
 
 ## [1.4.4] - 2026-08-31
 
