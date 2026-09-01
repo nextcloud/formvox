@@ -280,22 +280,22 @@
               />
               <NcTextField
                 v-if="isQuizMode"
-                v-model.number="option.score"
+                :model-value="option.score ?? ''"
                 type="number"
                 :disabled="readonly"
                 :placeholder="t('Score')"
                 class="score-input"
-                @update:model-value="emitUpdate"
+                @update:model-value="(val) => updateOptionScore(option, val)"
               />
               <NcTextField
-                v-model.number="option.capacity"
+                :model-value="option.capacity ?? ''"
                 type="number"
                 min="0"
                 :disabled="readonly"
                 :placeholder="t('Max')"
                 :title="t('Maximum times this option can be selected — leave empty for unlimited (#104)')"
                 class="capacity-input"
-                @update:model-value="emitUpdate"
+                @update:model-value="(val) => updateOptionCapacity(option, val)"
               />
               <NcButton
                 v-if="!readonly"
@@ -809,6 +809,17 @@ export default {
         if (!opt.value) {
           opt.value = opt.id;
         }
+        // A null capacity crashes NcTextField, which renders the value with
+        // `modelValue.value.toString()` and has no guard for null. The field
+        // then fails to render at all, so the Max box silently disappears from
+        // that row and can never be edited again (#134). "No limit" is the
+        // absent key, not null — drop it so the field comes back.
+        if (opt.capacity === null) {
+          delete opt.capacity;
+        }
+        if (opt.score === null) {
+          opt.score = 0;
+        }
       });
     };
 
@@ -957,6 +968,29 @@ export default {
     const emitUpdate = () => {
       // Deep copy to preserve nested objects like validation
       emit('update', JSON.parse(JSON.stringify(localQuestion)));
+    };
+
+    // Clearing the Max field must leave "no limit" — an absent key — rather
+    // than null or an empty string. v-model.number hands back null once the
+    // input is emptied, and a null model value breaks NcTextField's render, so
+    // the field would vanish for good (#134).
+    const updateOptionCapacity = (option, value) => {
+      const num = typeof value === 'number' ? value : parseFloat(value);
+      if (value === '' || value === null || value === undefined || Number.isNaN(num)) {
+        delete option.capacity;
+      } else {
+        option.capacity = num;
+      }
+      emitUpdate();
+    };
+
+    // Same null hazard as the capacity field, but an absent score is not a
+    // valid resting state here: isQuizMode is derived from a numeric score, so
+    // deleting the key would silently switch quiz mode off. Clear to 0 instead.
+    const updateOptionScore = (option, value) => {
+      const num = typeof value === 'number' ? value : parseFloat(value);
+      option.score = (value === '' || value === null || value === undefined || Number.isNaN(num)) ? 0 : num;
+      emitUpdate();
     };
 
     const updateDescriptorAlign = (align) => {
@@ -1252,6 +1286,8 @@ export default {
       removeFromSection,
       SectionIcon,
       emitUpdate,
+      updateOptionCapacity,
+      updateOptionScore,
       updateDescriptorAlign,
       onToggleRespondentEmail,
       onTypeChange,
