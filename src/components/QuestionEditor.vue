@@ -791,7 +791,21 @@ export default {
     // unvalidated, so a string can reach us here. Assigning to a property of a
     // string throws in strict mode and took down the whole options editor, so
     // convert those to objects before touching any property.
-    const migrateOptions = (question) => {
+    // Question-level number settings bound with v-model.number. A null here hits
+    // the same NcTextField crash as capacity did, so the whole settings block
+    // fails to render and the fields are simply gone (#134). An absent key is
+    // the correct "not set" state for all of these.
+    const NULLABLE_NUMBER_SETTINGS = [
+      'scaleMin', 'scaleMax', 'ratingMax', 'maxFileSize', 'maxFiles',
+      'minSelections', 'maxSelections', 'maxLength',
+    ];
+
+    const migrateQuestion = (question) => {
+      NULLABLE_NUMBER_SETTINGS.forEach((key) => {
+        if (question[key] === null) {
+          delete question[key];
+        }
+      });
       if (!Array.isArray(question.options)) {
         return;
       }
@@ -824,7 +838,7 @@ export default {
     };
 
     const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
-    migrateOptions(localQuestion);
+    migrateQuestion(localQuestion);
     const customTypesString = ref('');
 
     // Color options for question highlighting
@@ -853,7 +867,7 @@ export default {
         delete localQuestion[key];
       });
       Object.assign(localQuestion, JSON.parse(JSON.stringify(newVal)));
-      migrateOptions(localQuestion);
+      migrateQuestion(localQuestion);
     }, { deep: true });
 
     const hasOptions = computed(() => {
