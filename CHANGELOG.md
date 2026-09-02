@@ -2,18 +2,16 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [1.4.10] - 2026-09-01
+## [1.4.4] - 2026-09-02
 
 ### Fixed
-- **The [Max] field vanished from an option and could not be brought back (#134).** Clearing a maximum you had typed stored `null` rather than removing the limit, and a null value breaks the Nextcloud text field, which renders its value with `.toString()`. The field then failed to render at all: the option kept whatever limit was already saved, but nobody could see or change it. Clearing a maximum now removes the limit properly, and options already holding a null are repaired when the form is opened. The score field in quiz mode had the same flaw, where clearing a score also switched quiz mode off.
-- **Other number settings could disappear the same way.** The scale minimum and maximum, the star count, the file size and count limits, the selection minimum and maximum, and the character limit were all bound the same way as the option maximum, so a null stored in any of them made that whole settings block fail to render. Clearing any of these now removes the setting instead of storing a null, and forms already holding one are repaired when the question loads.
-- **Option rows were hard to use on a narrow screen.** The row holding an option's label, its maximum and the delete button never wrapped, so on a phone the fields were squeezed together. It now breaks onto a second line below 768px, with the delete button staying at the end of the row.
-
-## [1.4.4] - 2026-08-31
-
-### Fixed
+- **The [Max] field vanished from an option and could not be brought back.** Clearing a maximum you had typed stored `null` rather than removing the limit, and a null value breaks the Nextcloud text field, which renders its value with `.toString()`. The field then failed to render at all: the option kept whatever limit was already saved, but nobody could see or change it. Clearing a maximum now removes the limit properly, and options already holding a null are repaired when the form is opened. The score field in quiz mode had the same flaw, where clearing a score also switched quiz mode off. ([#134](https://github.com/nextcloud/formvox/issues/134))
+- **Other number settings could disappear the same way.** The scale minimum and maximum, the star count, the file size and count limits, the selection minimum and maximum, and the character limit were all bound the same way as the option maximum, so a null stored in any of them made that whole settings block fail to render. All numeric inputs in the question editor now go through one shared field component that never feeds the Nextcloud text field a null, so no current or future number setting can crash the editor this way; forms already holding a null are still repaired when the question loads. ([#134](https://github.com/nextcloud/formvox/issues/134))
 - **The options editor went blank on some forms.** A form whose choice options were stored as plain text rather than as objects crashed the whole question editor, so no option rows were drawn at all. Such options are now converted to proper options as the question loads, keeping their text as the label. This shape is not something the editor itself produces, but it is accepted by the REST API and is how table columns store their options, so a form built through the API or assembled by hand could carry it.
-- **The [Max] field next to an option could be squeezed.** The field holding the maximum number of times an option may be picked shares one row with the option label, and it was allowed to shrink: with a long label in a narrow editor pane it dropped from 80 to about 46 pixels. It now keeps its width, the label field keeps a sensible minimum, and below 768 pixels the row wraps onto a second line instead of the fields fighting over the space.
+- **Option rows were hard to use on a narrow screen.** The row holding an option's label, its maximum and the delete button was allowed to shrink and never wrapped, so with a long label in a narrow pane the Max field dropped from 80 to about 46 pixels and on a phone the fields were squeezed together. The number fields now keep their width, the label keeps a sensible minimum, and below 768px the row wraps onto a second line with the delete button staying at the end.
+
+### Changed
+- **Dependency updates.** Bumped `@nextcloud/vue` 9.9.0 → 9.11.0, `@nextcloud/dialogs` 7.4.1 → 7.5.0, `vue` 3.5.41 → 3.5.42, `axios` 1.19.0 → 1.20.0, `markdown-it` 14.3.0 → 14.3.1, `fast-xml-parser` 5.11.0 → 5.11.1, `webpack` 5.109 → 5.110 and related build tooling to their latest compatible releases.
 
 ## [1.4.3] - 2026-08-25
 
