@@ -507,7 +507,31 @@ export default {
   },
   emits: ['update:branding'],
   setup(props, { emit }) {
-    const layout = reactive({ ...props.initialBranding.layout });
+    // Block text settings are bound to NcTextField/NcTextArea with v-model. A
+    // null there renders via .toString() with no guard and unmounts the block
+    // editor (#134 crash class). Branding loaded from the server or built
+    // externally can carry null, so coerce the text-bearing settings to '' up
+    // front. Only these keys reach a text component; colors/levels/booleans
+    // don't crash on null.
+    const TEXT_BLOCK_SETTINGS = ['text', 'content', 'url', 'alt'];
+    const normalizeLayoutText = (layoutObj) => {
+      if (!layoutObj || typeof layoutObj !== 'object') return layoutObj;
+      Object.values(layoutObj).forEach((zone) => {
+        if (!Array.isArray(zone)) return;
+        zone.forEach((block) => {
+          if (block && block.settings && typeof block.settings === 'object') {
+            TEXT_BLOCK_SETTINGS.forEach((key) => {
+              if (block.settings[key] === null) {
+                block.settings[key] = '';
+              }
+            });
+          }
+        });
+      });
+      return layoutObj;
+    };
+
+    const layout = reactive(normalizeLayoutText({ ...props.initialBranding.layout }));
     const globalStyles = reactive({ ...props.initialBranding.globalStyles });
     const saving = ref(false);
     const activeZone = ref('header');

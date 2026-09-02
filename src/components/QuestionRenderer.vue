@@ -44,7 +44,7 @@
     <NcTextField
       v-if="question.type === 'text'"
       :id="inputId"
-      :model-value="value"
+      :model-value="safeInputValue"
       :error="!!effectiveError"
       :aria-required="question.required || undefined"
       :aria-invalid="!!effectiveError || undefined"
@@ -226,7 +226,7 @@
       v-else-if="question.type === 'number'"
       :id="inputId"
       type="number"
-      :model-value="value"
+      :model-value="safeInputValue"
       :error="!!effectiveError"
       :aria-required="question.required || undefined"
       :aria-invalid="!!effectiveError || undefined"
@@ -806,6 +806,16 @@ export default {
     // dropped because it counts code units and would disagree) (#10).
     const textareaCharCount = computed(() => [...(props.value || '')].length);
 
+    // Never hand NcTextField a null/undefined: it renders the value with
+    // .toString() and has no null guard (crashes the field, #134). The `value`
+    // prop default '' only covers undefined, not an explicit null that can
+    // arrive from an API-built or malformed form — so coerce here for the text
+    // and number answer inputs on the public form.
+    const safeInputValue = computed(() => {
+      const v = props.value;
+      return v === null || v === undefined ? '' : v;
+    });
+
     const renderedQuestion = computed(() => applyPiping(props.question.question || ''));
     const renderedDescription = computed(() => applyPiping(props.question.description || ''));
     const renderedDescriptionHtml = computed(() => {
@@ -1083,6 +1093,7 @@ export default {
       isOptionDisabled,
       onMultipleUpdate,
       textareaCharCount,
+      safeInputValue,
       renderedQuestion,
       renderedDescription,
       renderedDescriptionHtml,

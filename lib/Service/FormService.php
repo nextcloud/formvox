@@ -149,6 +149,15 @@ class FormService
         if (!array_key_exists('pages', $form)) {
             $form['pages'] = null;
         }
+        // A null title/description crashes the editor's NcTextField on open
+        // (renders via .toString(), no null guard — #134). Normalise to '' so
+        // no consumer of a loaded form has to guard against it.
+        if (($form['title'] ?? null) === null) {
+            $form['title'] = '';
+        }
+        if (($form['description'] ?? null) === null) {
+            $form['description'] = '';
+        }
 
         return $form;
     }

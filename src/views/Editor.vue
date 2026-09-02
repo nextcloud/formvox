@@ -407,6 +407,13 @@ export default {
   setup(props) {
     // Deep copy to preserve nested objects like question.validation
     const form = reactive(JSON.parse(JSON.stringify(props.initialForm)));
+    // The title binds to NcTextField, which crashes on a null value (renders
+    // via .toString(), no guard — #134). A stored form can carry title: null
+    // (AI-generated, imported, or built through the API — the backend read
+    // paths all use `title ?? ''`), which would crash the whole editor on open.
+    // Coerce the top-level text fields to '' up front.
+    if (form.title === null || form.title === undefined) form.title = '';
+    if (form.description === null) form.description = '';
     const saving = ref(false);
     const showSettings = ref(false);
     const showShare = ref(false);

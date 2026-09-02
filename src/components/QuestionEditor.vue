@@ -792,12 +792,48 @@ export default {
       'minSelections', 'maxSelections', 'maxLength',
     ];
 
+    // A null in any text field bound to an NcTextField crashes the same way a
+    // null number does: NcTextField renders with `modelValue.value.toString()`
+    // and its default '' only covers undefined, not an explicit null — so the
+    // whole settings block fails to render (#134). The editor never types a null
+    // (it types '' or deletes the key), but the REST API stores questions
+    // verbatim and imports build them, so a null can arrive via external data.
+    // Coerce every nullable text field to '' on load. Helper mutates in place.
+    const coerceNullText = (obj, key) => {
+      if (obj && obj[key] === null) {
+        obj[key] = '';
+      }
+    };
+
     const migrateQuestion = (question) => {
+      // Numeric settings: an absent key is the correct "not set" state.
       NULLABLE_NUMBER_SETTINGS.forEach((key) => {
         if (question[key] === null) {
           delete question[key];
         }
       });
+
+      // Question-level text fields.
+      coerceNullText(question, 'question');
+      coerceNullText(question, 'description');
+      coerceNullText(question, 'scaleMinLabel');
+      coerceNullText(question, 'scaleMaxLabel');
+      if (question.validation && typeof question.validation === 'object') {
+        coerceNullText(question.validation, 'pattern');
+        coerceNullText(question.validation, 'errorMessage');
+      }
+
+      // Matrix rows and matrix/table columns carry their own labels.
+      if (Array.isArray(question.rows)) {
+        question.rows.forEach((row) => coerceNullText(row, 'label'));
+      }
+      if (Array.isArray(question.columns)) {
+        question.columns.forEach((col) => {
+          coerceNullText(col, 'label');
+          coerceNullText(col, 'optionsText');
+        });
+      }
+
       if (!Array.isArray(question.options)) {
         return;
       }
@@ -815,10 +851,11 @@ export default {
         if (!opt.value) {
           opt.value = opt.id;
         }
-        // A null capacity crashes NcTextField, which renders the value with
-        // `modelValue.value.toString()` and has no guard for null. The field
-        // then fails to render at all, so the Max box silently disappears from
-        // that row and can never be edited again (#134). "No limit" is the
+        // A null label on a well-formed object option is the #134 smoking gun:
+        // the numeric Max/Score siblings were guarded in 1.4.4 but the label
+        // itself was not, so the option row still crashed on load.
+        coerceNullText(opt, 'label');
+        // A null capacity crashes NcTextField the same way. "No limit" is the
         // absent key, not null — drop it so the field comes back.
         if (opt.capacity === null) {
           delete opt.capacity;
