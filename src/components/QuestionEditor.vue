@@ -275,26 +275,25 @@
                 v-model="option.label"
                 :disabled="readonly"
                 :placeholder="t('Option {n}', { n: optIndex + 1 })"
+                class="option-label-input"
                 @update:model-value="emitUpdate"
               />
-              <NcTextField
+              <NumberField
                 v-if="isQuizMode"
-                v-model.number="option.score"
-                type="number"
+                :model-value="option.score ?? null"
                 :disabled="readonly"
                 :placeholder="t('Score')"
                 class="score-input"
-                @update:model-value="emitUpdate"
+                @update:model-value="(val) => updateOptionScore(option, val)"
               />
-              <NcTextField
-                v-model.number="option.capacity"
-                type="number"
+              <NumberField
+                :model-value="option.capacity ?? null"
                 min="0"
                 :disabled="readonly"
                 :placeholder="t('Max')"
                 :title="t('Maximum times this option can be selected — leave empty for unlimited (#104)')"
                 class="capacity-input"
-                @update:model-value="emitUpdate"
+                @update:model-value="(val) => updateOptionCapacity(option, val)"
               />
               <NcButton
                 v-if="!readonly"
@@ -319,19 +318,17 @@
       <!-- Scale settings -->
       <div v-if="localQuestion.type === 'scale'" class="scale-settings">
         <div class="scale-row">
-          <NcTextField
-            v-model.number="localQuestion.scaleMin"
-            type="number"
+          <NumberField
+            :model-value="localQuestion.scaleMin ?? null"
             :disabled="readonly"
             :label="t('Min')"
-            @update:model-value="emitUpdate"
+            @update:model-value="(val) => updateQuestionNumber('scaleMin', val)"
           />
-          <NcTextField
-            v-model.number="localQuestion.scaleMax"
-            type="number"
+          <NumberField
+            :model-value="localQuestion.scaleMax ?? null"
             :disabled="readonly"
             :label="t('Max')"
-            @update:model-value="emitUpdate"
+            @update:model-value="(val) => updateQuestionNumber('scaleMax', val)"
           />
         </div>
         <div class="scale-row">
@@ -354,12 +351,11 @@
 
       <!-- Rating settings -->
       <div v-if="localQuestion.type === 'rating'" class="rating-settings">
-        <NcTextField
-          v-model.number="localQuestion.ratingMax"
-          type="number"
+        <NumberField
+          :model-value="localQuestion.ratingMax ?? null"
           :disabled="readonly"
           :label="t('Maximum stars')"
-          @update:model-value="emitUpdate"
+          @update:model-value="(val) => updateQuestionNumber('ratingMax', val)"
         />
       </div>
 
@@ -436,13 +432,12 @@
 
         <div class="form-field">
           <label class="form-label">{{ t('Maximum file size (MB)') }}</label>
-          <NcTextField
-            v-model.number="localQuestion.maxFileSize"
-            type="number"
+          <NumberField
+            :model-value="localQuestion.maxFileSize ?? null"
             :disabled="readonly"
             :min="1"
             :max="100"
-            @update:model-value="emitUpdate"
+            @update:model-value="(val) => updateQuestionNumber('maxFileSize', val)"
           />
         </div>
 
@@ -458,13 +453,12 @@
 
         <div v-if="localQuestion.maxFiles > 1" class="form-field">
           <label class="form-label">{{ t('Maximum number of files') }}</label>
-          <NcTextField
-            v-model.number="localQuestion.maxFiles"
-            type="number"
+          <NumberField
+            :model-value="localQuestion.maxFiles ?? null"
             :disabled="readonly"
             :min="2"
             :max="20"
-            @update:model-value="emitUpdate"
+            @update:model-value="(val) => updateQuestionNumber('maxFiles', val)"
           />
         </div>
       </div>
@@ -474,24 +468,22 @@
         <div class="scale-inline">
           <div class="form-field">
             <label class="form-label">{{ t('Minimum selections') }}</label>
-            <NcTextField
-              v-model.number="localQuestion.minSelections"
-              type="number"
+            <NumberField
+              :model-value="localQuestion.minSelections ?? null"
               :disabled="readonly"
               :min="0"
               :placeholder="t('No minimum')"
-              @update:model-value="emitUpdate"
+              @update:model-value="(val) => updateQuestionNumber('minSelections', val)"
             />
           </div>
           <div class="form-field">
             <label class="form-label">{{ t('Maximum selections') }}</label>
-            <NcTextField
-              v-model.number="localQuestion.maxSelections"
-              type="number"
+            <NumberField
+              :model-value="localQuestion.maxSelections ?? null"
               :disabled="readonly"
               :min="0"
               :placeholder="t('No maximum')"
-              @update:model-value="emitUpdate"
+              @update:model-value="(val) => updateQuestionNumber('maxSelections', val)"
             />
           </div>
         </div>
@@ -502,13 +494,12 @@
       <div v-if="localQuestion.type === 'textarea'" class="scale-settings">
         <div class="form-field">
           <label class="form-label">{{ t('Maximum characters') }}</label>
-          <NcTextField
-            v-model.number="localQuestion.maxLength"
-            type="number"
+          <NumberField
+            :model-value="localQuestion.maxLength ?? null"
             :disabled="readonly"
             :min="0"
             :placeholder="t('No limit')"
-            @update:model-value="emitUpdate"
+            @update:model-value="(val) => updateQuestionNumber('maxLength', val)"
           />
           <small class="hint">{{ t('Leave empty for no limit. A live counter is shown to respondents.') }}</small>
         </div>
@@ -720,6 +711,7 @@ import { t } from '@/utils/l10n';
 import draggable from 'vuedraggable';
 import ConditionEditor from './ConditionEditor.vue';
 import MarkdownEditor from './MarkdownEditor.vue';
+import NumberField from './NumberField.vue';
 import DragIcon from './icons/DragIcon.vue';
 import ChevronIcon from './icons/ChevronIcon.vue';
 import CopyIcon from './icons/CopyIcon.vue';
@@ -737,6 +729,7 @@ export default {
     NcActions,
     NcActionButton,
     NcTextField,
+    NumberField,
     NcTextArea,
     NcCheckboxRadioSwitch,
     NcSelect,
@@ -784,15 +777,60 @@ export default {
     const collapsed = ref(false);
     const showConditions = ref(false);
     // Deep copy to preserve nested objects like validation
-    const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
-    // Migrate legacy options with empty values
-    if (localQuestion.options) {
-      localQuestion.options.forEach(opt => {
+    // Normalise legacy option shapes in place. Options are expected to be
+    // objects, but a bare string is a valid shape elsewhere in a .fvform (table
+    // columns store options that way) and the REST API accepts questions
+    // unvalidated, so a string can reach us here. Assigning to a property of a
+    // string throws in strict mode and took down the whole options editor, so
+    // convert those to objects before touching any property.
+    // Question-level number settings bound with v-model.number. A null here hits
+    // the same NcTextField crash as capacity did, so the whole settings block
+    // fails to render and the fields are simply gone (#134). An absent key is
+    // the correct "not set" state for all of these.
+    const NULLABLE_NUMBER_SETTINGS = [
+      'scaleMin', 'scaleMax', 'ratingMax', 'maxFileSize', 'maxFiles',
+      'minSelections', 'maxSelections', 'maxLength',
+    ];
+
+    const migrateQuestion = (question) => {
+      NULLABLE_NUMBER_SETTINGS.forEach((key) => {
+        if (question[key] === null) {
+          delete question[key];
+        }
+      });
+      if (!Array.isArray(question.options)) {
+        return;
+      }
+      question.options.forEach((opt, i) => {
+        if (typeof opt === 'string' || typeof opt === 'number') {
+          const id = `opt${uuidv4().split('-')[0]}`;
+          question.options[i] = { id, label: String(opt), value: id };
+          return;
+        }
+        if (!opt || typeof opt !== 'object') {
+          const id = `opt${uuidv4().split('-')[0]}`;
+          question.options[i] = { id, label: '', value: id };
+          return;
+        }
         if (!opt.value) {
           opt.value = opt.id;
         }
+        // A null capacity crashes NcTextField, which renders the value with
+        // `modelValue.value.toString()` and has no guard for null. The field
+        // then fails to render at all, so the Max box silently disappears from
+        // that row and can never be edited again (#134). "No limit" is the
+        // absent key, not null — drop it so the field comes back.
+        if (opt.capacity === null) {
+          delete opt.capacity;
+        }
+        if (opt.score === null) {
+          opt.score = 0;
+        }
       });
-    }
+    };
+
+    const localQuestion = reactive(JSON.parse(JSON.stringify(props.question)));
+    migrateQuestion(localQuestion);
     const customTypesString = ref('');
 
     // Color options for question highlighting
@@ -821,14 +859,7 @@ export default {
         delete localQuestion[key];
       });
       Object.assign(localQuestion, JSON.parse(JSON.stringify(newVal)));
-      // Migrate legacy options with empty values
-      if (localQuestion.options) {
-        localQuestion.options.forEach(opt => {
-          if (!opt.value) {
-            opt.value = opt.id;
-          }
-        });
-      }
+      migrateQuestion(localQuestion);
     }, { deep: true });
 
     const hasOptions = computed(() => {
@@ -943,6 +974,41 @@ export default {
     const emitUpdate = () => {
       // Deep copy to preserve nested objects like validation
       emit('update', JSON.parse(JSON.stringify(localQuestion)));
+    };
+
+    // The NumberField wrapper already guards the render (never passes null to
+    // NcTextField) and emits a clean number|null: null means "empty". Here we
+    // only decide what "empty" means for a given key — drop it, or fall back to
+    // a default. The render-crash that was #134 is handled by the wrapper, so a
+    // null can no longer reach the input regardless of what we store.
+    const setNumberField = (target, key, value, fallback) => {
+      if (value === null) {
+        if (fallback === undefined) {
+          delete target[key];
+        } else {
+          target[key] = fallback;
+        }
+      } else {
+        target[key] = value;
+      }
+      emitUpdate();
+    };
+
+    // Scale bounds, star count, file limits, selection limits and the character
+    // limit. All of these treat an absent key as "not set": the renderer falls
+    // back to its own defaults, so clearing one is safe.
+    const updateQuestionNumber = (key, value) => {
+      setNumberField(localQuestion, key, value);
+    };
+
+    const updateOptionCapacity = (option, value) => {
+      setNumberField(option, 'capacity', value);
+    };
+
+    // Score clears to 0 rather than an absent key: isQuizMode is derived from a
+    // numeric score, so deleting it would switch quiz mode off entirely.
+    const updateOptionScore = (option, value) => {
+      setNumberField(option, 'score', value, 0);
     };
 
     const updateDescriptorAlign = (align) => {
@@ -1238,6 +1304,9 @@ export default {
       removeFromSection,
       SectionIcon,
       emitUpdate,
+      updateOptionCapacity,
+      updateOptionScore,
+      updateQuestionNumber,
       updateDescriptorAlign,
       onToggleRespondentEmail,
       onTypeChange,
@@ -1474,18 +1543,44 @@ export default {
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+    flex-wrap: wrap;
 
     .option-handle {
       cursor: grab;
       color: var(--color-text-maxcontrast);
+      flex-shrink: 0;
     }
 
-    .score-input {
-      width: 80px;
+    // The label field is the only one allowed to absorb the free space, so a
+    // long label no longer eats into the fixed-width fields beside it.
+    .option-label-input {
+      flex: 1 1 200px;
+      min-width: 0;
     }
 
+    // Never let these shrink: width alone is only a basis, and the default
+    // flex-shrink: 1 squeezed the Max box down to ~46px on a narrow pane.
+    .score-input,
     .capacity-input {
+      flex: 0 0 80px;
       width: 80px;
+    }
+
+    :deep(.button-vue) {
+      flex-shrink: 0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .options-editor .option-item {
+    // Too narrow for one line. The DOM order is already handle, label, score,
+    // max, delete — so rather than reordering anything, give the label a basis
+    // that fills the first line and let the number fields and the delete button
+    // wrap onto the second, keeping the delete button last where it belongs.
+    .option-label-input {
+      flex: 1 1 calc(100% - 24px);
+      min-width: 0;
     }
   }
 }
