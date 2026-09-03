@@ -321,6 +321,9 @@
           </div>
 
           <div class="delete-link-section">
+            <NcButton type="tertiary" @click="replaceShareLink">
+              {{ t('Replace with a new link') }}
+            </NcButton>
             <NcButton type="tertiary" @click="deleteShareLink">
               {{ t('Delete response link') }}
             </NcButton>
@@ -680,7 +683,10 @@ export default {
       creatingLink.value = true;
       try {
         // Ask the server to mint a cryptographically strong token — the
-        // placeholder is replaced server-side with a secure value.
+        // placeholder is replaced server-side with a secure value. This only
+        // establishes a link when there is none; once one exists the server
+        // keeps it and no save can change it (#135). Use replaceShareLink() to
+        // deliberately swap it for a new one.
         const response = await axios.put(
           generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
           {
@@ -839,6 +845,37 @@ export default {
         showSuccess(t('Settings saved'));
       } catch (error) {
         showError(t('Failed to save settings'));
+        console.error(error);
+      }
+    };
+
+    // Deliberately swap the link for a new one. Everyone holding the old URL
+    // loses access, so this is confirmed and never happens as a side effect of
+    // saving the form (#135).
+    const replaceShareLink = async () => {
+      if (!confirm(t('Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form.'))) {
+        return;
+      }
+
+      try {
+        const response = await axios.post(
+          generateUrl('/apps/formvox/api/form/{fileId}/share-token', { fileId: props.fileId })
+        );
+
+        const token = response.data?.form?.settings?.public_token;
+        if (!token) {
+          throw new Error('Server did not return a share token');
+        }
+
+        shareToken.value = token;
+        const baseUrl = window.location.origin;
+        shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{fileId}/{token}', { fileId: props.fileId, token })}`;
+        props.form.settings.public_token = token;
+        generateQr();
+
+        showSuccess(t('New response link created — the previous link no longer works'));
+      } catch (error) {
+        showError(t('Failed to replace response link'));
         console.error(error);
       }
     };
@@ -1249,6 +1286,7 @@ export default {
       toggleLinkExpiration,
       toggleLinkStart,
       savePassword,
+      replaceShareLink,
       deleteShareLink,
       confirmDeleteResponses,
       toggleAccessRestrictions,
@@ -1385,6 +1423,11 @@ export default {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
+    // Replace and delete sit side by side; wrap them on a narrow dialog rather
+    // than letting the labels collide.
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 
@@ -1496,6 +1539,11 @@ export default {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
+    // Replace and delete sit side by side; wrap them on a narrow dialog rather
+    // than letting the labels collide.
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .response-count {

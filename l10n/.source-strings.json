@@ -1,6 +1,6 @@
 {
-    "count": 821,
-    "sha256": "31efa566178403286ce66d58055444610f672574fbe98b5b60cf273a11b4cad4",
+    "count": 825,
+    "sha256": "408150656bcac55b896fb06cb6a8029cabdf82074dc87b4a87371072d5689ff2",
     "strings": [
         "\"{question}\" does not match the required format",
         "(required)",
@@ -302,6 +302,7 @@
         "Failed to load templates",
         "Failed to remove subscription key",
         "Failed to remove template",
+        "Failed to replace response link",
         "Failed to save access restrictions",
         "Failed to save AI settings",
         "Failed to save embed settings",
@@ -468,6 +469,7 @@
         "My forms",
         "Never",
         "New form",
+        "New response link created — the previous link no longer works",
         "New response to \"{formTitle}\" from {respondentName}",
         "New response to \"%1$s\" from %2$s",
         "Next",
@@ -587,6 +589,8 @@
         "Remove subscription key",
         "Rename",
         "Replace template",
+        "Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form.",
+        "Replace with a new link",
         "Report sent successfully",
         "Require login to respond",
         "Required",
