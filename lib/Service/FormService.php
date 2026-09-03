@@ -1485,7 +1485,7 @@ class FormService
         // Lowercase
         $name = strtolower($name);
         // Limit length
-        $name = substr($name, 0, 50);
+        $name = mb_substr($name, 0, 50, 'UTF-8');
         // Default if empty
         if (empty($name)) {
             $name = 'form';
