@@ -10,6 +10,8 @@ use OCP\Files\Folder;
 use OCP\Files\IMimeTypeLoader;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
+use OCP\IGroupManager;
+use OCP\IServerContainer;
 use OCP\IUserSession;
 use OCP\IDBConnection;
 use OCP\IL10N;
@@ -47,6 +49,9 @@ class FormService
     private IDBConnection $db;
     private IL10N $l;
     private IMimeTypeLoader $mimeTypeLoader;
+    private IGroupManager $groupManager;
+    private IServerContainer $serverContainer;
+    private ?bool $hasCircleIdColumn = null;
 
     public function __construct(
         IRootFolder $rootFolder,
@@ -54,7 +59,9 @@ class FormService
         IndexService $indexService,
         IDBConnection $db,
         IL10N $l,
-        IMimeTypeLoader $mimeTypeLoader
+        IMimeTypeLoader $mimeTypeLoader,
+        IGroupManager $groupManager,
+        IServerContainer $serverContainer
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
@@ -62,6 +69,8 @@ class FormService
         $this->db = $db;
         $this->l = $l;
         $this->mimeTypeLoader = $mimeTypeLoader;
+        $this->groupManager = $groupManager;
+        $this->serverContainer = $serverContainer;
     }
 
     /**
@@ -929,41 +938,158 @@ class FormService
         // Get groups that have access to this group folder, most-permissive
         // first. Members of several groups get their permissions OR'd together
         // by groupfolders, so a write-capable group is the better bet.
+        // groupfolders stores group and circle entries in the same table; a row
+        // is a circle when circle_id is set, and then group_id holds the
+        // circle's single id. The column exists since groupfolders 14.1, well
+        // below our minimum, but stay defensive: an older or patched schema
+        // should degrade to groups-only rather than break every lookup.
+        $hasCircles = $this->groupFolderGroupsHasCircleId();
+
         $qb = $this->db->getQueryBuilder();
-        $qb->select('group_id', 'permissions')
+        $columns = $hasCircles
+            ? ['group_id', 'circle_id', 'permissions']
+            : ['group_id', 'permissions'];
+        $qb->select(...$columns)
             ->from('group_folders_groups')
             ->where($qb->expr()->eq('folder_id', $qb->createNamedParameter($groupFolderId, \PDO::PARAM_INT)))
             ->orderBy('permissions', 'DESC')
             ->setMaxResults(self::ACCESS_CANDIDATE_GROUPS);
 
         $result = $qb->executeQuery();
-        $groups = [];
+        $entities = [];
         while ($row = $result->fetch()) {
-            $groups[] = $row['group_id'];
+            $isCircle = $hasCircles && !empty($row['circle_id']);
+            $entities[] = [
+                'id' => (string)($isCircle ? $row['circle_id'] : $row['group_id']),
+                'isCircle' => $isCircle,
+            ];
         }
         $result->closeCursor();
 
         $userIds = [];
-        foreach ($groups as $groupId) {
-            $qb = $this->db->getQueryBuilder();
-            // ORDER BY uid so the members we consider are deterministic across
-            // requests — without it the DB returns an arbitrary subset, and if
-            // the only ACL-writable member falls outside that subset the write
-            // is lost even though a valid writer exists (#90).
-            $qb->select('uid')
-                ->from('group_user')
-                ->where($qb->expr()->eq('gid', $qb->createNamedParameter($groupId)))
-                ->orderBy('uid', 'ASC')
-                ->setMaxResults(self::ACCESS_CANDIDATE_USERS_PER_GROUP);
-
-            $result = $qb->executeQuery();
-            while ($row = $result->fetch()) {
-                $userIds[] = $row['uid'];
+        foreach ($entities as $entity) {
+            $members = $entity['isCircle']
+                ? $this->membersOfCircle($entity['id'])
+                : $this->membersOfGroup($entity['id']);
+            foreach ($members as $uid) {
+                $userIds[] = $uid;
             }
-            $result->closeCursor();
         }
 
         return array_values(array_unique($userIds));
+    }
+
+    /**
+     * Does groupfolders' applicable-entity table carry circle entries?
+     *
+     * The column arrived in groupfolders 14.1, far below anything that runs on
+     * a supported Nextcloud, so this is true in practice. It is probed rather
+     * than assumed so an older or hand-patched schema degrades to groups-only
+     * instead of erroring on every form in a team folder.
+     */
+    private function groupFolderGroupsHasCircleId(): bool
+    {
+        if ($this->hasCircleIdColumn !== null) {
+            return $this->hasCircleIdColumn;
+        }
+
+        try {
+            $qb = $this->db->getQueryBuilder();
+            $qb->select('circle_id')
+                ->from('group_folders_groups')
+                ->setMaxResults(1);
+            $qb->executeQuery()->closeCursor();
+            $this->hasCircleIdColumn = true;
+        } catch (\Throwable $e) {
+            $this->hasCircleIdColumn = false;
+        }
+
+        return $this->hasCircleIdColumn;
+    }
+
+    /**
+     * Members of a group, whatever backend it lives in.
+     *
+     * This must go through IGroupManager rather than reading oc_group_user: that
+     * table only holds *local* group membership. On an LDAP/AD-backed instance
+     * membership lives in the directory, so the SQL query returned nothing, no
+     * account was available to open the file, and every public link to a form in
+     * a team folder answered 404 (#136). IGroupManager asks each configured
+     * backend in turn, so LDAP, SAML and local groups all resolve.
+     *
+     * @return list<string>
+     */
+    private function membersOfGroup(string $groupId): array
+    {
+        $group = $this->groupManager->get($groupId);
+        if ($group === null) {
+            return [];
+        }
+
+        // Sorted so the candidates we consider are deterministic across
+        // requests — without it a backend may return an arbitrary subset, and if
+        // the only ACL-writable member falls outside that subset the write is
+        // lost even though a valid writer exists (#90). Bounded because an LDAP
+        // group can hold thousands of accounts and we only need a few.
+        $userIds = array_map(
+            static fn (\OCP\IUser $user): string => $user->getUID(),
+            $group->searchUsers('', self::ACCESS_CANDIDATE_USERS_PER_GROUP)
+        );
+        $userIds = array_values($userIds);
+        sort($userIds);
+
+        return $userIds;
+    }
+
+    /**
+     * Members of a circle (Teams), for team folders shared with one.
+     *
+     * Circles are optional: the app may be absent or disabled, in which case
+     * this contributes nothing and group-based access still works.
+     *
+     * @return list<string>
+     */
+    private function membersOfCircle(string $circleId): array
+    {
+        if (!class_exists(\OCA\Circles\CirclesManager::class)) {
+            return [];
+        }
+
+        try {
+            /** @var \OCA\Circles\CirclesManager $circlesManager */
+            $circlesManager = $this->serverContainer->get(\OCA\Circles\CirclesManager::class);
+            $circlesManager->startSuperSession();
+            $circle = $circlesManager->getCircle($circleId);
+
+            $userIds = [];
+            foreach ($circle->getInheritedMembers() as $member) {
+                if ($member->getUserType() !== 1) {
+                    // Only single users can own a filesystem view; nested
+                    // circles and groups arrive flattened as their members.
+                    continue;
+                }
+                $userIds[] = $member->getUserId();
+                if (count($userIds) >= self::ACCESS_CANDIDATE_USERS_PER_GROUP) {
+                    break;
+                }
+            }
+
+            sort($userIds);
+
+            return array_values(array_unique(array_map('strval', $userIds)));
+        } catch (\Throwable $e) {
+            // Circle gone, app disabled mid-request, or API change — fall back
+            // to the group entries rather than failing the whole lookup.
+            return [];
+        } finally {
+            if (isset($circlesManager)) {
+                try {
+                    $circlesManager->stopSession();
+                } catch (\Throwable $e) {
+                    // best effort
+                }
+            }
+        }
     }
 
     /**
