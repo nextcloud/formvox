@@ -260,29 +260,65 @@ class ApiController extends Controller
                 unset($data['settings']);
             }
 
-            // Share tokens must be generated server-side with a cryptographically
-            // secure RNG. If the client is establishing/rotating a share link, mint
-            // a fresh token; preserve any existing token otherwise.
-            if (isset($data['settings']) && array_key_exists('public_token', $data['settings'])) {
-                $incoming = $data['settings']['public_token'];
-                if ($incoming === null || $incoming === '') {
-                    // client is revoking the link — leave as null
-                    $data['settings']['public_token'] = null;
-                } else {
-                    $existing = null;
-                    try {
-                        $existingForm = $this->formService->loadPublic($fileId);
-                        $existing = $existingForm['settings']['public_token'] ?? null;
-                    } catch (\Exception $e) {
-                        // ignore — new token will be minted below
+            // The share token is server-owned: once a link exists its URL must stay
+            // valid until someone deliberately revokes it. A generic save can never
+            // change it, however stale the client's copy of `settings` is (#135).
+            //
+            // This mirrors Nextcloud core, which mints a token only when there is
+            // none (Share20\Manager::createShare) and never touches it in
+            // updateShare — changing a share's password, expiry or permissions
+            // keeps the same link.
+            //
+            // Note this runs whenever settings are written, not only when the
+            // client includes the key: FormService::update() replaces `settings`
+            // wholesale, so a save that merely omits public_token would drop the
+            // link just as effectively as one sending a stale value.
+            if (isset($data['settings'])) {
+                // Read the current token from the file we already fetched above
+                // ($file, user-scoped and permission-checked) rather than a second
+                // loadPublic() lookup, which resolves through a different path and
+                // could fail independently of this save succeeding.
+                $existing = null;
+                $readOk = false;
+                try {
+                    $currentForm = json_decode($file->getContent(), true);
+                    if (is_array($currentForm)) {
+                        $existing = $currentForm['settings']['public_token'] ?? null;
+                        $readOk = true;
                     }
-                    if (!is_string($existing) || $existing === '' || $existing !== $incoming) {
-                        $data['settings']['public_token'] = $this->secureRandom->generate(
-                            32,
-                            ISecureRandom::CHAR_ALPHANUMERIC
-                        );
-                    }
+                } catch (\Throwable $e) {
+                    // Could not read the current form — fall through to fail-closed.
                 }
+                $hasExisting = is_string($existing) && $existing !== '';
+
+                $sentKey = array_key_exists('public_token', $data['settings']);
+                $incoming = $sentKey ? $data['settings']['public_token'] : null;
+                $isRevoke = $sentKey && ($incoming === null || $incoming === '');
+
+                if (!$readOk) {
+                    // Fail closed: we couldn't read the current form, so we can't
+                    // tell whether a link exists. FormService::update() replaces
+                    // settings wholesale, so letting this save proceed would drop
+                    // the token. Skip the settings write entirely (same escape
+                    // hatch as the permission check above) — every other field
+                    // still saves, and the stored settings, including the link,
+                    // stay intact (#135). A genuine settings change can retry
+                    // once the read succeeds.
+                    unset($data['settings']);
+                } elseif ($isRevoke) {
+                    // Revoking the link: explicit and deliberate.
+                    $data['settings']['public_token'] = null;
+                } elseif ($hasExisting) {
+                    // A link exists — keep it, whatever the client sent or omitted.
+                    // This is the case that used to silently rotate the URL and
+                    // break every link already handed out.
+                    $data['settings']['public_token'] = $existing;
+                } elseif ($sentKey) {
+                    // No link yet and the client asked for one. Its value is only
+                    // an intent marker; the token is always minted here.
+                    $data['settings']['public_token'] = $this->generateShareToken();
+                }
+                // No link and no request for one: leave it absent.
             }
 
             $updatedForm = $this->formService->update($fileId, $data);
@@ -770,6 +806,63 @@ class ApiController extends Controller
         } catch (\OCP\Files\NotFoundException $e) {
             throw new \Exception('No uploads found');
         }
+    }
+
+    /**
+     * Replace the share link with a freshly minted one.
+     *
+     * Rotating a link invalidates the URL everyone already has, so it must be a
+     * deliberate act with its own endpoint — never a side effect of saving the
+     * form (#135). Password, expiry and access restrictions are left untouched;
+     * only the token changes.
+     */
+    #[NoAdminRequired]
+    public function rotateShareToken(int $fileId): DataResponse
+    {
+        try {
+            $file = $this->formService->getFileById($fileId);
+            $userId = $this->userSession->getUser()?->getUID() ?? '';
+            $role = $this->permissionService->getRoleFromFile($file, $userId);
+
+            if (!$this->permissionService->canEditSettings($role)) {
+                return new DataResponse(
+                    ['error' => 'Permission denied'],
+                    Http::STATUS_FORBIDDEN
+                );
+            }
+
+            $form = $this->formService->loadPublic($fileId);
+            $existing = $form['settings']['public_token'] ?? null;
+            if (!is_string($existing) || $existing === '') {
+                return new DataResponse(
+                    ['error' => 'This form has no share link to replace'],
+                    Http::STATUS_BAD_REQUEST
+                );
+            }
+
+            $settings = $form['settings'];
+            $settings['public_token'] = $this->generateShareToken();
+
+            $updatedForm = $this->formService->update($fileId, ['settings' => $settings]);
+            return new DataResponse(['form' => $updatedForm]);
+        } catch (\OCP\Files\NotFoundException $e) {
+            return new DataResponse(['error' => 'Form not found'], Http::STATUS_NOT_FOUND);
+        } catch (\RuntimeException $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_CONFLICT);
+        }
+    }
+
+    /**
+     * Mint a share token.
+     *
+     * CHAR_HUMAN_READABLE matches what Nextcloud core uses for share tokens: it
+     * drops the characters people misread when a link is dictated or copied off
+     * a screen. 32 chars of that alphabet still leaves far more entropy than a
+     * guessing attack can cover.
+     */
+    private function generateShareToken(): string
+    {
+        return $this->secureRandom->generate(32, ISecureRandom::CHAR_HUMAN_READABLE);
     }
 
 }

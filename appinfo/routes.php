@@ -65,6 +65,10 @@ return [
         // API routes - User/Group search for access restrictions
         ['name' => 'api#searchSharees', 'url' => '/api/sharees', 'verb' => 'GET'],
 
+        // Replacing a share link invalidates the URL everyone already has, so it
+        // needs its own deliberate endpoint rather than riding along on a save (#135)
+        ['name' => 'api#rotateShareToken', 'url' => '/api/form/{fileId}/share-token', 'verb' => 'POST'],
+
         // API routes - File uploads
         ['name' => 'api#downloadUpload', 'url' => '/api/form/{fileId}/uploads/{responseId}/{filename}', 'verb' => 'GET'],
         ['name' => 'api#downloadAllUploads', 'url' => '/api/form/{fileId}/uploads', 'verb' => 'GET'],

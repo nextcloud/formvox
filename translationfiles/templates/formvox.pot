@@ -4,9 +4,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: FormVox 1.4.3\n"
+"Project-Id-Version: FormVox 1.4.4\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"POT-Creation-Date: 2026-08-30 19:25+0000\n"
+"POT-Creation-Date: 2026-09-03 15:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -930,6 +930,9 @@ msgstr ""
 msgid "Failed to remove template"
 msgstr ""
 
+msgid "Failed to replace response link"
+msgstr ""
+
 msgid "Failed to save access restrictions"
 msgstr ""
 
@@ -1428,6 +1431,9 @@ msgstr ""
 msgid "New form"
 msgstr ""
 
+msgid "New response link created — the previous link no longer works"
+msgstr ""
+
 msgid "New response to \"{formTitle}\" from {respondentName}"
 msgstr ""
 
@@ -1789,6 +1795,12 @@ msgid "Rename"
 msgstr ""
 
 msgid "Replace template"
+msgstr ""
+
+msgid "Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form."
+msgstr ""
+
+msgid "Replace with a new link"
 msgstr ""
 
 msgid "Report sent successfully"
