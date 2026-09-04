@@ -52,6 +52,16 @@ class FormService
     private IGroupManager $groupManager;
     private IServerContainer $serverContainer;
     private ?bool $hasCircleIdColumn = null;
+    /**
+     * Per-request memo of resolved group-folder member candidates, keyed by
+     * folder id. Resolving members hits the group backend (an LDAP round-trip
+     * per group), and getFileByIdPublic() is called several times over a single
+     * public request (render, capacity check, branding, uploads), so caching
+     * the result for the request avoids repeating that work. Not persisted —
+     * it lives only for the lifetime of this service instance.
+     * @var array<int, list<string>>
+     */
+    private array $groupFolderMembersCache = [];
 
     public function __construct(
         IRootFolder $rootFolder,
@@ -935,14 +945,22 @@ class FormService
      */
     private function findUsersWithGroupFolderAccess(int $groupFolderId): array
     {
+        // Reuse the result within this request — the member lookup below can do
+        // one LDAP round-trip per group, and this runs on every public
+        // getFileByIdPublic() call (render + capacity + branding + upload).
+        if (isset($this->groupFolderMembersCache[$groupFolderId])) {
+            return $this->groupFolderMembersCache[$groupFolderId];
+        }
         // Get groups that have access to this group folder, most-permissive
         // first. Members of several groups get their permissions OR'd together
         // by groupfolders, so a write-capable group is the better bet.
-        // groupfolders stores group and circle entries in the same table; a row
-        // is a circle when circle_id is set, and then group_id holds the
-        // circle's single id. The column exists since groupfolders 14.1, well
-        // below our minimum, but stay defensive: an older or patched schema
-        // should degrade to groups-only rather than break every lookup.
+        // groupfolders stores group and circle entries in the same table
+        // (group_folders_groups): a row is a circle when its circle_id column is
+        // set, and we read the circle id from that circle_id column; otherwise
+        // it is a plain group and we read group_id. The circle_id column exists
+        // since groupfolders 14.1, well below our minimum, but stay defensive —
+        // an older or patched schema should degrade to groups-only (detected by
+        // groupFolderGroupsHasCircleId()) rather than break every lookup.
         $hasCircles = $this->groupFolderGroupsHasCircleId();
 
         $qb = $this->db->getQueryBuilder();
@@ -976,7 +994,9 @@ class FormService
             }
         }
 
-        return array_values(array_unique($userIds));
+        $result = array_values(array_unique($userIds));
+        $this->groupFolderMembersCache[$groupFolderId] = $result;
+        return $result;
     }
 
     /**
@@ -1061,6 +1081,14 @@ class FormService
             $circlesManager->startSuperSession();
             $circle = $circlesManager->getCircle($circleId);
 
+            // Collect ALL single-user members first, then dedupe + sort, and
+            // only then truncate. Truncating before sorting would pick whatever
+            // arbitrary subset getInheritedMembers() yields first (its order is
+            // not stable across requests once nested circles/groups are
+            // flattened), so the ACL-writable member could fall outside the cap
+            // on some requests and the write would be intermittently lost (#90).
+            // getInheritedMembers() is an in-memory list, so iterating it fully
+            // costs no extra queries.
             $userIds = [];
             foreach ($circle->getInheritedMembers() as $member) {
                 if ($member->getUserType() !== 1) {
@@ -1068,15 +1096,12 @@ class FormService
                     // circles and groups arrive flattened as their members.
                     continue;
                 }
-                $userIds[] = $member->getUserId();
-                if (count($userIds) >= self::ACCESS_CANDIDATE_USERS_PER_GROUP) {
-                    break;
-                }
+                $userIds[] = (string)$member->getUserId();
             }
-
+            $userIds = array_values(array_unique($userIds));
             sort($userIds);
 
-            return array_values(array_unique(array_map('strval', $userIds)));
+            return array_slice($userIds, 0, self::ACCESS_CANDIDATE_USERS_PER_GROUP);
         } catch (\Throwable $e) {
             // Circle gone, app disabled mid-request, or API change — fall back
             // to the group entries rather than failing the whole lookup.
