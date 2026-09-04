@@ -274,12 +274,20 @@ class ApiController extends Controller
             // wholesale, so a save that merely omits public_token would drop the
             // link just as effectively as one sending a stale value.
             if (isset($data['settings'])) {
+                // Read the current token from the file we already fetched above
+                // ($file, user-scoped and permission-checked) rather than a second
+                // loadPublic() lookup, which resolves through a different path and
+                // could fail independently of this save succeeding.
                 $existing = null;
+                $readOk = false;
                 try {
-                    $existingForm = $this->formService->loadPublic($fileId);
-                    $existing = $existingForm['settings']['public_token'] ?? null;
-                } catch (\Exception $e) {
-                    // Form not readable here — treat as "no link yet".
+                    $currentForm = json_decode($file->getContent(), true);
+                    if (is_array($currentForm)) {
+                        $existing = $currentForm['settings']['public_token'] ?? null;
+                        $readOk = true;
+                    }
+                } catch (\Throwable $e) {
+                    // Could not read the current form — fall through to fail-closed.
                 }
                 $hasExisting = is_string($existing) && $existing !== '';
 
@@ -287,7 +295,17 @@ class ApiController extends Controller
                 $incoming = $sentKey ? $data['settings']['public_token'] : null;
                 $isRevoke = $sentKey && ($incoming === null || $incoming === '');
 
-                if ($isRevoke) {
+                if (!$readOk) {
+                    // Fail closed: we couldn't read the current form, so we can't
+                    // tell whether a link exists. FormService::update() replaces
+                    // settings wholesale, so letting this save proceed would drop
+                    // the token. Skip the settings write entirely (same escape
+                    // hatch as the permission check above) — every other field
+                    // still saves, and the stored settings, including the link,
+                    // stay intact (#135). A genuine settings change can retry
+                    // once the read succeeds.
+                    unset($data['settings']);
+                } elseif ($isRevoke) {
                     // Revoking the link: explicit and deliberate.
                     $data['settings']['public_token'] = null;
                 } elseif ($hasExisting) {
