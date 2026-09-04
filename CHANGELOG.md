@@ -2,7 +2,7 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [Unreleased]
+## [1.4.5] - 2026-09-04
 
 ### Fixed
 - **Public links to forms in a Team Folder returned 404 on LDAP or AD instances.** Opening a form stored in a Team Folder (Groupfolder) needs an account that can see that folder, and FormVox looked those members up with a direct database query against local group membership. On an instance where groups come from LDAP or Active Directory that membership lives in the directory, so the query found nobody, no account was available to open the file, and every public link answered 404 — while the same form opened fine for logged-in members, and fine from a personal folder. Members are now resolved through Nextcloud's group API, which asks every configured backend. Team Folders shared with a Team (Circle) also work now; those were not consulted at all. ([#136](https://github.com/nextcloud/formvox/issues/136))
