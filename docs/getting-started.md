@@ -55,10 +55,14 @@ Add questions by:
 
 Once your form is ready:
 
-1. Click the **Share** button in the toolbar
-2. Choose how to share:
-   - **Nextcloud users** - Share with specific users or groups
-   - **Public link** - Create a link anyone can access
+There are two routes, and they do different things:
+
+- **Public link** - click **Share** in the toolbar and create a response link.
+  Anyone with the link can respond; you can add a password, an expiry, or restrict
+  it to specific users and groups.
+- **Nextcloud users** - share the form's `.fvform` file (or its folder) from the
+  **Files** app. The recipient then has the form in their own FormVox, with the
+  rights your file share grants them.
 
 ### Step 6: View Responses
 

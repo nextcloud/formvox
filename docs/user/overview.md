@@ -30,7 +30,7 @@ FormVox supports 12+ question types:
 - **Multi-page Forms** - Organize long forms into pages
 
 ### Sharing Options
-- Share with Nextcloud users and groups
+- Share with Nextcloud users and groups by sharing the form file from the Files app
 - Create public links with optional:
   - Password protection
   - Expiration dates

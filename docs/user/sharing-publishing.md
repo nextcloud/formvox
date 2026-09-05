@@ -6,24 +6,43 @@ FormVox offers flexible options for sharing your forms with others.
 
 ### Share with Nextcloud Users
 
-Share forms with specific Nextcloud users or groups:
+FormVox is file-based: every form is a `.fvform` file in your Files. You therefore
+share a form the same way you share any other file — through the **Files** app, not
+through the Share dialog inside FormVox.
 
-1. Open your form
-2. Click the **Share** button in the toolbar
-3. Search for users or groups
-4. Set permissions:
-   - **View** - Can view the form and submit responses
-   - **Edit** - Can modify the form structure
-   - **Manage** - Full access including sharing
+1. Open the **Files** app
+2. Locate the `.fvform` file (or the folder containing your forms)
+3. Open the sharing sidebar and share it with a user or group as usual
+4. The recipient opens the file and FormVox launches with it
+
+What the recipient may do follows directly from the Nextcloud file permissions you
+grant:
+
+| File permission | Role in FormVox | What they can do |
+| --- | --- | --- |
+| Owner | Owner | Everything, including deleting the form |
+| Read + Edit | Editor | Edit questions, settings, branding and view responses |
+| Read only | Viewer | Open and view the form, submit a response |
+| Share permission | — | May create and manage the public response link |
+
+Sharing the containing folder is usually the most practical approach: every form you
+place in it is shared automatically.
+
+> **Note:** the **Share** button inside FormVox does *not* share the form with other
+> Nextcloud users. It manages the public response link and its settings. The
+> user and group pickers you find there serve two different purposes: choosing who
+> gets notified of new responses, and restricting who may submit through the public
+> link (see [User/Group Restrictions](#usergroup-restrictions) below).
 
 ### Public Links
 
 Create a link that anyone can access:
 
 1. Open your form
-2. Click **Share** → **Public link**
-3. Configure options (see below)
-4. Copy the link
+2. Click **Share** in the toolbar
+3. Under **Response link**, click **Create response link** if none exists yet
+4. Configure options under **Link settings** (see below)
+5. Copy the link, or download the QR code
 
 ## Public Link Options
 
@@ -31,15 +50,15 @@ Create a link that anyone can access:
 
 Require a password to access the form:
 
-1. Enable **Password protection**
-2. Enter a password
+1. Open **Link settings** and enable **Password protect**
+2. Enter a password and click **Save**
 3. Share the password separately with intended respondents
 
 ### Expiration Date
 
 Set a deadline for form access:
 
-1. Enable **Expiration date**
+1. Open **Link settings** and enable **Set expiration**
 2. Choose a date and time
 3. After expiration, the link returns an error
 
@@ -47,9 +66,12 @@ Set a deadline for form access:
 
 Limit who can access a public form:
 
-1. Enable **Restrict access**
+1. Open **Link settings** and enable **Restrict to specific users/groups**
 2. Select Nextcloud users or groups
-3. Only these users can submit responses (they must log in)
+3. Only these users can open and submit the form (they must log in)
+
+This restricts access *through the public link*. It does not give those users the
+form in their own FormVox — for that, share the file (see above).
 
 This is useful for:
 - Internal surveys that need a public-style interface
@@ -78,7 +100,7 @@ The easiest way to embed a form:
 
 1. Open your form
 2. Click **Share** in the toolbar
-3. Click the **Embed** tab
+3. Open the **Advanced** section and find **Embed code**
 4. Configure options:
    - **Width** - Fixed pixels or responsive (100%)
    - **Height** - Frame height in pixels
@@ -118,7 +140,7 @@ For mobile-friendly embedding that adapts to any screen size:
 
 To embed a FormVox form in SharePoint:
 
-1. Generate the embed code using the **Embed** tab in the Share dialog
+1. Generate the embed code using **Advanced → Embed code** in the Share dialog
 2. In SharePoint, edit your page
 3. Add an **Embed** web part (or **Script Editor**)
 4. Paste the iframe code
