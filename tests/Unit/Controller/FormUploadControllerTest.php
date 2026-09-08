@@ -91,7 +91,7 @@ class FormUploadControllerTest extends TestCase {
 		try {
 			$this->controller()->downloadUpload(1, 'r1', 'photo.jpg');
 		} catch (\Error $e) {
-			$this->assertStringContainsString('UnicodeString', $e->getMessage());
+			$this->assertStringContainsString('Symfony\\Component\\', $e->getMessage());
 		}
 	}
 
@@ -136,7 +136,7 @@ class FormUploadControllerTest extends TestCase {
 		try {
 			$this->controller()->downloadAllUploads(1);
 		} catch (\Error $e) {
-			$this->assertStringContainsString('UnicodeString', $e->getMessage());
+			$this->assertStringContainsString('Symfony\\Component\\', $e->getMessage());
 		}
 	}
 

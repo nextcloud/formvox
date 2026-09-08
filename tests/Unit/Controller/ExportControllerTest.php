@@ -63,17 +63,21 @@ class ExportControllerTest extends TestCase {
 
 	/**
 	 * Invoke a download endpoint whose only observable output is a
-	 * DataDownloadResponse. That class cannot be instantiated in the Unit env
-	 * (symfony/string is absent), so the controller reaches the response
-	 * constructor and throws a missing-class Error *after* all the mocked
-	 * service work is done. Swallow only that specific Error — every other
-	 * assertion (the ->expects() matchers) still runs at tearDown.
+	 * DataDownloadResponse. That class cannot be instantiated in the Unit env:
+	 * OCP\AppFramework\Http\DownloadResponse pulls in Symfony HttpFoundation /
+	 * String classes that are not on the unit autoloader, so the controller
+	 * reaches the response constructor and throws a missing-Symfony-class Error
+	 * *after* all the mocked service work is done. Swallow only that specific
+	 * class of Error (any missing Symfony\Component\… class) — every other
+	 * assertion (the ->expects() matchers) still runs at tearDown. Which exact
+	 * Symfony class is missing depends on what other dev-deps happen to be
+	 * installed, so match the namespace, not one class name.
 	 */
 	private function buildDownload(callable $fn): void {
 		try {
 			$fn();
 		} catch (\Error $e) {
-			if (!str_contains($e->getMessage(), 'Symfony\\Component\\String\\UnicodeString')) {
+			if (!str_contains($e->getMessage(), 'Symfony\\Component\\')) {
 				throw $e;
 			}
 		}
