@@ -123,9 +123,16 @@ abstract class IntegrationTestCase extends TestCase {
 		// Ensure the file is present in oc_filecache before any public lookup:
 		// getFileByIdPublic() queries filecache/storages directly (it has no
 		// session-folder to walk), and a freshly-written node isn't guaranteed
-		// to be cache-resolvable via a raw query yet. Re-resolving by id through
-		// the owner's user folder forces/confirms the cache entry — the standard
-		// NC-test way. Return the re-resolved File.
+		// to be cache-resolvable via a raw query yet. Force a scan of the written
+		// path so its filecache row definitely exists, then re-resolve by id.
+		try {
+			$scanner = $file->getStorage()->getScanner();
+			$scanner->scan($file->getInternalPath());
+		} catch (\Throwable $e) {
+			// Scanner unavailable on this storage — fall through; the re-resolve
+			// below still confirms the cache entry where possible.
+		}
+
 		$fileId = $file->getId();
 		$owner = $file->getOwner();
 		$ownerUid = $owner !== null ? $owner->getUID() : $this->ownerUid;
