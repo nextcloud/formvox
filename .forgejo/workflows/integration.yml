@@ -72,36 +72,33 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         server: [stable30, stable31, stable32, stable33, stable34]
-    services:
-      mysql:
-        image: ghcr.io/nextcloud/continuous-integration-mariadb-10.6:latest
-        env:
-          MARIADB_ROOT_PASSWORD: rootpassword
-        ports:
-          - 4444:3306
-        options: >-
-          --health-cmd="mysqladmin ping -uroot -prootpassword"
-          --health-interval=5s --health-timeout=2s --health-retries=30
     steps:
-      - name: Install PHP 8.2 + Composer
+      - name: Install PHP 8.2 + Composer + MariaDB on the host
+        # DB on the host (not a services: container): the single Forgejo runner
+        # collided on the fixed host port when service containers from parallel
+        # matrix jobs bound the same port. A host DB reached via 127.0.0.1:3306
+        # avoids the whole container/port/networking class of problems.
         run: |
           set -e
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git >/dev/null
+          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git mariadb-server >/dev/null
           add-apt-repository -y ppa:ondrej/php >/dev/null
           apt-get update -qq
           apt-get install -y --no-install-recommends \
             php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
             php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-mysql >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          # Start MariaDB and create the nextcloud db + user.
+          mkdir -p /var/run/mysqld && chown mysql:mysql /var/run/mysqld
+          mysqld_safe --skip-grant-tables=0 &
+          for i in $(seq 1 30); do mysqladmin ping --silent 2>/dev/null && break; sleep 1; done
+          mysql -e "CREATE DATABASE IF NOT EXISTS nextcloud CHARACTER SET utf8mb4;"
+          mysql -e "CREATE USER IF NOT EXISTS 'nc'@'127.0.0.1' IDENTIFIED BY 'ncpass';"
+          mysql -e "GRANT ALL ON nextcloud.* TO 'nc'@'127.0.0.1'; FLUSH PRIVILEGES;"
       - name: Clone Nextcloud server ${{ matrix.server }} from GitHub
-        # NOT actions/checkout: on this Forgejo runner it clones from the local
-        # instance (http://forgejo:3000/nextcloud/server → "not found"). Clone
-        # GitHub explicitly, shallow, with submodules (3rdparty is required).
         run: |
           git clone --depth=1 --branch "${{ matrix.server }}" --recurse-submodules --shallow-submodules \
             https://github.com/nextcloud/server.git server
@@ -115,8 +112,8 @@ jobs:
         working-directory: server
         run: |
           php occ maintenance:install --verbose --database=mysql \
-            --database-name=nextcloud --database-host=127.0.0.1 --database-port=4444 \
-            --database-user=root --database-pass=rootpassword \
+            --database-name=nextcloud --database-host=127.0.0.1 --database-port=3306 \
+            --database-user=nc --database-pass=ncpass \
             --admin-user admin --admin-pass admin
       - name: Enable FormVox
         working-directory: server
@@ -130,38 +127,30 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         server: [stable30, stable31, stable32, stable33, stable34]
-    services:
-      pgsql:
-        image: ghcr.io/nextcloud/continuous-integration-postgres-14:latest
-        env:
-          POSTGRES_USER: root
-          POSTGRES_PASSWORD: rootpassword
-          POSTGRES_DB: nextcloud
-        ports:
-          - 4445:5432
-        options: >-
-          --health-cmd="pg_isready -U root" --health-interval=5s
-          --health-timeout=2s --health-retries=30
     steps:
-      - name: Install PHP 8.2 + Composer
+      - name: Install PHP 8.2 + Composer + Postgres on the host
+        # DB on the host (not a services: container) — see the mysql job: avoids
+        # the fixed-host-port collision between parallel matrix jobs on the
+        # single Forgejo runner. Reached via 127.0.0.1:5432.
         run: |
           set -e
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git >/dev/null
+          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git postgresql postgresql-contrib >/dev/null
           add-apt-repository -y ppa:ondrej/php >/dev/null
           apt-get update -qq
           apt-get install -y --no-install-recommends \
             php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
             php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-pgsql >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          # Start Postgres and create the nextcloud db + user (listen on localhost).
+          service postgresql start || pg_ctlcluster "$(ls /etc/postgresql)" main start
+          for i in $(seq 1 30); do pg_isready -h 127.0.0.1 -p 5432 && break; sleep 1; done
+          sudo -u postgres psql -c "CREATE USER nc WITH PASSWORD 'ncpass';" || true
+          sudo -u postgres psql -c "CREATE DATABASE nextcloud OWNER nc;" || true
       - name: Clone Nextcloud server ${{ matrix.server }} from GitHub
-        # NOT actions/checkout: on this Forgejo runner it clones from the local
-        # instance (http://forgejo:3000/nextcloud/server → "not found"). Clone
-        # GitHub explicitly, shallow, with submodules (3rdparty is required).
         run: |
           git clone --depth=1 --branch "${{ matrix.server }}" --recurse-submodules --shallow-submodules \
             https://github.com/nextcloud/server.git server
@@ -175,8 +164,8 @@ jobs:
         working-directory: server
         run: |
           php occ maintenance:install --verbose --database=pgsql \
-            --database-name=nextcloud --database-host=127.0.0.1 --database-port=4445 \
-            --database-user=root --database-pass=rootpassword \
+            --database-name=nextcloud --database-host=127.0.0.1 --database-port=5432 \
+            --database-user=nc --database-pass=ncpass \
             --admin-user admin --admin-pass admin
       - name: Enable FormVox
         working-directory: server
