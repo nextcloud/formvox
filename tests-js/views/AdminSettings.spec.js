@@ -134,19 +134,18 @@ describe('views/AdminSettings', () => {
 		expect(wrapper.vm.licenseBanner.message).toContain('expired')
 	})
 
-	// Note: subscriptionNudge() (composables/useSubscriptionNudge.js) calls the
-	// @nextcloud/l10n translate() positionally as t(text[, vars]) rather than
-	// t(app, text). Under the test stub translate(app, text, vars) that returns
-	// `text`, a one-arg call yields undefined and a call with vars yields ''.
-	// These tests pin that (stub-shaped) behaviour, not the production copy.
+	// subscriptionNudge() (composables/useSubscriptionNudge.js) now calls
+	// translate() correctly as t(app, text[, vars]); an Enterprise subscription
+	// therefore surfaces a real info banner rather than the previous undefined.
 
-	it('licenseBanner is null for an Enterprise subscription under the l10n stub', async () => {
+	it('licenseBanner shows an info nudge for an Enterprise subscription', async () => {
 		const wrapper = mountAdmin()
 		await flushPromises()
 		wrapper.vm.licenseStats = { hasLicense: false, hasValidSubscription: true }
 		await wrapper.vm.$nextTick()
-		// nudge text resolves to undefined under the stub → no banner.
-		expect(wrapper.vm.licenseBanner).toBe(null)
+		expect(wrapper.vm.licenseBanner).not.toBeNull()
+		expect(wrapper.vm.licenseBanner.type).toBe('info')
+		expect(wrapper.vm.licenseBanner.message).toContain('Nextcloud Enterprise subscription detected')
 	})
 
 	it('licenseBanner is null below the user-count nudge threshold', async () => {
@@ -171,9 +170,9 @@ describe('views/AdminSettings', () => {
 		}
 		await wrapper.vm.$nextTick()
 		const banner = wrapper.vm.licenseBanner
-		// The branch fires (info banner produced); the message text is subject
-		// to the l10n stub's positional-arg handling.
 		expect(banner).not.toBe(null)
 		expect(banner.type).toBe('info')
+		// {count} is interpolated now that translate() gets the app name.
+		expect(banner.message).toContain('250 users')
 	})
 })

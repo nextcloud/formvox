@@ -31,7 +31,7 @@ export function subscriptionNudge(stats) {
 	}
 
 	if (stats.hasValidSubscription || stats.hasExtendedSupport) {
-		return t('Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or sales@nextcloud.com.')
+		return t('formvox', 'Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or sales@nextcloud.com.')
 	}
 
 	// A missing threshold means an older backend: say nothing rather than
@@ -42,5 +42,5 @@ export function subscriptionNudge(stats) {
 		return null
 	}
 
-	return t('FormVox is running for {count} users here and keeps working in full without a subscription. If your organisation gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or sales@nextcloud.com.', { count: users })
+	return t('formvox', 'FormVox is running for {count} users here and keeps working in full without a subscription. If your organisation gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or sales@nextcloud.com.', { count: users })
 }

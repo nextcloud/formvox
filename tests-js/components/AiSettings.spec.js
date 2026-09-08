@@ -7,10 +7,10 @@ import axios from '@nextcloud/axios'
  * Characterization tests for AiSettings — admin panel for AI form generation.
  * Loads settings on mount and shows a provider-available/unavailable banner.
  *
- * NOTE: `save()` (and the load/save error paths) reference an out-of-scope `t`
- * and throw ReferenceError on every call — the panel cannot actually persist a
- * change. That is a live bug in the component, not behaviour worth pinning, so
- * these tests exercise only the load + render surface, which is `t`-free.
+ * Regression note: save()/load() previously called a bare t('formvox', …) that
+ * was only a return-property, not in setup() scope, so every save threw
+ * ReferenceError and the panel could not persist a change. Fixed by importing
+ * translate as t; the save/load tests below would catch a re-introduction.
  */
 const mountLoaded = async (settings) => {
 	vi.spyOn(axios, 'get').mockResolvedValue({ data: { settings } })
@@ -21,6 +21,40 @@ const mountLoaded = async (settings) => {
 
 describe('AiSettings', () => {
 	afterEach(() => vi.restoreAllMocks())
+
+	it('save() posts settings and does not throw (regression: bare t was out of scope)', async () => {
+		const wrapper = await mountLoaded({ providerAvailable: true, enabled: false })
+		const post = vi.spyOn(axios, 'post').mockResolvedValue({ data: { settings: { enabled: true } } })
+
+		await wrapper.vm.save()
+		await flushPromises()
+
+		expect(post).toHaveBeenCalledWith(
+			'/apps/formvox/api/settings/ai',
+			expect.objectContaining({ enabled: false }),
+		)
+		// enabled was merged back from the server response.
+		expect(wrapper.vm.settings.enabled).toBe(true)
+		expect(wrapper.vm.error).toBe('')
+	})
+
+	it('save() surfaces a server error message instead of crashing', async () => {
+		const wrapper = await mountLoaded({ providerAvailable: true })
+		vi.spyOn(axios, 'post').mockRejectedValue({ response: { data: { error: 'nope' } } })
+
+		await wrapper.vm.save()
+		await flushPromises()
+
+		expect(wrapper.vm.error).toBe('nope')
+	})
+
+	it('load() error path shows a toast without crashing on the bare t', async () => {
+		vi.spyOn(axios, 'get').mockRejectedValue(new Error('boom'))
+		const wrapper = mount(AiSettings)
+		await flushPromises()
+		// Reached the finally, loading cleared — no ReferenceError propagated.
+		expect(wrapper.vm.loading).toBe(false)
+	})
 
 	it('shows the loading icon before the request resolves', () => {
 		vi.spyOn(axios, 'get').mockReturnValue(new Promise(() => {}))

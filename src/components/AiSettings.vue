@@ -107,6 +107,7 @@
 
 <script>
 import { ref, onMounted } from 'vue';
+import { translate as t } from '@nextcloud/l10n';
 import { NcCheckboxRadioSwitch, NcLoadingIcon } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
@@ -198,7 +199,7 @@ export default {
     onMounted(load);
 
     return {
-      t: (app, msg) => (typeof window.t === 'function' ? window.t(app, msg) : msg),
+      t,
       loading,
       saving,
       error,

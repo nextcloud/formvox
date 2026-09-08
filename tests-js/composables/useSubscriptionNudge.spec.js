@@ -4,11 +4,12 @@ import { subscriptionNudge } from '@/composables/useSubscriptionNudge.js'
 /**
  * Characterization tests for subscriptionNudge — the single-message rule.
  *
- * The message strings themselves are produced by @nextcloud/l10n's translate,
- * which is stubbed in tests, so these tests pin the BRANCH SELECTION (which of
- * the three outcomes is chosen) rather than the exact wording: every "show
- * nothing" path must return null, and every "say something" path must return a
- * non-null value.
+ * These pin BRANCH SELECTION (which of the three outcomes is chosen). Two also
+ * assert the rendered text now that translate() is called correctly as
+ * t(app, text, vars): previously it was called t(text[, vars]) (missing the app
+ * name), so the enterprise branch returned undefined and the headcount branch
+ * returned the raw vars object. The identity l10n stub renders {count}, so the
+ * headcount message must contain the interpolated user count.
  */
 describe('subscriptionNudge', () => {
 	it('returns null when there are no stats', () => {
@@ -23,6 +24,8 @@ describe('subscriptionNudge', () => {
 	it('shows the enterprise message when a valid subscription is detected', () => {
 		const msg = subscriptionNudge({ hasLicense: false, hasValidSubscription: true })
 		expect(msg).not.toBeNull()
+		// Rendered text (proves translate(app, text) is called correctly).
+		expect(msg).toContain('Nextcloud Enterprise subscription detected')
 	})
 
 	it('shows the enterprise message when extended support is detected', () => {
@@ -59,6 +62,8 @@ describe('subscriptionNudge', () => {
 	it('shows the headcount message when users exceed the threshold', () => {
 		const msg = subscriptionNudge({ hasLicense: false, supportNudgeUserThreshold: 100, totalUsers: 101 })
 		expect(msg).not.toBeNull()
+		// {count} is interpolated (proves translate(app, text, vars) is used).
+		expect(msg).toContain('101 users')
 	})
 
 	it('treats a non-numeric threshold as missing', () => {
