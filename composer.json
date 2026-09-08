@@ -26,6 +26,7 @@
   "scripts": {
     "test": "phpunit",
     "test:unit": "phpunit --testsuite Unit",
+    "test:integration": "phpunit --configuration phpunit.integration.xml",
     "test:coverage": "phpunit --coverage-html coverage",
     "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l",
     "cs:check": "php-cs-fixer fix --dry-run --diff",

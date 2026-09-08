@@ -1,0 +1,115 @@
+# Forgejo Actions: FormVox INTEGRATION tests against a real Nextcloud + DB.
+#
+# Matrix: NC 30-34 x SQLite/MySQL/Postgres. Each job checks out nextcloud/server
+# at the target branch, checks FormVox out into apps/formvox, installs NC on the
+# chosen DB via occ, enables the app, and runs the @group DB integration suite.
+#
+# Heavy (minutes, and 15 combinations) so it is NOT on the every-push path — it
+# runs on PRs to the main lines and on manual dispatch, mirroring how
+# nextcloud/forms gates its DB suite. The fast unit+lint+psalm gate lives in
+# ci.yml and runs on every push.
+#
+# Forgejo notes (same runner constraints as ci.yml): actions resolve from
+# data.forgejo.org, so use actions/checkout (present there) and install PHP on
+# the host via ondrej/php rather than shivammathur/setup-php (absent there).
+
+name: Integration
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    name: NC ${{ matrix.server }} / ${{ matrix.db }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        server: [stable30, stable31, stable32, stable33, stable34]
+        db: [sqlite, mysql, pgsql]
+    services:
+      mysql:
+        image: ghcr.io/nextcloud/continuous-integration-mariadb-10.6:latest
+        env:
+          MARIADB_ROOT_PASSWORD: rootpassword
+        ports:
+          - 4444:3306
+        options: >-
+          --health-cmd="mysqladmin ping -uroot -prootpassword"
+          --health-interval=5s --health-timeout=2s --health-retries=20
+      pgsql:
+        image: ghcr.io/nextcloud/continuous-integration-postgres-14:latest
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: rootpassword
+          POSTGRES_DB: nextcloud
+        ports:
+          - 4445:5432
+        options: >-
+          --health-cmd="pg_isready -U root" --health-interval=5s
+          --health-timeout=2s --health-retries=20
+    steps:
+      - name: Install PHP 8.2 + Composer on the host
+        run: |
+          set -e
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            software-properties-common ca-certificates curl unzip git >/dev/null
+          add-apt-repository -y ppa:ondrej/php >/dev/null
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
+            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp \
+            php8.2-sqlite3 php8.2-mysql php8.2-pgsql >/dev/null
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          php -v
+
+      - name: Checkout Nextcloud server ${{ matrix.server }}
+        uses: actions/checkout@v4
+        with:
+          repository: nextcloud/server
+          ref: ${{ matrix.server }}
+          submodules: true
+          path: server
+
+      - name: Checkout FormVox into apps/
+        uses: actions/checkout@v4
+        with:
+          path: server/apps/formvox
+
+      - name: Install FormVox dev dependencies
+        working-directory: server/apps/formvox
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Install Nextcloud (${{ matrix.db }})
+        working-directory: server
+        run: |
+          set -e
+          case "${{ matrix.db }}" in
+            sqlite)
+              php occ maintenance:install --verbose \
+                --database=sqlite --admin-user admin --admin-pass admin ;;
+            mysql)
+              php occ maintenance:install --verbose \
+                --database=mysql --database-name=nextcloud \
+                --database-host=127.0.0.1 --database-port=4444 \
+                --database-user=root --database-pass=rootpassword \
+                --admin-user admin --admin-pass admin ;;
+            pgsql)
+              php occ maintenance:install --verbose \
+                --database=pgsql --database-name=nextcloud \
+                --database-host=127.0.0.1 --database-port=4445 \
+                --database-user=root --database-pass=rootpassword \
+                --admin-user admin --admin-pass admin ;;
+          esac
+
+      - name: Enable FormVox
+        working-directory: server
+        run: php occ app:enable --force formvox
+
+      - name: Run integration tests
+        working-directory: server/apps/formvox
+        run: composer test:integration
