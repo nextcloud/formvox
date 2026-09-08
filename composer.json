@@ -2,7 +2,7 @@
   "name": "voxcloud/formvox",
   "description": "File-based forms and polls for Nextcloud",
   "type": "nextcloud-app",
-  "license": "AGPL-3.0",
+  "license": "AGPL-3.0-or-later",
   "require": {
     "php": ">=8.2"
   },

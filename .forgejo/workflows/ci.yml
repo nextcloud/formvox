@@ -1,0 +1,69 @@
+# Forgejo Actions: FormVox CI — lint + static analysis + unit tests.
+#
+# Runs the STANDALONE suites (no running Nextcloud needed): the PHP unit tests
+# resolve OCP via the nextcloud/ocp stubs, and the JS unit tests stub the
+# @nextcloud/* packages. Both are fast and run on every push and PR.
+#
+# NOT here: integration tests against a real Nextcloud + database (the NC-app
+# pattern with a DB matrix). That needs the server checked out around the app
+# and is a separate, heavier workflow to add later.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+jobs:
+  php:
+    name: PHP — lint, coding-standard, Psalm, unit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: PHP syntax lint
+        run: composer lint
+
+      - name: Coding standard (php-cs-fixer)
+        run: composer cs:check
+
+      - name: Static analysis (Psalm)
+        run: composer psalm
+
+      - name: Unit tests
+        run: composer test:unit
+
+  js:
+    name: JS — unit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (Vitest)
+        run: npm run test:js
