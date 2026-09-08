@@ -86,3 +86,31 @@ jobs:
 
       - name: Unit tests (Vitest)
         run: npm run test:js
+
+  security:
+    name: Security — Semgrep SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Semgrep on the host
+        # Install via pip on the host rather than a docker-mounted image: the
+        # Forgejo runner's docker-in-docker doesn't reliably expose the
+        # workspace to the host daemon (hit "file not found" with mounts before).
+        run: |
+          set -e
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends python3 python3-pip >/dev/null
+          pip3 install --break-system-packages --quiet semgrep
+
+      - name: Semgrep scan (lib/)
+        # Static application security testing: scans lib/ for injection, XSS,
+        # path-traversal, SSRF, secrets etc. GitHub-hosted NC apps get this
+        # org-wide via CodeQL; on Forgejo we run it ourselves. --error makes any
+        # finding fail the build.
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          semgrep --config p/php --config p/security-audit --config p/secrets \
+            --error --disable-version-check lib/

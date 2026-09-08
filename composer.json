@@ -32,7 +32,8 @@
     "cs:check": "php-cs-fixer fix --dry-run --diff",
     "cs:fix": "php-cs-fixer fix",
     "psalm": "psalm --no-cache",
-    "psalm:baseline": "psalm --no-cache --set-baseline=tests/psalm-baseline.xml"
+    "psalm:baseline": "psalm --no-cache --set-baseline=tests/psalm-baseline.xml",
+    "security": "semgrep --config p/php --config p/security-audit --config p/secrets --error lib/"
   },
   "config": {
     "sort-packages": true,
