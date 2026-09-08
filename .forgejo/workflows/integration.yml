@@ -44,9 +44,13 @@ jobs:
             php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
             php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-sqlite3 >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-      - name: Checkout Nextcloud server ${{ matrix.server }}
-        uses: actions/checkout@v4
-        with: { repository: nextcloud/server, ref: '${{ matrix.server }}', submodules: true, path: server }
+      - name: Clone Nextcloud server ${{ matrix.server }} from GitHub
+        # NOT actions/checkout: on this Forgejo runner it clones from the local
+        # instance (http://forgejo:3000/nextcloud/server → "not found"). Clone
+        # GitHub explicitly, shallow, with submodules (3rdparty is required).
+        run: |
+          git clone --depth=1 --branch "${{ matrix.server }}" --recurse-submodules --shallow-submodules \
+            https://github.com/nextcloud/server.git server
       - name: Checkout FormVox into apps/
         uses: actions/checkout@v4
         with: { path: server/apps/formvox }
@@ -94,9 +98,13 @@ jobs:
             php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
             php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-mysql >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-      - name: Checkout Nextcloud server ${{ matrix.server }}
-        uses: actions/checkout@v4
-        with: { repository: nextcloud/server, ref: '${{ matrix.server }}', submodules: true, path: server }
+      - name: Clone Nextcloud server ${{ matrix.server }} from GitHub
+        # NOT actions/checkout: on this Forgejo runner it clones from the local
+        # instance (http://forgejo:3000/nextcloud/server → "not found"). Clone
+        # GitHub explicitly, shallow, with submodules (3rdparty is required).
+        run: |
+          git clone --depth=1 --branch "${{ matrix.server }}" --recurse-submodules --shallow-submodules \
+            https://github.com/nextcloud/server.git server
       - name: Checkout FormVox into apps/
         uses: actions/checkout@v4
         with: { path: server/apps/formvox }
@@ -150,9 +158,13 @@ jobs:
             php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
             php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-pgsql >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-      - name: Checkout Nextcloud server ${{ matrix.server }}
-        uses: actions/checkout@v4
-        with: { repository: nextcloud/server, ref: '${{ matrix.server }}', submodules: true, path: server }
+      - name: Clone Nextcloud server ${{ matrix.server }} from GitHub
+        # NOT actions/checkout: on this Forgejo runner it clones from the local
+        # instance (http://forgejo:3000/nextcloud/server → "not found"). Clone
+        # GitHub explicitly, shallow, with submodules (3rdparty is required).
+        run: |
+          git clone --depth=1 --branch "${{ matrix.server }}" --recurse-submodules --shallow-submodules \
+            https://github.com/nextcloud/server.git server
       - name: Checkout FormVox into apps/
         uses: actions/checkout@v4
         with: { path: server/apps/formvox }
