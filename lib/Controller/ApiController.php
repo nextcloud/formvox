@@ -15,13 +15,13 @@ use OCP\IUserSession;
 use OCP\IUserManager;
 use OCP\IGroupManager;
 use OCP\Notification\IManager as INotificationManager;
-use OCP\Security\ISecureRandom;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\IndexService;
 use OCA\FormVox\Service\TemplateService;
+use OCA\FormVox\Service\ShareTokenService;
 class ApiController extends Controller
 {
     private FormService $formService;
@@ -32,7 +32,7 @@ class ApiController extends Controller
     private IUserSession $userSession;
     private IUserManager $userManager;
     private IGroupManager $groupManager;
-    private ISecureRandom $secureRandom;
+    private ShareTokenService $shareTokenService;
     private INotificationManager $notificationManager;
 
     public function __construct(
@@ -45,7 +45,7 @@ class ApiController extends Controller
         IUserSession $userSession,
         IUserManager $userManager,
         IGroupManager $groupManager,
-        ISecureRandom $secureRandom,
+        ShareTokenService $shareTokenService,
         INotificationManager $notificationManager
     ) {
         parent::__construct(Application::APP_ID, $request);
@@ -57,7 +57,7 @@ class ApiController extends Controller
         $this->userSession = $userSession;
         $this->userManager = $userManager;
         $this->groupManager = $groupManager;
-        $this->secureRandom = $secureRandom;
+        $this->shareTokenService = $shareTokenService;
         $this->notificationManager = $notificationManager;
     }
 
@@ -289,36 +289,22 @@ class ApiController extends Controller
                 } catch (\Throwable $e) {
                     // Could not read the current form — fall through to fail-closed.
                 }
-                $hasExisting = is_string($existing) && $existing !== '';
 
-                $sentKey = array_key_exists('public_token', $data['settings']);
-                $incoming = $sentKey ? $data['settings']['public_token'] : null;
-                $isRevoke = $sentKey && ($incoming === null || $incoming === '');
-
-                if (!$readOk) {
-                    // Fail closed: we couldn't read the current form, so we can't
-                    // tell whether a link exists. FormService::update() replaces
-                    // settings wholesale, so letting this save proceed would drop
-                    // the token. Skip the settings write entirely (same escape
-                    // hatch as the permission check above) — every other field
-                    // still saves, and the stored settings, including the link,
-                    // stay intact (#135). A genuine settings change can retry
-                    // once the read succeeds.
+                // The share-token rules live in ShareTokenService (#135). A null
+                // return means "fail closed": we couldn't read the current form,
+                // so we can't tell whether a link exists and must not risk
+                // dropping it — skip the settings write entirely (every other
+                // field still saves). Otherwise it returns the settings to store.
+                $resolvedSettings = $this->shareTokenService->resolveTokenForUpdate(
+                    $data['settings'],
+                    $readOk,
+                    is_string($existing) ? $existing : null
+                );
+                if ($resolvedSettings === null) {
                     unset($data['settings']);
-                } elseif ($isRevoke) {
-                    // Revoking the link: explicit and deliberate.
-                    $data['settings']['public_token'] = null;
-                } elseif ($hasExisting) {
-                    // A link exists — keep it, whatever the client sent or omitted.
-                    // This is the case that used to silently rotate the URL and
-                    // break every link already handed out.
-                    $data['settings']['public_token'] = $existing;
-                } elseif ($sentKey) {
-                    // No link yet and the client asked for one. Its value is only
-                    // an intent marker; the token is always minted here.
-                    $data['settings']['public_token'] = $this->generateShareToken();
+                } else {
+                    $data['settings'] = $resolvedSettings;
                 }
-                // No link and no request for one: leave it absent.
             }
 
             $updatedForm = $this->formService->update($fileId, $data);
@@ -832,16 +818,17 @@ class ApiController extends Controller
             }
 
             $form = $this->formService->loadPublic($fileId);
-            $existing = $form['settings']['public_token'] ?? null;
-            if (!is_string($existing) || $existing === '') {
+
+            // The "no link to replace" guard + fresh mint live in the service
+            // (#135); it throws DomainException when there is nothing to rotate.
+            try {
+                $settings = $this->shareTokenService->rotate($form['settings'] ?? []);
+            } catch (\DomainException $e) {
                 return new DataResponse(
-                    ['error' => 'This form has no share link to replace'],
+                    ['error' => $e->getMessage()],
                     Http::STATUS_BAD_REQUEST
                 );
             }
-
-            $settings = $form['settings'];
-            $settings['public_token'] = $this->generateShareToken();
 
             $updatedForm = $this->formService->update($fileId, ['settings' => $settings]);
             return new DataResponse(['form' => $updatedForm]);
@@ -850,19 +837,6 @@ class ApiController extends Controller
         } catch (\RuntimeException $e) {
             return new DataResponse(['error' => $e->getMessage()], Http::STATUS_CONFLICT);
         }
-    }
-
-    /**
-     * Mint a share token.
-     *
-     * CHAR_HUMAN_READABLE matches what Nextcloud core uses for share tokens: it
-     * drops the characters people misread when a link is dictated or copied off
-     * a screen. 32 chars of that alphabet still leaves far more entropy than a
-     * guessing attack can cover.
-     */
-    private function generateShareToken(): string
-    {
-        return $this->secureRandom->generate(32, ISecureRandom::CHAR_HUMAN_READABLE);
     }
 
 }

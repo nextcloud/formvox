@@ -8,6 +8,9 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCA\FormVox\Versions\FilesVersionCleaner;
+use OCA\FormVox\Versions\IFormVersionCleaner;
+use OCA\FormVox\Versions\NullVersionCleaner;
 use OCP\Files\Events\Node\NodeCopiedEvent;
 use OCP\Files\Events\Node\NodeDeletedEvent;
 use OCP\Files\Events\Node\NodeRenamedEvent;
@@ -63,6 +66,17 @@ class Application extends App implements IBootstrap
 
         // Register DAV plugin to hide .fvform files from sync clients
         $context->registerEventListener(SabrePluginAuthInitEvent::class, RegisterDavPluginListener::class);
+
+        // Bind the form version cleaner to the real implementation when the
+        // files_versions app is available, otherwise a no-op. FormLockManager
+        // type-hints the interface; this alias tells the DI container which
+        // implementation to construct (auto-wiring cannot resolve an interface).
+        $context->registerService(IFormVersionCleaner::class, static function ($c): IFormVersionCleaner {
+            if (class_exists(\OCA\Files_Versions\Versions\IVersionManager::class)) {
+                return $c->get(FilesVersionCleaner::class);
+            }
+            return $c->get(NullVersionCleaner::class);
+        });
     }
 
     public function boot(IBootContext $context): void
