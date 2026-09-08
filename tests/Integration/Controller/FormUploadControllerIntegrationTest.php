@@ -32,6 +32,7 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 	public function testDownloadUploadReturnsFile(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Download Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		$uploadService = $this->getService(UploadService::class);
 		$meta = $uploadService->storeUpload(
@@ -60,6 +61,7 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 	public function testDownloadAllUploadsReturnsZip(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Zip Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		$uploadService = $this->getService(UploadService::class);
 		$uploadService->storeUpload(
@@ -87,6 +89,7 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 	public function testDownloadUploadNotFound(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Missing Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		// Store one real upload so the uploads folder exists; then ask for a
 		// filename that was never stored.

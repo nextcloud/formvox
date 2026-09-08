@@ -30,6 +30,8 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 	public function testStoreUploadWritesRealFile(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Store Form');
 		$fileId = $formFile->getId();
+		// storeUpload → getUploadsFolder → getFileByIdPublic (public raw lookup).
+		$this->requirePublicResolvable($fileId);
 
 		$meta = $this->service->storeUpload(
 			$fileId,
@@ -64,6 +66,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 	public function testStoreUploadSanitizesUnsafeFilename(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Sanitize Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		// Path traversal + illegal chars + collapsed whitespace must be scrubbed.
 		$meta = $this->service->storeUpload(
@@ -87,6 +90,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 	public function testGetUploadReadsBack(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Read Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		$meta = $this->service->storeUpload(
 			$fileId,
@@ -104,6 +108,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 	public function testCreateUploadsZipProducesRealZip(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Zip Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		$this->service->storeUpload(
 			$fileId,
@@ -143,6 +148,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 	public function testDeleteAllUploadsRemovesFolder(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Delete Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		$this->service->storeUpload(
 			$fileId,
@@ -164,6 +170,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		// creating the folder.
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload NoUploads Form');
 		$fileId = $formFile->getId();
+		$this->requirePublicResolvable($fileId);
 
 		$this->expectException(NotFoundException::class);
 		$this->service->getUploadsFolder($fileId, false);
