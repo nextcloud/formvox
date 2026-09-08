@@ -15,22 +15,19 @@ use PHPUnit\Framework\TestCase;
  *  - OCP interfaces resolve (from nextcloud/ocp) and are mockable
  * If this is green, the harness is ready for the real characterization tests.
  */
-class HarnessSmokeTest extends TestCase
-{
-    public function testOcpInterfacesAreAutoloadable(): void
-    {
-        $this->assertTrue(interface_exists(IDBConnection::class));
-        $this->assertTrue(interface_exists(IGroupManager::class));
-        $this->assertTrue(interface_exists(File::class));
-    }
+class HarnessSmokeTest extends TestCase {
+	public function testOcpInterfacesAreAutoloadable(): void {
+		$this->assertTrue(interface_exists(IDBConnection::class));
+		$this->assertTrue(interface_exists(IGroupManager::class));
+		$this->assertTrue(interface_exists(File::class));
+	}
 
-    public function testOcpInterfacesAreMockable(): void
-    {
-        $db = $this->createMock(IDBConnection::class);
-        $this->assertInstanceOf(IDBConnection::class, $db);
+	public function testOcpInterfacesAreMockable(): void {
+		$db = $this->createMock(IDBConnection::class);
+		$this->assertInstanceOf(IDBConnection::class, $db);
 
-        $groupManager = $this->createMock(IGroupManager::class);
-        $groupManager->method('get')->willReturn(null);
-        $this->assertNull($groupManager->get('nonexistent'));
-    }
+		$groupManager = $this->createMock(IGroupManager::class);
+		$groupManager->method('get')->willReturn(null);
+		$this->assertNull($groupManager->get('nonexistent'));
+	}
 }

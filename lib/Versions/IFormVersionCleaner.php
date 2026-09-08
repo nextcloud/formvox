@@ -20,11 +20,10 @@ use OCP\Files\File;
  * used to make. When files_versions is unavailable, {@see NullVersionCleaner}
  * is bound instead.
  */
-interface IFormVersionCleaner
-{
-    /**
-     * Delete all stored versions of $file. Best-effort: never throws — a
-     * failure here must not fail the write that just succeeded.
-     */
-    public function deleteVersionsForFile(File $file): void;
+interface IFormVersionCleaner {
+	/**
+	 * Delete all stored versions of $file. Best-effort: never throws — a
+	 * failure here must not fail the write that just succeeded.
+	 */
+	public function deleteVersionsForFile(File $file): void;
 }

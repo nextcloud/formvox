@@ -18,23 +18,20 @@ use Psr\Log\LoggerInterface;
  *
  * @template-implements IEventListener<SabrePluginAuthInitEvent>
  */
-class RegisterDavPluginListener implements IEventListener
-{
-    private LoggerInterface $logger;
+class RegisterDavPluginListener implements IEventListener {
+	private LoggerInterface $logger;
 
-    public function __construct(LoggerInterface $logger)
-    {
-        $this->logger = $logger;
-    }
+	public function __construct(LoggerInterface $logger) {
+		$this->logger = $logger;
+	}
 
-    public function handle(Event $event): void
-    {
-        if (!($event instanceof SabrePluginAuthInitEvent)) {
-            return;
-        }
+	public function handle(Event $event): void {
+		if (!($event instanceof SabrePluginAuthInitEvent)) {
+			return;
+		}
 
-        $server = $event->getServer();
-        $server->addPlugin(new HideFormFilesPlugin($this->logger));
-        $server->addPlugin(new StripFormDataPlugin());
-    }
+		$server = $event->getServer();
+		$server->addPlugin(new HideFormFilesPlugin($this->logger));
+		$server->addPlugin(new StripFormDataPlugin());
+	}
 }

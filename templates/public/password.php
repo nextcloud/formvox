@@ -6,8 +6,6 @@
 
 declare(strict_types=1);
 
-use OCP\Util;
-
 $appId = $_['appId'];
 $token = $_['token'];
 $error = $_['error'] ?? null;

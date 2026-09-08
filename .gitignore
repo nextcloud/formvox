@@ -6,6 +6,9 @@ vendor/
 .phpunit.cache/
 coverage/
 
+# php-cs-fixer
+.php-cs-fixer.cache
+
 # Build artifacts (keep js/ for deployment)
 # js/
 

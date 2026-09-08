@@ -16,58 +16,54 @@ use Psr\Log\LoggerInterface;
  *
  * @template-implements IEventListener<NodeDeletedEvent>
  */
-class FormDeletedListener implements IEventListener
-{
-    private LoggerInterface $logger;
+class FormDeletedListener implements IEventListener {
+	private LoggerInterface $logger;
 
-    public function __construct(LoggerInterface $logger)
-    {
-        $this->logger = $logger;
-    }
+	public function __construct(LoggerInterface $logger) {
+		$this->logger = $logger;
+	}
 
-    public function handle(Event $event): void
-    {
-        if (!($event instanceof NodeDeletedEvent)) {
-            return;
-        }
+	public function handle(Event $event): void {
+		if (!($event instanceof NodeDeletedEvent)) {
+			return;
+		}
 
-        $node = $event->getNode();
+		$node = $event->getNode();
 
-        // Check if this is a .fvform file
-        if ($node->getMimeType() !== 'application/x-fvform') {
-            // Also check by extension as mimetype might not be registered
-            $extension = pathinfo($node->getName(), PATHINFO_EXTENSION);
-            if ($extension !== 'fvform') {
-                return;
-            }
-        }
+		// Check if this is a .fvform file
+		if ($node->getMimeType() !== 'application/x-fvform') {
+			// Also check by extension as mimetype might not be registered
+			$extension = pathinfo($node->getName(), PATHINFO_EXTENSION);
+			if ($extension !== 'fvform') {
+				return;
+			}
+		}
 
-        $this->deleteAssociatedFolder($node, 'uploads');
-        $this->deleteAssociatedFolder($node, 'templates');
-        $this->deleteAssociatedFolder($node, 'branding');
-    }
+		$this->deleteAssociatedFolder($node, 'uploads');
+		$this->deleteAssociatedFolder($node, 'templates');
+		$this->deleteAssociatedFolder($node, 'branding');
+	}
 
-    /**
-     * Delete an associated folder (uploads or templates) for a form file
-     */
-    private function deleteAssociatedFolder($formFile, string $type): void
-    {
-        try {
-            $parent = $formFile->getParent();
-            $fileId = $formFile->getId();
-            $folderName = ".formvox-{$type}-{$fileId}";
+	/**
+	 * Delete an associated folder (uploads or templates) for a form file
+	 */
+	private function deleteAssociatedFolder($formFile, string $type): void {
+		try {
+			$parent = $formFile->getParent();
+			$fileId = $formFile->getId();
+			$folderName = ".formvox-{$type}-{$fileId}";
 
-            try {
-                $folder = $parent->get($folderName);
-                if ($folder instanceof Folder) {
-                    $folder->delete();
-                    $this->logger->info("FormVox: Deleted {$type} folder for form ID {$fileId}");
-                }
-            } catch (NotFoundException $e) {
-                // No folder to delete - this is fine
-            }
-        } catch (\Exception $e) {
-            $this->logger->error("FormVox: Failed to delete {$type} folder: " . $e->getMessage());
-        }
-    }
+			try {
+				$folder = $parent->get($folderName);
+				if ($folder instanceof Folder) {
+					$folder->delete();
+					$this->logger->info("FormVox: Deleted {$type} folder for form ID {$fileId}");
+				}
+			} catch (NotFoundException $e) {
+				// No folder to delete - this is fine
+			}
+		} catch (\Exception $e) {
+			$this->logger->error("FormVox: Failed to delete {$type} folder: " . $e->getMessage());
+		}
+	}
 }

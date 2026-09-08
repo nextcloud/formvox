@@ -4,197 +4,190 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Controller;
 
+use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Service\BrandingService;
+use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Service\PermissionService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
-use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\DataDisplayResponse;
+use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
-use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormFileLocator;
-use OCA\FormVox\Service\PermissionService;
 
-class BrandingController extends Controller
-{
-    private BrandingService $brandingService;
-    private FormFileLocator $fileLocator;
-    private PermissionService $permissionService;
-    private IUserSession $userSession;
+class BrandingController extends Controller {
+	private BrandingService $brandingService;
+	private FormFileLocator $fileLocator;
+	private PermissionService $permissionService;
+	private IUserSession $userSession;
 
-    public function __construct(
-        IRequest $request,
-        BrandingService $brandingService,
-        FormFileLocator $fileLocator,
-        PermissionService $permissionService,
-        IUserSession $userSession
-    ) {
-        parent::__construct(Application::APP_ID, $request);
-        $this->brandingService = $brandingService;
-        $this->fileLocator = $fileLocator;
-        $this->permissionService = $permissionService;
-        $this->userSession = $userSession;
-    }
+	public function __construct(
+		IRequest $request,
+		BrandingService $brandingService,
+		FormFileLocator $fileLocator,
+		PermissionService $permissionService,
+		IUserSession $userSession,
+	) {
+		parent::__construct(Application::APP_ID, $request);
+		$this->brandingService = $brandingService;
+		$this->fileLocator = $fileLocator;
+		$this->permissionService = $permissionService;
+		$this->userSession = $userSession;
+	}
 
-    /**
-     * Get branding settings (admin only)
-     */
-    public function get(): DataResponse
-    {
-        return new DataResponse($this->brandingService->getBranding());
-    }
+	/**
+	 * Get branding settings (admin only)
+	 */
+	public function get(): DataResponse {
+		return new DataResponse($this->brandingService->getBranding());
+	}
 
-    /**
-     * Save layout (admin only)
-     */
-    public function saveLayout(array $layout): DataResponse
-    {
-        $branding = $this->brandingService->saveLayout($layout);
-        return new DataResponse($branding);
-    }
+	/**
+	 * Save layout (admin only)
+	 */
+	public function saveLayout(array $layout): DataResponse {
+		$branding = $this->brandingService->saveLayout($layout);
+		return new DataResponse($branding);
+	}
 
-    /**
-     * Save global styles (admin only)
-     */
-    public function saveStyles(array $globalStyles): DataResponse
-    {
-        $branding = $this->brandingService->saveGlobalStyles($globalStyles);
-        return new DataResponse($branding);
-    }
+	/**
+	 * Save global styles (admin only)
+	 */
+	public function saveStyles(array $globalStyles): DataResponse {
+		$branding = $this->brandingService->saveGlobalStyles($globalStyles);
+		return new DataResponse($branding);
+	}
 
-    /**
-     * Upload block image (admin only)
-     */
-    public function uploadBlockImage(string $blockId): DataResponse
-    {
-        $file = $this->request->getUploadedFile('image');
-        if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
-            return new DataResponse(
-                ['error' => 'No file uploaded'],
-                Http::STATUS_BAD_REQUEST
-            );
-        }
+	/**
+	 * Upload block image (admin only)
+	 */
+	public function uploadBlockImage(string $blockId): DataResponse {
+		$file = $this->request->getUploadedFile('image');
+		if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
+			return new DataResponse(
+				['error' => 'No file uploaded'],
+				Http::STATUS_BAD_REQUEST
+			);
+		}
 
-        $allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
-        if (!in_array($file['type'], $allowedTypes)) {
-            return new DataResponse(
-                ['error' => 'Invalid file type. Allowed: PNG, JPEG, SVG, GIF, WebP'],
-                Http::STATUS_BAD_REQUEST
-            );
-        }
+		$allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
+		if (!in_array($file['type'], $allowedTypes)) {
+			return new DataResponse(
+				['error' => 'Invalid file type. Allowed: PNG, JPEG, SVG, GIF, WebP'],
+				Http::STATUS_BAD_REQUEST
+			);
+		}
 
-        $maxSize = 2 * 1024 * 1024; // 2MB
-        if ($file['size'] > $maxSize) {
-            return new DataResponse(
-                ['error' => 'File too large. Maximum size: 2MB'],
-                Http::STATUS_BAD_REQUEST
-            );
-        }
+		$maxSize = 2 * 1024 * 1024; // 2MB
+		if ($file['size'] > $maxSize) {
+			return new DataResponse(
+				['error' => 'File too large. Maximum size: 2MB'],
+				Http::STATUS_BAD_REQUEST
+			);
+		}
 
-        $imageId = $this->brandingService->saveBlockImage($blockId, $file['tmp_name'], $file['type']);
-        return new DataResponse(['imageId' => $imageId]);
-    }
+		$imageId = $this->brandingService->saveBlockImage($blockId, $file['tmp_name'], $file['type']);
+		return new DataResponse(['imageId' => $imageId]);
+	}
 
-    /**
-     * Delete block image (admin only)
-     */
-    public function deleteBlockImage(string $blockId): DataResponse
-    {
-        $this->brandingService->deleteBlockImage($blockId);
-        return new DataResponse(['success' => true]);
-    }
+	/**
+	 * Delete block image (admin only)
+	 */
+	public function deleteBlockImage(string $blockId): DataResponse {
+		$this->brandingService->deleteBlockImage($blockId);
+		return new DataResponse(['success' => true]);
+	}
 
-    /**
-     * Serve block image (public access)
-     */
-    #[PublicPage]
-    #[NoCSRFRequired]
-    public function blockImage(string $blockId): DataDisplayResponse
-    {
-        $image = $this->brandingService->getBlockImage($blockId);
-        if ($image === null) {
-            return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
-        }
+	/**
+	 * Serve block image (public access)
+	 */
+	#[PublicPage]
+	#[NoCSRFRequired]
+	public function blockImage(string $blockId): DataDisplayResponse {
+		$image = $this->brandingService->getBlockImage($blockId);
+		if ($image === null) {
+			return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
+		}
 
-        $response = new DataDisplayResponse($image['content']);
-        $response->addHeader('Content-Type', $image['mimeType']);
-        $response->cacheFor(3600); // Cache for 1 hour
-        return $response;
-    }
+		$response = new DataDisplayResponse($image['content']);
+		$response->addHeader('Content-Type', $image['mimeType']);
+		$response->cacheFor(3600); // Cache for 1 hour
+		return $response;
+	}
 
-    /**
-     * Upload a per-form branding image (form owner / editor with branding rights).
-     * Stored in .formvox-branding-{fileId}/ next to the .fvform file.
-     */
-    #[NoAdminRequired]
-    public function uploadFormBlockImage(int $fileId, string $blockId): DataResponse
-    {
-        $err = $this->requireBrandingEditPermission($fileId);
-        if ($err !== null) return $err;
+	/**
+	 * Upload a per-form branding image (form owner / editor with branding rights).
+	 * Stored in .formvox-branding-{fileId}/ next to the .fvform file.
+	 */
+	#[NoAdminRequired]
+	public function uploadFormBlockImage(int $fileId, string $blockId): DataResponse {
+		$err = $this->requireBrandingEditPermission($fileId);
+		if ($err !== null) {
+			return $err;
+		}
 
-        $file = $this->request->getUploadedFile('image');
-        if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
-            return new DataResponse(['error' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
-        }
-        $allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
-        if (!in_array($file['type'], $allowedTypes)) {
-            return new DataResponse(['error' => 'Invalid file type. Allowed: PNG, JPEG, SVG, GIF, WebP'], Http::STATUS_BAD_REQUEST);
-        }
-        if ($file['size'] > 2 * 1024 * 1024) {
-            return new DataResponse(['error' => 'File too large. Maximum size: 2MB'], Http::STATUS_BAD_REQUEST);
-        }
+		$file = $this->request->getUploadedFile('image');
+		if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
+			return new DataResponse(['error' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
+		}
+		$allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
+		if (!in_array($file['type'], $allowedTypes)) {
+			return new DataResponse(['error' => 'Invalid file type. Allowed: PNG, JPEG, SVG, GIF, WebP'], Http::STATUS_BAD_REQUEST);
+		}
+		if ($file['size'] > 2 * 1024 * 1024) {
+			return new DataResponse(['error' => 'File too large. Maximum size: 2MB'], Http::STATUS_BAD_REQUEST);
+		}
 
-        try {
-            $imageId = $this->brandingService->saveFormBlockImage($fileId, $blockId, $file['tmp_name'], $file['type']);
-            return new DataResponse(['imageId' => $imageId]);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-        }
-    }
+		try {
+			$imageId = $this->brandingService->saveFormBlockImage($fileId, $blockId, $file['tmp_name'], $file['type']);
+			return new DataResponse(['imageId' => $imageId]);
+		} catch (\Exception $e) {
+			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+		}
+	}
 
-    #[NoAdminRequired]
-    public function deleteFormBlockImage(int $fileId, string $blockId): DataResponse
-    {
-        $err = $this->requireBrandingEditPermission($fileId);
-        if ($err !== null) return $err;
-        $this->brandingService->deleteFormBlockImage($fileId, $blockId);
-        return new DataResponse(['success' => true]);
-    }
+	#[NoAdminRequired]
+	public function deleteFormBlockImage(int $fileId, string $blockId): DataResponse {
+		$err = $this->requireBrandingEditPermission($fileId);
+		if ($err !== null) {
+			return $err;
+		}
+		$this->brandingService->deleteFormBlockImage($fileId, $blockId);
+		return new DataResponse(['success' => true]);
+	}
 
-    #[PublicPage]
-    #[NoCSRFRequired]
-    public function formBlockImage(int $fileId, string $blockId): DataDisplayResponse
-    {
-        $image = $this->brandingService->getFormBlockImage($fileId, $blockId);
-        if ($image === null) {
-            return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
-        }
-        $response = new DataDisplayResponse($image['content']);
-        $response->addHeader('Content-Type', $image['mimeType']);
-        $response->cacheFor(3600);
-        return $response;
-    }
+	#[PublicPage]
+	#[NoCSRFRequired]
+	public function formBlockImage(int $fileId, string $blockId): DataDisplayResponse {
+		$image = $this->brandingService->getFormBlockImage($fileId, $blockId);
+		if ($image === null) {
+			return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
+		}
+		$response = new DataDisplayResponse($image['content']);
+		$response->addHeader('Content-Type', $image['mimeType']);
+		$response->cacheFor(3600);
+		return $response;
+	}
 
-    private function requireBrandingEditPermission(int $fileId): ?DataResponse
-    {
-        $userId = $this->userSession->getUser()?->getUID();
-        if ($userId === null) {
-            return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
-        }
-        try {
-            $file = $this->fileLocator->getFileById($fileId);
-            $role = $this->permissionService->getRoleFromFile($file, $userId);
-            if (!$this->permissionService->canEditSettings($role)) {
-                return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
-            }
-            return null;
-        } catch (\OCP\Files\NotFoundException $e) {
-            return new DataResponse(['error' => 'Form not found'], Http::STATUS_NOT_FOUND);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-        }
-    }
+	private function requireBrandingEditPermission(int $fileId): ?DataResponse {
+		$userId = $this->userSession->getUser()?->getUID();
+		if ($userId === null) {
+			return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
+		}
+		try {
+			$file = $this->fileLocator->getFileById($fileId);
+			$role = $this->permissionService->getRoleFromFile($file, $userId);
+			if (!$this->permissionService->canEditSettings($role)) {
+				return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
+			}
+			return null;
+		} catch (\OCP\Files\NotFoundException $e) {
+			return new DataResponse(['error' => 'Form not found'], Http::STATUS_NOT_FOUND);
+		} catch (\Exception $e) {
+			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+		}
+	}
 }

@@ -4,290 +4,274 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
-use OCP\IConfig;
-use OCP\IURLGenerator;
+use OCA\FormVox\AppInfo\Application;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFolder;
-use OCA\FormVox\AppInfo\Application;
+use OCP\IConfig;
+use OCP\IURLGenerator;
 
-class BrandingService
-{
-    private IConfig $config;
-    private IAppData $appData;
-    private UploadService $uploadService;
-    private IURLGenerator $urlGenerator;
+class BrandingService {
+	private IConfig $config;
+	private IAppData $appData;
+	private UploadService $uploadService;
+	private IURLGenerator $urlGenerator;
 
-    private const DEFAULT_LAYOUT = [
-        'header' => [],
-        'footer' => [],
-        'thankYou' => [
-            [
-                'id' => 'default-thankyou-heading',
-                'type' => 'heading',
-                'alignment' => 'center',
-                'settings' => [
-                    'level' => 'h1',
-                    'text' => 'Thank you!',
-                ],
-            ],
-            [
-                'id' => 'default-thankyou-text',
-                'type' => 'text',
-                'alignment' => 'center',
-                'settings' => [
-                    'content' => 'Your response has been submitted successfully.',
-                ],
-            ],
-        ],
-    ];
+	private const DEFAULT_LAYOUT = [
+		'header' => [],
+		'footer' => [],
+		'thankYou' => [
+			[
+				'id' => 'default-thankyou-heading',
+				'type' => 'heading',
+				'alignment' => 'center',
+				'settings' => [
+					'level' => 'h1',
+					'text' => 'Thank you!',
+				],
+			],
+			[
+				'id' => 'default-thankyou-text',
+				'type' => 'text',
+				'alignment' => 'center',
+				'settings' => [
+					'content' => 'Your response has been submitted successfully.',
+				],
+			],
+		],
+	];
 
-    private const DEFAULT_GLOBAL_STYLES = [
-        'primaryColor' => '#0082c9',
-        'backgroundColor' => '#ffffff',
-        'fontFamily' => 'default',
-    ];
+	private const DEFAULT_GLOBAL_STYLES = [
+		'primaryColor' => '#0082c9',
+		'backgroundColor' => '#ffffff',
+		'fontFamily' => 'default',
+	];
 
-    public function __construct(IConfig $config, IAppData $appData, UploadService $uploadService, IURLGenerator $urlGenerator)
-    {
-        $this->config = $config;
-        $this->appData = $appData;
-        $this->uploadService = $uploadService;
-        $this->urlGenerator = $urlGenerator;
-    }
+	public function __construct(IConfig $config, IAppData $appData, UploadService $uploadService, IURLGenerator $urlGenerator) {
+		$this->config = $config;
+		$this->appData = $appData;
+		$this->uploadService = $uploadService;
+		$this->urlGenerator = $urlGenerator;
+	}
 
-    /**
-     * Get all branding settings (layout + global styles)
-     */
-    public function getBranding(): array
-    {
-        // Get layout
-        $layoutJson = $this->config->getAppValue(Application::APP_ID, 'branding_layout', '');
-        $layout = $layoutJson ? json_decode($layoutJson, true) : self::DEFAULT_LAYOUT;
+	/**
+	 * Get all branding settings (layout + global styles)
+	 */
+	public function getBranding(): array {
+		// Get layout
+		$layoutJson = $this->config->getAppValue(Application::APP_ID, 'branding_layout', '');
+		$layout = $layoutJson ? json_decode($layoutJson, true) : self::DEFAULT_LAYOUT;
 
-        // Get global styles
-        $stylesJson = $this->config->getAppValue(Application::APP_ID, 'branding_globalStyles', '');
-        $globalStyles = $stylesJson ? json_decode($stylesJson, true) : self::DEFAULT_GLOBAL_STYLES;
+		// Get global styles
+		$stylesJson = $this->config->getAppValue(Application::APP_ID, 'branding_globalStyles', '');
+		$globalStyles = $stylesJson ? json_decode($stylesJson, true) : self::DEFAULT_GLOBAL_STYLES;
 
-        // Add image URLs for blocks that need them
-        $layout = $this->resolveImageUrls($layout);
+		// Add image URLs for blocks that need them
+		$layout = $this->resolveImageUrls($layout);
 
-        return [
-            'layout' => $layout,
-            'globalStyles' => $globalStyles,
-        ];
-    }
+		return [
+			'layout' => $layout,
+			'globalStyles' => $globalStyles,
+		];
+	}
 
-    /**
-     * Save branding layout
-     */
-    public function saveLayout(array $layout): array
-    {
-        $this->config->setAppValue(Application::APP_ID, 'branding_layout', json_encode($layout));
-        return $this->getBranding();
-    }
+	/**
+	 * Save branding layout
+	 */
+	public function saveLayout(array $layout): array {
+		$this->config->setAppValue(Application::APP_ID, 'branding_layout', json_encode($layout));
+		return $this->getBranding();
+	}
 
-    /**
-     * Save global styles
-     */
-    public function saveGlobalStyles(array $styles): array
-    {
-        $this->config->setAppValue(Application::APP_ID, 'branding_globalStyles', json_encode($styles));
-        return $this->getBranding();
-    }
+	/**
+	 * Save global styles
+	 */
+	public function saveGlobalStyles(array $styles): array {
+		$this->config->setAppValue(Application::APP_ID, 'branding_globalStyles', json_encode($styles));
+		return $this->getBranding();
+	}
 
-    /**
-     * Resolve image URLs for logo and image blocks
-     */
-    private function resolveImageUrls(array $layout): array
-    {
-        foreach (['header', 'footer', 'thankYou'] as $zone) {
-            if (!isset($layout[$zone])) {
-                continue;
-            }
-            foreach ($layout[$zone] as &$block) {
-                if (in_array($block['type'], ['logo', 'image']) && !empty($block['settings']['imageId'])) {
-                    $block['settings']['imageUrl'] = $this->getBlockImageUrl($block['id']);
-                }
-            }
-        }
-        return $layout;
-    }
+	/**
+	 * Resolve image URLs for logo and image blocks
+	 */
+	private function resolveImageUrls(array $layout): array {
+		foreach (['header', 'footer', 'thankYou'] as $zone) {
+			if (!isset($layout[$zone])) {
+				continue;
+			}
+			foreach ($layout[$zone] as &$block) {
+				if (in_array($block['type'], ['logo', 'image']) && !empty($block['settings']['imageId'])) {
+					$block['settings']['imageUrl'] = $this->getBlockImageUrl($block['id']);
+				}
+			}
+		}
+		return $layout;
+	}
 
-    /**
-     * Save uploaded image for a block
-     */
-    public function saveBlockImage(string $blockId, string $tmpPath, string $mimeType): string
-    {
-        try {
-            $folder = $this->appData->getFolder('branding');
-        } catch (NotFoundException $e) {
-            $folder = $this->appData->newFolder('branding');
-        }
+	/**
+	 * Save uploaded image for a block
+	 */
+	public function saveBlockImage(string $blockId, string $tmpPath, string $mimeType): string {
+		try {
+			$folder = $this->appData->getFolder('branding');
+		} catch (NotFoundException $e) {
+			$folder = $this->appData->newFolder('branding');
+		}
 
-        // Determine extension from mime type
-        $extension = $this->getExtensionFromMimeType($mimeType);
-        $filename = 'block_' . $blockId . '.' . $extension;
+		// Determine extension from mime type
+		$extension = $this->getExtensionFromMimeType($mimeType);
+		$filename = 'block_' . $blockId . '.' . $extension;
 
-        // Delete old image if exists
-        $this->deleteBlockImageFile($folder, $blockId);
+		// Delete old image if exists
+		$this->deleteBlockImageFile($folder, $blockId);
 
-        // Save new image
-        $content = file_get_contents($tmpPath);
-        $file = $folder->newFile($filename);
-        $file->putContent($content);
+		// Save new image
+		$content = file_get_contents($tmpPath);
+		$file = $folder->newFile($filename);
+		$file->putContent($content);
 
-        return $blockId;
-    }
+		return $blockId;
+	}
 
-    /**
-     * Delete image for a block
-     */
-    public function deleteBlockImage(string $blockId): void
-    {
-        try {
-            $folder = $this->appData->getFolder('branding');
-            $this->deleteBlockImageFile($folder, $blockId);
-        } catch (NotFoundException $e) {
-            // No folder or file to delete
-        }
-    }
+	/**
+	 * Delete image for a block
+	 */
+	public function deleteBlockImage(string $blockId): void {
+		try {
+			$folder = $this->appData->getFolder('branding');
+			$this->deleteBlockImageFile($folder, $blockId);
+		} catch (NotFoundException $e) {
+			// No folder or file to delete
+		}
+	}
 
-    /**
-     * Delete block image file from folder
-     */
-    private function deleteBlockImageFile(ISimpleFolder $folder, string $blockId): void
-    {
-        try {
-            foreach ($folder->getDirectoryListing() as $file) {
-                if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
-                    $file->delete();
-                    break;
-                }
-            }
-        } catch (NotFoundException $e) {
-            // No file to delete
-        }
-    }
+	/**
+	 * Delete block image file from folder
+	 */
+	private function deleteBlockImageFile(ISimpleFolder $folder, string $blockId): void {
+		try {
+			foreach ($folder->getDirectoryListing() as $file) {
+				if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
+					$file->delete();
+					break;
+				}
+			}
+		} catch (NotFoundException $e) {
+			// No file to delete
+		}
+	}
 
-    /**
-     * Get block image content for serving
-     */
-    public function getBlockImage(string $blockId): ?array
-    {
-        try {
-            $folder = $this->appData->getFolder('branding');
-            foreach ($folder->getDirectoryListing() as $file) {
-                if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
-                    $mimeType = $this->getMimeTypeFromFilename($file->getName());
-                    return [
-                        'content' => $file->getContent(),
-                        'mimeType' => $mimeType,
-                    ];
-                }
-            }
-        } catch (NotFoundException $e) {
-            // No file found
-        }
-        return null;
-    }
+	/**
+	 * Get block image content for serving
+	 */
+	public function getBlockImage(string $blockId): ?array {
+		try {
+			$folder = $this->appData->getFolder('branding');
+			foreach ($folder->getDirectoryListing() as $file) {
+				if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
+					$mimeType = $this->getMimeTypeFromFilename($file->getName());
+					return [
+						'content' => $file->getContent(),
+						'mimeType' => $mimeType,
+					];
+				}
+			}
+		} catch (NotFoundException $e) {
+			// No file found
+		}
+		return null;
+	}
 
-    /**
-     * Get block image URL for frontend
-     */
-    private function getBlockImageUrl(string $blockId): string
-    {
-        return $this->urlGenerator->linkToRoute('formvox.branding.blockImage', ['blockId' => $blockId]);
-    }
+	/**
+	 * Get block image URL for frontend
+	 */
+	private function getBlockImageUrl(string $blockId): string {
+		return $this->urlGenerator->linkToRoute('formvox.branding.blockImage', ['blockId' => $blockId]);
+	}
 
-    /**
-     * Form-scoped variants — store branding images in a hidden folder next to
-     * the .fvform file (mirrors the .formvox-uploads-{fileId} pattern). This
-     * way they travel with the form on move and are cleaned up on delete.
-     */
-    public function saveFormBlockImage(int $fileId, string $blockId, string $tmpPath, string $mimeType): string
-    {
-        $folder = $this->uploadService->getBrandingFolder($fileId, true);
-        $extension = $this->getExtensionFromMimeType($mimeType);
-        $filename = 'block_' . $blockId . '.' . $extension;
+	/**
+	 * Form-scoped variants — store branding images in a hidden folder next to
+	 * the .fvform file (mirrors the .formvox-uploads-{fileId} pattern). This
+	 * way they travel with the form on move and are cleaned up on delete.
+	 */
+	public function saveFormBlockImage(int $fileId, string $blockId, string $tmpPath, string $mimeType): string {
+		$folder = $this->uploadService->getBrandingFolder($fileId, true);
+		$extension = $this->getExtensionFromMimeType($mimeType);
+		$filename = 'block_' . $blockId . '.' . $extension;
 
-        // Drop any previous image for this block
-        try {
-            foreach ($folder->getDirectoryListing() as $node) {
-                if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
-                    $node->delete();
-                }
-            }
-        } catch (\Exception $e) {
-            // ignore — proceed with the upload
-        }
+		// Drop any previous image for this block
+		try {
+			foreach ($folder->getDirectoryListing() as $node) {
+				if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
+					$node->delete();
+				}
+			}
+		} catch (\Exception $e) {
+			// ignore — proceed with the upload
+		}
 
-        $content = file_get_contents($tmpPath);
-        $file = $folder->newFile($filename);
-        $file->putContent($content);
-        return $blockId;
-    }
+		$content = file_get_contents($tmpPath);
+		$file = $folder->newFile($filename);
+		$file->putContent($content);
+		return $blockId;
+	}
 
-    public function getFormBlockImage(int $fileId, string $blockId): ?array
-    {
-        try {
-            $folder = $this->uploadService->getBrandingFolder($fileId);
-            foreach ($folder->getDirectoryListing() as $file) {
-                if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
-                    return [
-                        'content' => $file->getContent(),
-                        'mimeType' => $this->getMimeTypeFromFilename($file->getName()),
-                    ];
-                }
-            }
-        } catch (\Exception $e) {
-            // no folder yet
-        }
-        return null;
-    }
+	public function getFormBlockImage(int $fileId, string $blockId): ?array {
+		try {
+			$folder = $this->uploadService->getBrandingFolder($fileId);
+			foreach ($folder->getDirectoryListing() as $file) {
+				if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
+					return [
+						'content' => $file->getContent(),
+						'mimeType' => $this->getMimeTypeFromFilename($file->getName()),
+					];
+				}
+			}
+		} catch (\Exception $e) {
+			// no folder yet
+		}
+		return null;
+	}
 
-    public function deleteFormBlockImage(int $fileId, string $blockId): void
-    {
-        try {
-            $folder = $this->uploadService->getBrandingFolder($fileId, true);
-            foreach ($folder->getDirectoryListing() as $node) {
-                if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
-                    $node->delete();
-                }
-            }
-        } catch (\Exception $e) {
-            // nothing to delete
-        }
-    }
+	public function deleteFormBlockImage(int $fileId, string $blockId): void {
+		try {
+			$folder = $this->uploadService->getBrandingFolder($fileId, true);
+			foreach ($folder->getDirectoryListing() as $node) {
+				if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
+					$node->delete();
+				}
+			}
+		} catch (\Exception $e) {
+			// nothing to delete
+		}
+	}
 
-    /**
-     * Get file extension from mime type
-     */
-    private function getExtensionFromMimeType(string $mimeType): string
-    {
-        return match ($mimeType) {
-            'image/jpeg' => 'jpg',
-            'image/svg+xml' => 'svg',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-            default => 'png',
-        };
-    }
+	/**
+	 * Get file extension from mime type
+	 */
+	private function getExtensionFromMimeType(string $mimeType): string {
+		return match ($mimeType) {
+			'image/jpeg' => 'jpg',
+			'image/svg+xml' => 'svg',
+			'image/gif' => 'gif',
+			'image/webp' => 'webp',
+			default => 'png',
+		};
+	}
 
-    /**
-     * Get mime type from filename
-     */
-    private function getMimeTypeFromFilename(string $filename): string
-    {
-        if (str_ends_with($filename, '.jpg') || str_ends_with($filename, '.jpeg')) {
-            return 'image/jpeg';
-        } elseif (str_ends_with($filename, '.svg')) {
-            return 'image/svg+xml';
-        } elseif (str_ends_with($filename, '.gif')) {
-            return 'image/gif';
-        } elseif (str_ends_with($filename, '.webp')) {
-            return 'image/webp';
-        }
-        return 'image/png';
-    }
+	/**
+	 * Get mime type from filename
+	 */
+	private function getMimeTypeFromFilename(string $filename): string {
+		if (str_ends_with($filename, '.jpg') || str_ends_with($filename, '.jpeg')) {
+			return 'image/jpeg';
+		} elseif (str_ends_with($filename, '.svg')) {
+			return 'image/svg+xml';
+		} elseif (str_ends_with($filename, '.gif')) {
+			return 'image/gif';
+		} elseif (str_ends_with($filename, '.webp')) {
+			return 'image/webp';
+		}
+		return 'image/png';
+	}
 }
