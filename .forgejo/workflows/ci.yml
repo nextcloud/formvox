@@ -11,8 +11,9 @@
 name: CI
 
 on:
+  # Run on every branch push so feature branches are gated too, plus PRs to the
+  # main lines and manual dispatch.
   push:
-    branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
   workflow_dispatch:
