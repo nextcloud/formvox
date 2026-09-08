@@ -22,16 +22,22 @@ jobs:
   php:
     name: PHP — lint, coding-standard, Psalm, unit
     runs-on: ubuntu-latest
+    # Run inside an official PHP image rather than using shivammathur/setup-php:
+    # the Forgejo runner resolves actions from data.forgejo.org, which does not
+    # mirror that action. The container already has the PHP version we target.
+    container:
+      image: php:8.2-cli
     steps:
+      - name: Install OS + PHP build deps
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git unzip libzip-dev
+          docker-php-ext-install zip
+          # Composer
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          coverage: none
-          tools: composer
 
       - name: Validate composer.json
         run: composer validate --no-check-publish
