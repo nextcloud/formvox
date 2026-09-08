@@ -24,6 +24,10 @@ export default defineConfig({
 			'@nextcloud/vue': fileURLToPath(new URL('./tests-js/stubs/nextcloud-vue.js', import.meta.url)),
 			'@nextcloud/l10n': fileURLToPath(new URL('./tests-js/stubs/nextcloud-l10n.js', import.meta.url)),
 			'@nextcloud/router': fileURLToPath(new URL('./tests-js/stubs/nextcloud-router.js', import.meta.url)),
+			'@nextcloud/axios': fileURLToPath(new URL('./tests-js/stubs/nextcloud-axios.js', import.meta.url)),
+			'@nextcloud/dialogs': fileURLToPath(new URL('./tests-js/stubs/nextcloud-dialogs.js', import.meta.url)),
+			'@nextcloud/initial-state': fileURLToPath(new URL('./tests-js/stubs/nextcloud-initial-state.js', import.meta.url)),
+			'@nextcloud/files': fileURLToPath(new URL('./tests-js/stubs/nextcloud-files.js', import.meta.url)),
 		},
 	},
 })
