@@ -9,6 +9,10 @@ coverage/
 # php-cs-fixer
 .php-cs-fixer.cache
 
+# Psalm
+/psalm.cache
+.psalm/
+
 # Build artifacts (keep js/ for deployment)
 # js/
 

@@ -1,0 +1,668 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="6.16.1@f1f5de594dc76faf8784e02d3dc4716c91c6f6ac">
+  <file src="lib/AppInfo/Application.php">
+    <InvalidArgument>
+      <code><![CDATA[LoadFilesPluginListener::class]]></code>
+      <code><![CDATA[RegisterDavPluginListener::class]]></code>
+    </InvalidArgument>
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function boot(IBootContext $context): void {]]></code>
+      <code><![CDATA[public function register(IRegistrationContext $context): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UndefinedClass>
+      <code><![CDATA[LoadAdditionalScriptsEvent]]></code>
+      <code><![CDATA[SabrePluginAuthInitEvent]]></code>
+    </UndefinedClass>
+  </file>
+  <file src="lib/BackgroundJob/LicenseUsageJob.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[protected function run(mixed $argument): void {]]></code>
+    </MissingOverrideAttribute>
+    <UnusedClass>
+      <code><![CDATA[LicenseUsageJob]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/BackgroundJob/TelemetryJob.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[protected function run($argument): void {]]></code>
+    </MissingOverrideAttribute>
+    <UnusedClass>
+      <code><![CDATA[TelemetryJob]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/AiController.php">
+    <MissingDependency>
+      <code><![CDATA[$this->rootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+    </MissingDependency>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$aiService]]></code>
+      <code><![CDATA[$pendingMapper]]></code>
+      <code><![CDATA[$request]]></code>
+      <code><![CDATA[$rootFolder]]></code>
+      <code><![CDATA[$taskManager]]></code>
+      <code><![CDATA[$userSession]]></code>
+    </PossiblyUnusedParam>
+    <UnusedClass>
+      <code><![CDATA[AiController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/BrandingController.php">
+    <UnusedClass>
+      <code><![CDATA[BrandingController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/ExportController.php">
+    <UnusedClass>
+      <code><![CDATA[ExportController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/ExternalApiController.php">
+    <UnusedClass>
+      <code><![CDATA[ExternalApiController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/FilePermissionController.php">
+    <MissingDependency>
+      <code><![CDATA[$this->rootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+    </MissingDependency>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$request]]></code>
+      <code><![CDATA[$rootFolder]]></code>
+      <code><![CDATA[$userSession]]></code>
+    </PossiblyUnusedParam>
+    <UnusedClass>
+      <code><![CDATA[FilePermissionController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/FormController.php">
+    <PossiblyUnusedParam>
+      <code><![CDATA[$branding]]></code>
+    </PossiblyUnusedParam>
+    <UnusedClass>
+      <code><![CDATA[FormController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/FormUploadController.php">
+    <UnusedClass>
+      <code><![CDATA[FormUploadController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/ImportController.php">
+    <UnusedClass>
+      <code><![CDATA[ImportController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/IntegrationController.php">
+    <UnusedClass>
+      <code><![CDATA[IntegrationController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/LicenseController.php">
+    <UnusedClass>
+      <code><![CDATA[LicenseController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/PageController.php">
+    <InvalidThrow>
+      <code><![CDATA[throw new \OCP\AppFramework\Http\NotFoundResponse()]]></code>
+      <code><![CDATA[throw new \OCP\AppFramework\Http\NotFoundResponse()]]></code>
+    </InvalidThrow>
+    <UnusedClass>
+      <code><![CDATA[PageController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/PresenceController.php">
+    <UnusedClass>
+      <code><![CDATA[PresenceController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/PublicController.php">
+    <UnusedClass>
+      <code><![CDATA[PublicController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/ResponseController.php">
+    <UnusedClass>
+      <code><![CDATA[ResponseController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/SettingsController.php">
+    <UnusedClass>
+      <code><![CDATA[SettingsController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Controller/StatisticsController.php">
+    <UnusedClass>
+      <code><![CDATA[StatisticsController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/DAV/HideFormFilesPlugin.php">
+    <PossiblyUnusedParam>
+      <code><![CDATA[$logger]]></code>
+      <code><![CDATA[$request]]></code>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$server]]></code>
+    </PossiblyUnusedParam>
+    <UndefinedClass>
+      <code><![CDATA[ServerPlugin]]></code>
+    </UndefinedClass>
+    <UnusedClass>
+      <code><![CDATA[HideFormFilesPlugin]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/DAV/StripFormDataPlugin.php">
+    <PossiblyUnusedParam>
+      <code><![CDATA[$request]]></code>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$server]]></code>
+    </PossiblyUnusedParam>
+    <UndefinedClass>
+      <code><![CDATA[ServerPlugin]]></code>
+    </UndefinedClass>
+    <UnusedClass>
+      <code><![CDATA[StripFormDataPlugin]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Db/AiPending.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[#[\ReturnTypeWillChange]]]></code>
+    </MissingOverrideAttribute>
+  </file>
+  <file src="lib/Db/AiPendingMapper.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedReturnValue>
+      <code><![CDATA[?AiPending]]></code>
+    </PossiblyUnusedReturnValue>
+  </file>
+  <file src="lib/Listener/AiTaskFailedListener.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function handle(Event $event): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Listener/AiTaskSuccessfulListener.php">
+    <InvalidOperand>
+      <code><![CDATA[$task->getId()]]></code>
+    </InvalidOperand>
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function handle(Event $event): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedProperty>
+      <code><![CDATA[$userManager]]></code>
+    </UnusedProperty>
+  </file>
+  <file src="lib/Listener/FormCopiedListener.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function handle(Event $event): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedProperty>
+      <code><![CDATA[$db]]></code>
+    </UnusedProperty>
+  </file>
+  <file src="lib/Listener/FormDeletedListener.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function handle(Event $event): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Listener/FormMovedListener.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function handle(Event $event): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Listener/LoadFilesPluginListener.php">
+    <ImplementedParamTypeMismatch>
+      <code><![CDATA[$event]]></code>
+    </ImplementedParamTypeMismatch>
+    <InvalidTemplateParam>
+      <code><![CDATA[IEventListener]]></code>
+    </InvalidTemplateParam>
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function handle(Event $event): void {]]></code>
+    </MissingOverrideAttribute>
+    <UndefinedClass>
+      <code><![CDATA[LoadAdditionalScriptsEvent]]></code>
+    </UndefinedClass>
+    <UndefinedDocblockClass>
+      <code><![CDATA[LoadFilesPluginListener]]></code>
+    </UndefinedDocblockClass>
+  </file>
+  <file src="lib/Listener/RegisterDavPluginListener.php">
+    <ImplementedParamTypeMismatch>
+      <code><![CDATA[$event]]></code>
+    </ImplementedParamTypeMismatch>
+    <InvalidTemplateParam>
+      <code><![CDATA[IEventListener]]></code>
+    </InvalidTemplateParam>
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function handle(Event $event): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UndefinedClass>
+      <code><![CDATA[SabrePluginAuthInitEvent]]></code>
+    </UndefinedClass>
+    <UndefinedDocblockClass>
+      <code><![CDATA[RegisterDavPluginListener]]></code>
+    </UndefinedDocblockClass>
+    <UnusedProperty>
+      <code><![CDATA[$logger]]></code>
+    </UnusedProperty>
+  </file>
+  <file src="lib/Migration/RegisterMimeType.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function getName(): string {]]></code>
+      <code><![CDATA[public function run(IOutput $output): void {]]></code>
+    </MissingOverrideAttribute>
+    <UndefinedClass>
+      <code><![CDATA[\OC]]></code>
+      <code><![CDATA[\OC]]></code>
+      <code><![CDATA[\OC]]></code>
+    </UndefinedClass>
+    <UnusedClass>
+      <code><![CDATA[RegisterMimeType]]></code>
+    </UnusedClass>
+    <UnusedParam>
+      <code><![CDATA[$output]]></code>
+      <code><![CDATA[$output]]></code>
+      <code><![CDATA[$output]]></code>
+    </UnusedParam>
+  </file>
+  <file src="lib/Migration/Version00010Date20260420000000.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function changeSchema(IOutput $output, Closure $schemaClosure, array $options): ?ISchemaWrapper {]]></code>
+      <code><![CDATA[public function postSchemaChange(IOutput $output, Closure $schemaClosure, array $options): void {]]></code>
+      <code><![CDATA[public function preSchemaChange(IOutput $output, Closure $schemaClosure, array $options): void {]]></code>
+    </MissingOverrideAttribute>
+    <UnnecessaryVarAnnotation>
+      <code><![CDATA[ISchemaWrapper]]></code>
+    </UnnecessaryVarAnnotation>
+    <UnusedClass>
+      <code><![CDATA[Version00010Date20260420000000]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Notification/Notifier.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function getID(): string {]]></code>
+      <code><![CDATA[public function getName(): string {]]></code>
+      <code><![CDATA[public function prepare(INotification $notification, string $languageCode): INotification {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <RedundantCast>
+      <code><![CDATA[(string)$notification->getObjectId()]]></code>
+      <code><![CDATA[(string)$notification->getObjectId()]]></code>
+    </RedundantCast>
+  </file>
+  <file src="lib/Preview/FormPreview.php">
+    <InvalidOperand>
+      <code><![CDATA[$maxX - $iconSize]]></code>
+      <code><![CDATA[$maxY * 0.1]]></code>
+      <code><![CDATA[$maxY * 0.1]]></code>
+      <code><![CDATA[$maxY * 0.15]]></code>
+      <code><![CDATA[($maxX - $iconSize) / 2]]></code>
+      <code><![CDATA[min($maxX, $maxY) * 0.4]]></code>
+    </InvalidOperand>
+    <MissingDependency>
+      <code><![CDATA[Image]]></code>
+    </MissingDependency>
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function getMimeType(): string {]]></code>
+      <code><![CDATA[public function getThumbnail(File $file, int $maxX, int $maxY): ?IImage {]]></code>
+      <code><![CDATA[public function isAvailable(FileInfo $file): bool {]]></code>
+    </MissingOverrideAttribute>
+  </file>
+  <file src="lib/Service/AiFormGeneratorService.php">
+    <InvalidOperand>
+      <code><![CDATA[$j]]></code>
+      <code><![CDATA[$j + 1]]></code>
+      <code><![CDATA[$maxBytes / 1024 / 1024]]></code>
+    </InvalidOperand>
+    <MissingDependency>
+      <code><![CDATA[$this->rootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+    </MissingDependency>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[generateForm]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$appManager]]></code>
+      <code><![CDATA[$config]]></code>
+      <code><![CDATA[$logger]]></code>
+      <code><![CDATA[$rootFolder]]></code>
+      <code><![CDATA[$taskManager]]></code>
+    </PossiblyUnusedParam>
+    <UndefinedClass>
+      <code><![CDATA[\PhpOffice\PhpWord\IOFactory]]></code>
+      <code><![CDATA[\Smalot\PdfParser\Config]]></code>
+      <code><![CDATA[\Smalot\PdfParser\Parser]]></code>
+      <code><![CDATA[\Smalot\PdfParser\Parser]]></code>
+    </UndefinedClass>
+    <UnusedMethod>
+      <code><![CDATA[extractPhpWordText]]></code>
+    </UnusedMethod>
+  </file>
+  <file src="lib/Service/ApiKeyService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[maskKey]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/BrandingService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UndefinedInterfaceMethod>
+      <code><![CDATA[getContent]]></code>
+    </UndefinedInterfaceMethod>
+  </file>
+  <file src="lib/Service/ChallengeService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/FormFactory.php">
+    <InvalidArrayOffset>
+      <code><![CDATA[$templateData['responses']]]></code>
+    </InvalidArrayOffset>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/FormFileLocator.php">
+    <InvalidArgument>
+      <code><![CDATA[\PDO::PARAM_INT]]></code>
+      <code><![CDATA[\PDO::PARAM_INT]]></code>
+      <code><![CDATA[\PDO::PARAM_INT]]></code>
+    </InvalidArgument>
+    <MissingDependency>
+      <code><![CDATA[$this->rootFolder]]></code>
+      <code><![CDATA[$this->rootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+    </MissingDependency>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$db]]></code>
+      <code><![CDATA[$groupManager]]></code>
+      <code><![CDATA[$rootFolder]]></code>
+      <code><![CDATA[$serverContainer]]></code>
+      <code><![CDATA[$userSession]]></code>
+    </PossiblyUnusedParam>
+  </file>
+  <file src="lib/Service/FormLockManager.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/FormRepository.php">
+    <MissingDependency>
+      <code><![CDATA[$this->rootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+    </MissingDependency>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[loadPublicData]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$db]]></code>
+      <code><![CDATA[$fileLocator]]></code>
+      <code><![CDATA[$formFactory]]></code>
+      <code><![CDATA[$l]]></code>
+      <code><![CDATA[$lockManager]]></code>
+      <code><![CDATA[$mimeTypeLoader]]></code>
+      <code><![CDATA[$rootFolder]]></code>
+      <code><![CDATA[$userSession]]></code>
+    </PossiblyUnusedParam>
+    <UndefinedMethod>
+      <code><![CDATA[getFileById]]></code>
+      <code><![CDATA[getFileById]]></code>
+      <code><![CDATA[getFileById]]></code>
+    </UndefinedMethod>
+    <UnusedMethod>
+      <code><![CDATA[findFormsRecursive]]></code>
+    </UnusedMethod>
+    <UnusedProperty>
+      <code><![CDATA[$l]]></code>
+    </UnusedProperty>
+  </file>
+  <file src="lib/Service/IndexService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[verifyIndex]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/LicenseService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/MSFormsImportService.php">
+    <InvalidArrayAccess>
+      <code><![CDATA[$choice['branchTarget']]]></code>
+      <code><![CDATA[$choice['text']]]></code>
+      <code><![CDATA[$choice['text']]]></code>
+      <code><![CDATA[$choice['value']]]></code>
+      <code><![CDATA[$item['text']]]></code>
+      <code><![CDATA[$opt['text']]]></code>
+      <code><![CDATA[$stmt['text']]]></code>
+    </InvalidArrayAccess>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$userId]]></code>
+    </PossiblyUnusedParam>
+    <UnusedParam>
+      <code><![CDATA[$choiceMap]]></code>
+    </UnusedParam>
+    <UnusedVariable>
+      <code><![CDATA[$groupId]]></code>
+      <code><![CDATA[$groupId]]></code>
+      <code><![CDATA[$idx]]></code>
+      <code><![CDATA[$msChoiceId]]></code>
+    </UnusedVariable>
+  </file>
+  <file src="lib/Service/MicrosoftFormsApiClient.php">
+    <InvalidArgument>
+      <code><![CDATA[($questionInfo['ChoiceType'] ?? 0) === 1
+							  || $question['allowMultipleSelection']]]></code>
+    </InvalidArgument>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <RedundantCondition>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$response]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA[[]]]></code>
+      <code><![CDATA[[]]]></code>
+      <code><![CDATA[[]]]></code>
+    </TypeDoesNotContainNull>
+    <UnusedMethod>
+      <code><![CDATA[requestGraph]]></code>
+    </UnusedMethod>
+  </file>
+  <file src="lib/Service/MicrosoftFormsAuthService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/OdtTemplateService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/ResponsePersistenceService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedReturnValue>
+      <code><![CDATA[array]]></code>
+    </PossiblyUnusedReturnValue>
+  </file>
+  <file src="lib/Service/ResponseService.php">
+    <FalsableReturnStatement>
+      <code><![CDATA[json_encode([
+			'title' => $form['title'],
+			'exportedAt' => date('c'),
+			'questions' => $form['questions'],
+			'responses' => $form['responses'] ?? [],
+		], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)]]></code>
+    </FalsableReturnStatement>
+    <InvalidOperand>
+      <code><![CDATA[$r]]></code>
+      <code><![CDATA[$rowNum]]></code>
+      <code><![CDATA[$rowNum]]></code>
+      <code><![CDATA[$value]]></code>
+      <code><![CDATA[array_sum($values) / count($values)]]></code>
+    </InvalidOperand>
+    <NoValue>
+      <code><![CDATA[$question]]></code>
+      <code><![CDATA[$question]]></code>
+      <code><![CDATA[$question]]></code>
+    </NoValue>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[getSummaryPublic]]></code>
+      <code><![CDATA[submitAnonymous]]></code>
+    </PossiblyUnusedMethod>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+    <UnusedForeachValue>
+      <code><![CDATA[$question]]></code>
+      <code><![CDATA[$question]]></code>
+    </UnusedForeachValue>
+    <UnusedProperty>
+      <code><![CDATA[$urlGenerator]]></code>
+    </UnusedProperty>
+  </file>
+  <file src="lib/Service/ShareTokenService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/StatisticsService.php">
+    <MissingDependency>
+      <code><![CDATA[$this->rootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+      <code><![CDATA[IRootFolder]]></code>
+    </MissingDependency>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$db]]></code>
+      <code><![CDATA[$logger]]></code>
+      <code><![CDATA[$mimeTypeLoader]]></code>
+      <code><![CDATA[$rootFolder]]></code>
+      <code><![CDATA[$userManager]]></code>
+    </PossiblyUnusedParam>
+    <UndefinedInterfaceMethod>
+      <code><![CDATA[getContent]]></code>
+    </UndefinedInterfaceMethod>
+    <UnusedClosureParam>
+      <code><![CDATA[$user]]></code>
+    </UnusedClosureParam>
+  </file>
+  <file src="lib/Service/TelemetryService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[shouldSendReport]]></code>
+    </PossiblyUnusedMethod>
+    <RedundantCondition>
+      <code><![CDATA[$this->licenseService->getLicenseKey()]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA['']]></code>
+    </TypeDoesNotContainNull>
+    <UnusedProperty>
+      <code><![CDATA[$userManager]]></code>
+    </UnusedProperty>
+  </file>
+  <file src="lib/Service/TemplateService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedProperty>
+      <code><![CDATA[$logger]]></code>
+    </UnusedProperty>
+  </file>
+  <file src="lib/Service/UploadService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Service/WebhookService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[verifySignature]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Settings/AdminSection.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function getID(): string {]]></code>
+      <code><![CDATA[public function getIcon(): string {]]></code>
+      <code><![CDATA[public function getName(): string {]]></code>
+      <code><![CDATA[public function getPriority(): int {]]></code>
+    </MissingOverrideAttribute>
+    <UnusedClass>
+      <code><![CDATA[AdminSection]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Settings/AdminSettings.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function getForm(): TemplateResponse {]]></code>
+      <code><![CDATA[public function getPriority(): int {]]></code>
+      <code><![CDATA[public function getSection(): string {]]></code>
+    </MissingOverrideAttribute>
+    <UnusedClass>
+      <code><![CDATA[AdminSettings]]></code>
+    </UnusedClass>
+  </file>
+  <file src="lib/Versions/FilesVersionCleaner.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function deleteVersionsForFile(File $file): void {]]></code>
+    </MissingOverrideAttribute>
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="lib/Versions/NullVersionCleaner.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function deleteVersionsForFile(File $file): void {]]></code>
+    </MissingOverrideAttribute>
+  </file>
+</files>
