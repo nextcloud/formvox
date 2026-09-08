@@ -6,6 +6,8 @@
     "build": "webpack",
     "build:dev": "NODE_ENV=development webpack",
     "watch": "webpack --watch",
+    "test:js": "vitest run",
+    "test:js:watch": "vitest",
     "l10n:extract": "node scripts/extract-en-json.js",
     "l10n:lint": "node scripts/lint-l10n-strings.js",
     "l10n:check": "node scripts/check-l10n-sync.js",
@@ -46,11 +48,15 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.5.0",
     "css-loader": "^6.8.1",
+    "happy-dom": "^20.14.0",
     "sass": "^1.69.0",
     "sass-loader": "^16.0.8",
     "string-replace-loader": "^3.2.0",
     "style-loader": "^3.3.3",
+    "vitest": "^2.1.9",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   }
