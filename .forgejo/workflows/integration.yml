@@ -1,17 +1,20 @@
 # Forgejo Actions: FormVox INTEGRATION tests against a real Nextcloud + DB.
 #
-# Matrix: NC 30-34 x SQLite/MySQL/Postgres. Each job checks out nextcloud/server
-# at the target branch, checks FormVox out into apps/formvox, installs NC on the
-# chosen DB via occ, enables the app, and runs the @group DB integration suite.
+# NC 30-34 across SQLite, MySQL/MariaDB and Postgres, exercising the paths unit
+# tests can't (real DB lock, real filecache resolution, real .fvform round-trips,
+# real DataDownloadResponse). Heavy, so PR + manual dispatch only — the fast
+# unit/lint/psalm gate lives in ci.yml on every push.
 #
-# Heavy (minutes, and 15 combinations) so it is NOT on the every-push path — it
-# runs on PRs to the main lines and on manual dispatch, mirroring how
-# nextcloud/forms gates its DB suite. The fast unit+lint+psalm gate lives in
-# ci.yml and runs on every push.
+# Three separate jobs (one per DB) so a job only ever starts the ONE service it
+# needs — an earlier single-job-with-both-services version collided on the fixed
+# host ports (0.0.0.0:4444 "already allocated") when matrix jobs shared the
+# runner. Each DB job runs its NC-version matrix with max-parallel 1 so the same
+# host port is never bound by two concurrent jobs.
 #
-# Forgejo notes (same runner constraints as ci.yml): actions resolve from
-# data.forgejo.org, so use actions/checkout (present there) and install PHP on
-# the host via ondrej/php rather than shivammathur/setup-php (absent there).
+# Forgejo runner constraints (as in ci.yml): actions resolve from
+# data.forgejo.org (use actions/checkout, present there) and PHP is installed on
+# the host via ondrej/php (shivammathur/setup-php is absent there). Steps run on
+# the host, so DB services are reached via their mapped host port on 127.0.0.1.
 
 name: Integration
 
@@ -21,14 +24,53 @@ on:
   workflow_dispatch:
 
 jobs:
-  integration:
-    name: NC ${{ matrix.server }} / ${{ matrix.db }}
+  sqlite:
+    name: NC ${{ matrix.server }} / sqlite
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         server: [stable30, stable31, stable32, stable33, stable34]
-        db: [sqlite, mysql, pgsql]
+    steps:
+      - name: Install PHP 8.2 + Composer
+        run: |
+          set -e
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git >/dev/null
+          add-apt-repository -y ppa:ondrej/php >/dev/null
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
+            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-sqlite3 >/dev/null
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+      - name: Checkout Nextcloud server ${{ matrix.server }}
+        uses: actions/checkout@v4
+        with: { repository: nextcloud/server, ref: '${{ matrix.server }}', submodules: true, path: server }
+      - name: Checkout FormVox into apps/
+        uses: actions/checkout@v4
+        with: { path: server/apps/formvox }
+      - name: Install FormVox dev dependencies
+        working-directory: server/apps/formvox
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Install Nextcloud (sqlite)
+        working-directory: server
+        run: php occ maintenance:install --verbose --database=sqlite --admin-user admin --admin-pass admin
+      - name: Enable FormVox
+        working-directory: server
+        run: php occ app:enable --force formvox
+      - name: Integration tests
+        working-directory: server/apps/formvox
+        run: composer test:integration
+
+  mysql:
+    name: NC ${{ matrix.server }} / mysql
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        server: [stable30, stable31, stable32, stable33, stable34]
     services:
       mysql:
         image: ghcr.io/nextcloud/continuous-integration-mariadb-10.6:latest
@@ -38,7 +80,52 @@ jobs:
           - 4444:3306
         options: >-
           --health-cmd="mysqladmin ping -uroot -prootpassword"
-          --health-interval=5s --health-timeout=2s --health-retries=20
+          --health-interval=5s --health-timeout=2s --health-retries=30
+    steps:
+      - name: Install PHP 8.2 + Composer
+        run: |
+          set -e
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git >/dev/null
+          add-apt-repository -y ppa:ondrej/php >/dev/null
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
+            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-mysql >/dev/null
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+      - name: Checkout Nextcloud server ${{ matrix.server }}
+        uses: actions/checkout@v4
+        with: { repository: nextcloud/server, ref: '${{ matrix.server }}', submodules: true, path: server }
+      - name: Checkout FormVox into apps/
+        uses: actions/checkout@v4
+        with: { path: server/apps/formvox }
+      - name: Install FormVox dev dependencies
+        working-directory: server/apps/formvox
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Install Nextcloud (mysql)
+        working-directory: server
+        run: |
+          php occ maintenance:install --verbose --database=mysql \
+            --database-name=nextcloud --database-host=127.0.0.1 --database-port=4444 \
+            --database-user=root --database-pass=rootpassword \
+            --admin-user admin --admin-pass admin
+      - name: Enable FormVox
+        working-directory: server
+        run: php occ app:enable --force formvox
+      - name: Integration tests
+        working-directory: server/apps/formvox
+        run: composer test:integration
+
+  pgsql:
+    name: NC ${{ matrix.server }} / pgsql
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        server: [stable30, stable31, stable32, stable33, stable34]
+    services:
       pgsql:
         image: ghcr.io/nextcloud/continuous-integration-postgres-14:latest
         env:
@@ -49,67 +136,39 @@ jobs:
           - 4445:5432
         options: >-
           --health-cmd="pg_isready -U root" --health-interval=5s
-          --health-timeout=2s --health-retries=20
+          --health-timeout=2s --health-retries=30
     steps:
-      - name: Install PHP 8.2 + Composer on the host
+      - name: Install PHP 8.2 + Composer
         run: |
           set -e
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y --no-install-recommends \
-            software-properties-common ca-certificates curl unzip git >/dev/null
+          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git >/dev/null
           add-apt-repository -y ppa:ondrej/php >/dev/null
           apt-get update -qq
           apt-get install -y --no-install-recommends \
             php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
-            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp \
-            php8.2-sqlite3 php8.2-mysql php8.2-pgsql >/dev/null
+            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-pgsql >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-          php -v
-
       - name: Checkout Nextcloud server ${{ matrix.server }}
         uses: actions/checkout@v4
-        with:
-          repository: nextcloud/server
-          ref: ${{ matrix.server }}
-          submodules: true
-          path: server
-
+        with: { repository: nextcloud/server, ref: '${{ matrix.server }}', submodules: true, path: server }
       - name: Checkout FormVox into apps/
         uses: actions/checkout@v4
-        with:
-          path: server/apps/formvox
-
+        with: { path: server/apps/formvox }
       - name: Install FormVox dev dependencies
         working-directory: server/apps/formvox
         run: composer install --prefer-dist --no-progress --no-interaction
-
-      - name: Install Nextcloud (${{ matrix.db }})
+      - name: Install Nextcloud (pgsql)
         working-directory: server
         run: |
-          set -e
-          case "${{ matrix.db }}" in
-            sqlite)
-              php occ maintenance:install --verbose \
-                --database=sqlite --admin-user admin --admin-pass admin ;;
-            mysql)
-              php occ maintenance:install --verbose \
-                --database=mysql --database-name=nextcloud \
-                --database-host=127.0.0.1 --database-port=4444 \
-                --database-user=root --database-pass=rootpassword \
-                --admin-user admin --admin-pass admin ;;
-            pgsql)
-              php occ maintenance:install --verbose \
-                --database=pgsql --database-name=nextcloud \
-                --database-host=127.0.0.1 --database-port=4445 \
-                --database-user=root --database-pass=rootpassword \
-                --admin-user admin --admin-pass admin ;;
-          esac
-
+          php occ maintenance:install --verbose --database=pgsql \
+            --database-name=nextcloud --database-host=127.0.0.1 --database-port=4445 \
+            --database-user=root --database-pass=rootpassword \
+            --admin-user admin --admin-pass admin
       - name: Enable FormVox
         working-directory: server
         run: php occ app:enable --force formvox
-
-      - name: Run integration tests
+      - name: Integration tests
         working-directory: server/apps/formvox
         run: composer test:integration
