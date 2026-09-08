@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 class MSFormsImportService
 {
     public function __construct(
-        private FormService $formService,
+        private FormRepository $formRepository,
         private ResponsePersistenceService $responsePersistence,
         private MicrosoftFormsApiClient $apiClient,
         private ISecureRandom $secureRandom,
@@ -250,7 +250,7 @@ class MSFormsImportService
         }
 
         // Create the FormVox form
-        $createResult = $this->formService->create(
+        $createResult = $this->formRepository->create(
             $msForm['title'] ?? 'Imported Form',
             $path,
             null // No template
@@ -290,7 +290,7 @@ class MSFormsImportService
             $formData['pages'] = $formPages;
         }
 
-        $this->formService->update($fileId, $formData);
+        $this->formRepository->update($fileId, $formData);
 
         // Import responses if requested
         $responsesImported = 0;

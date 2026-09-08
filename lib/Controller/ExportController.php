@@ -13,7 +13,7 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\OdtTemplateService;
@@ -21,7 +21,7 @@ use OCA\FormVox\Service\PermissionService;
 
 class ExportController extends Controller
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private ResponseService $responseService;
     private OdtTemplateService $odtTemplateService;
@@ -30,7 +30,7 @@ class ExportController extends Controller
 
     public function __construct(
         IRequest $request,
-        FormService $formService,
+        FormRepository $formRepository,
         FormFileLocator $fileLocator,
         ResponseService $responseService,
         OdtTemplateService $odtTemplateService,
@@ -38,7 +38,7 @@ class ExportController extends Controller
         IUserSession $userSession
     ) {
         parent::__construct(Application::APP_ID, $request);
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->fileLocator = $fileLocator;
         $this->responseService = $responseService;
         $this->odtTemplateService = $odtTemplateService;
@@ -54,7 +54,7 @@ class ExportController extends Controller
     public function exportCsv(int $fileId): DataDownloadResponse
     {
         $file = $this->fileLocator->getFileById($fileId);
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         $userId = $this->userSession->getUser()?->getUID() ?? '';
         $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -77,7 +77,7 @@ class ExportController extends Controller
     public function exportExcel(int $fileId): DataDownloadResponse
     {
         $file = $this->fileLocator->getFileById($fileId);
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         $userId = $this->userSession->getUser()?->getUID() ?? '';
         $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -103,7 +103,7 @@ class ExportController extends Controller
     public function exportJson(int $fileId): DataDownloadResponse
     {
         $file = $this->fileLocator->getFileById($fileId);
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         $userId = $this->userSession->getUser()?->getUID() ?? '';
         $role = $this->permissionService->getRoleFromFile($file, $userId);
 

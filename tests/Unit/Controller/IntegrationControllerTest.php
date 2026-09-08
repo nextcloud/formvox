@@ -6,7 +6,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\IntegrationController;
 use OCA\FormVox\Service\ApiKeyService;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\WebhookService;
@@ -27,7 +27,7 @@ use PHPUnit\Framework\TestCase;
 class IntegrationControllerTest extends TestCase
 {
     private IRequest $request;
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private ApiKeyService $apiKeyService;
@@ -38,7 +38,7 @@ class IntegrationControllerTest extends TestCase
     {
         parent::setUp();
         $this->request = $this->createMock(IRequest::class);
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->permissionService = $this->createMock(PermissionService::class);
         $this->apiKeyService = $this->createMock(ApiKeyService::class);
@@ -54,7 +54,7 @@ class IntegrationControllerTest extends TestCase
     {
         return new IntegrationController(
             $this->request,
-            $this->formService,
+            $this->formRepository,
             $this->fileLocator,
             $this->permissionService,
             $this->apiKeyService,
@@ -77,7 +77,7 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditSettings')->willReturn(false);
         $this->apiKeyService->expects($this->never())->method('generateKey');
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->createApiKey(1, 'k', ['read_form']);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -99,7 +99,7 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->apiKeyService->method('generateKey')->willReturn(['id' => 'kid', 'hash' => 'h', 'key' => 'plain']);
-        $this->formService->method('load')->willThrowException(new \RuntimeException('boom'));
+        $this->formRepository->method('load')->willThrowException(new \RuntimeException('boom'));
 
         $resp = $this->controller()->createApiKey(1, 'k', []);
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
@@ -113,10 +113,10 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->apiKeyService->method('generateKey')
             ->willReturn(['id' => 'kid1', 'hash' => 'HASH', 'key' => 'PLAINKEY']);
-        $this->formService->method('load')->willReturn(['settings' => ['api_keys' => []]]);
+        $this->formRepository->method('load')->willReturn(['settings' => ['api_keys' => []]]);
 
         // Verify the persisted config appends a key with hash (not plain key).
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, $this->callback(function ($payload) {
                 $keys = $payload['settings']['api_keys'];
                 $this->assertCount(1, $keys);
@@ -147,10 +147,10 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->apiKeyService->method('generateKey')
             ->willReturn(['id' => 'kid2', 'hash' => 'H2', 'key' => 'K2']);
-        $this->formService->method('load')
+        $this->formRepository->method('load')
             ->willReturn(['settings' => ['api_keys' => [['id' => 'existing']]]]);
 
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, $this->callback(function ($payload) {
                 $keys = $payload['settings']['api_keys'];
                 $this->assertCount(2, $keys);
@@ -170,7 +170,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditSettings')->willReturn(false);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->deleteApiKey(1, 'kid');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -191,9 +191,9 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')
+        $this->formRepository->method('load')
             ->willReturn(['settings' => ['api_keys' => [['id' => 'other']]]]);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->deleteApiKey(1, 'missing');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -205,11 +205,11 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'settings' => ['api_keys' => [['id' => 'keep'], ['id' => 'gone']]],
         ]);
 
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, $this->callback(function ($payload) {
                 $keys = array_values($payload['settings']['api_keys']);
                 $this->assertCount(1, $keys);
@@ -227,7 +227,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')->willThrowException(new \RuntimeException('kaboom'));
+        $this->formRepository->method('load')->willThrowException(new \RuntimeException('kaboom'));
 
         $resp = $this->controller()->deleteApiKey(1, 'kid');
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
@@ -279,7 +279,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->createWebhook(1);
         $this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
@@ -294,9 +294,9 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->webhookService->method('generateId')->willReturn('wh1');
         $this->webhookService->method('generateSecret')->willReturn('SECRET');
-        $this->formService->method('load')->willReturn(['settings' => ['webhooks' => []]]);
+        $this->formRepository->method('load')->willReturn(['settings' => ['webhooks' => []]]);
 
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, $this->callback(function ($payload) {
                 $hooks = $payload['settings']['webhooks'];
                 $this->assertCount(1, $hooks);
@@ -330,8 +330,8 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->webhookService->method('generateId')->willReturn('wh2');
         $this->webhookService->method('generateSecret')->willReturn('S2');
-        $this->formService->method('load')->willReturn(['settings' => []]);
-        $this->formService->method('update');
+        $this->formRepository->method('load')->willReturn(['settings' => []]);
+        $this->formRepository->method('update');
 
         $resp = $this->controller()->createWebhook(1);
         $this->assertSame(Http::STATUS_CREATED, $resp->getStatus());
@@ -346,8 +346,8 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->webhookService->method('generateId')->willReturn('wh3');
         $this->webhookService->method('generateSecret')->willReturn('S3');
-        $this->formService->method('load')->willReturn(['settings' => []]);
-        $this->formService->method('update');
+        $this->formRepository->method('load')->willReturn(['settings' => []]);
+        $this->formRepository->method('update');
 
         $resp = $this->controller()->createWebhook(1);
         $this->assertSame(Http::STATUS_CREATED, $resp->getStatus());
@@ -362,7 +362,7 @@ class IntegrationControllerTest extends TestCase
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->webhookService->method('generateId')->willReturn('wh');
         $this->webhookService->method('generateSecret')->willReturn('s');
-        $this->formService->method('load')->willThrowException(new \RuntimeException('explode'));
+        $this->formRepository->method('load')->willThrowException(new \RuntimeException('explode'));
 
         $resp = $this->controller()->createWebhook(1);
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
@@ -376,7 +376,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditSettings')->willReturn(false);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->updateWebhook(1, 'wh1');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -397,7 +397,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->updateWebhook(1, 'wh1', 'bad-url');
         $this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
@@ -409,9 +409,9 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')
+        $this->formRepository->method('load')
             ->willReturn(['settings' => ['webhooks' => [['id' => 'other']]]]);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->updateWebhook(1, 'missing', null, 'newname');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -423,7 +423,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'settings' => ['webhooks' => [[
                 'id' => 'wh1',
                 'name' => 'Old',
@@ -433,7 +433,7 @@ class IntegrationControllerTest extends TestCase
             ]]],
         ]);
 
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, $this->callback(function ($payload) {
                 $hook = $payload['settings']['webhooks'][0];
                 // name + enabled provided; url + events left untouched.
@@ -455,7 +455,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'settings' => ['webhooks' => [[
                 'id' => 'wh1',
                 'url' => 'https://old.example.com',
@@ -463,7 +463,7 @@ class IntegrationControllerTest extends TestCase
             ]]],
         ]);
 
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, $this->callback(function ($payload) {
                 $hook = $payload['settings']['webhooks'][0];
                 $this->assertSame('https://new.example.com', $hook['url']);
@@ -487,7 +487,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')->willThrowException(new \RuntimeException('nope'));
+        $this->formRepository->method('load')->willThrowException(new \RuntimeException('nope'));
 
         $resp = $this->controller()->updateWebhook(1, 'wh1', null, 'x');
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
@@ -501,7 +501,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditSettings')->willReturn(false);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->deleteWebhook(1, 'wh1');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -522,9 +522,9 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')
+        $this->formRepository->method('load')
             ->willReturn(['settings' => ['webhooks' => [['id' => 'other']]]]);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->deleteWebhook(1, 'missing');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -536,11 +536,11 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'settings' => ['webhooks' => [['id' => 'keep'], ['id' => 'gone']]],
         ]);
 
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, $this->callback(function ($payload) {
                 $hooks = array_values($payload['settings']['webhooks']);
                 $this->assertCount(1, $hooks);
@@ -558,7 +558,7 @@ class IntegrationControllerTest extends TestCase
         $this->withFile();
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('load')->willThrowException(new \RuntimeException('argh'));
+        $this->formRepository->method('load')->willThrowException(new \RuntimeException('argh'));
 
         $resp = $this->controller()->deleteWebhook(1, 'wh1');
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());

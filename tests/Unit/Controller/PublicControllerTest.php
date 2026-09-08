@@ -7,7 +7,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 use OCA\FormVox\Controller\PublicController;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\UploadService;
 use OCA\FormVox\Service\ResponseService;
 use OCP\AppFramework\Http;
@@ -41,7 +41,7 @@ class PublicControllerTest extends TestCase
     private IUserSession $userSession;
     private IURLGenerator $urlGenerator;
     private IGroupManager $groupManager;
-    private FormService $formService;
+    private FormRepository $formRepository;
     private UploadService $uploadService;
     private ResponseService $responseService;
     private BrandingService $brandingService;
@@ -56,7 +56,7 @@ class PublicControllerTest extends TestCase
         $this->userSession = $this->createMock(IUserSession::class);
         $this->urlGenerator = $this->createMock(IURLGenerator::class);
         $this->groupManager = $this->createMock(IGroupManager::class);
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->uploadService = $this->createMock(UploadService::class);
         $this->responseService = $this->createMock(ResponseService::class);
         $this->brandingService = $this->createMock(BrandingService::class);
@@ -77,7 +77,7 @@ class PublicControllerTest extends TestCase
             $this->userSession,
             $this->urlGenerator,
             $this->groupManager,
-            $this->formService,
+            $this->formRepository,
             $this->uploadService,
             $this->responseService,
             $this->brandingService,
@@ -116,7 +116,7 @@ class PublicControllerTest extends TestCase
     public function testShowFormNotFoundWhenTokenMismatch(): void
     {
         // Stored token differs from supplied → loadAndValidateForm returns null.
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
         $resp = $this->controller()->showForm(1, 'TOKEN');
         $this->assertInstanceOf(TemplateResponse::class, $resp);
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -124,7 +124,7 @@ class PublicControllerTest extends TestCase
 
     public function testShowFormNotFoundWhenLoadThrows(): void
     {
-        $this->formService->method('loadPublic')->willThrowException(new \RuntimeException('boom'));
+        $this->formRepository->method('loadPublic')->willThrowException(new \RuntimeException('boom'));
         $resp = $this->controller()->showForm(1, 'TOKEN');
         $this->assertInstanceOf(TemplateResponse::class, $resp);
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -133,7 +133,7 @@ class PublicControllerTest extends TestCase
     public function testShowFormNotYetOpenReturnsForbidden(): void
     {
         $future = (new \DateTime('+1 day'))->format(\DateTime::ATOM);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_starts_at' => $future]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_starts_at' => $future]));
         $resp = $this->controller()->showForm(1, 'TOKEN');
         $this->assertInstanceOf(TemplateResponse::class, $resp);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -142,7 +142,7 @@ class PublicControllerTest extends TestCase
     public function testShowFormExpiredReturnsGone(): void
     {
         $past = (new \DateTime('-1 day'))->format(\DateTime::ATOM);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
         $resp = $this->controller()->showForm(1, 'TOKEN');
         $this->assertInstanceOf(TemplateResponse::class, $resp);
         $this->assertSame(Http::STATUS_GONE, $resp->getStatus());
@@ -150,7 +150,7 @@ class PublicControllerTest extends TestCase
 
     public function testShowFormRequireLoginRedirectsAnonymous(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
         $this->userSession->method('getUser')->willReturn(null);
         $resp = $this->controller()->showForm(1, 'TOKEN');
         $this->assertInstanceOf(RedirectResponse::class, $resp);
@@ -158,7 +158,7 @@ class PublicControllerTest extends TestCase
 
     public function testShowFormRestrictionsRedirectAnonymous(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
         $this->userSession->method('getUser')->willReturn(null);
         $resp = $this->controller()->showForm(1, 'TOKEN');
         $this->assertInstanceOf(RedirectResponse::class, $resp);
@@ -166,7 +166,7 @@ class PublicControllerTest extends TestCase
 
     public function testShowFormRestrictionsUnauthorizedWhenUserNotAllowed(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
         $this->loginAs('carol');
         $this->groupManager->method('isInGroup')->willReturn(false);
         $resp = $this->controller()->showForm(1, 'TOKEN');
@@ -176,7 +176,7 @@ class PublicControllerTest extends TestCase
 
     public function testShowFormRestrictionsAllowedViaGroupSucceeds(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['allowed_groups' => ['staff']]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['allowed_groups' => ['staff']]));
         $this->loginAs('carol');
         $this->groupManager->method('isInGroup')->with('carol', 'staff')->willReturn(true);
         $resp = $this->controller()->showForm(1, 'TOKEN');
@@ -187,7 +187,7 @@ class PublicControllerTest extends TestCase
     public function testShowFormPasswordProtectedShowsPasswordFormWhenNoPassword(): void
     {
         $hash = password_hash('secret', PASSWORD_DEFAULT);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getCookie')->willReturn(null);
         $this->challengeService->method('verifyPasswordToken')->willReturn(false);
@@ -202,7 +202,7 @@ class PublicControllerTest extends TestCase
     public function testShowFormPasswordProtectedWrongPasswordShowsPasswordForm(): void
     {
         $hash = password_hash('secret', PASSWORD_DEFAULT);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getCookie')->willReturn(null);
         $this->challengeService->method('verifyPasswordToken')->willReturn(false);
@@ -216,7 +216,7 @@ class PublicControllerTest extends TestCase
     public function testShowFormPasswordProtectedCorrectPasswordRenders(): void
     {
         $hash = password_hash('secret', PASSWORD_DEFAULT);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getCookie')->willReturn(null);
         $this->challengeService->method('verifyPasswordToken')->willReturn(false);
@@ -230,7 +230,7 @@ class PublicControllerTest extends TestCase
     public function testShowFormPasswordCookieBypassesPrompt(): void
     {
         $hash = password_hash('secret', PASSWORD_DEFAULT);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getCookie')->willReturn('cookieval');
         $this->challengeService->method('verifyPasswordToken')->with('cookieval', 1)->willReturn(true);
@@ -262,7 +262,7 @@ class PublicControllerTest extends TestCase
                 ]],
             ]
         );
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
 
         $captured = [];
@@ -308,7 +308,7 @@ class PublicControllerTest extends TestCase
                 ['id' => 'q2', 'type' => 'choice', 'options' => [['label' => 'no cap']]],
             ],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
 
         $captured = [];
@@ -345,7 +345,7 @@ class PublicControllerTest extends TestCase
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(false);
         // Must fail before touching the form.
-        $this->formService->expects($this->never())->method('loadPublic');
+        $this->formRepository->expects($this->never())->method('loadPublic');
 
         $resp = $this->controller()->submit(1, 'TOKEN', ['q1' => 'a'], ['payload' => 'x']);
         $this->assertSame(Http::STATUS_TOO_MANY_REQUESTS, $resp->getStatus());
@@ -356,7 +356,7 @@ class PublicControllerTest extends TestCase
     {
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
 
         $resp = $this->controller()->submit(1, 'TOKEN', ['q1' => 'a'], ['p' => 'x']);
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -368,7 +368,7 @@ class PublicControllerTest extends TestCase
         $future = (new \DateTime('+1 day'))->format(\DateTime::ATOM);
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_starts_at' => $future]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_starts_at' => $future]));
 
         $resp = $this->controller()->submit(1, 'TOKEN', ['q1' => 'a'], ['p' => 'x']);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -381,7 +381,7 @@ class PublicControllerTest extends TestCase
         $past = (new \DateTime('-1 day'))->format(\DateTime::ATOM);
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
 
         $resp = $this->controller()->submit(1, 'TOKEN', ['q1' => 'a'], ['p' => 'x']);
         $this->assertSame(Http::STATUS_GONE, $resp->getStatus());
@@ -393,7 +393,7 @@ class PublicControllerTest extends TestCase
         $hash = password_hash('secret', PASSWORD_DEFAULT);
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->request->method('getCookie')->willReturn(null);
         $this->challengeService->method('verifyPasswordToken')->willReturn(false);
         $this->request->method('getParam')->willReturn('');
@@ -408,7 +408,7 @@ class PublicControllerTest extends TestCase
         $hash = password_hash('secret', PASSWORD_DEFAULT);
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->request->method('getCookie')->willReturn('cv');
         $this->challengeService->method('verifyPasswordToken')->with('cv', 1)->willReturn(true);
         $this->responseService->method('submitAnonymousWithForm')
@@ -421,7 +421,7 @@ class PublicControllerTest extends TestCase
     public function testSubmitRestrictionsForbiddenWhenUserNotAllowed(): void
     {
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
         $this->loginAs('carol');
         $this->groupManager->method('isInGroup')->willReturn(false);
 
@@ -433,7 +433,7 @@ class PublicControllerTest extends TestCase
     public function testSubmitRequireLoginForbiddenWhenAnonymous(): void
     {
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
         // No user → verify() skipped because getUser() null triggers challenge,
         // but challenge passes; then require_login gate rejects.
         $this->userSession->method('getUser')->willReturn(null);
@@ -447,7 +447,7 @@ class PublicControllerTest extends TestCase
     {
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
         $this->responseService->method('submitAnonymousWithForm')
             ->willReturn(['id' => 'resp1', 'submitted_at' => '2026-01-01T00:00:00Z']);
 
@@ -464,7 +464,7 @@ class PublicControllerTest extends TestCase
     {
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
         $this->responseService->method('submitAnonymousWithForm')
             ->willReturn(['id' => 'r', 'submitted_at' => 'now', 'score' => 42]);
 
@@ -475,7 +475,7 @@ class PublicControllerTest extends TestCase
     public function testSubmitAuthenticatedWhenNonAnonymousAndRequireLogin(): void
     {
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn(
+        $this->formRepository->method('loadPublic')->willReturn(
             $this->formWith(['anonymous' => false, 'require_login' => true])
         );
         $this->loginAs('dave', 'Dave D');
@@ -494,7 +494,7 @@ class PublicControllerTest extends TestCase
         // anonymous=false but no restrictions and no require_login → last else branch.
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['anonymous' => false]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['anonymous' => false]));
         $this->responseService->expects($this->once())->method('submitAnonymousWithForm')
             ->willReturn(['id' => 'x', 'submitted_at' => 'now']);
         $this->responseService->expects($this->never())->method('submitAuthenticated');
@@ -507,7 +507,7 @@ class PublicControllerTest extends TestCase
     {
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
         $this->responseService->method('submitAnonymousWithForm')
             ->willThrowException(new \RuntimeException('This option is full'));
 
@@ -520,7 +520,7 @@ class PublicControllerTest extends TestCase
     {
         $this->userSession->method('getUser')->willReturn(null);
         $this->challengeService->method('verify')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
         $this->responseService->method('submitAnonymousWithForm')
             ->willThrowException(new \LogicException('unexpected'));
 
@@ -534,7 +534,7 @@ class PublicControllerTest extends TestCase
         // A logged-in user bypasses the ALTCHA check entirely.
         $this->loginAs('eve');
         $this->challengeService->expects($this->never())->method('verify');
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['anonymous' => true]));
         $this->responseService->method('submitAnonymousWithForm')
             ->willReturn(['id' => 'z', 'submitted_at' => 'now']);
 
@@ -548,7 +548,7 @@ class PublicControllerTest extends TestCase
 
     public function testEmbedFormDelegatesToShowFormAndSetsFrameHeaders(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith());
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith());
         $this->userSession->method('getUser')->willReturn(null);
         $this->config->method('getAppValue')->willReturn('*');
 
@@ -562,7 +562,7 @@ class PublicControllerTest extends TestCase
 
     public function testEmbedFormWithSpecificDomainsUsesSameOrigin(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith());
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith());
         $this->userSession->method('getUser')->willReturn(null);
         $this->config->method('getAppValue')->willReturn('example.com, https://foo.test');
 
@@ -578,7 +578,7 @@ class PublicControllerTest extends TestCase
     public function testEmbedFormDoesNotSetFrameHeadersOnRedirect(): void
     {
         // require_login anonymous → RedirectResponse, setEmbedHeaders is a no-op.
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
         $this->userSession->method('getUser')->willReturn(null);
 
         $resp = $this->controller()->embedForm(1, 'TOKEN');
@@ -587,7 +587,7 @@ class PublicControllerTest extends TestCase
 
     public function testEmbedAuthenticateDelegatesAndSetsHeaders(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith());
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith());
         $this->config->method('getAppValue')->willReturn('*');
         $resp = $this->controller()->embedAuthenticate(1, 'TOKEN');
         $this->assertInstanceOf(TemplateResponse::class, $resp);
@@ -601,7 +601,7 @@ class PublicControllerTest extends TestCase
 
     public function testAuthenticateNotFoundWhenTokenMismatch(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
         $resp = $this->controller()->authenticate(1, 'TOKEN');
         $this->assertInstanceOf(TemplateResponse::class, $resp);
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -610,7 +610,7 @@ class PublicControllerTest extends TestCase
     public function testAuthenticateNotYetOpenForbidden(): void
     {
         $future = (new \DateTime('+1 day'))->format(\DateTime::ATOM);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_starts_at' => $future]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_starts_at' => $future]));
         $resp = $this->controller()->authenticate(1, 'TOKEN');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
     }
@@ -618,7 +618,7 @@ class PublicControllerTest extends TestCase
     public function testAuthenticateExpiredGone(): void
     {
         $past = (new \DateTime('-1 day'))->format(\DateTime::ATOM);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
         $resp = $this->controller()->authenticate(1, 'TOKEN');
         $this->assertSame(Http::STATUS_GONE, $resp->getStatus());
     }
@@ -626,7 +626,7 @@ class PublicControllerTest extends TestCase
     public function testAuthenticateWrongPasswordShowsPasswordFormAndThrottles(): void
     {
         $hash = password_hash('secret', PASSWORD_DEFAULT);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->request->method('getParam')->willReturn('wrong');
 
         $resp = $this->controller()->authenticate(1, 'TOKEN');
@@ -638,7 +638,7 @@ class PublicControllerTest extends TestCase
     public function testAuthenticateEmptyPasswordShowsPasswordForm(): void
     {
         $hash = password_hash('secret', PASSWORD_DEFAULT);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->request->method('getParam')->willReturn('');
 
         $resp = $this->controller()->authenticate(1, 'TOKEN');
@@ -649,7 +649,7 @@ class PublicControllerTest extends TestCase
     public function testAuthenticateCorrectPasswordRendersFormAndSetsCookie(): void
     {
         $hash = password_hash('secret', PASSWORD_DEFAULT);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_password_hash' => $hash]));
         $this->request->method('getParam')->willReturn('secret');
         $this->challengeService->expects($this->once())->method('issuePasswordToken')->with(1)->willReturn('tok');
 
@@ -672,7 +672,7 @@ class PublicControllerTest extends TestCase
     public function testAuthenticateNoPasswordFormRendersWithoutCookie(): void
     {
         // Form is not password protected → passwordVerified stays false, no cookie.
-        $this->formService->method('loadPublic')->willReturn($this->formWith());
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith());
         $this->challengeService->expects($this->never())->method('issuePasswordToken');
 
         $resp = $this->controller()->authenticate(1, 'TOKEN');
@@ -685,7 +685,7 @@ class PublicControllerTest extends TestCase
     {
         // Expired check uses new DateTime() on the raw string; an invalid
         // expires string throws inside the try and is caught → errorResponse (400).
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => 'not-a-date']));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => 'not-a-date']));
         $resp = $this->controller()->authenticate(1, 'TOKEN');
         $this->assertInstanceOf(TemplateResponse::class, $resp);
         $this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
@@ -697,7 +697,7 @@ class PublicControllerTest extends TestCase
 
     public function testUploadFileNotFoundWhenTokenMismatch(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['public_token' => 'OTHER']));
         $resp = $this->controller()->uploadFile(1, 'TOKEN');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
         $this->assertSame('Form not found', $resp->getData()['error']);
@@ -706,14 +706,14 @@ class PublicControllerTest extends TestCase
     public function testUploadFileBlockedWhenExpired(): void
     {
         $past = (new \DateTime('-1 day'))->format(\DateTime::ATOM);
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['share_expires_at' => $past]));
         $resp = $this->controller()->uploadFile(1, 'TOKEN');
         $this->assertSame(Http::STATUS_GONE, $resp->getStatus());
     }
 
     public function testUploadFileForbiddenWhenUserNotAllowed(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['allowed_users' => ['bob']]));
         $this->loginAs('carol');
         $this->groupManager->method('isInGroup')->willReturn(false);
         $resp = $this->controller()->uploadFile(1, 'TOKEN');
@@ -723,7 +723,7 @@ class PublicControllerTest extends TestCase
 
     public function testUploadFileForbiddenWhenRequireLoginAnonymous(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith(['require_login' => true]));
         $this->userSession->method('getUser')->willReturn(null);
         $resp = $this->controller()->uploadFile(1, 'TOKEN');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -732,7 +732,7 @@ class PublicControllerTest extends TestCase
 
     public function testUploadFileBadRequestWhenNoQuestionId(): void
     {
-        $this->formService->method('loadPublic')->willReturn($this->formWith());
+        $this->formRepository->method('loadPublic')->willReturn($this->formWith());
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturn(null);
         $resp = $this->controller()->uploadFile(1, 'TOKEN');
@@ -745,7 +745,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'text']],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -758,7 +758,7 @@ class PublicControllerTest extends TestCase
     public function testUploadFileBadRequestWhenQuestionMissing(): void
     {
         $form = $this->formWith([], ['questions' => []]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'nope'],
@@ -773,7 +773,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'file']],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -789,7 +789,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'file']],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -807,7 +807,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'file', 'maxFileSize' => 1]],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -829,7 +829,7 @@ class PublicControllerTest extends TestCase
                 'allowedTypes' => ['application/pdf'],
             ]],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -848,7 +848,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'file']],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -867,7 +867,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'file', 'allowedTypes' => ['application/pdf']]],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -894,7 +894,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'file', 'allowedTypes' => ['*/*']]],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],
@@ -916,7 +916,7 @@ class PublicControllerTest extends TestCase
         $form = $this->formWith([], [
             'questions' => [['id' => 'q1', 'type' => 'file', 'allowedTypes' => ['application/pdf']]],
         ]);
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->userSession->method('getUser')->willReturn(null);
         $this->request->method('getParam')->willReturnMap([
             ['questionId', null, 'q1'],

@@ -11,7 +11,7 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\UploadService;
@@ -20,7 +20,7 @@ class FormUploadController extends Controller
 {
     private FormFileLocator $fileLocator;
     private UploadService $uploadService;
-    private FormService $formService;
+    private FormRepository $formRepository;
     private PermissionService $permissionService;
     private IUserSession $userSession;
 
@@ -28,14 +28,14 @@ class FormUploadController extends Controller
         IRequest $request,
         FormFileLocator $fileLocator,
         UploadService $uploadService,
-        FormService $formService,
+        FormRepository $formRepository,
         PermissionService $permissionService,
         IUserSession $userSession
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->fileLocator = $fileLocator;
         $this->uploadService = $uploadService;
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->permissionService = $permissionService;
         $this->userSession = $userSession;
     }
@@ -84,7 +84,7 @@ class FormUploadController extends Controller
                 throw new \Exception('Permission denied');
             }
 
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $formTitle = preg_replace('/[^a-zA-Z0-9_-]/', '_', $form['title'] ?? 'form');
 
             // Create ZIP file

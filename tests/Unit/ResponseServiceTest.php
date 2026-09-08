@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Unit;
 
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\IndexService;
@@ -34,7 +34,7 @@ use Psr\Log\LoggerInterface;
  */
 class ResponseServiceTest extends TestCase
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private ResponsePersistenceService $responsePersistence;
     private IndexService $indexService;
@@ -49,7 +49,7 @@ class ResponseServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
         $this->indexService = $this->createMock(IndexService::class);
@@ -70,7 +70,7 @@ class ResponseServiceTest extends TestCase
     private function service(): ResponseService
     {
         return new ResponseService(
-            $this->formService,
+            $this->formRepository,
             $this->fileLocator,
             $this->responsePersistence,
             $this->indexService,
@@ -914,13 +914,13 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataNullWhenNoResponses(): void
     {
-        $this->formService->method('load')->willReturn(['questions' => [], 'responses' => []]);
+        $this->formRepository->method('load')->willReturn(['questions' => [], 'responses' => []]);
         $this->assertNull($this->call('buildExportData', [1]));
     }
 
     public function testBuildExportDataHeadersAndRows(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [
                 ['id' => 'q1', 'type' => 'text', 'question' => 'Name'],
                 ['id' => 'sec', 'type' => 'section', 'question' => 'Section'],
@@ -939,7 +939,7 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataAnonymousUsesFingerprint(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
             'responses' => [[
                 'id' => 'r1', 'submitted_at' => 't',
@@ -953,7 +953,7 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataConsentYesNo(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [['id' => 'q1', 'type' => 'consent', 'question' => 'Agree']],
             'responses' => [
                 ['id' => 'r1', 'submitted_at' => 't', 'respondent' => ['type' => 'anonymous', 'fingerprint' => 'f'], 'answers' => ['q1' => true]],
@@ -969,7 +969,7 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataMatrix(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [[
                 'id' => 'q1', 'type' => 'matrix', 'question' => 'M',
                 'rows' => [['id' => 'r1', 'label' => 'Row1']],
@@ -987,7 +987,7 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataTableJson(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [[
                 'id' => 'q1', 'type' => 'table', 'question' => 'T',
                 'columns' => [['id' => 'c1', 'label' => 'Price']],
@@ -1005,7 +1005,7 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataChoiceOptionMapping(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [[
                 'id' => 'q1', 'type' => 'choice', 'question' => 'C',
                 'options' => [['value' => 'opt1', 'label' => 'Yes']],
@@ -1022,7 +1022,7 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataMultipleOptionMappingJoined(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [[
                 'id' => 'q1', 'type' => 'multiple', 'question' => 'M',
                 'options' => [
@@ -1042,7 +1042,7 @@ class ResponseServiceTest extends TestCase
 
     public function testBuildExportDataSanitizesInjectionInAnswerAndHeader(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => '=DANGER']],
             'responses' => [[
                 'id' => 'x', 'submitted_at' => 't',
@@ -1061,13 +1061,13 @@ class ResponseServiceTest extends TestCase
 
     public function testExportCsvEmptyWhenNoResponses(): void
     {
-        $this->formService->method('load')->willReturn(['questions' => [], 'responses' => []]);
+        $this->formRepository->method('load')->willReturn(['questions' => [], 'responses' => []]);
         $this->assertSame('', $this->service()->exportCsv(1));
     }
 
     public function testExportCsvHasBomAndSemicolons(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Name']],
             'responses' => [[
                 'id' => 'r1', 'submitted_at' => 't',
@@ -1086,7 +1086,7 @@ class ResponseServiceTest extends TestCase
 
     public function testExportXlsxEmptyWhenNoResponses(): void
     {
-        $this->formService->method('load')->willReturn(['questions' => [], 'responses' => []]);
+        $this->formRepository->method('load')->willReturn(['questions' => [], 'responses' => []]);
         $this->assertSame('', $this->service()->exportXlsx(1));
     }
 
@@ -1095,7 +1095,7 @@ class ResponseServiceTest extends TestCase
         if (!class_exists(\ZipArchive::class)) {
             $this->markTestSkipped('ZipArchive extension not available');
         }
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Name']],
             'responses' => [[
                 'id' => 'r1', 'submitted_at' => 't',
@@ -1128,7 +1128,7 @@ class ResponseServiceTest extends TestCase
         // number question keeps numeric answer as number in xlsx? Answer is stored
         // as string typically, but buildExportData leaves plain strings. Force an
         // int by using consent? No — use a response answer that is int.
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [['id' => 'q1', 'type' => 'number', 'question' => 'N']],
             'responses' => [[
                 'id' => 'r1', 'submitted_at' => 't',
@@ -1150,7 +1150,7 @@ class ResponseServiceTest extends TestCase
 
     public function testExportJson(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'title' => 'My Form',
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
             'responses' => [['id' => 'r1']],
@@ -1164,7 +1164,7 @@ class ResponseServiceTest extends TestCase
 
     public function testExportJsonNoResponsesKey(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'title' => 'T', 'questions' => [],
         ]);
         $decoded = json_decode($this->service()->exportJson(1), true);
@@ -1177,19 +1177,19 @@ class ResponseServiceTest extends TestCase
 
     public function testGetResponsesReturnsAll(): void
     {
-        $this->formService->method('load')->willReturn(['responses' => [['id' => 'r1']]]);
+        $this->formRepository->method('load')->willReturn(['responses' => [['id' => 'r1']]]);
         $this->assertSame([['id' => 'r1']], $this->service()->getResponses(1));
     }
 
     public function testGetResponsesEmptyWhenNoKey(): void
     {
-        $this->formService->method('load')->willReturn([]);
+        $this->formRepository->method('load')->willReturn([]);
         $this->assertSame([], $this->service()->getResponses(1));
     }
 
     public function testGetResponsesWithDateFilterDelegates(): void
     {
-        $this->formService->method('load')->willReturn(['responses' => []]);
+        $this->formRepository->method('load')->willReturn(['responses' => []]);
         $this->indexService->expects($this->once())
             ->method('getResponsesByDate')
             ->with($this->anything(), '2020-01-01')
@@ -1199,7 +1199,7 @@ class ResponseServiceTest extends TestCase
 
     public function testGetSummaryBuildsQuestions(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [
                 ['id' => 'q1', 'type' => 'choice', 'question' => 'C', 'options' => [['value' => 'a']]],
                 ['id' => 'sec', 'type' => 'section', 'question' => 'S'],
@@ -1222,7 +1222,7 @@ class ResponseServiceTest extends TestCase
 
     public function testGetSummaryMatrixKeepsRowsColumns(): void
     {
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'questions' => [[
                 'id' => 'q1', 'type' => 'matrix', 'question' => 'M',
                 'rows' => [['id' => 'r']], 'columns' => [['value' => 'c']],
@@ -1238,7 +1238,7 @@ class ResponseServiceTest extends TestCase
 
     public function testGetSummaryPublicUsesLoadPublic(): void
     {
-        $this->formService->expects($this->once())->method('loadPublic')->with(7)
+        $this->formRepository->expects($this->once())->method('loadPublic')->with(7)
             ->willReturn(['questions' => [], 'responses' => []]);
         $this->indexService->method('getResponseCount')->willReturn(0);
         $summary = $this->service()->getSummaryPublic(7);
@@ -1418,7 +1418,7 @@ class ResponseServiceTest extends TestCase
             'settings' => ['allow_multiple' => true],
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
         ];
-        $this->formService->method('load')->willReturn($form);
+        $this->formRepository->method('load')->willReturn($form);
         $this->responsePersistence->method('appendResponsePublic')->willReturn(['ok' => true]);
         // notifyFormOwner: getFileByIdPublic
         $owner = $this->createMock(IUser::class);
@@ -1442,7 +1442,7 @@ class ResponseServiceTest extends TestCase
     public function testSubmitAnonymousDuplicateThrows(): void
     {
         $form = ['settings' => [], 'questions' => []];
-        $this->formService->method('load')->willReturn($form);
+        $this->formRepository->method('load')->willReturn($form);
         $this->indexService->method('hasFingerprint')->willReturn(true);
         $req = $this->createMock(IRequest::class);
         $req->method('getRemoteAddress')->willReturn('ip');
@@ -1456,7 +1456,7 @@ class ResponseServiceTest extends TestCase
     public function testSubmitAnonymousExpiredThrows(): void
     {
         $form = ['settings' => ['expires_at' => '2000-01-01T00:00:00'], 'questions' => []];
-        $this->formService->method('load')->willReturn($form);
+        $this->formRepository->method('load')->willReturn($form);
         $req = $this->createMock(IRequest::class);
         $req->method('getRemoteAddress')->willReturn('ip');
         $req->method('getHeader')->willReturn('ua');
@@ -1475,7 +1475,7 @@ class ResponseServiceTest extends TestCase
                 'options' => [['value' => 'a', 'score' => 5]],
             ]],
         ];
-        $this->formService->method('load')->willReturn($form);
+        $this->formRepository->method('load')->willReturn($form);
         $captured = null;
         $this->responsePersistence->method('appendResponsePublic')
             ->willReturnCallback(function ($id, $response) use (&$captured) {
@@ -1506,7 +1506,7 @@ class ResponseServiceTest extends TestCase
             'settings' => ['allow_multiple' => true],
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
         ];
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $captured = null;
         $this->responsePersistence->method('appendResponsePublic')
             ->willReturnCallback(function ($id, $response) use (&$captured) {
@@ -1530,7 +1530,7 @@ class ResponseServiceTest extends TestCase
     public function testSubmitAuthenticatedDuplicateThrows(): void
     {
         $form = ['settings' => [], 'questions' => []];
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->indexService->method('hasUserResponse')->willReturn(true);
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('You have already submitted');
@@ -1543,7 +1543,7 @@ class ResponseServiceTest extends TestCase
             'settings' => ['allow_multiple' => true],
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q', 'required' => true]],
         ];
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage("Question 'Q' is required");
         $this->service()->submitAuthenticated(1, [], 'bob', 'Bob');

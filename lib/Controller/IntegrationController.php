@@ -11,7 +11,7 @@ use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\ApiKeyService;
@@ -22,7 +22,7 @@ use OCA\FormVox\Service\WebhookService;
  */
 class IntegrationController extends Controller
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private ApiKeyService $apiKeyService;
@@ -31,7 +31,7 @@ class IntegrationController extends Controller
 
     public function __construct(
         IRequest $request,
-        FormService $formService,
+        FormRepository $formRepository,
         FormFileLocator $fileLocator,
         PermissionService $permissionService,
         ApiKeyService $apiKeyService,
@@ -39,7 +39,7 @@ class IntegrationController extends Controller
         IUserSession $userSession
     ) {
         parent::__construct(Application::APP_ID, $request);
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->fileLocator = $fileLocator;
         $this->permissionService = $permissionService;
         $this->apiKeyService = $apiKeyService;
@@ -69,7 +69,7 @@ class IntegrationController extends Controller
             $keyData = $this->apiKeyService->generateKey();
 
             // Load form and add key
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $apiKeys = $form['settings']['api_keys'] ?? [];
 
             $newKeyConfig = [
@@ -85,7 +85,7 @@ class IntegrationController extends Controller
 
             // Update form
             $form['settings']['api_keys'] = $apiKeys;
-            $this->formService->update($fileId, ['settings' => $form['settings']]);
+            $this->formRepository->update($fileId, ['settings' => $form['settings']]);
 
             // Return the plain key (only shown once!)
             return new DataResponse([
@@ -128,7 +128,7 @@ class IntegrationController extends Controller
             }
 
             // Load form and remove key
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $apiKeys = $form['settings']['api_keys'] ?? [];
 
             $found = false;
@@ -149,7 +149,7 @@ class IntegrationController extends Controller
 
             // Update form
             $form['settings']['api_keys'] = $apiKeys;
-            $this->formService->update($fileId, ['settings' => $form['settings']]);
+            $this->formRepository->update($fileId, ['settings' => $form['settings']]);
 
             return new DataResponse(['success' => true]);
 
@@ -203,7 +203,7 @@ class IntegrationController extends Controller
             $secret = $this->webhookService->generateSecret();
 
             // Load form and add webhook
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $webhooks = $form['settings']['webhooks'] ?? [];
 
             $newWebhook = [
@@ -221,7 +221,7 @@ class IntegrationController extends Controller
 
             // Update form
             $form['settings']['webhooks'] = $webhooks;
-            $this->formService->update($fileId, ['settings' => $form['settings']]);
+            $this->formRepository->update($fileId, ['settings' => $form['settings']]);
 
             // Return the webhook config (including secret - only shown once!)
             return new DataResponse([
@@ -279,7 +279,7 @@ class IntegrationController extends Controller
             }
 
             // Load form and update webhook
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $webhooks = $form['settings']['webhooks'] ?? [];
 
             $found = false;
@@ -312,7 +312,7 @@ class IntegrationController extends Controller
 
             // Update form
             $form['settings']['webhooks'] = $webhooks;
-            $this->formService->update($fileId, ['settings' => $form['settings']]);
+            $this->formRepository->update($fileId, ['settings' => $form['settings']]);
 
             return new DataResponse(['success' => true]);
 
@@ -348,7 +348,7 @@ class IntegrationController extends Controller
             }
 
             // Load form and remove webhook
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $webhooks = $form['settings']['webhooks'] ?? [];
 
             $found = false;
@@ -369,7 +369,7 @@ class IntegrationController extends Controller
 
             // Update form
             $form['settings']['webhooks'] = $webhooks;
-            $this->formService->update($fileId, ['settings' => $form['settings']]);
+            $this->formRepository->update($fileId, ['settings' => $form['settings']]);
 
             return new DataResponse(['success' => true]);
 

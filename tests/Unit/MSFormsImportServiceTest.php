@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Unit;
 
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\MicrosoftFormsApiClient;
 use OCA\FormVox\Service\MSFormsImportService;
@@ -23,7 +23,7 @@ use Psr\Log\LoggerInterface;
  */
 class MSFormsImportServiceTest extends TestCase
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private ResponsePersistenceService $responsePersistence;
     private MicrosoftFormsApiClient $apiClient;
     private ISecureRandom $secureRandom;
@@ -32,7 +32,7 @@ class MSFormsImportServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
         $this->apiClient = $this->createMock(MicrosoftFormsApiClient::class);
         $this->secureRandom = $this->createMock(ISecureRandom::class);
@@ -42,7 +42,7 @@ class MSFormsImportServiceTest extends TestCase
     private function service(): MSFormsImportService
     {
         return new MSFormsImportService(
-            $this->formService,
+            $this->formRepository,
             $this->responsePersistence,
             $this->apiClient,
             $this->secureRandom,
@@ -692,7 +692,7 @@ class MSFormsImportServiceTest extends TestCase
 
     private function primeCreate(int $fileId = 42): void
     {
-        $this->formService->method('create')->willReturn(['fileId' => $fileId]);
+        $this->formRepository->method('create')->willReturn(['fileId' => $fileId]);
     }
 
     public function testImportFormNoPagesFlatQuestionsSortedByOrder(): void
@@ -711,7 +711,7 @@ class MSFormsImportServiceTest extends TestCase
         ]);
 
         $captured = null;
-        $this->formService->method('update')->willReturnCallback(
+        $this->formRepository->method('update')->willReturnCallback(
             function ($fileId, $data) use (&$captured) {
                 $captured = $data;
                 return $data;
@@ -746,14 +746,14 @@ class MSFormsImportServiceTest extends TestCase
         $this->apiClient->method('getQuestions')->willReturn([]);
 
         $captured = null;
-        $this->formService->method('update')->willReturnCallback(
+        $this->formRepository->method('update')->willReturnCallback(
             function ($fileId, $data) use (&$captured) {
                 $captured = $data;
                 return $data;
             }
         );
         // create() must be called with the fallback title
-        $this->formService->expects($this->once())->method('create')
+        $this->formRepository->expects($this->once())->method('create')
             ->with('Imported Form', '/', null)
             ->willReturn(['fileId' => 7]);
 
@@ -788,7 +788,7 @@ class MSFormsImportServiceTest extends TestCase
         ]);
 
         $captured = null;
-        $this->formService->method('update')->willReturnCallback(
+        $this->formRepository->method('update')->willReturnCallback(
             function ($fileId, $data) use (&$captured) {
                 $captured = $data;
                 return $data;
@@ -837,7 +837,7 @@ class MSFormsImportServiceTest extends TestCase
         ]);
 
         $captured = null;
-        $this->formService->method('update')->willReturnCallback(
+        $this->formRepository->method('update')->willReturnCallback(
             function ($fileId, $data) use (&$captured) {
                 $captured = $data;
                 return $data;
@@ -875,7 +875,7 @@ class MSFormsImportServiceTest extends TestCase
             ['id' => 'r', 'msType' => 'Question.MatrixChoice', 'groupId' => 'orphan', 'title' => 'RowA', 'order' => 1],
         ]);
         $captured = null;
-        $this->formService->method('update')->willReturnCallback(
+        $this->formRepository->method('update')->willReturnCallback(
             function ($f, $d) use (&$captured) {
                 $captured = $d;
                 return $d;
@@ -896,7 +896,7 @@ class MSFormsImportServiceTest extends TestCase
         $this->apiClient->method('getQuestions')->willReturn([
             ['id' => 'msq', 'msType' => 'Question.Text', 'title' => 'Q', 'order' => 1],
         ]);
-        $this->formService->method('update')->willReturn([]);
+        $this->formRepository->method('update')->willReturn([]);
 
         // Determine the FormVox question id generated for 'msq'
         // (stubSecureRandom returns 'AAAAAAAA' => id 'qAAAAAAAA')
@@ -953,7 +953,7 @@ class MSFormsImportServiceTest extends TestCase
         $this->primeCreate(60);
         $this->apiClient->method('getForm')->willReturn(['title' => 'F']);
         $this->apiClient->method('getQuestions')->willReturn([]);
-        $this->formService->method('update')->willReturn([]);
+        $this->formRepository->method('update')->willReturn([]);
         $this->apiClient->method('getResponses')
             ->willThrowException(new \RuntimeException('boom'));
 
@@ -972,7 +972,7 @@ class MSFormsImportServiceTest extends TestCase
         $this->apiClient->method('getQuestions')->willReturn([
             ['id' => 'msq', 'msType' => 'Question.Text', 'title' => 'Q', 'order' => 1],
         ]);
-        $this->formService->method('update')->willReturn([]);
+        $this->formRepository->method('update')->willReturn([]);
         $this->apiClient->method('getResponses')->willReturn([
             ['id' => 'r1', 'answers' => ['msq' => 'ok']],
             ['id' => 'r2', 'answers' => ['msq' => 'fail']],
@@ -999,8 +999,8 @@ class MSFormsImportServiceTest extends TestCase
         $this->stubSecureRandom();
         $this->apiClient->method('getForm')->willReturn(['title' => 'F']);
         $this->apiClient->method('getQuestions')->willReturn([]);
-        $this->formService->method('update')->willReturn([]);
-        $this->formService->expects($this->once())->method('create')
+        $this->formRepository->method('update')->willReturn([]);
+        $this->formRepository->expects($this->once())->method('create')
             ->with('F', '/Projects', null)
             ->willReturn(['fileId' => 5]);
 
@@ -1026,7 +1026,7 @@ class MSFormsImportServiceTest extends TestCase
         ]);
 
         $captured = null;
-        $this->formService->method('update')->willReturnCallback(
+        $this->formRepository->method('update')->willReturnCallback(
             function ($f, $d) use (&$captured) {
                 $captured = $d;
                 return $d;

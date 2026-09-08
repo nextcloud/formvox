@@ -15,7 +15,7 @@ use Psr\Log\LoggerInterface;
 
 class ResponseService
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private ResponsePersistenceService $responsePersistence;
     private IndexService $indexService;
@@ -28,7 +28,7 @@ class ResponseService
     private LoggerInterface $logger;
 
     public function __construct(
-        FormService $formService,
+        FormRepository $formRepository,
         FormFileLocator $fileLocator,
         ResponsePersistenceService $responsePersistence,
         IndexService $indexService,
@@ -40,7 +40,7 @@ class ResponseService
         IL10N $l,
         LoggerInterface $logger
     ) {
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->fileLocator = $fileLocator;
         $this->responsePersistence = $responsePersistence;
         $this->indexService = $indexService;
@@ -58,7 +58,7 @@ class ResponseService
      */
     public function submitAnonymous(int $fileId, array $answers, IRequest $request, string $shareToken): array
     {
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         return $this->submitAnonymousWithForm($fileId, $form, $answers, $request, $shareToken);
     }
 
@@ -136,7 +136,7 @@ class ResponseService
         // identity (the response is attributed to $userId) but they don't
         // need file/folder permissions on the form file itself. The share
         // link + token already validated their right to submit. (#77)
-        $form = $this->formService->loadPublic($fileId);
+        $form = $this->formRepository->loadPublic($fileId);
 
         // Check if form accepts responses
         $this->validateFormAcceptsResponses($form);
@@ -320,7 +320,7 @@ class ResponseService
      */
     public function getSummary(int $fileId): array
     {
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         return $this->buildSummary($form);
     }
 
@@ -329,7 +329,7 @@ class ResponseService
      */
     public function getSummaryPublic(int $fileId): array
     {
-        $form = $this->formService->loadPublic($fileId);
+        $form = $this->formRepository->loadPublic($fileId);
         return $this->buildSummary($form);
     }
 
@@ -390,7 +390,7 @@ class ResponseService
      */
     public function getResponses(int $fileId, ?string $dateFilter = null): array
     {
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
 
         if ($dateFilter !== null) {
             return $this->indexService->getResponsesByDate($form, $dateFilter);
@@ -427,7 +427,7 @@ class ResponseService
      */
     private function buildExportData(int $fileId): ?array
     {
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         $responses = $form['responses'] ?? [];
 
         if (empty($responses)) {
@@ -703,7 +703,7 @@ class ResponseService
      */
     public function exportJson(int $fileId): string
     {
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
 
         return json_encode([
             'title' => $form['title'],

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\FormController;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\IndexService;
 use OCA\FormVox\Service\PermissionService;
@@ -31,7 +31,7 @@ use PHPUnit\Framework\TestCase;
  */
 class FormControllerTest extends TestCase
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private IndexService $indexService;
@@ -45,7 +45,7 @@ class FormControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->permissionService = $this->createMock(PermissionService::class);
         $this->indexService = $this->createMock(IndexService::class);
@@ -65,7 +65,7 @@ class FormControllerTest extends TestCase
     {
         return new FormController(
             $this->createMock(IRequest::class),
-            $this->formService,
+            $this->formRepository,
             $this->fileLocator,
             $this->permissionService,
             $this->indexService,
@@ -83,7 +83,7 @@ class FormControllerTest extends TestCase
     public function testGetDeniesWhenRoleNone(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'T', 'responses' => []]);
+        $this->formRepository->method('load')->willReturn(['title' => 'T', 'responses' => []]);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_NONE);
 
         $resp = $this->controller()->get(1);
@@ -93,7 +93,7 @@ class FormControllerTest extends TestCase
     public function testGetStripsResponsesWhenNotAllowedToView(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn([
+        $this->formRepository->method('load')->willReturn([
             'title' => 'T', 'responses' => [['id' => 'r1']], '_index' => ['x' => 1],
         ]);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_RESPONDENT);
@@ -110,7 +110,7 @@ class FormControllerTest extends TestCase
     public function testGetKeepsResponsesWhenAllowed(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'T', 'responses' => [['id' => 'r1']]]);
+        $this->formRepository->method('load')->willReturn(['title' => 'T', 'responses' => [['id' => 'r1']]]);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('getPermissionsForRole')->willReturn(['viewResponses' => true]);
 
@@ -132,7 +132,7 @@ class FormControllerTest extends TestCase
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canDeleteForm')->willReturn(false);
-        $this->formService->expects($this->never())->method('delete');
+        $this->formRepository->expects($this->never())->method('delete');
 
         $resp = $this->controller()->delete(1);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -143,7 +143,7 @@ class FormControllerTest extends TestCase
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canDeleteForm')->willReturn(true);
-        $this->formService->expects($this->once())->method('delete')->with(1);
+        $this->formRepository->expects($this->once())->method('delete')->with(1);
 
         $resp = $this->controller()->delete(1);
         $this->assertSame(Http::STATUS_OK, $resp->getStatus());
@@ -174,7 +174,7 @@ class FormControllerTest extends TestCase
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn(['settings' => []]);
+        $this->formRepository->method('loadPublic')->willReturn(['settings' => []]);
         // Service throws when there's no link to replace.
         $this->shareTokenService->method('rotate')
             ->willThrowException(new \DomainException('This form has no share link to replace'));
@@ -188,9 +188,9 @@ class FormControllerTest extends TestCase
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
-        $this->formService->method('loadPublic')->willReturn(['settings' => ['public_token' => 'OLD']]);
+        $this->formRepository->method('loadPublic')->willReturn(['settings' => ['public_token' => 'OLD']]);
         $this->shareTokenService->method('rotate')->willReturn(['public_token' => 'NEW']);
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, ['settings' => ['public_token' => 'NEW']])
             ->willReturn(['settings' => ['public_token' => 'NEW']]);
 
@@ -202,7 +202,7 @@ class FormControllerTest extends TestCase
 
     public function testListReturnsForms(): void
     {
-        $this->formService->method('listForms')->willReturn([['id' => 1]]);
+        $this->formRepository->method('listForms')->willReturn([['id' => 1]]);
         $resp = $this->controller()->list();
         $this->assertSame(Http::STATUS_OK, $resp->getStatus());
         $this->assertSame([['id' => 1]], $resp->getData());
@@ -210,7 +210,7 @@ class FormControllerTest extends TestCase
 
     public function testListMapsErrorTo500(): void
     {
-        $this->formService->method('listForms')->willThrowException(new \Exception('boom'));
+        $this->formRepository->method('listForms')->willThrowException(new \Exception('boom'));
         $resp = $this->controller()->list();
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
     }
@@ -219,7 +219,7 @@ class FormControllerTest extends TestCase
 
     public function testCreateReturns201(): void
     {
-        $this->formService->method('create')->willReturn(['fileId' => 5]);
+        $this->formRepository->method('create')->willReturn(['fileId' => 5]);
         $resp = $this->controller()->create('Title');
         $this->assertSame(Http::STATUS_CREATED, $resp->getStatus());
         $this->assertSame(['fileId' => 5], $resp->getData());
@@ -227,14 +227,14 @@ class FormControllerTest extends TestCase
 
     public function testCreateMapsErrorTo500(): void
     {
-        $this->formService->method('create')->willThrowException(new \Exception('boom'));
+        $this->formRepository->method('create')->willThrowException(new \Exception('boom'));
         $resp = $this->controller()->create('Title');
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
     }
 
     public function testCreateSendsNotificationWhenNotifyOnReady(): void
     {
-        $this->formService->method('create')->willReturn(['fileId' => 7]);
+        $this->formRepository->method('create')->willReturn(['fileId' => 7]);
         $notification = $this->createMock(\OCP\Notification\INotification::class);
         $notification->method('setApp')->willReturnSelf();
         $notification->method('setUser')->willReturnSelf();
@@ -254,7 +254,7 @@ class FormControllerTest extends TestCase
             'description' => 'Tpl desc',
             'questions' => [['q' => 1]],
         ]);
-        $this->formService->expects($this->once())->method('create')
+        $this->formRepository->expects($this->once())->method('create')
             ->with('Title', '', null, [
                 'description' => 'Tpl desc',
                 'questions' => [['q' => 1]],
@@ -269,7 +269,7 @@ class FormControllerTest extends TestCase
 
     public function testSaveAsTemplateSucceeds(): void
     {
-        $this->formService->method('load')->willReturn(['title' => 'Orig', 'description' => 'D']);
+        $this->formRepository->method('load')->willReturn(['title' => 'Orig', 'description' => 'D']);
         $this->templateService->method('addTemplate')->willReturn(['id' => 'tpl-1']);
         $resp = $this->controller()->saveAsTemplate(1);
         $this->assertSame(Http::STATUS_OK, $resp->getStatus());
@@ -278,7 +278,7 @@ class FormControllerTest extends TestCase
 
     public function testSaveAsTemplateMapsErrorTo400(): void
     {
-        $this->formService->method('load')->willThrowException(new \RuntimeException('nope'));
+        $this->formRepository->method('load')->willThrowException(new \RuntimeException('nope'));
         $resp = $this->controller()->saveAsTemplate(1);
         $this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
     }
@@ -289,7 +289,7 @@ class FormControllerTest extends TestCase
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_NONE);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->setFavorite(1, true);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -299,7 +299,7 @@ class FormControllerTest extends TestCase
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
-        $this->formService->expects($this->once())->method('update')->with(1, ['favorite' => true]);
+        $this->formRepository->expects($this->once())->method('update')->with(1, ['favorite' => true]);
 
         $resp = $this->controller()->setFavorite(1, true);
         $this->assertSame(Http::STATUS_OK, $resp->getStatus());
@@ -326,7 +326,7 @@ class FormControllerTest extends TestCase
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditQuestions')->willReturn(false);
-        $this->formService->expects($this->never())->method('update');
+        $this->formRepository->expects($this->never())->method('update');
 
         $resp = $this->controller()->update(1, 'New title');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -337,7 +337,7 @@ class FormControllerTest extends TestCase
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('canEditQuestions')->willReturn(true);
-        $this->formService->expects($this->once())->method('update')
+        $this->formRepository->expects($this->once())->method('update')
             ->with(1, ['title' => 'New title'])
             ->willReturn(['title' => 'New title']);
 
@@ -358,7 +358,7 @@ class FormControllerTest extends TestCase
     public function testRebuildIndexDeniedWithoutSettingsPermission(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['_index' => []]);
+        $this->formRepository->method('load')->willReturn(['_index' => []]);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditSettings')->willReturn(false);
         $this->indexService->expects($this->never())->method('rebuildIndex');
@@ -370,11 +370,11 @@ class FormControllerTest extends TestCase
     public function testRebuildIndexSucceeds(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['_index' => ['old' => 1]]);
+        $this->formRepository->method('load')->willReturn(['_index' => ['old' => 1]]);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->indexService->expects($this->once())->method('rebuildIndex');
-        $this->formService->expects($this->once())->method('update');
+        $this->formRepository->expects($this->once())->method('update');
 
         $resp = $this->controller()->rebuildIndex(1);
         $this->assertSame(Http::STATUS_OK, $resp->getStatus());

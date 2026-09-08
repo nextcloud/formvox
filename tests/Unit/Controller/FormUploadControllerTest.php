@@ -6,7 +6,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\FormUploadController;
 use OCA\FormVox\Service\FormFileLocator;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\UploadService;
 use OCP\Files\File;
@@ -29,7 +29,7 @@ class FormUploadControllerTest extends TestCase
 {
     private FormFileLocator $fileLocator;
     private UploadService $uploadService;
-    private FormService $formService;
+    private FormRepository $formRepository;
     private PermissionService $permissionService;
     private IUserSession $userSession;
 
@@ -38,7 +38,7 @@ class FormUploadControllerTest extends TestCase
         parent::setUp();
         $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->uploadService = $this->createMock(UploadService::class);
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->permissionService = $this->createMock(PermissionService::class);
         $this->userSession = $this->createMock(IUserSession::class);
 
@@ -53,7 +53,7 @@ class FormUploadControllerTest extends TestCase
             $this->createMock(IRequest::class),
             $this->fileLocator,
             $this->uploadService,
-            $this->formService,
+            $this->formRepository,
             $this->permissionService,
             $this->userSession
         );
@@ -132,7 +132,7 @@ class FormUploadControllerTest extends TestCase
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('canViewResponses')->willReturn(true);
         // load() stays on FormService and supplies the zip filename title.
-        $this->formService->expects($this->once())->method('load')
+        $this->formRepository->expects($this->once())->method('load')
             ->with(1)->willReturn(['title' => 'My Form!']);
         // Zip built via UploadService (repointed) with the form's file id.
         $this->uploadService->expects($this->once())
@@ -153,7 +153,7 @@ class FormUploadControllerTest extends TestCase
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('canViewResponses')->willReturn(true);
-        $this->formService->method('load')->willReturn(['title' => 'T']);
+        $this->formRepository->method('load')->willReturn(['title' => 'T']);
         $this->uploadService->method('createUploadsZip')->willThrowException(new NotFoundException());
 
         $this->expectException(\Exception::class);

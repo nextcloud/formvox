@@ -15,7 +15,7 @@ use OCP\IDBConnection;
 use OCP\IL10N;
 use OCA\FormVox\AppInfo\Application;
 
-class FormService
+class FormRepository
 {
     /**
      * Chunk size for IN() clauses — stays below SQLite's 999 bound-parameter limit.
@@ -30,9 +30,6 @@ class FormService
     private FormFactory $formFactory;
     private FormFileLocator $fileLocator;
     private FormLockManager $lockManager;
-    private UploadService $uploadService;
-    private OdtTemplateService $odtTemplateService;
-    private ResponsePersistenceService $responsePersistence;
 
     public function __construct(
         IRootFolder $rootFolder,
@@ -42,10 +39,7 @@ class FormService
         IMimeTypeLoader $mimeTypeLoader,
         FormFactory $formFactory,
         FormFileLocator $fileLocator,
-        FormLockManager $lockManager,
-        UploadService $uploadService,
-        OdtTemplateService $odtTemplateService,
-        ResponsePersistenceService $responsePersistence
+        FormLockManager $lockManager
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
@@ -55,9 +49,6 @@ class FormService
         $this->formFactory = $formFactory;
         $this->fileLocator = $fileLocator;
         $this->lockManager = $lockManager;
-        $this->uploadService = $uploadService;
-        $this->odtTemplateService = $odtTemplateService;
-        $this->responsePersistence = $responsePersistence;
     }
 
     /**
@@ -387,47 +378,6 @@ class FormService
         return array_keys($fileIds);
     }
 
-    // ---- Thin delegators to ResponsePersistenceService ---------------------
-    // Kept while external consumers still type-hint FormService; they repoint to
-    // ResponsePersistenceService directly when the controllers are split.
-
-    public function appendResponse(int $fileId, array $response): array
-    {
-        return $this->responsePersistence->appendResponse($fileId, $response);
-    }
-
-    public function deleteResponse(int $fileId, string $responseId): void
-    {
-        $this->responsePersistence->deleteResponse($fileId, $responseId);
-    }
-
-    public function deleteAllResponses(int $fileId): void
-    {
-        $this->responsePersistence->deleteAllResponses($fileId);
-    }
-
-    /**
-     * Resolve a file by ID for the session user.
-     *
-     * Thin delegation to {@see FormFileLocator::getFileById()}. Kept on
-     * FormService while consumers still type-hint FormService; they repoint to
-     * FormFileLocator directly when the controllers are split.
-     */
-    public function getFileById(int $fileId): File
-    {
-        return $this->fileLocator->getFileById($fileId);
-    }
-
-    /**
-     * Resolve a file by ID without a session (public/system access).
-     *
-     * Thin delegation to {@see FormFileLocator::getFileByIdPublic()}.
-     */
-    public function getFileByIdPublic(int $fileId, bool $requireWrite = false): File
-    {
-        return $this->fileLocator->getFileByIdPublic($fileId, $requireWrite);
-    }
-
     /**
      * Load a form by file ID (public access - no user context needed)
      */
@@ -443,17 +393,6 @@ class FormService
 
         return $form;
     }
-
-    public function appendResponsePublic(int $fileId, array $response, ?callable $guard = null): array
-    {
-        return $this->responsePersistence->appendResponsePublic($fileId, $response, $guard);
-    }
-
-    public function savePublic(int $fileId, array $form): void
-    {
-        $this->responsePersistence->savePublic($fileId, $form);
-    }
-
     /**
      * Recursively find all .fvform files
      */
@@ -485,63 +424,4 @@ class FormService
         }
     }
 
-    // ---- Thin delegators to UploadService / OdtTemplateService --------------
-    // Kept while external consumers (controllers, BrandingService) still
-    // type-hint FormService; they repoint to the dedicated services directly
-    // when the controllers are split.
-
-    public function getUploadsFolder(int $fileId, bool $requireWrite = false): Folder
-    {
-        return $this->uploadService->getUploadsFolder($fileId, $requireWrite);
-    }
-
-    public function getBrandingFolder(int $fileId, bool $requireWrite = false): Folder
-    {
-        return $this->uploadService->getBrandingFolder($fileId, $requireWrite);
-    }
-
-    public function storeUpload(int $fileId, string $responseId, array $uploadedFile): array
-    {
-        return $this->uploadService->storeUpload($fileId, $responseId, $uploadedFile);
-    }
-
-    public function getUpload(int $formFileId, string $responseId, string $filename): File
-    {
-        return $this->uploadService->getUpload($formFileId, $responseId, $filename);
-    }
-
-    public function deleteResponseUploads(int $formFileId, string $responseId): void
-    {
-        $this->uploadService->deleteResponseUploads($formFileId, $responseId);
-    }
-
-    public function deleteAllUploads(int $fileId): void
-    {
-        $this->uploadService->deleteAllUploads($fileId);
-    }
-
-    public function createUploadsZip(int $fileId): string
-    {
-        return $this->uploadService->createUploadsZip($fileId);
-    }
-
-    public function storeOdtTemplate(int $fileId, array $uploadedFile): void
-    {
-        $this->odtTemplateService->storeOdtTemplate($fileId, $uploadedFile);
-    }
-
-    public function getOdtTemplate(int $fileId, bool $requireWrite = false): File
-    {
-        return $this->odtTemplateService->getOdtTemplate($fileId, $requireWrite);
-    }
-
-    public function hasOdtTemplate(int $fileId): bool
-    {
-        return $this->odtTemplateService->hasOdtTemplate($fileId);
-    }
-
-    public function deleteOdtTemplate(int $fileId): void
-    {
-        $this->odtTemplateService->deleteOdtTemplate($fileId);
-    }
 }

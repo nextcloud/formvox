@@ -14,7 +14,7 @@ use OCP\IUserManager;
 use OCP\IGroupManager;
 use OCP\Notification\IManager as INotificationManager;
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\IndexService;
@@ -23,7 +23,7 @@ use OCA\FormVox\Service\ShareTokenService;
 
 class FormController extends Controller
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private IndexService $indexService;
@@ -36,7 +36,7 @@ class FormController extends Controller
 
     public function __construct(
         IRequest $request,
-        FormService $formService,
+        FormRepository $formRepository,
         FormFileLocator $fileLocator,
         PermissionService $permissionService,
         IndexService $indexService,
@@ -48,7 +48,7 @@ class FormController extends Controller
         INotificationManager $notificationManager
     ) {
         parent::__construct(Application::APP_ID, $request);
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->fileLocator = $fileLocator;
         $this->permissionService = $permissionService;
         $this->indexService = $indexService;
@@ -67,7 +67,7 @@ class FormController extends Controller
     public function list(): DataResponse
     {
         try {
-            $forms = $this->formService->listForms();
+            $forms = $this->formRepository->listForms();
             return new DataResponse($forms);
         } catch (\Exception $e) {
             return new DataResponse(
@@ -86,7 +86,7 @@ class FormController extends Controller
     public function saveAsTemplate(int $fileId, string $title = '', string $description = ''): DataResponse
     {
         try {
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $entry = $this->templateService->addTemplate(
                 $title !== '' ? $title : ($form['title'] ?? 'Untitled template'),
                 $description !== '' ? $description : ($form['description'] ?? ''),
@@ -117,7 +117,7 @@ class FormController extends Controller
                 }
             }
 
-            $result = $this->formService->create($title, $path, $template, $prefilled);
+            $result = $this->formRepository->create($title, $path, $template, $prefilled);
 
             if ($notifyOnReady) {
                 $this->sendAiReadyNotification($result, $title);
@@ -166,7 +166,7 @@ class FormController extends Controller
     {
         try {
             $file = $this->fileLocator->getFileById($fileId);
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -269,7 +269,7 @@ class FormController extends Controller
             // keeps the same link.
             //
             // Note this runs whenever settings are written, not only when the
-            // client includes the key: FormService::update() replaces `settings`
+            // client includes the key: FormRepository::update() replaces `settings`
             // wholesale, so a save that merely omits public_token would drop the
             // link just as effectively as one sending a stale value.
             if (isset($data['settings'])) {
@@ -306,7 +306,7 @@ class FormController extends Controller
                 }
             }
 
-            $updatedForm = $this->formService->update($fileId, $data);
+            $updatedForm = $this->formRepository->update($fileId, $data);
             return new DataResponse(['form' => $updatedForm]);
         } catch (\OCP\Files\NotFoundException $e) {
             return new DataResponse(
@@ -346,7 +346,7 @@ class FormController extends Controller
                 );
             }
 
-            $this->formService->update($fileId, ['favorite' => $favorite]);
+            $this->formRepository->update($fileId, ['favorite' => $favorite]);
             return new DataResponse(['success' => true, 'favorite' => $favorite]);
         } catch (\OCP\Files\NotFoundException $e) {
             return new DataResponse(
@@ -379,7 +379,7 @@ class FormController extends Controller
                 );
             }
 
-            $this->formService->delete($fileId);
+            $this->formRepository->delete($fileId);
             return new DataResponse(['success' => true]);
         } catch (\OCP\Files\NotFoundException $e) {
             return new DataResponse(
@@ -402,7 +402,7 @@ class FormController extends Controller
     {
         try {
             $file = $this->fileLocator->getFileById($fileId);
-            $form = $this->formService->load($fileId);
+            $form = $this->formRepository->load($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -417,7 +417,7 @@ class FormController extends Controller
             $this->indexService->rebuildIndex($form);
 
             // Save updated form
-            $this->formService->update($fileId, ['_index' => $form['_index']]);
+            $this->formRepository->update($fileId, ['_index' => $form['_index']]);
 
             return new DataResponse(['success' => true]);
         } catch (\Exception $e) {
@@ -486,7 +486,7 @@ class FormController extends Controller
                 );
             }
 
-            $form = $this->formService->loadPublic($fileId);
+            $form = $this->formRepository->loadPublic($fileId);
 
             // The "no link to replace" guard + fresh mint live in the service
             // (#135); it throws DomainException when there is nothing to rotate.
@@ -499,7 +499,7 @@ class FormController extends Controller
                 );
             }
 
-            $updatedForm = $this->formService->update($fileId, ['settings' => $settings]);
+            $updatedForm = $this->formRepository->update($fileId, ['settings' => $settings]);
             return new DataResponse(['form' => $updatedForm]);
         } catch (\OCP\Files\NotFoundException $e) {
             return new DataResponse(['error' => 'Form not found'], Http::STATUS_NOT_FOUND);

@@ -22,7 +22,7 @@ use OCP\IGroupManager;
 use OCP\IUser;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\UploadService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\BrandingService;
@@ -34,7 +34,7 @@ class PublicController extends Controller
     private IUserSession $userSession;
     private IURLGenerator $urlGenerator;
     private IGroupManager $groupManager;
-    private FormService $formService;
+    private FormRepository $formRepository;
     private UploadService $uploadService;
     private ResponseService $responseService;
     private BrandingService $brandingService;
@@ -47,7 +47,7 @@ class PublicController extends Controller
         IUserSession $userSession,
         IURLGenerator $urlGenerator,
         IGroupManager $groupManager,
-        FormService $formService,
+        FormRepository $formRepository,
         UploadService $uploadService,
         ResponseService $responseService,
         BrandingService $brandingService,
@@ -59,7 +59,7 @@ class PublicController extends Controller
         $this->userSession = $userSession;
         $this->urlGenerator = $urlGenerator;
         $this->groupManager = $groupManager;
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->uploadService = $uploadService;
         $this->responseService = $responseService;
         $this->brandingService = $brandingService;
@@ -145,7 +145,7 @@ class PublicController extends Controller
     private function loadAndValidateForm(int $fileId, string $token): ?array
     {
         try {
-            $form = $this->formService->loadPublic($fileId);
+            $form = $this->formRepository->loadPublic($fileId);
 
             // Validate token matches (timing-safe)
             $storedToken = $form['settings']['public_token'] ?? null;

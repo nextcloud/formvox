@@ -12,7 +12,7 @@ use OCP\AppFramework\Http\Attribute\AnonRateLimit;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\ApiKeyService;
 use OCA\FormVox\Service\WebhookService;
@@ -23,20 +23,20 @@ use OCA\FormVox\Service\WebhookService;
  */
 class ExternalApiController extends Controller
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private ResponsePersistenceService $responsePersistence;
     private ApiKeyService $apiKeyService;
     private WebhookService $webhookService;
 
     public function __construct(
         IRequest $request,
-        FormService $formService,
+        FormRepository $formRepository,
         ResponsePersistenceService $responsePersistence,
         ApiKeyService $apiKeyService,
         WebhookService $webhookService
     ) {
         parent::__construct(Application::APP_ID, $request);
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->responsePersistence = $responsePersistence;
         $this->apiKeyService = $apiKeyService;
         $this->webhookService = $webhookService;
@@ -59,7 +59,7 @@ class ExternalApiController extends Controller
 
         try {
             // Load form using admin access (API key grants access)
-            $form = $this->formService->loadPublic($fileId);
+            $form = $this->formRepository->loadPublic($fileId);
         } catch (\Exception $e) {
             return new DataResponse(
                 ['error' => 'Form not found'],

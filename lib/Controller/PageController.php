@@ -14,7 +14,7 @@ use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\BrandingService;
@@ -22,7 +22,7 @@ use OCA\FormVox\Service\MicrosoftFormsAuthService;
 
 class PageController extends Controller
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private BrandingService $brandingService;
@@ -33,7 +33,7 @@ class PageController extends Controller
 
     public function __construct(
         IRequest $request,
-        FormService $formService,
+        FormRepository $formRepository,
         FormFileLocator $fileLocator,
         PermissionService $permissionService,
         BrandingService $brandingService,
@@ -43,7 +43,7 @@ class PageController extends Controller
         ?string $userId
     ) {
         parent::__construct(Application::APP_ID, $request);
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->fileLocator = $fileLocator;
         $this->permissionService = $permissionService;
         $this->brandingService = $brandingService;
@@ -80,7 +80,7 @@ class PageController extends Controller
     public function editor(int $fileId): TemplateResponse
     {
         $file = $this->fileLocator->getFileById($fileId);
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         $role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
         $canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');
         $permissions = $this->permissionService->getPermissionsForRole($role, $canShare);
@@ -116,7 +116,7 @@ class PageController extends Controller
     public function results(int $fileId): TemplateResponse
     {
         $file = $this->fileLocator->getFileById($fileId);
-        $form = $this->formService->load($fileId);
+        $form = $this->formRepository->load($fileId);
         $role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
         $canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');
         $permissions = $this->permissionService->getPermissionsForRole($role, $canShare);

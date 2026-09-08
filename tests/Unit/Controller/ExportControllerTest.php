@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\ExportController;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\OdtTemplateService;
 use OCA\FormVox\Service\PermissionService;
@@ -27,7 +27,7 @@ use PHPUnit\Framework\TestCase;
  */
 class ExportControllerTest extends TestCase
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private FormFileLocator $fileLocator;
     private ResponseService $responseService;
     private OdtTemplateService $odtTemplateService;
@@ -38,7 +38,7 @@ class ExportControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->responseService = $this->createMock(ResponseService::class);
         $this->odtTemplateService = $this->createMock(OdtTemplateService::class);
@@ -55,7 +55,7 @@ class ExportControllerTest extends TestCase
     {
         return new ExportController(
             $this->request,
-            $this->formService,
+            $this->formRepository,
             $this->fileLocator,
             $this->responseService,
             $this->odtTemplateService,
@@ -89,7 +89,7 @@ class ExportControllerTest extends TestCase
     public function testExportCsvDeniedWithoutViewResponses(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'T']);
+        $this->formRepository->method('load')->willReturn(['title' => 'T']);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_RESPONDENT);
         $this->permissionService->method('canViewResponses')->willReturn(false);
         $this->responseService->expects($this->never())->method('exportCsv');
@@ -106,7 +106,7 @@ class ExportControllerTest extends TestCase
         // ResponseService for the right form) and tolerate the response
         // construction failing on the missing class.
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'My Form']);
+        $this->formRepository->method('load')->willReturn(['title' => 'My Form']);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('canViewResponses')->willReturn(true);
         $this->responseService->expects($this->once())->method('exportCsv')->with(1)->willReturn('a,b,c');
@@ -119,7 +119,7 @@ class ExportControllerTest extends TestCase
     public function testExportExcelDeniedWithoutViewResponses(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'T']);
+        $this->formRepository->method('load')->willReturn(['title' => 'T']);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_RESPONDENT);
         $this->permissionService->method('canViewResponses')->willReturn(false);
         $this->responseService->expects($this->never())->method('exportXlsx');
@@ -132,7 +132,7 @@ class ExportControllerTest extends TestCase
     public function testExportExcelBuildsViaResponseServiceWhenAllowed(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'My Form']);
+        $this->formRepository->method('load')->willReturn(['title' => 'My Form']);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('canViewResponses')->willReturn(true);
         $this->responseService->expects($this->once())->method('exportXlsx')->with(1)->willReturn('XLSXBYTES');
@@ -145,7 +145,7 @@ class ExportControllerTest extends TestCase
     public function testExportJsonDeniedWithoutViewResponses(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'T']);
+        $this->formRepository->method('load')->willReturn(['title' => 'T']);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_RESPONDENT);
         $this->permissionService->method('canViewResponses')->willReturn(false);
         $this->responseService->expects($this->never())->method('exportJson');
@@ -158,7 +158,7 @@ class ExportControllerTest extends TestCase
     public function testExportJsonBuildsViaResponseServiceWhenAllowed(): void
     {
         $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-        $this->formService->method('load')->willReturn(['title' => 'My Form']);
+        $this->formRepository->method('load')->willReturn(['title' => 'My Form']);
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('canViewResponses')->willReturn(true);
         $this->responseService->expects($this->once())->method('exportJson')->with(1)->willReturn('{"ok":true}');

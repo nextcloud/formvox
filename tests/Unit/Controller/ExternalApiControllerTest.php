@@ -6,7 +6,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\ExternalApiController;
 use OCA\FormVox\Service\ApiKeyService;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\WebhookService;
 use OCP\AppFramework\Http;
@@ -20,14 +20,14 @@ use PHPUnit\Framework\TestCase;
  * authenticate() gate (missing key -> 401, form-not-found -> 404, no api_keys
  * configured -> 403, invalid key -> 401), the per-endpoint API-key permission
  * gates (403), bad-request validation (400), not-found response lookup (404),
- * and the response CRUD flows that MUST call formService->savePublic and fire a
+ * and the response CRUD flows that MUST call formRepository->savePublic and fire a
  * webhook (RISK-CRITICAL: savePublic was once silently broken here).
  *
  * Everything is mocked; the controller runs against ocp stubs with no server.
  */
 class ExternalApiControllerTest extends TestCase
 {
-    private FormService $formService;
+    private FormRepository $formRepository;
     private ResponsePersistenceService $responsePersistence;
     private ApiKeyService $apiKeyService;
     private WebhookService $webhookService;
@@ -41,7 +41,7 @@ class ExternalApiControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->formService = $this->createMock(FormService::class);
+        $this->formRepository = $this->createMock(FormRepository::class);
         $this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
         $this->apiKeyService = $this->createMock(ApiKeyService::class);
         $this->webhookService = $this->createMock(WebhookService::class);
@@ -62,7 +62,7 @@ class ExternalApiControllerTest extends TestCase
     {
         return new ExternalApiController(
             $this->request,
-            $this->formService,
+            $this->formRepository,
             $this->responsePersistence,
             $this->apiKeyService,
             $this->webhookService
@@ -82,7 +82,7 @@ class ExternalApiControllerTest extends TestCase
         $form['settings'] = $form['settings'] ?? [];
         $form['settings']['api_keys'] = $form['settings']['api_keys'] ?? [['id' => 'k1']];
 
-        $this->formService->method('loadPublic')->willReturn($form);
+        $this->formRepository->method('loadPublic')->willReturn($form);
         $this->apiKeyService->method('findValidKey')->willReturn($keyConfig);
         $this->apiKeyService->method('hasPermission')->willReturnCallback(
             fn (array $kc, string $perm): bool => $grantedPermissions === null
@@ -96,7 +96,7 @@ class ExternalApiControllerTest extends TestCase
     public function testMissingApiKeyReturns401(): void
     {
         $this->headers['X-FormVox-API-Key'] = '';
-        $this->formService->expects($this->never())->method('loadPublic');
+        $this->formRepository->expects($this->never())->method('loadPublic');
 
         $resp = $this->controller()->getForm(1);
         $this->assertSame(Http::STATUS_UNAUTHORIZED, $resp->getStatus());
@@ -108,7 +108,7 @@ class ExternalApiControllerTest extends TestCase
 
     public function testFormNotFoundReturns404(): void
     {
-        $this->formService->method('loadPublic')->willThrowException(new \RuntimeException('nope'));
+        $this->formRepository->method('loadPublic')->willThrowException(new \RuntimeException('nope'));
 
         $resp = $this->controller()->getForm(1);
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -117,7 +117,7 @@ class ExternalApiControllerTest extends TestCase
 
     public function testNoApiKeysConfiguredReturns403(): void
     {
-        $this->formService->method('loadPublic')->willReturn(['settings' => ['api_keys' => []]]);
+        $this->formRepository->method('loadPublic')->willReturn(['settings' => ['api_keys' => []]]);
 
         $resp = $this->controller()->getForm(1);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -127,7 +127,7 @@ class ExternalApiControllerTest extends TestCase
     public function testApiKeysMissingKeyEntirelyReturns403(): void
     {
         // settings has no api_keys key at all -> null coalesced to [] -> empty.
-        $this->formService->method('loadPublic')->willReturn(['settings' => []]);
+        $this->formRepository->method('loadPublic')->willReturn(['settings' => []]);
 
         $resp = $this->controller()->getForm(1);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -135,7 +135,7 @@ class ExternalApiControllerTest extends TestCase
 
     public function testInvalidApiKeyReturns401(): void
     {
-        $this->formService->method('loadPublic')->willReturn(['settings' => ['api_keys' => [['id' => 'k1']]]]);
+        $this->formRepository->method('loadPublic')->willReturn(['settings' => ['api_keys' => [['id' => 'k1']]]]);
         $this->apiKeyService->method('findValidKey')->willReturn(null);
 
         $resp = $this->controller()->getForm(1);

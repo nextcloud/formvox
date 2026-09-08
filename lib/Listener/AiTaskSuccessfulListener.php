@@ -7,7 +7,7 @@ namespace OCA\FormVox\Listener;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Db\AiPendingMapper;
 use OCA\FormVox\Service\AiFormGeneratorService;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormRepository;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\IUserManager;
@@ -22,7 +22,7 @@ class AiTaskSuccessfulListener implements IEventListener
 {
     private AiPendingMapper $pendingMapper;
     private AiFormGeneratorService $aiService;
-    private FormService $formService;
+    private FormRepository $formRepository;
     private INotificationManager $notificationManager;
     private IUserManager $userManager;
     private LoggerInterface $logger;
@@ -30,14 +30,14 @@ class AiTaskSuccessfulListener implements IEventListener
     public function __construct(
         AiPendingMapper $pendingMapper,
         AiFormGeneratorService $aiService,
-        FormService $formService,
+        FormRepository $formRepository,
         INotificationManager $notificationManager,
         IUserManager $userManager,
         LoggerInterface $logger
     ) {
         $this->pendingMapper = $pendingMapper;
         $this->aiService = $aiService;
-        $this->formService = $formService;
+        $this->formRepository = $formRepository;
         $this->notificationManager = $notificationManager;
         $this->userManager = $userManager;
         $this->logger = $logger;
@@ -69,7 +69,7 @@ class AiTaskSuccessfulListener implements IEventListener
 
             // Build the form using the title from the pending row, but inject the
             // AI-generated questions and description.
-            $result = $this->formService->createAsUser(
+            $result = $this->formRepository->createAsUser(
                 $task->getUserId(),
                 $pending->getTitle(),
                 $pending->getPath() ?? '',
