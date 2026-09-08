@@ -119,6 +119,20 @@ abstract class IntegrationTestCase extends TestCase {
 		$name = $factory->getUniqueFilename($folder, $name);
 		$file = $folder->newFile($name);
 		$file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+		// Ensure the file is present in oc_filecache before any public lookup:
+		// getFileByIdPublic() queries filecache/storages directly (it has no
+		// session-folder to walk), and a freshly-written node isn't guaranteed
+		// to be cache-resolvable via a raw query yet. Re-resolving by id through
+		// the owner's user folder forces/confirms the cache entry — the standard
+		// NC-test way. Return the re-resolved File.
+		$fileId = $file->getId();
+		$owner = $file->getOwner();
+		$ownerUid = $owner !== null ? $owner->getUID() : $this->ownerUid;
+		$nodes = $this->rootFolder->getUserFolder($ownerUid)->getById($fileId);
+		if (!empty($nodes) && $nodes[0] instanceof File) {
+			return $nodes[0];
+		}
 		return $file;
 	}
 
