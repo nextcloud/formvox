@@ -105,7 +105,7 @@ class FormRepository {
 	 * Load a form by file ID
 	 */
 	public function load(int $fileId): array {
-		$file = $this->getFileById($fileId);
+		$file = $this->fileLocator->getFileById($fileId);
 		$content = $file->getContent();
 		$form = json_decode($content, true);
 
@@ -151,7 +151,7 @@ class FormRepository {
 	 * Update a form
 	 */
 	public function update(int $fileId, array $data): array {
-		$file = $this->getFileById($fileId);
+		$file = $this->fileLocator->getFileById($fileId);
 
 		// Apply the edit under the shared lock, against the freshly-read form,
 		// so a response submitted concurrently is preserved rather than
@@ -225,7 +225,7 @@ class FormRepository {
 	 * Delete a form
 	 */
 	public function delete(int $fileId): void {
-		$file = $this->getFileById($fileId);
+		$file = $this->fileLocator->getFileById($fileId);
 		$file->delete();
 	}
 
