@@ -28,7 +28,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Stryker 10 requires Node >=22 (the unit-test job on Node 20 is fine,
+          # but Stryker's CLI hard-fails below 22).
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci
