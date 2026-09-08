@@ -1,5 +1,16 @@
 # FormService refactor — plan of record
 
+> **STATUS: COMPLETE.** The God-object `FormService` (2058 lines) and the
+> God-controller `ApiController` (22 methods) are gone. The service layer is
+> `FormRepository` (CRUD, 427 lines) + `FormFactory` + `FormFileLocator` +
+> `FormLockManager` + `UploadService` + `OdtTemplateService` +
+> `ShareTokenService` + `ResponsePersistenceService` + `IFormVersionCleaner`.
+> Controllers: `FormController` / `ResponseController` / `ExportController` /
+> `FormUploadController` (route URLs unchanged). Test harness stood up from
+> scratch; **491 unit tests, 1196 assertions, green**, incl. a route-integrity
+> guard. Branch `refactor/formservice-split`, 8 commits, nothing pushed.
+
+
 Corrected after an adversarial design review (3 architects → jury → synthesis →
 completeness critic + red-team). All the review's fixes are folded in below.
 
