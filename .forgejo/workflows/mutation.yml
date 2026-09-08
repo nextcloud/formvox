@@ -1,0 +1,45 @@
+# Forgejo Actions: FormVox mutation testing (Stryker) — main only.
+#
+# Mutation testing measures whether the JS unit tests actually ASSERT behaviour
+# (it mutates src/ and checks the suite catches each change), not just cover it.
+# A full src/ run is heavy (~1-2h), so it runs ONLY on push to main and manual
+# dispatch — never on feature branches (those get the fast ci.yml gate).
+#
+# The mutation score is reported; the run fails below the `break` threshold in
+# stryker.config.mjs.
+
+name: Mutation
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  stryker:
+    name: Stryker — JS mutation testing
+    runs-on: ubuntu-latest
+    # Generous ceiling: a full-tree mutation run is long.
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Stryker (full src/)
+        run: npm run test:mutation
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: reports/mutation
+          if-no-files-found: ignore

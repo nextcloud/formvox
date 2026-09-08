@@ -8,6 +8,7 @@
     "watch": "webpack --watch",
     "test:js": "vitest run",
     "test:js:watch": "vitest",
+    "test:mutation": "stryker run",
     "l10n:extract": "node scripts/extract-en-json.js",
     "l10n:lint": "node scripts/lint-l10n-strings.js",
     "l10n:check": "node scripts/check-l10n-sync.js",
@@ -48,6 +49,8 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/test-utils": "^2.5.0",
     "css-loader": "^6.8.1",

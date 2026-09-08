@@ -13,6 +13,10 @@ coverage/
 /psalm.cache
 .psalm/
 
+# Stryker (mutation testing)
+.stryker-tmp/
+reports/
+
 # Build artifacts (keep js/ for deployment)
 # js/
 
