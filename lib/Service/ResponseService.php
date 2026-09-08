@@ -16,6 +16,8 @@ use Psr\Log\LoggerInterface;
 class ResponseService
 {
     private FormService $formService;
+    private FormFileLocator $fileLocator;
+    private ResponsePersistenceService $responsePersistence;
     private IndexService $indexService;
     private WebhookService $webhookService;
     private INotificationManager $notificationManager;
@@ -27,6 +29,8 @@ class ResponseService
 
     public function __construct(
         FormService $formService,
+        FormFileLocator $fileLocator,
+        ResponsePersistenceService $responsePersistence,
         IndexService $indexService,
         WebhookService $webhookService,
         INotificationManager $notificationManager,
@@ -37,6 +41,8 @@ class ResponseService
         LoggerInterface $logger
     ) {
         $this->formService = $formService;
+        $this->fileLocator = $fileLocator;
+        $this->responsePersistence = $responsePersistence;
         $this->indexService = $indexService;
         $this->webhookService = $webhookService;
         $this->notificationManager = $notificationManager;
@@ -107,7 +113,7 @@ class ResponseService
         };
 
         // Append response (use public method since no user is logged in)
-        $result = $this->formService->appendResponsePublic($fileId, $response, $guard);
+        $result = $this->responsePersistence->appendResponsePublic($fileId, $response, $guard);
 
         // Trigger webhook
         $this->webhookService->trigger($form, 'response.created', $response);
@@ -174,7 +180,7 @@ class ResponseService
         };
 
         // Append response (use public method so respondent doesn't need file permissions)
-        $result = $this->formService->appendResponsePublic($fileId, $response, $guard);
+        $result = $this->responsePersistence->appendResponsePublic($fileId, $response, $guard);
 
         // Trigger webhook
         $this->webhookService->trigger($form, 'response.created', $response);
@@ -264,7 +270,7 @@ class ResponseService
 
             // 1. Form owner (if notify_owner is enabled)
             if (($form['settings']['notify_owner'] ?? true) !== false) {
-                $file = $this->formService->getFileByIdPublic($fileId);
+                $file = $this->fileLocator->getFileByIdPublic($fileId);
                 $owner = $file->getOwner();
                 if ($owner !== null) {
                     $recipientIds[] = $owner->getUID();

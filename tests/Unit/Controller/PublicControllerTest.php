@@ -8,6 +8,7 @@ use OCA\FormVox\Controller\PublicController;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\UploadService;
 use OCA\FormVox\Service\ResponseService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataResponse;
@@ -41,6 +42,7 @@ class PublicControllerTest extends TestCase
     private IURLGenerator $urlGenerator;
     private IGroupManager $groupManager;
     private FormService $formService;
+    private UploadService $uploadService;
     private ResponseService $responseService;
     private BrandingService $brandingService;
     private ChallengeService $challengeService;
@@ -55,6 +57,7 @@ class PublicControllerTest extends TestCase
         $this->urlGenerator = $this->createMock(IURLGenerator::class);
         $this->groupManager = $this->createMock(IGroupManager::class);
         $this->formService = $this->createMock(FormService::class);
+        $this->uploadService = $this->createMock(UploadService::class);
         $this->responseService = $this->createMock(ResponseService::class);
         $this->brandingService = $this->createMock(BrandingService::class);
         $this->challengeService = $this->createMock(ChallengeService::class);
@@ -75,6 +78,7 @@ class PublicControllerTest extends TestCase
             $this->urlGenerator,
             $this->groupManager,
             $this->formService,
+            $this->uploadService,
             $this->responseService,
             $this->brandingService,
             $this->challengeService,
@@ -874,7 +878,7 @@ class PublicControllerTest extends TestCase
             'size' => 100, 'error' => UPLOAD_ERR_OK,
         ];
         $this->request->method('getUploadedFile')->willReturn($uploaded);
-        $this->formService->expects($this->once())->method('storeUpload')
+        $this->uploadService->expects($this->once())->method('storeUpload')
             ->with(1, 'temp-abc', $uploaded)
             ->willReturn(['fileId' => 99, 'name' => 'doc.pdf']);
 
@@ -899,7 +903,7 @@ class PublicControllerTest extends TestCase
         $this->request->method('getUploadedFile')->willReturn([
             'name' => 'notes.txt', 'type' => 'text/plain', 'size' => 5, 'error' => UPLOAD_ERR_OK,
         ]);
-        $this->formService->method('storeUpload')->willReturn(['fileId' => 1]);
+        $this->uploadService->method('storeUpload')->willReturn(['fileId' => 1]);
 
         $resp = $this->controller()->uploadFile(1, 'TOKEN');
         $this->assertSame(Http::STATUS_CREATED, $resp->getStatus());
@@ -921,7 +925,7 @@ class PublicControllerTest extends TestCase
         $this->request->method('getUploadedFile')->willReturn([
             'name' => 'doc.pdf', 'type' => 'application/pdf', 'size' => 100, 'error' => UPLOAD_ERR_OK,
         ]);
-        $this->formService->method('storeUpload')->willThrowException(new \RuntimeException('disk full'));
+        $this->uploadService->method('storeUpload')->willThrowException(new \RuntimeException('disk full'));
 
         $resp = $this->controller()->uploadFile(1, 'TOKEN');
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());

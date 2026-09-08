@@ -15,7 +15,7 @@ class BrandingService
 {
     private IConfig $config;
     private IAppData $appData;
-    private FormService $formService;
+    private UploadService $uploadService;
     private IURLGenerator $urlGenerator;
 
     private const DEFAULT_LAYOUT = [
@@ -48,11 +48,11 @@ class BrandingService
         'fontFamily' => 'default',
     ];
 
-    public function __construct(IConfig $config, IAppData $appData, FormService $formService, IURLGenerator $urlGenerator)
+    public function __construct(IConfig $config, IAppData $appData, UploadService $uploadService, IURLGenerator $urlGenerator)
     {
         $this->config = $config;
         $this->appData = $appData;
-        $this->formService = $formService;
+        $this->uploadService = $uploadService;
         $this->urlGenerator = $urlGenerator;
     }
 
@@ -207,7 +207,7 @@ class BrandingService
      */
     public function saveFormBlockImage(int $fileId, string $blockId, string $tmpPath, string $mimeType): string
     {
-        $folder = $this->formService->getBrandingFolder($fileId, true);
+        $folder = $this->uploadService->getBrandingFolder($fileId, true);
         $extension = $this->getExtensionFromMimeType($mimeType);
         $filename = 'block_' . $blockId . '.' . $extension;
 
@@ -231,7 +231,7 @@ class BrandingService
     public function getFormBlockImage(int $fileId, string $blockId): ?array
     {
         try {
-            $folder = $this->formService->getBrandingFolder($fileId);
+            $folder = $this->uploadService->getBrandingFolder($fileId);
             foreach ($folder->getDirectoryListing() as $file) {
                 if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
                     return [
@@ -249,7 +249,7 @@ class BrandingService
     public function deleteFormBlockImage(int $fileId, string $blockId): void
     {
         try {
-            $folder = $this->formService->getBrandingFolder($fileId, true);
+            $folder = $this->uploadService->getBrandingFolder($fileId, true);
             foreach ($folder->getDirectoryListing() as $node) {
                 if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
                     $node->delete();

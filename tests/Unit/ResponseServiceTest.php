@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit;
 
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\IndexService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\WebhookService;
@@ -33,6 +35,8 @@ use Psr\Log\LoggerInterface;
 class ResponseServiceTest extends TestCase
 {
     private FormService $formService;
+    private FormFileLocator $fileLocator;
+    private ResponsePersistenceService $responsePersistence;
     private IndexService $indexService;
     private WebhookService $webhookService;
     private INotificationManager $notificationManager;
@@ -46,6 +50,8 @@ class ResponseServiceTest extends TestCase
     {
         parent::setUp();
         $this->formService = $this->createMock(FormService::class);
+        $this->fileLocator = $this->createMock(FormFileLocator::class);
+        $this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
         $this->indexService = $this->createMock(IndexService::class);
         $this->webhookService = $this->createMock(WebhookService::class);
         $this->notificationManager = $this->createMock(INotificationManager::class);
@@ -65,6 +71,8 @@ class ResponseServiceTest extends TestCase
     {
         return new ResponseService(
             $this->formService,
+            $this->fileLocator,
+            $this->responsePersistence,
             $this->indexService,
             $this->webhookService,
             $this->notificationManager,
@@ -1315,7 +1323,7 @@ class ResponseServiceTest extends TestCase
         $owner->method('getUID')->willReturn('owner1');
         $file = $this->createMock(File::class);
         $file->method('getOwner')->willReturn($owner);
-        $this->formService->method('getFileByIdPublic')->willReturn($file);
+        $this->fileLocator->method('getFileByIdPublic')->willReturn($file);
 
         $notification = $this->makeNotificationMock();
         $this->notificationManager->method('createNotification')->willReturn($notification);
@@ -1333,7 +1341,7 @@ class ResponseServiceTest extends TestCase
         $owner->method('getUID')->willReturn('bob');
         $file = $this->createMock(File::class);
         $file->method('getOwner')->willReturn($owner);
-        $this->formService->method('getFileByIdPublic')->willReturn($file);
+        $this->fileLocator->method('getFileByIdPublic')->willReturn($file);
 
         // Owner == respondent → no notification sent.
         $this->notificationManager->expects($this->never())->method('notify');
@@ -1347,7 +1355,7 @@ class ResponseServiceTest extends TestCase
     public function testNotifyFormOwnerNotifyOwnerDisabledSkipsOwner(): void
     {
         // notify_owner=false and no recipients → nothing sent, file never fetched.
-        $this->formService->expects($this->never())->method('getFileByIdPublic');
+        $this->fileLocator->expects($this->never())->method('getFileByIdPublic');
         $this->notificationManager->expects($this->never())->method('notify');
         $form = ['title' => 'F', 'settings' => ['notify_owner' => false]];
         $response = ['id' => 'r1', 'respondent' => ['type' => 'anonymous']];
@@ -1381,7 +1389,7 @@ class ResponseServiceTest extends TestCase
 
     public function testNotifyFormOwnerSwallowsExceptions(): void
     {
-        $this->formService->method('getFileByIdPublic')->willThrowException(new \RuntimeException('x'));
+        $this->fileLocator->method('getFileByIdPublic')->willThrowException(new \RuntimeException('x'));
         // Must not propagate.
         $this->call('notifyFormOwner', [1, ['title' => 'F', 'settings' => []], ['id' => 'r', 'respondent' => ['type' => 'anonymous']]]);
         $this->addToAssertionCount(1);
@@ -1411,13 +1419,13 @@ class ResponseServiceTest extends TestCase
             'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
         ];
         $this->formService->method('load')->willReturn($form);
-        $this->formService->method('appendResponsePublic')->willReturn(['ok' => true]);
+        $this->responsePersistence->method('appendResponsePublic')->willReturn(['ok' => true]);
         // notifyFormOwner: getFileByIdPublic
         $owner = $this->createMock(IUser::class);
         $owner->method('getUID')->willReturn('owner');
         $file = $this->createMock(File::class);
         $file->method('getOwner')->willReturn($owner);
-        $this->formService->method('getFileByIdPublic')->willReturn($file);
+        $this->fileLocator->method('getFileByIdPublic')->willReturn($file);
         $this->notificationManager->method('createNotification')->willReturn($this->makeNotificationMock());
 
         $this->webhookService->expects($this->once())->method('trigger')
@@ -1469,7 +1477,7 @@ class ResponseServiceTest extends TestCase
         ];
         $this->formService->method('load')->willReturn($form);
         $captured = null;
-        $this->formService->method('appendResponsePublic')
+        $this->responsePersistence->method('appendResponsePublic')
             ->willReturnCallback(function ($id, $response) use (&$captured) {
                 $captured = $response;
                 return ['ok' => true];
@@ -1478,7 +1486,7 @@ class ResponseServiceTest extends TestCase
         $owner->method('getUID')->willReturn('owner');
         $file = $this->createMock(File::class);
         $file->method('getOwner')->willReturn($owner);
-        $this->formService->method('getFileByIdPublic')->willReturn($file);
+        $this->fileLocator->method('getFileByIdPublic')->willReturn($file);
         $this->notificationManager->method('createNotification')->willReturn($this->makeNotificationMock());
 
         $req = $this->createMock(IRequest::class);
@@ -1500,7 +1508,7 @@ class ResponseServiceTest extends TestCase
         ];
         $this->formService->method('loadPublic')->willReturn($form);
         $captured = null;
-        $this->formService->method('appendResponsePublic')
+        $this->responsePersistence->method('appendResponsePublic')
             ->willReturnCallback(function ($id, $response) use (&$captured) {
                 $captured = $response;
                 return ['ok' => true];
@@ -1509,7 +1517,7 @@ class ResponseServiceTest extends TestCase
         $owner->method('getUID')->willReturn('owner');
         $file = $this->createMock(File::class);
         $file->method('getOwner')->willReturn($owner);
-        $this->formService->method('getFileByIdPublic')->willReturn($file);
+        $this->fileLocator->method('getFileByIdPublic')->willReturn($file);
         $this->notificationManager->method('createNotification')->willReturn($this->makeNotificationMock());
 
         $result = $this->service()->submitAuthenticated(1, ['q1' => 'x'], 'bob', 'Bob');

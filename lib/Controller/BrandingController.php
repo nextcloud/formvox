@@ -15,26 +15,26 @@ use OCP\IRequest;
 use OCP\IUserSession;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 
 class BrandingController extends Controller
 {
     private BrandingService $brandingService;
-    private FormService $formService;
+    private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private IUserSession $userSession;
 
     public function __construct(
         IRequest $request,
         BrandingService $brandingService,
-        FormService $formService,
+        FormFileLocator $fileLocator,
         PermissionService $permissionService,
         IUserSession $userSession
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->brandingService = $brandingService;
-        $this->formService = $formService;
+        $this->fileLocator = $fileLocator;
         $this->permissionService = $permissionService;
         $this->userSession = $userSession;
     }
@@ -185,7 +185,7 @@ class BrandingController extends Controller
             return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
         }
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $role = $this->permissionService->getRoleFromFile($file, $userId);
             if (!$this->permissionService->canEditSettings($role)) {
                 return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);

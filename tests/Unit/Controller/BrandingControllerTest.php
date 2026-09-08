@@ -6,7 +6,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\BrandingController;
 use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDisplayResponse;
@@ -27,7 +27,7 @@ class BrandingControllerTest extends TestCase
 {
     private IRequest $request;
     private BrandingService $brandingService;
-    private FormService $formService;
+    private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private IUserSession $userSession;
 
@@ -36,7 +36,7 @@ class BrandingControllerTest extends TestCase
         parent::setUp();
         $this->request = $this->createMock(IRequest::class);
         $this->brandingService = $this->createMock(BrandingService::class);
-        $this->formService = $this->createMock(FormService::class);
+        $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->permissionService = $this->createMock(PermissionService::class);
         $this->userSession = $this->createMock(IUserSession::class);
 
@@ -50,7 +50,7 @@ class BrandingControllerTest extends TestCase
         return new BrandingController(
             $this->request,
             $this->brandingService,
-            $this->formService,
+            $this->fileLocator,
             $this->permissionService,
             $this->userSession
         );
@@ -200,7 +200,7 @@ class BrandingControllerTest extends TestCase
         $session = $this->createMock(IUserSession::class);
         $session->method('getUser')->willReturn(null);
         $controller = new BrandingController(
-            $this->request, $this->brandingService, $this->formService,
+            $this->request, $this->brandingService, $this->fileLocator,
             $this->permissionService, $session
         );
         $resp = $controller->uploadFormBlockImage(7, 'b1');
@@ -210,7 +210,7 @@ class BrandingControllerTest extends TestCase
 
     public function testUploadFormBlockImageForbiddenWhenCannotEditSettings(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditSettings')->willReturn(false);
         $this->brandingService->expects($this->never())->method('saveFormBlockImage');
@@ -221,7 +221,7 @@ class BrandingControllerTest extends TestCase
 
     public function testUploadFormBlockImageNotFoundWhenFormMissing(): void
     {
-        $this->formService->method('getFileById')->willThrowException(new NotFoundException());
+        $this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
         $resp = $this->controller()->uploadFormBlockImage(7, 'b1');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
         $this->assertSame(['error' => 'Form not found'], $resp->getData());
@@ -229,7 +229,7 @@ class BrandingControllerTest extends TestCase
 
     public function testUploadFormBlockImageMapsGenericExceptionTo500(): void
     {
-        $this->formService->method('getFileById')->willThrowException(new \RuntimeException('boom'));
+        $this->fileLocator->method('getFileById')->willThrowException(new \RuntimeException('boom'));
         $resp = $this->controller()->uploadFormBlockImage(7, 'b1');
         $this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
         $this->assertSame(['error' => 'boom'], $resp->getData());
@@ -237,7 +237,7 @@ class BrandingControllerTest extends TestCase
 
     public function testUploadFormBlockImageBadRequestWhenNoFile(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->request->method('getUploadedFile')->willReturn(null);
@@ -248,7 +248,7 @@ class BrandingControllerTest extends TestCase
 
     public function testUploadFormBlockImageRejectsInvalidType(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->request->method('getUploadedFile')->willReturn($this->validFile('text/plain'));
@@ -259,7 +259,7 @@ class BrandingControllerTest extends TestCase
 
     public function testUploadFormBlockImageRejectsTooLarge(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->request->method('getUploadedFile')->willReturn($this->validFile('image/png', 2 * 1024 * 1024 + 1));
@@ -271,7 +271,7 @@ class BrandingControllerTest extends TestCase
     public function testUploadFormBlockImageSucceeds(): void
     {
         $file = $this->validFile('image/webp', 800);
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->request->method('getUploadedFile')->willReturn($file);
@@ -284,7 +284,7 @@ class BrandingControllerTest extends TestCase
 
     public function testUploadFormBlockImageMapsSaveExceptionTo500(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->request->method('getUploadedFile')->willReturn($this->validFile());
@@ -299,7 +299,7 @@ class BrandingControllerTest extends TestCase
 
     public function testDeleteFormBlockImageForbiddenWhenCannotEditSettings(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
         $this->permissionService->method('canEditSettings')->willReturn(false);
         $this->brandingService->expects($this->never())->method('deleteFormBlockImage');
@@ -309,14 +309,14 @@ class BrandingControllerTest extends TestCase
 
     public function testDeleteFormBlockImageNotFoundWhenFormMissing(): void
     {
-        $this->formService->method('getFileById')->willThrowException(new NotFoundException());
+        $this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
         $resp = $this->controller()->deleteFormBlockImage(7, 'b1');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
     }
 
     public function testDeleteFormBlockImageSucceeds(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
         $this->permissionService->method('canEditSettings')->willReturn(true);
         $this->brandingService->expects($this->once())->method('deleteFormBlockImage')->with(7, 'b1');

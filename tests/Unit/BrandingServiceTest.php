@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit;
 
 use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\UploadService;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IAppData;
@@ -25,7 +25,7 @@ class BrandingServiceTest extends TestCase
 {
     private IConfig $config;
     private IAppData $appData;
-    private FormService $formService;
+    private UploadService $uploadService;
     private IURLGenerator $urlGenerator;
 
     private const APP_ID = 'formvox';
@@ -35,7 +35,7 @@ class BrandingServiceTest extends TestCase
         parent::setUp();
         $this->config = $this->createMock(IConfig::class);
         $this->appData = $this->createMock(IAppData::class);
-        $this->formService = $this->createMock(FormService::class);
+        $this->uploadService = $this->createMock(UploadService::class);
         $this->urlGenerator = $this->createMock(IURLGenerator::class);
     }
 
@@ -44,7 +44,7 @@ class BrandingServiceTest extends TestCase
         return new BrandingService(
             $this->config,
             $this->appData,
-            $this->formService,
+            $this->uploadService,
             $this->urlGenerator
         );
     }
@@ -477,7 +477,7 @@ class BrandingServiceTest extends TestCase
             ->with('block_fb.png')
             ->willReturn($newFile);
 
-        $this->formService->expects($this->once())
+        $this->uploadService->expects($this->once())
             ->method('getBrandingFolder')
             ->with(42, true)
             ->willReturn($folder);
@@ -506,7 +506,7 @@ class BrandingServiceTest extends TestCase
         $folder->method('getDirectoryListing')->willReturn([$old, $unrelated]);
         $folder->method('newFile')->willReturn($newFile);
 
-        $this->formService->method('getBrandingFolder')->willReturn($folder);
+        $this->uploadService->method('getBrandingFolder')->willReturn($folder);
 
         $this->service()->saveFormBlockImage(1, 'fb', $tmp, 'image/jpeg');
         unlink($tmp);
@@ -524,7 +524,7 @@ class BrandingServiceTest extends TestCase
         $folder->method('getDirectoryListing')->willThrowException(new \RuntimeException('boom'));
         $folder->expects($this->once())->method('newFile')->willReturn($newFile);
 
-        $this->formService->method('getBrandingFolder')->willReturn($folder);
+        $this->uploadService->method('getBrandingFolder')->willReturn($folder);
 
         $result = $this->service()->saveFormBlockImage(1, 'fb', $tmp, 'image/png');
         $this->assertSame('fb', $result);
@@ -542,7 +542,7 @@ class BrandingServiceTest extends TestCase
         $folder = $this->createMock(Folder::class);
         $folder->method('getDirectoryListing')->willReturn([$file]);
 
-        $this->formService->expects($this->once())
+        $this->uploadService->expects($this->once())
             ->method('getBrandingFolder')
             ->with(7)
             ->willReturn($folder);
@@ -558,14 +558,14 @@ class BrandingServiceTest extends TestCase
         $file->method('getName')->willReturn('block_other.png');
         $folder = $this->createMock(Folder::class);
         $folder->method('getDirectoryListing')->willReturn([$file]);
-        $this->formService->method('getBrandingFolder')->willReturn($folder);
+        $this->uploadService->method('getBrandingFolder')->willReturn($folder);
 
         $this->assertNull($this->service()->getFormBlockImage(7, 'fb'));
     }
 
     public function testGetFormBlockImageReturnsNullWhenFolderThrows(): void
     {
-        $this->formService->method('getBrandingFolder')
+        $this->uploadService->method('getBrandingFolder')
             ->willThrowException(new NotFoundException());
 
         $this->assertNull($this->service()->getFormBlockImage(7, 'fb'));
@@ -590,7 +590,7 @@ class BrandingServiceTest extends TestCase
         $folder = $this->createMock(Folder::class);
         $folder->method('getDirectoryListing')->willReturn([$m1, $skip, $m2]);
 
-        $this->formService->expects($this->once())
+        $this->uploadService->expects($this->once())
             ->method('getBrandingFolder')
             ->with(7, true)
             ->willReturn($folder);
@@ -600,7 +600,7 @@ class BrandingServiceTest extends TestCase
 
     public function testDeleteFormBlockImageSilentWhenFolderThrows(): void
     {
-        $this->formService->method('getBrandingFolder')
+        $this->uploadService->method('getBrandingFolder')
             ->willThrowException(new NotFoundException());
 
         // Must not throw.

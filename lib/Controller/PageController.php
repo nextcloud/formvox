@@ -15,6 +15,7 @@ use OCP\IURLGenerator;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
@@ -22,6 +23,7 @@ use OCA\FormVox\Service\MicrosoftFormsAuthService;
 class PageController extends Controller
 {
     private FormService $formService;
+    private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private BrandingService $brandingService;
     private MicrosoftFormsAuthService $msFormsAuthService;
@@ -32,6 +34,7 @@ class PageController extends Controller
     public function __construct(
         IRequest $request,
         FormService $formService,
+        FormFileLocator $fileLocator,
         PermissionService $permissionService,
         BrandingService $brandingService,
         MicrosoftFormsAuthService $msFormsAuthService,
@@ -41,6 +44,7 @@ class PageController extends Controller
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
+        $this->fileLocator = $fileLocator;
         $this->permissionService = $permissionService;
         $this->brandingService = $brandingService;
         $this->msFormsAuthService = $msFormsAuthService;
@@ -75,7 +79,7 @@ class PageController extends Controller
     #[NoCSRFRequired]
     public function editor(int $fileId): TemplateResponse
     {
-        $file = $this->formService->getFileById($fileId);
+        $file = $this->fileLocator->getFileById($fileId);
         $form = $this->formService->load($fileId);
         $role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
         $canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');
@@ -111,7 +115,7 @@ class PageController extends Controller
     #[NoCSRFRequired]
     public function results(int $fileId): TemplateResponse
     {
-        $file = $this->formService->getFileById($fileId);
+        $file = $this->fileLocator->getFileById($fileId);
         $form = $this->formService->load($fileId);
         $role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
         $canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');

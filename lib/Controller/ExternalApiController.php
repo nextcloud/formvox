@@ -13,6 +13,7 @@ use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\ApiKeyService;
 use OCA\FormVox\Service\WebhookService;
 
@@ -23,17 +24,20 @@ use OCA\FormVox\Service\WebhookService;
 class ExternalApiController extends Controller
 {
     private FormService $formService;
+    private ResponsePersistenceService $responsePersistence;
     private ApiKeyService $apiKeyService;
     private WebhookService $webhookService;
 
     public function __construct(
         IRequest $request,
         FormService $formService,
+        ResponsePersistenceService $responsePersistence,
         ApiKeyService $apiKeyService,
         WebhookService $webhookService
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
+        $this->responsePersistence = $responsePersistence;
         $this->apiKeyService = $apiKeyService;
         $this->webhookService = $webhookService;
     }
@@ -275,7 +279,7 @@ class ExternalApiController extends Controller
         $form['responses'][] = $newResponse;
 
         // Save
-        $this->formService->savePublic($fileId, $form);
+        $this->responsePersistence->savePublic($fileId, $form);
 
         // Trigger webhooks
         $this->webhookService->trigger($form, 'response.created', $newResponse);
@@ -339,7 +343,7 @@ class ExternalApiController extends Controller
         }
 
         $form['responses'] = $responses;
-        $this->formService->savePublic($fileId, $form);
+        $this->responsePersistence->savePublic($fileId, $form);
 
         // Trigger webhooks
         $this->webhookService->trigger($form, 'response.updated', $updatedResponse);
@@ -393,7 +397,7 @@ class ExternalApiController extends Controller
         }
 
         $form['responses'] = $responses;
-        $this->formService->savePublic($fileId, $form);
+        $this->responsePersistence->savePublic($fileId, $form);
 
         // Trigger webhooks
         $this->webhookService->trigger($form, 'response.deleted', $deletedResponse);

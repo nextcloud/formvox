@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit;
 
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\MicrosoftFormsApiClient;
 use OCA\FormVox\Service\MSFormsImportService;
 use OCP\Security\ISecureRandom;
@@ -23,6 +24,7 @@ use Psr\Log\LoggerInterface;
 class MSFormsImportServiceTest extends TestCase
 {
     private FormService $formService;
+    private ResponsePersistenceService $responsePersistence;
     private MicrosoftFormsApiClient $apiClient;
     private ISecureRandom $secureRandom;
     private LoggerInterface $logger;
@@ -31,6 +33,7 @@ class MSFormsImportServiceTest extends TestCase
     {
         parent::setUp();
         $this->formService = $this->createMock(FormService::class);
+        $this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
         $this->apiClient = $this->createMock(MicrosoftFormsApiClient::class);
         $this->secureRandom = $this->createMock(ISecureRandom::class);
         $this->logger = $this->createMock(LoggerInterface::class);
@@ -40,6 +43,7 @@ class MSFormsImportServiceTest extends TestCase
     {
         return new MSFormsImportService(
             $this->formService,
+            $this->responsePersistence,
             $this->apiClient,
             $this->secureRandom,
             $this->logger
@@ -910,7 +914,7 @@ class MSFormsImportServiceTest extends TestCase
         ]);
 
         $appended = [];
-        $this->formService->method('appendResponse')->willReturnCallback(
+        $this->responsePersistence->method('appendResponse')->willReturnCallback(
             function ($fileId, $response) use (&$appended) {
                 $appended[] = $response;
                 return $response;
@@ -975,7 +979,7 @@ class MSFormsImportServiceTest extends TestCase
         ]);
 
         $call = 0;
-        $this->formService->method('appendResponse')->willReturnCallback(
+        $this->responsePersistence->method('appendResponse')->willReturnCallback(
             function ($f, $r) use (&$call) {
                 $call++;
                 if ($call === 2) {

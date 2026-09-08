@@ -7,6 +7,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 use OCA\FormVox\Controller\ExternalApiController;
 use OCA\FormVox\Service\ApiKeyService;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\WebhookService;
 use OCP\AppFramework\Http;
 use OCP\IRequest;
@@ -27,6 +28,7 @@ use PHPUnit\Framework\TestCase;
 class ExternalApiControllerTest extends TestCase
 {
     private FormService $formService;
+    private ResponsePersistenceService $responsePersistence;
     private ApiKeyService $apiKeyService;
     private WebhookService $webhookService;
     private IRequest $request;
@@ -40,6 +42,7 @@ class ExternalApiControllerTest extends TestCase
     {
         parent::setUp();
         $this->formService = $this->createMock(FormService::class);
+        $this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
         $this->apiKeyService = $this->createMock(ApiKeyService::class);
         $this->webhookService = $this->createMock(WebhookService::class);
 
@@ -60,6 +63,7 @@ class ExternalApiControllerTest extends TestCase
         return new ExternalApiController(
             $this->request,
             $this->formService,
+            $this->responsePersistence,
             $this->apiKeyService,
             $this->webhookService
         );
@@ -349,7 +353,7 @@ class ExternalApiControllerTest extends TestCase
     {
         $this->givenAuthenticated([], ['read_responses']);
         $this->params['answers'] = ['q1' => 'yes'];
-        $this->formService->expects($this->never())->method('savePublic');
+        $this->responsePersistence->expects($this->never())->method('savePublic');
 
         $resp = $this->controller()->createResponse(1);
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -360,7 +364,7 @@ class ExternalApiControllerTest extends TestCase
     {
         $this->givenAuthenticated([], ['write_responses']);
         // answers param absent -> null -> not array
-        $this->formService->expects($this->never())->method('savePublic');
+        $this->responsePersistence->expects($this->never())->method('savePublic');
 
         $resp = $this->controller()->createResponse(1);
         $this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
@@ -375,7 +379,7 @@ class ExternalApiControllerTest extends TestCase
         $this->params['answers'] = ['q1' => 'hello'];
 
         // RISK-CRITICAL: savePublic must be called with the appended response.
-        $this->formService->expects($this->once())
+        $this->responsePersistence->expects($this->once())
             ->method('savePublic')
             ->with(
                 5,
@@ -407,7 +411,7 @@ class ExternalApiControllerTest extends TestCase
     {
         $this->givenAuthenticated([], ['write_responses'], []); // keyConfig has no 'id'
         $this->params['answers'] = ['q' => 1];
-        $this->formService->expects($this->once())->method('savePublic');
+        $this->responsePersistence->expects($this->once())->method('savePublic');
 
         $data = $this->controller()->createResponse(1)->getData();
         $this->assertNull($data['api_key_id']);
@@ -419,7 +423,7 @@ class ExternalApiControllerTest extends TestCase
     {
         $this->givenAuthenticated([], ['read_responses']);
         $this->params['answers'] = ['q1' => 'x'];
-        $this->formService->expects($this->never())->method('savePublic');
+        $this->responsePersistence->expects($this->never())->method('savePublic');
 
         $resp = $this->controller()->updateResponse(1, 'r1');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -428,7 +432,7 @@ class ExternalApiControllerTest extends TestCase
     public function testUpdateResponseRejectsNonArrayAnswers(): void
     {
         $this->givenAuthenticated(['responses' => [['id' => 'r1']]], ['write_responses']);
-        $this->formService->expects($this->never())->method('savePublic');
+        $this->responsePersistence->expects($this->never())->method('savePublic');
 
         $resp = $this->controller()->updateResponse(1, 'r1');
         $this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
@@ -438,7 +442,7 @@ class ExternalApiControllerTest extends TestCase
     {
         $this->givenAuthenticated(['responses' => [['id' => 'r1']]], ['write_responses']);
         $this->params['answers'] = ['q1' => 'x'];
-        $this->formService->expects($this->never())->method('savePublic');
+        $this->responsePersistence->expects($this->never())->method('savePublic');
         $this->webhookService->expects($this->never())->method('trigger');
 
         $resp = $this->controller()->updateResponse(1, 'nope');
@@ -456,7 +460,7 @@ class ExternalApiControllerTest extends TestCase
         ], ['write_responses'], ['id' => 'key-9']);
         $this->params['answers'] = ['new' => 'value'];
 
-        $this->formService->expects($this->once())
+        $this->responsePersistence->expects($this->once())
             ->method('savePublic')
             ->with(
                 3,
@@ -487,7 +491,7 @@ class ExternalApiControllerTest extends TestCase
             'responses' => [['id' => 'r1', 'answers' => []]],
         ], ['write_responses'], []); // keyConfig has no 'id'
         $this->params['answers'] = ['a' => 1];
-        $this->formService->expects($this->once())->method('savePublic');
+        $this->responsePersistence->expects($this->once())->method('savePublic');
 
         $data = $this->controller()->updateResponse(1, 'r1')->getData();
         $this->assertSame('api:unknown', $data['updated_by']);
@@ -498,7 +502,7 @@ class ExternalApiControllerTest extends TestCase
     public function testDeleteResponseDeniedWithoutDeletePermission(): void
     {
         $this->givenAuthenticated(['responses' => [['id' => 'r1']]], ['write_responses']);
-        $this->formService->expects($this->never())->method('savePublic');
+        $this->responsePersistence->expects($this->never())->method('savePublic');
 
         $resp = $this->controller()->deleteResponse(1, 'r1');
         $this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
@@ -508,7 +512,7 @@ class ExternalApiControllerTest extends TestCase
     public function testDeleteResponseNotFoundReturns404(): void
     {
         $this->givenAuthenticated(['responses' => [['id' => 'r1']]], ['delete_responses']);
-        $this->formService->expects($this->never())->method('savePublic');
+        $this->responsePersistence->expects($this->never())->method('savePublic');
         $this->webhookService->expects($this->never())->method('trigger');
 
         $resp = $this->controller()->deleteResponse(1, 'nope');
@@ -522,7 +526,7 @@ class ExternalApiControllerTest extends TestCase
             'responses' => [['id' => 'r1'], ['id' => 'r2'], ['id' => 'r3']],
         ], ['delete_responses']);
 
-        $this->formService->expects($this->once())
+        $this->responsePersistence->expects($this->once())
             ->method('savePublic')
             ->with(
                 8,

@@ -14,6 +14,7 @@ class MSFormsImportService
 {
     public function __construct(
         private FormService $formService,
+        private ResponsePersistenceService $responsePersistence,
         private MicrosoftFormsApiClient $apiClient,
         private ISecureRandom $secureRandom,
         private LoggerInterface $logger,
@@ -877,7 +878,7 @@ class MSFormsImportService
             }
 
             try {
-                $this->formService->appendResponse($fileId, $response);
+                $this->responsePersistence->appendResponse($fileId, $response);
                 $count++;
             } catch (\Exception $e) {
                 $this->logger->warning('Failed to import response', [

@@ -7,6 +7,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 use OCA\FormVox\Controller\IntegrationController;
 use OCA\FormVox\Service\ApiKeyService;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\WebhookService;
 use OCP\AppFramework\Http;
@@ -27,6 +28,7 @@ class IntegrationControllerTest extends TestCase
 {
     private IRequest $request;
     private FormService $formService;
+    private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private ApiKeyService $apiKeyService;
     private WebhookService $webhookService;
@@ -37,6 +39,7 @@ class IntegrationControllerTest extends TestCase
         parent::setUp();
         $this->request = $this->createMock(IRequest::class);
         $this->formService = $this->createMock(FormService::class);
+        $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->permissionService = $this->createMock(PermissionService::class);
         $this->apiKeyService = $this->createMock(ApiKeyService::class);
         $this->webhookService = $this->createMock(WebhookService::class);
@@ -52,6 +55,7 @@ class IntegrationControllerTest extends TestCase
         return new IntegrationController(
             $this->request,
             $this->formService,
+            $this->fileLocator,
             $this->permissionService,
             $this->apiKeyService,
             $this->webhookService,
@@ -62,7 +66,7 @@ class IntegrationControllerTest extends TestCase
     /** Convenience: make getFileById return a File mock. */
     private function withFile(): void
     {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
     }
 
     // ---- createApiKey() ----------------------------------------------------
@@ -82,7 +86,7 @@ class IntegrationControllerTest extends TestCase
 
     public function testCreateApiKeyMapsNotFoundTo404(): void
     {
-        $this->formService->method('getFileById')->willThrowException(new NotFoundException());
+        $this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
 
         $resp = $this->controller()->createApiKey(999, 'k', []);
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -175,7 +179,7 @@ class IntegrationControllerTest extends TestCase
 
     public function testDeleteApiKeyMapsNotFoundTo404(): void
     {
-        $this->formService->method('getFileById')->willThrowException(new NotFoundException());
+        $this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
 
         $resp = $this->controller()->deleteApiKey(999, 'kid');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -262,7 +266,7 @@ class IntegrationControllerTest extends TestCase
     public function testCreateWebhookMapsNotFoundTo404(): void
     {
         $this->stubWebhookParams('https://example.com/hook');
-        $this->formService->method('getFileById')->willThrowException(new NotFoundException());
+        $this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
 
         $resp = $this->controller()->createWebhook(999);
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -381,7 +385,7 @@ class IntegrationControllerTest extends TestCase
 
     public function testUpdateWebhookMapsNotFoundTo404(): void
     {
-        $this->formService->method('getFileById')->willThrowException(new NotFoundException());
+        $this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
 
         $resp = $this->controller()->updateWebhook(999, 'wh1');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
@@ -506,7 +510,7 @@ class IntegrationControllerTest extends TestCase
 
     public function testDeleteWebhookMapsNotFoundTo404(): void
     {
-        $this->formService->method('getFileById')->willThrowException(new NotFoundException());
+        $this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
 
         $resp = $this->controller()->deleteWebhook(999, 'wh1');
         $this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());

@@ -7,6 +7,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 use OCA\FormVox\Controller\PageController;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\PermissionService;
 use OCP\AppFramework\Http;
@@ -40,6 +41,7 @@ class PageControllerTest extends TestCase
 {
     private IRequest $request;
     private FormService $formService;
+    private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private BrandingService $brandingService;
     private MicrosoftFormsAuthService $msFormsAuthService;
@@ -51,6 +53,7 @@ class PageControllerTest extends TestCase
         parent::setUp();
         $this->request = $this->createMock(IRequest::class);
         $this->formService = $this->createMock(FormService::class);
+        $this->fileLocator = $this->createMock(FormFileLocator::class);
         $this->permissionService = $this->createMock(PermissionService::class);
         $this->brandingService = $this->createMock(BrandingService::class);
         $this->msFormsAuthService = $this->createMock(MicrosoftFormsAuthService::class);
@@ -67,6 +70,7 @@ class PageControllerTest extends TestCase
         return new PageController(
             $this->request,
             $this->formService,
+            $this->fileLocator,
             $this->permissionService,
             $this->brandingService,
             $this->msFormsAuthService,
@@ -137,7 +141,7 @@ class PageControllerTest extends TestCase
     public function testIndexDoesNotTouchFormOrPermissionServices(): void
     {
         $this->formService->expects($this->never())->method('load');
-        $this->formService->expects($this->never())->method('getFileById');
+        $this->fileLocator->expects($this->never())->method('getFileById');
         $this->permissionService->expects($this->never())->method('getRoleFromFile');
 
         $this->controller()->index();
@@ -157,7 +161,7 @@ class PageControllerTest extends TestCase
         array $form = ['title' => 'T'],
         bool $canShare = false
     ): void {
-        $this->formService->method('getFileById')->willReturn($this->createMock(File::class));
+        $this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
         $this->formService->method('load')->willReturn($form);
         $this->permissionService->method('getRoleFromFile')->willReturn($role);
         $this->permissionService->method('canShareFromFile')->willReturn($canShare);
@@ -219,7 +223,7 @@ class PageControllerTest extends TestCase
     public function testEditorPassesUserIdToPermissionLookup(): void
     {
         $file = $this->createMock(File::class);
-        $this->formService->method('getFileById')->willReturn($file);
+        $this->fileLocator->method('getFileById')->willReturn($file);
         $this->formService->method('load')->willReturn(['title' => 'T']);
         $this->permissionService->expects($this->once())->method('getRoleFromFile')
             ->with($file, 'bob')->willReturn(PermissionService::ROLE_VIEWER);
@@ -234,7 +238,7 @@ class PageControllerTest extends TestCase
     {
         // userId === null → the controller passes '' to the permission lookups.
         $file = $this->createMock(File::class);
-        $this->formService->method('getFileById')->willReturn($file);
+        $this->fileLocator->method('getFileById')->willReturn($file);
         $this->formService->method('load')->willReturn(['title' => 'T']);
         $this->permissionService->expects($this->once())->method('getRoleFromFile')
             ->with($file, '')->willReturn(PermissionService::ROLE_VIEWER);
@@ -261,7 +265,7 @@ class PageControllerTest extends TestCase
     public function testEditorPropagatesNotFoundExceptionFromGetFileById(): void
     {
         // If getFileById throws (e.g. file missing), editor() does not catch it.
-        $this->formService->method('getFileById')
+        $this->fileLocator->method('getFileById')
             ->willThrowException(new \OCP\Files\NotFoundException('gone'));
 
         $this->expectException(\OCP\Files\NotFoundException::class);
@@ -323,7 +327,7 @@ class PageControllerTest extends TestCase
     public function testResultsPassesUserIdToPermissionLookup(): void
     {
         $file = $this->createMock(File::class);
-        $this->formService->method('getFileById')->willReturn($file);
+        $this->fileLocator->method('getFileById')->willReturn($file);
         $this->formService->method('load')->willReturn(['title' => 'T']);
         $this->permissionService->expects($this->once())->method('getRoleFromFile')
             ->with($file, 'carol')->willReturn(PermissionService::ROLE_EDITOR);
@@ -337,7 +341,7 @@ class PageControllerTest extends TestCase
     public function testResultsNullUserIdCoercedToEmptyString(): void
     {
         $file = $this->createMock(File::class);
-        $this->formService->method('getFileById')->willReturn($file);
+        $this->fileLocator->method('getFileById')->willReturn($file);
         $this->formService->method('load')->willReturn(['title' => 'T']);
         $this->permissionService->expects($this->once())->method('getRoleFromFile')
             ->with($file, '')->willReturn(PermissionService::ROLE_EDITOR);
@@ -350,7 +354,7 @@ class PageControllerTest extends TestCase
 
     public function testResultsPropagatesNotFoundExceptionFromGetFileById(): void
     {
-        $this->formService->method('getFileById')
+        $this->fileLocator->method('getFileById')
             ->willThrowException(new \OCP\Files\NotFoundException('gone'));
 
         $this->expectException(\OCP\Files\NotFoundException::class);

@@ -23,6 +23,7 @@ use OCP\IUser;
 use OCP\Util;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\UploadService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
@@ -34,6 +35,7 @@ class PublicController extends Controller
     private IURLGenerator $urlGenerator;
     private IGroupManager $groupManager;
     private FormService $formService;
+    private UploadService $uploadService;
     private ResponseService $responseService;
     private BrandingService $brandingService;
     private ChallengeService $challengeService;
@@ -46,6 +48,7 @@ class PublicController extends Controller
         IURLGenerator $urlGenerator,
         IGroupManager $groupManager,
         FormService $formService,
+        UploadService $uploadService,
         ResponseService $responseService,
         BrandingService $brandingService,
         ChallengeService $challengeService,
@@ -57,6 +60,7 @@ class PublicController extends Controller
         $this->urlGenerator = $urlGenerator;
         $this->groupManager = $groupManager;
         $this->formService = $formService;
+        $this->uploadService = $uploadService;
         $this->responseService = $responseService;
         $this->brandingService = $brandingService;
         $this->challengeService = $challengeService;
@@ -929,7 +933,7 @@ class PublicController extends Controller
             }
 
             // Store the file
-            $fileMetadata = $this->formService->storeUpload($fileId, $tempResponseId, $uploadedFile);
+            $fileMetadata = $this->uploadService->storeUpload($fileId, $tempResponseId, $uploadedFile);
             $fileMetadata['tempResponseId'] = $tempResponseId;
 
             return new DataResponse($fileMetadata, Http::STATUS_CREATED);

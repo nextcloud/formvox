@@ -12,6 +12,7 @@ use OCP\IRequest;
 use OCP\IUserSession;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
+use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\ApiKeyService;
 use OCA\FormVox\Service\WebhookService;
@@ -22,6 +23,7 @@ use OCA\FormVox\Service\WebhookService;
 class IntegrationController extends Controller
 {
     private FormService $formService;
+    private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private ApiKeyService $apiKeyService;
     private WebhookService $webhookService;
@@ -30,6 +32,7 @@ class IntegrationController extends Controller
     public function __construct(
         IRequest $request,
         FormService $formService,
+        FormFileLocator $fileLocator,
         PermissionService $permissionService,
         ApiKeyService $apiKeyService,
         WebhookService $webhookService,
@@ -37,6 +40,7 @@ class IntegrationController extends Controller
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
+        $this->fileLocator = $fileLocator;
         $this->permissionService = $permissionService;
         $this->apiKeyService = $apiKeyService;
         $this->webhookService = $webhookService;
@@ -50,7 +54,7 @@ class IntegrationController extends Controller
     public function createApiKey(int $fileId, string $name, array $permissions): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -112,7 +116,7 @@ class IntegrationController extends Controller
     public function deleteApiKey(int $fileId, string $keyId): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -175,7 +179,7 @@ class IntegrationController extends Controller
             if (!is_array($events)) {
                 $events = [];
             }
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -255,7 +259,7 @@ class IntegrationController extends Controller
         ?bool $enabled = null
     ): DataResponse {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -332,7 +336,7 @@ class IntegrationController extends Controller
     public function deleteWebhook(int $fileId, string $webhookId): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
