@@ -21,12 +21,12 @@ return [
         ['name' => 'public#embedAuthenticate', 'url' => '/embed/{fileId}/{token}', 'verb' => 'POST'],
 
         // API routes - Forms
-        ['name' => 'api#list', 'url' => '/api/forms', 'verb' => 'GET'],
-        ['name' => 'api#create', 'url' => '/api/forms', 'verb' => 'POST'],
-        ['name' => 'api#get', 'url' => '/api/form/{fileId}', 'verb' => 'GET'],
-        ['name' => 'api#update', 'url' => '/api/form/{fileId}', 'verb' => 'PUT'],
-        ['name' => 'api#delete', 'url' => '/api/form/{fileId}', 'verb' => 'DELETE'],
-        ['name' => 'api#setFavorite', 'url' => '/api/form/{fileId}/favorite', 'verb' => 'POST'],
+        ['name' => 'form#list', 'url' => '/api/forms', 'verb' => 'GET'],
+        ['name' => 'form#create', 'url' => '/api/forms', 'verb' => 'POST'],
+        ['name' => 'form#get', 'url' => '/api/form/{fileId}', 'verb' => 'GET'],
+        ['name' => 'form#update', 'url' => '/api/form/{fileId}', 'verb' => 'PUT'],
+        ['name' => 'form#delete', 'url' => '/api/form/{fileId}', 'verb' => 'DELETE'],
+        ['name' => 'form#setFavorite', 'url' => '/api/form/{fileId}/favorite', 'verb' => 'POST'],
 
         // API routes - AI form generator
         ['name' => 'settings#getAi', 'url' => '/api/settings/ai', 'verb' => 'GET'],
@@ -37,23 +37,23 @@ return [
         ['name' => 'ai#resolveFile', 'url' => '/api/ai/resolve-file', 'verb' => 'GET'],
 
         // API routes - Responses
-        ['name' => 'api#getResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'GET'],
-        ['name' => 'api#deleteAllResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'DELETE'],
-        ['name' => 'api#deleteResponse', 'url' => '/api/form/{fileId}/responses/{responseId}', 'verb' => 'DELETE'],
+        ['name' => 'response#getResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'GET'],
+        ['name' => 'response#deleteAllResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'DELETE'],
+        ['name' => 'response#deleteResponse', 'url' => '/api/form/{fileId}/responses/{responseId}', 'verb' => 'DELETE'],
 
         // API routes - Export
-        ['name' => 'api#exportCsv', 'url' => '/api/form/{fileId}/export/csv', 'verb' => 'GET'],
-        ['name' => 'api#exportJson', 'url' => '/api/form/{fileId}/export/json', 'verb' => 'GET'],
-        ['name' => 'api#exportExcel', 'url' => '/api/form/{fileId}/export/xlsx', 'verb' => 'GET'],
+        ['name' => 'export#exportCsv', 'url' => '/api/form/{fileId}/export/csv', 'verb' => 'GET'],
+        ['name' => 'export#exportJson', 'url' => '/api/form/{fileId}/export/json', 'verb' => 'GET'],
+        ['name' => 'export#exportExcel', 'url' => '/api/form/{fileId}/export/xlsx', 'verb' => 'GET'],
 
         // API routes - ODT template
-        ['name' => 'api#uploadOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'POST'],
-        ['name' => 'api#downloadOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'GET'],
-        ['name' => 'api#deleteOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'DELETE'],
-        ['name' => 'api#hasOdtTemplate', 'url' => '/api/form/{fileId}/odt-template/status', 'verb' => 'GET'],
+        ['name' => 'export#uploadOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'POST'],
+        ['name' => 'export#downloadOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'GET'],
+        ['name' => 'export#deleteOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'DELETE'],
+        ['name' => 'export#hasOdtTemplate', 'url' => '/api/form/{fileId}/odt-template/status', 'verb' => 'GET'],
 
         // API routes - Index management
-        ['name' => 'api#rebuildIndex', 'url' => '/api/form/{fileId}/rebuild-index', 'verb' => 'POST'],
+        ['name' => 'form#rebuildIndex', 'url' => '/api/form/{fileId}/rebuild-index', 'verb' => 'POST'],
 
         // Presence (collaborative editing)
         ['name' => 'presence#sendPresence', 'url' => '/api/form/{fileId}/presence', 'verb' => 'POST'],
@@ -63,15 +63,15 @@ return [
         ['name' => 'file_permission#getPermissions', 'url' => '/api/permissions/{fileId}', 'verb' => 'GET'],
 
         // API routes - User/Group search for access restrictions
-        ['name' => 'api#searchSharees', 'url' => '/api/sharees', 'verb' => 'GET'],
+        ['name' => 'form#searchSharees', 'url' => '/api/sharees', 'verb' => 'GET'],
 
         // Replacing a share link invalidates the URL everyone already has, so it
         // needs its own deliberate endpoint rather than riding along on a save (#135)
-        ['name' => 'api#rotateShareToken', 'url' => '/api/form/{fileId}/share-token', 'verb' => 'POST'],
+        ['name' => 'form#rotateShareToken', 'url' => '/api/form/{fileId}/share-token', 'verb' => 'POST'],
 
         // API routes - File uploads
-        ['name' => 'api#downloadUpload', 'url' => '/api/form/{fileId}/uploads/{responseId}/{filename}', 'verb' => 'GET'],
-        ['name' => 'api#downloadAllUploads', 'url' => '/api/form/{fileId}/uploads', 'verb' => 'GET'],
+        ['name' => 'form_upload#downloadUpload', 'url' => '/api/form/{fileId}/uploads/{responseId}/{filename}', 'verb' => 'GET'],
+        ['name' => 'form_upload#downloadAllUploads', 'url' => '/api/form/{fileId}/uploads', 'verb' => 'GET'],
 
         // Branding routes (admin only, except images which are public)
         ['name' => 'branding#get', 'url' => '/api/branding', 'verb' => 'GET'],
@@ -101,7 +101,7 @@ return [
         ['name' => 'settings#addAdminTemplate', 'url' => '/api/admin/templates', 'verb' => 'POST'],
         ['name' => 'settings#deleteAdminTemplate', 'url' => '/api/admin/templates/{id}', 'verb' => 'DELETE'],
         ['name' => 'settings#listAvailableTemplates', 'url' => '/api/templates', 'verb' => 'GET'],
-        ['name' => 'api#saveAsTemplate', 'url' => '/api/form/{fileId}/save-as-template', 'verb' => 'POST'],
+        ['name' => 'form#saveAsTemplate', 'url' => '/api/form/{fileId}/save-as-template', 'verb' => 'POST'],
 
         // License routes (admin only)
         ['name' => 'license#getStats', 'url' => '/api/license/stats', 'verb' => 'GET'],

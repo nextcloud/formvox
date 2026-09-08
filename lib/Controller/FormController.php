@@ -7,9 +7,7 @@ namespace OCA\FormVox\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
-use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataResponse;
-use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\IUserManager;
@@ -17,47 +15,48 @@ use OCP\IGroupManager;
 use OCP\Notification\IManager as INotificationManager;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\FormService;
-use OCA\FormVox\Service\ResponseService;
+use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\IndexService;
 use OCA\FormVox\Service\TemplateService;
 use OCA\FormVox\Service\ShareTokenService;
-class ApiController extends Controller
+
+class FormController extends Controller
 {
     private FormService $formService;
-    private ResponseService $responseService;
+    private FormFileLocator $fileLocator;
     private PermissionService $permissionService;
     private IndexService $indexService;
     private TemplateService $templateService;
+    private ShareTokenService $shareTokenService;
     private IUserSession $userSession;
     private IUserManager $userManager;
     private IGroupManager $groupManager;
-    private ShareTokenService $shareTokenService;
     private INotificationManager $notificationManager;
 
     public function __construct(
         IRequest $request,
         FormService $formService,
-        ResponseService $responseService,
+        FormFileLocator $fileLocator,
         PermissionService $permissionService,
         IndexService $indexService,
         TemplateService $templateService,
+        ShareTokenService $shareTokenService,
         IUserSession $userSession,
         IUserManager $userManager,
         IGroupManager $groupManager,
-        ShareTokenService $shareTokenService,
         INotificationManager $notificationManager
     ) {
         parent::__construct(Application::APP_ID, $request);
         $this->formService = $formService;
-        $this->responseService = $responseService;
+        $this->fileLocator = $fileLocator;
         $this->permissionService = $permissionService;
         $this->indexService = $indexService;
         $this->templateService = $templateService;
+        $this->shareTokenService = $shareTokenService;
         $this->userSession = $userSession;
         $this->userManager = $userManager;
         $this->groupManager = $groupManager;
-        $this->shareTokenService = $shareTokenService;
         $this->notificationManager = $notificationManager;
     }
 
@@ -166,7 +165,7 @@ class ApiController extends Controller
     public function get(int $fileId): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $form = $this->formService->load($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
@@ -244,7 +243,7 @@ class ApiController extends Controller
             );
         }
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -335,7 +334,7 @@ class ApiController extends Controller
     public function setFavorite(int $fileId, bool $favorite): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -369,7 +368,7 @@ class ApiController extends Controller
     public function delete(int $fileId): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -396,272 +395,13 @@ class ApiController extends Controller
     }
 
     /**
-     * Get responses for a form
-     */
-    #[NoAdminRequired]
-    public function getResponses(int $fileId, ?string $date = null): DataResponse
-    {
-        try {
-            $file = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-            if (!$this->permissionService->canViewResponses($role)) {
-                return new DataResponse(
-                    ['error' => 'Permission denied'],
-                    Http::STATUS_FORBIDDEN
-                );
-            }
-
-            $responses = $this->responseService->getResponses($fileId, $date);
-            $summary = $this->responseService->getSummary($fileId);
-
-            return new DataResponse([
-                'responses' => $responses,
-                'summary' => $summary,
-            ]);
-        } catch (\Exception $e) {
-            return new DataResponse(
-                ['error' => $e->getMessage()],
-                Http::STATUS_INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    /**
-     * Delete all responses
-     */
-    #[NoAdminRequired]
-    public function deleteAllResponses(int $fileId): DataResponse
-    {
-        try {
-            $file = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-            if (!$this->permissionService->canDeleteResponses($role)) {
-                return new DataResponse(
-                    ['error' => 'Permission denied'],
-                    Http::STATUS_FORBIDDEN
-                );
-            }
-
-            $this->formService->deleteAllResponses($fileId);
-            return new DataResponse(['success' => true]);
-        } catch (\Exception $e) {
-            return new DataResponse(
-                ['error' => $e->getMessage()],
-                Http::STATUS_INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    /**
-     * Delete a response
-     */
-    #[NoAdminRequired]
-    public function deleteResponse(int $fileId, string $responseId): DataResponse
-    {
-        try {
-            $file = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-            if (!$this->permissionService->canDeleteResponses($role)) {
-                return new DataResponse(
-                    ['error' => 'Permission denied'],
-                    Http::STATUS_FORBIDDEN
-                );
-            }
-
-            $this->formService->deleteResponse($fileId, $responseId);
-            return new DataResponse(['success' => true]);
-        } catch (\OCP\Files\NotFoundException $e) {
-            return new DataResponse(
-                ['error' => 'Response not found'],
-                Http::STATUS_NOT_FOUND
-            );
-        } catch (\Exception $e) {
-            return new DataResponse(
-                ['error' => $e->getMessage()],
-                Http::STATUS_INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    /**
-     * Export to CSV
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function exportCsv(int $fileId): DataDownloadResponse
-    {
-        $file = $this->formService->getFileById($fileId);
-        $form = $this->formService->load($fileId);
-        $userId = $this->userSession->getUser()?->getUID() ?? '';
-        $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-        if (!$this->permissionService->canViewResponses($role)) {
-            throw new \Exception('Permission denied');
-        }
-
-        $csv = $this->responseService->exportCsv($fileId);
-        $filename = $this->sanitizeFilename($form['title']) . '-responses.csv';
-
-        return new DataDownloadResponse($csv, $filename, 'text/csv; charset=utf-8');
-    }
-
-    /**
-     * Export to XLSX (real Excel spreadsheet — no CSV encoding/separator
-     * ambiguity, so umlauts and columns are correct in every locale, #114).
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function exportExcel(int $fileId): DataDownloadResponse
-    {
-        $file = $this->formService->getFileById($fileId);
-        $form = $this->formService->load($fileId);
-        $userId = $this->userSession->getUser()?->getUID() ?? '';
-        $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-        if (!$this->permissionService->canViewResponses($role)) {
-            throw new \Exception('Permission denied');
-        }
-
-        $xlsx = $this->responseService->exportXlsx($fileId);
-        $filename = $this->sanitizeFilename($form['title']) . '-responses.xlsx';
-
-        return new DataDownloadResponse(
-            $xlsx,
-            $filename,
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        );
-    }
-
-    /**
-     * Export to JSON
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function exportJson(int $fileId): DataDownloadResponse
-    {
-        $file = $this->formService->getFileById($fileId);
-        $form = $this->formService->load($fileId);
-        $userId = $this->userSession->getUser()?->getUID() ?? '';
-        $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-        if (!$this->permissionService->canViewResponses($role)) {
-            throw new \Exception('Permission denied');
-        }
-
-        $json = $this->responseService->exportJson($fileId);
-        $filename = $this->sanitizeFilename($form['title']) . '-responses.json';
-
-        return new DataDownloadResponse($json, $filename, 'application/json');
-    }
-
-    /**
-     * Upload ODT template
-     */
-    #[NoAdminRequired]
-    public function uploadOdtTemplate(int $fileId): DataResponse
-    {
-        try {
-            $file = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-            if (!$this->permissionService->canViewResponses($role)) {
-                return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
-            }
-
-            $uploadedFile = $this->request->getUploadedFile('template');
-            if (!$uploadedFile || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
-                return new DataResponse(['error' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
-            }
-
-            $this->formService->storeOdtTemplate($fileId, $uploadedFile);
-            return new DataResponse(['success' => true]);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Download ODT template
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function downloadOdtTemplate(int $fileId): DataDownloadResponse
-    {
-        $file = $this->formService->getFileById($fileId);
-        $userId = $this->userSession->getUser()?->getUID() ?? '';
-        $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-        if (!$this->permissionService->canViewResponses($role)) {
-            throw new \Exception('Permission denied');
-        }
-
-        $template = $this->formService->getOdtTemplate($fileId);
-        return new DataDownloadResponse(
-            $template->getContent(),
-            'template.odt',
-            'application/vnd.oasis.opendocument.text'
-        );
-    }
-
-    /**
-     * Delete ODT template
-     */
-    #[NoAdminRequired]
-    public function deleteOdtTemplate(int $fileId): DataResponse
-    {
-        try {
-            $file = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-            if (!$this->permissionService->canViewResponses($role)) {
-                return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
-            }
-
-            $this->formService->deleteOdtTemplate($fileId);
-            return new DataResponse(['success' => true]);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Check if ODT template exists
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function hasOdtTemplate(int $fileId): DataResponse
-    {
-        try {
-            $file = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($file, $userId);
-
-            if (!$this->permissionService->canViewResponses($role)) {
-                return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
-            }
-
-            return new DataResponse(['hasTemplate' => $this->formService->hasOdtTemplate($fileId)]);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
      * Rebuild form index
      */
     #[NoAdminRequired]
     public function rebuildIndex(int $fileId): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $form = $this->formService->load($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
@@ -686,17 +426,6 @@ class ApiController extends Controller
                 Http::STATUS_INTERNAL_SERVER_ERROR
             );
         }
-    }
-
-    /**
-     * Sanitize filename
-     */
-    private function sanitizeFilename(string $name): string
-    {
-        $name = preg_replace('/[\/\\\\:*?"<>|]/', '', $name);
-        $name = preg_replace('/\s+/', '-', $name);
-        $name = strtolower($name);
-        return substr($name, 0, 50);
     }
 
     /**
@@ -735,66 +464,6 @@ class ApiController extends Controller
     }
 
     /**
-     * Download an uploaded file from a form response
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function downloadUpload(int $fileId, string $responseId, string $filename): DataDownloadResponse
-    {
-        try {
-            $formFile = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($formFile, $userId);
-
-            if (!$this->permissionService->canViewResponses($role)) {
-                throw new \Exception('Permission denied');
-            }
-
-            $uploadedFile = $this->formService->getUpload($fileId, $responseId, $filename);
-
-            return new DataDownloadResponse(
-                $uploadedFile->getContent(),
-                $uploadedFile->getName(),
-                $uploadedFile->getMimeType()
-            );
-        } catch (\OCP\Files\NotFoundException $e) {
-            throw new \Exception('File not found');
-        }
-    }
-
-    /**
-     * Download all uploads for a form as a ZIP file
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function downloadAllUploads(int $fileId): DataDownloadResponse
-    {
-        try {
-            $formFile = $this->formService->getFileById($fileId);
-            $userId = $this->userSession->getUser()?->getUID() ?? '';
-            $role = $this->permissionService->getRoleFromFile($formFile, $userId);
-
-            if (!$this->permissionService->canViewResponses($role)) {
-                throw new \Exception('Permission denied');
-            }
-
-            $form = $this->formService->load($fileId);
-            $formTitle = preg_replace('/[^a-zA-Z0-9_-]/', '_', $form['title'] ?? 'form');
-
-            // Create ZIP file
-            $zipContent = $this->formService->createUploadsZip($fileId);
-
-            return new DataDownloadResponse(
-                $zipContent,
-                $formTitle . '-uploads.zip',
-                'application/zip'
-            );
-        } catch (\OCP\Files\NotFoundException $e) {
-            throw new \Exception('No uploads found');
-        }
-    }
-
-    /**
      * Replace the share link with a freshly minted one.
      *
      * Rotating a link invalidates the URL everyone already has, so it must be a
@@ -806,7 +475,7 @@ class ApiController extends Controller
     public function rotateShareToken(int $fileId): DataResponse
     {
         try {
-            $file = $this->formService->getFileById($fileId);
+            $file = $this->fileLocator->getFileById($fileId);
             $userId = $this->userSession->getUser()?->getUID() ?? '';
             $role = $this->permissionService->getRoleFromFile($file, $userId);
 
@@ -838,5 +507,4 @@ class ApiController extends Controller
             return new DataResponse(['error' => $e->getMessage()], Http::STATUS_CONFLICT);
         }
     }
-
 }
