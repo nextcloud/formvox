@@ -22,30 +22,44 @@ jobs:
   php:
     name: PHP — lint, coding-standard, Psalm, unit
     runs-on: ubuntu-latest
-    # NOT a job-level `container:` — the Forgejo runner runs JS-based actions
-    # (actions/checkout) with Node, which the php:8.2-cli image lacks ("node not
-    # found in $PATH"). Instead checkout on the host, then run all PHP steps in
-    # one `docker run php:8.2-cli` over the mounted workspace. Also avoids
-    # shivammathur/setup-php, which data.forgejo.org does not mirror.
+    # The runner image (catthehacker/ubuntu:act-22.04) has Node for the actions
+    # but no PHP, and data.forgejo.org does not mirror shivammathur/setup-php, so
+    # install PHP + composer directly on the host via ondrej/php. Avoids both the
+    # missing action and the docker-in-docker workspace-mount pitfalls.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: PHP checks in a php:8.2 container
+      - name: Install PHP 8.2 + Composer
         run: |
-          docker run --rm -v "$PWD":/app -w /app php:8.2-cli bash -c '
-            set -e
-            apt-get update -qq
-            apt-get install -y --no-install-recommends git unzip libzip-dev >/dev/null
-            docker-php-ext-install zip >/dev/null
-            curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-            composer validate --no-check-publish
-            composer install --prefer-dist --no-progress --no-interaction
-            composer lint
-            composer cs:check
-            composer psalm
-            composer test:unit
-          '
+          set -e
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git >/dev/null
+          add-apt-repository -y ppa:ondrej/php >/dev/null
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl >/dev/null
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          php -v
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: PHP syntax lint
+        run: composer lint
+
+      - name: Coding standard (php-cs-fixer)
+        run: composer cs:check
+
+      - name: Static analysis (Psalm)
+        run: composer psalm
+
+      - name: Unit tests
+        run: composer test:unit
 
   js:
     name: JS — unit
