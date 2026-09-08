@@ -131,6 +131,12 @@ namespace {
                 if ($name === 'getUser') {
                     return null;
                 }
+                // Response::cacheFor() calls
+                // Server::get(ITimeFactory::class)->getTime() and passes the
+                // result to DateTime::setTimestamp(int). Give it a real int.
+                if ($name === 'getTime') {
+                    return time();
+                }
                 return 'en';
             }
         };
