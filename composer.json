@@ -1,0 +1,32 @@
+{
+  "name": "voxcloud/formvox",
+  "description": "File-based forms and polls for Nextcloud",
+  "type": "nextcloud-app",
+  "license": "AGPL-3.0",
+  "require": {
+    "php": ">=8.2"
+  },
+  "require-dev": {
+    "doctrine/dbal": "^4.0",
+    "nextcloud/ocp": "dev-stable32",
+    "phpunit/phpunit": "^10.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "OCA\\FormVox\\": "lib/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "OCA\\FormVox\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "test:unit": "phpunit --testsuite Unit",
+    "test:coverage": "phpunit --coverage-html coverage"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

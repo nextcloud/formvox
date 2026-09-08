@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>./tests/Unit</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">./lib</directory>
+        </include>
+        <exclude>
+            <directory>./lib/Migration</directory>
+        </exclude>
+    </source>
+    <!--
+      No <coverage> block on purpose: it would make every run try to produce a
+      coverage report, emitting a "No code coverage driver available" warning
+      when Xdebug/PCOV is absent. With failOnWarning="true" that turns a passing
+      run into a non-zero exit. Request coverage on the CLI instead:
+        composer test:coverage
+    -->
+</phpunit>

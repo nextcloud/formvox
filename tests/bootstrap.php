@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * PHPUnit bootstrap for FormVox unit tests.
+ *
+ * These are pure unit tests: no database, no running Nextcloud. They only need
+ * the OCP interfaces to exist so PHPUnit can mock them.
+ *
+ * Two ways the OCP interfaces become available:
+ *  1. The `nextcloud/ocp` dev-dependency provides stubs (preferred, works on
+ *     any machine with `composer install`).
+ *  2. When the suite runs inside a Nextcloud install (e.g. the app deployed in
+ *     a container), the real OCP classes are already on disk — we register a
+ *     small autoloader for them as a fallback.
+ *
+ * Run:  composer install && composer test
+ */
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// Minimal stubs for internal OC\ symbols that the public ocp interfaces
+// hard-reference (e.g. IRootFolder extends OC\Hooks\Emitter). Guarded so the
+// real classes win inside a running Nextcloud.
+require_once __DIR__ . '/stubs/oc-internals.php';
+
+// The nextcloud/ocp package ships no autoload config of its own, so register
+// the OCP\ / NCU\ namespaces against the package's source tree. Guarded so the
+// real classes win when the suite runs inside a Nextcloud install.
+if (!interface_exists(\OCP\IDBConnection::class)) {
+    $ocpPackage = __DIR__ . '/../vendor/nextcloud/ocp';
+    if (is_dir($ocpPackage)) {
+        spl_autoload_register(static function (string $class) use ($ocpPackage): void {
+            if (strncmp($class, 'OCP\\', 4) !== 0 && strncmp($class, 'NCU\\', 4) !== 0) {
+                return;
+            }
+            $file = $ocpPackage . '/' . str_replace('\\', '/', $class) . '.php';
+            if (is_file($file)) {
+                require_once $file;
+            }
+        });
+    }
+}
+
+// Fallback: running inside a Nextcloud install, use the server's own OCP tree.
+// NC's 3rdparty autoloader provides Doctrine (referenced by OCP\DB interfaces),
+// and a small OCP autoloader maps the public API classes.
+if (!interface_exists(\OCP\IDBConnection::class)) {
+    foreach (['/var/www/html', __DIR__ . '/../../..'] as $ncRoot) {
+        $ocpDir = $ncRoot . '/lib/public';
+        if (!is_dir($ocpDir)) {
+            continue;
+        }
+        if (is_file($ncRoot . '/3rdparty/autoload.php')) {
+            require_once $ncRoot . '/3rdparty/autoload.php';
+        }
+        spl_autoload_register(static function (string $class) use ($ocpDir): void {
+            if (strncmp($class, 'OCP\\', 4) !== 0) {
+                return;
+            }
+            $file = $ocpDir . '/' . str_replace('\\', '/', substr($class, 4)) . '.php';
+            if (is_file($file)) {
+                require_once $file;
+            }
+        });
+        break;
+    }
+}
