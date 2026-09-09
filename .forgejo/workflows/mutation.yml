@@ -37,11 +37,8 @@ jobs:
 
       - name: Run Stryker (full src/)
         run: npm run test:mutation
-
-      - name: Upload mutation report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mutation-report
-          path: reports/mutation
-          if-no-files-found: ignore
+        # No upload-artifact step: Forgejo (like GHES) does not support
+        # upload-artifact@v4's API, and with if:always() it reddened the job even
+        # when Stryker itself passed. The mutation score in the job log is the
+        # gate; the HTML report (reports/mutation) is produced in the workspace
+        # for local runs. Add artifact upload back if/when the runner supports it.
