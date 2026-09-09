@@ -80,7 +80,7 @@ class Notifier implements INotifier {
 					[
 						'formTitle' => [
 							'type' => 'highlight',
-							'id' => (string)$notification->getObjectId(),
+							'id' => $notification->getObjectId(),
 							'name' => $formTitle,
 						],
 					]
@@ -103,7 +103,7 @@ class Notifier implements INotifier {
 					[
 						'formTitle' => [
 							'type' => 'highlight',
-							'id' => (string)$notification->getObjectId(),
+							'id' => $notification->getObjectId(),
 							'name' => $formTitle,
 						],
 					]
