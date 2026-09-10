@@ -1,0 +1,56 @@
+# Forgejo Actions: self-hosted Renovate — automated dependency updates.
+#
+# Renovate scans composer.json + package.json, and on the schedule in
+# renovate.json opens update branches/PRs (grouped: non-major dev-deps together,
+# majors separate). The fast ci.yml gate + the integration matrix then validate
+# each update branch automatically.
+#
+# SETUP REQUIRED (one-time, by a maintainer — tokens must not live in the repo):
+#   Add a repository/org Actions secret RENOVATE_TOKEN = a Forgejo access token
+#   for a bot (or your) account with repo read/write + PR scope. Renovate uses it
+#   to read the repo and push update branches. Without the secret this workflow
+#   no-ops (guarded below).
+#
+# Runs weekly (cron) + on manual dispatch. Forgejo speaks the Gitea API, so
+# Renovate is pointed at this instance with platform=gitea.
+
+name: Renovate
+
+on:
+  schedule:
+    - cron: '0 4 * * 1' # Monday 04:00 UTC (renovate.json further limits timing)
+  workflow_dispatch:
+
+jobs:
+  renovate:
+    name: Renovate dependency updates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — require RENOVATE_TOKEN
+        run: |
+          if [ -z "${{ secrets.RENOVATE_TOKEN }}" ]; then
+            echo "RENOVATE_TOKEN secret not set — skipping. See the header of this workflow for setup."
+            exit 0
+          fi
+
+      - name: Checkout
+        if: ${{ secrets.RENOVATE_TOKEN != '' }}
+        uses: actions/checkout@v4
+
+      - name: Run Renovate
+        if: ${{ secrets.RENOVATE_TOKEN != '' }}
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_PLATFORM: gitea
+          RENOVATE_ENDPOINT: https://forgejo.voxcloud.nl/api/v1
+          RENOVATE_REPOSITORIES: voxcloud-apps/formvox
+          # Onboard silently against the committed renovate.json (no onboarding PR).
+          RENOVATE_ONBOARDING: 'false'
+          RENOVATE_REQUIRE_CONFIG: required
+          LOG_LEVEL: info
+        run: |
+          docker run --rm \
+            -e RENOVATE_TOKEN -e RENOVATE_PLATFORM -e RENOVATE_ENDPOINT \
+            -e RENOVATE_REPOSITORIES -e RENOVATE_ONBOARDING -e RENOVATE_REQUIRE_CONFIG \
+            -e LOG_LEVEL \
+            renovate/renovate:latest

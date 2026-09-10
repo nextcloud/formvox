@@ -1,0 +1,59 @@
+{
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": [
+		"config:recommended",
+		":dependencyDashboard",
+		":semanticCommits"
+	],
+	"description": "FormVox dependency updates (npm + composer). Runs on a schedule via .forgejo/workflows/renovate.yml; the fast ci.yml gate + integration matrix validate each update branch.",
+	"timezone": "Europe/Amsterdam",
+	"schedule": ["before 6am on monday"],
+	"labels": ["dependencies"],
+	"prConcurrentLimit": 5,
+	"prHourlyLimit": 0,
+	"lockFileMaintenance": {
+		"enabled": true,
+		"schedule": ["before 6am on monday"]
+	},
+	"packageRules": [
+		{
+			"description": "Group all non-major npm devDependencies into one PR to cut noise.",
+			"matchManagers": ["npm"],
+			"matchDepTypes": ["devDependencies"],
+			"matchUpdateTypes": ["minor", "patch"],
+			"groupName": "npm dev-dependencies (non-major)"
+		},
+		{
+			"description": "Group all non-major composer dev deps together.",
+			"matchManagers": ["composer"],
+			"matchDepTypes": ["require-dev"],
+			"matchUpdateTypes": ["minor", "patch"],
+			"groupName": "composer dev-dependencies (non-major)"
+		},
+		{
+			"description": "Major bumps get their own PR — they usually need review + code changes.",
+			"matchUpdateTypes": ["major"],
+			"addLabels": ["major-update"]
+		},
+		{
+			"description": "Pin the test-only NC OCP stubs to the lowest supported server (stable32); don't let Renovate chase a newer branch.",
+			"matchPackageNames": ["nextcloud/ocp"],
+			"enabled": false
+		},
+		{
+			"description": "Psalm must stay on 5.x (6 needs PHP >=8.4, our CI floor is 8.2). Only patch/minor within 5.",
+			"matchPackageNames": ["vimeo/psalm"],
+			"allowedVersions": "<6"
+		},
+		{
+			"description": "Stryker needs Node >=22; keep it on the current major line.",
+			"matchPackageNames": ["@stryker-mutator/core", "@stryker-mutator/vitest-runner"],
+			"matchUpdateTypes": ["major"],
+			"enabled": false
+		}
+	],
+	"vulnerabilityAlerts": {
+		"labels": ["security"],
+		"schedule": ["at any time"]
+	}
+}
