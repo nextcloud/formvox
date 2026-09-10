@@ -584,5 +584,349 @@ describe('QuestionRenderer', () => {
 			const wrapper = mountQ({ id: 'q1', type: 'text', question: 'x' }, { value: '', speakingQuestionId: 'q1' })
 			expect(wrapper.vm.isSpeaking).toBe(true)
 		})
+
+		it('isSpeaking is false when a different question is speaking', () => {
+			// kills the isSpeaking `=== -> true` mutant (620): must depend on the id match
+			const wrapper = mountQ({ id: 'q1', type: 'text', question: 'x' }, { value: '', speakingQuestionId: 'q2' })
+			expect(wrapper.vm.isSpeaking).toBe(false)
+		})
+	})
+
+	describe('inputId computed', () => {
+		it('returns input-<id> for a non-group type and wires it to the input', () => {
+			// kills 603 (empty string return) and the 600 "always group" mutants
+			const wrapper = mountQ({ id: 'q9', type: 'text', question: 'x' }, { value: '' })
+			expect(wrapper.vm.inputId).toBe('input-q9')
+			expect(wrapper.get('[data-stub="NcTextField"]').attributes('id')).toBe('input-q9')
+		})
+
+		it.each(['choice', 'multiple', 'scale', 'rating', 'matrix'])(
+			'returns undefined for group type %s',
+			(type) => {
+				// kills each list-member mutant at 600 (removing a type would make it defined)
+				const wrapper = mountQ(
+					{ id: 'q9', type, options: [], rows: [], columns: [] },
+					{ value: type === 'multiple' ? [] : type === 'matrix' ? {} : '' },
+				)
+				expect(wrapper.vm.inputId).toBe(undefined)
+			},
+		)
+
+		it('is defined for a non-group type like number/dropdown', () => {
+			// counter-case: kills the `if (true)` mutant that would make every type undefined
+			const wrapper = mountQ({ id: 'q9', type: 'number', question: 'x' }, { value: '' })
+			expect(wrapper.vm.inputId).toBe('input-q9')
+		})
+	})
+
+	describe('ariaDescribedBy computed', () => {
+		it('is undefined with no description and no error', () => {
+			// kills the ids seed mutant (608 ["Stryker.."]) and length>0 -> true (615)
+			const wrapper = mountQ({ id: 'q1', type: 'text', question: 'x' }, { value: '' })
+			expect(wrapper.vm.ariaDescribedBy).toBe(undefined)
+		})
+
+		it('lists only the description id when a description exists', () => {
+			// kills 609 description branch flips + 615 join mutant
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'text', question: 'x', description: 'help' },
+				{ value: '' },
+			)
+			expect(wrapper.vm.ariaDescribedBy).toBe('question-desc-q1')
+		})
+
+		it('lists only the error id when an error exists', () => {
+			// kills 612 error branch flips + 613 push(``) mutant
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'text', question: 'x' },
+				{ value: '', validationErrorExternal: 'bad' },
+			)
+			expect(wrapper.vm.ariaDescribedBy).toBe('question-error-q1')
+		})
+
+		it('joins description and error ids with a space in order', () => {
+			// kills 615 join('') mutant and both branch mutants together
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'text', question: 'x', description: 'help' },
+				{ value: '', validationErrorExternal: 'bad' },
+			)
+			expect(wrapper.vm.ariaDescribedBy).toBe('question-desc-q1 question-error-q1')
+		})
+	})
+
+	describe('getRadioTabindex (roving tabindex)', () => {
+		it('puts tabindex 0 on the first scale option when nothing is selected', () => {
+			// kills 632 mutants: with no selection the FIRST in range is focusable
+			const wrapper = mountQ({ id: 'q1', type: 'scale', scaleMin: 1, scaleMax: 3 }, { value: null })
+			const tabindexes = wrapper.findAll('.scale-option').map((b) => b.attributes('tabindex'))
+			expect(tabindexes).toEqual(['0', '-1', '-1'])
+		})
+
+		it('puts tabindex 0 only on the selected scale option', () => {
+			// kills 629/630 mutants: with a selection, the SELECTED one is focusable
+			const wrapper = mountQ({ id: 'q1', type: 'scale', scaleMin: 1, scaleMax: 3 }, { value: 2 })
+			const tabindexes = wrapper.findAll('.scale-option').map((b) => b.attributes('tabindex'))
+			expect(tabindexes).toEqual(['-1', '0', '-1'])
+		})
+
+		it('roves on the rating stars too', () => {
+			const wrapper = mountQ({ id: 'q1', type: 'rating', ratingMax: 4 }, { value: 3 })
+			const tabindexes = wrapper.findAll('.star-button').map((b) => b.attributes('tabindex'))
+			expect(tabindexes).toEqual(['-1', '-1', '0', '-1'])
+		})
+	})
+
+	describe('validatePattern — optional chaining guard', () => {
+		it('is a no-op returning true when the question has no validation object', () => {
+			// kills 685: validation?.pattern -> validation.pattern would throw here
+			const wrapper = mountQ({ id: 'q1', type: 'text', question: 'x' }, { value: 'anything' })
+			expect(wrapper.vm.validatePattern()).toBe(true)
+			expect(wrapper.vm.validationError).toBe('')
+		})
+	})
+
+	describe('capacity boundary (#104)', () => {
+		it('isOptionFull uses answerCounts via optional chaining (undefined map -> not full)', () => {
+			// kills 770 optional-chaining removal: answerCounts prop defaults to {}
+			const opt = { id: 'a', value: 'a', capacity: 2 }
+			const wrapper = mountQ({ id: 'q1', type: 'choice', options: [opt] }, { value: '' })
+			expect(wrapper.vm.isOptionFull(opt)).toBe(false)
+			expect(wrapper.vm.optionRemaining(opt)).toBe(2)
+		})
+
+		it('a negative capacity is treated as no cap (kills cap<0 vs cap<=0)', () => {
+			// original: !cap || cap <= 0 -> capacity 0 already covered; use a below-cap count
+			// The cap<0 mutant differs only for cap===0 which !cap catches; instead assert
+			// exact remaining at the boundary so the <= stays meaningful.
+			const opt = { id: 'a', value: 'a', capacity: 4 }
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'choice', options: [opt] },
+				{ value: '', answerCounts: { a: 4 } },
+			)
+			expect(wrapper.vm.optionRemaining(opt)).toBe(0)
+			expect(wrapper.vm.isOptionFull(opt)).toBe(true)
+		})
+	})
+
+	describe('isOptionDisabled — capacity-full path', () => {
+		const opt = { id: 'a', value: 'a', capacity: 1 }
+
+		it('disables a full option the user has not already picked', () => {
+			// kills 785 (&& -> ||, false) : full + not-checked => disabled
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'multiple', options: [opt] },
+				{ value: [], answerCounts: { a: 1 } },
+			)
+			expect(wrapper.vm.isOptionDisabled(opt)).toBe(true)
+		})
+
+		it('keeps a full option enabled when already selected', () => {
+			// kills 785 (|| would wrongly disable an already-checked full option)
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'multiple', options: [opt] },
+				{ value: ['a'], answerCounts: { a: 1 } },
+			)
+			expect(wrapper.vm.isOptionDisabled(opt)).toBe(false)
+		})
+
+		it('does not disable when maxSelections is unset (kills max>=0 mutant)', () => {
+			// with no maxSelections (undefined -> NaN, max>0 false), option stays enabled
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'multiple', options: [{ id: 'b', value: 'b' }] },
+				{ value: ['x', 'y', 'z'] },
+			)
+			expect(wrapper.vm.isOptionDisabled({ value: 'b' })).toBe(false)
+		})
+
+		it('disables exactly at the selection limit, not one before (boundary)', () => {
+			// kills 787 selected.length >= max vs > max
+			const q = {
+				id: 'q1', type: 'multiple', maxSelections: 2,
+				options: [{ id: 'c', value: 'c' }],
+			}
+			const oneSelected = mountQ(q, { value: ['a'] })
+			expect(oneSelected.vm.isOptionDisabled({ value: 'c' })).toBe(false)
+			const atLimit = mountQ(q, { value: ['a', 'b'] })
+			expect(atLimit.vm.isOptionDisabled({ value: 'c' })).toBe(true)
+		})
+	})
+
+	describe('onMultipleUpdate — boundary + side effect', () => {
+		const q = {
+			id: 'q1', type: 'multiple', maxSelections: 2,
+			options: [{ id: 'a', value: 'a' }, { id: 'b', value: 'b' }],
+		}
+
+		it('passes through a selection exactly at the limit unchanged', () => {
+			// kills 796 value.length > max vs >= max: length===max must NOT be sliced
+			const wrapper = mountQ(q, { value: [] })
+			wrapper.vm.onMultipleUpdate(['a', 'b'])
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([['a', 'b']])
+		})
+
+		it('clears a standing validation error when the selection changes', () => {
+			// kills 800: removing clearValidationError() would leave the error set
+			const wrapper = mountQ(
+				{ ...q, validation: { pattern: '^z$', errorMessage: 'nope' } },
+				{ value: 'y' },
+			)
+			wrapper.vm.validatePattern()
+			expect(wrapper.vm.validationError).toBe('nope')
+			wrapper.vm.onMultipleUpdate(['a'])
+			expect(wrapper.vm.validationError).toBe('')
+		})
+	})
+
+	describe('formatAnswerForDisplay via piping', () => {
+		it('renders an object answer as row: value pairs (matrix piping)', () => {
+			// kills 712 object branch flips: object answers must serialise, not String([object])
+			const wrapper = mountQ(
+				{ id: 'q2', type: 'text', question: '{{q1}}' },
+				{ value: '', allQuestions: [{ id: 'q1' }], allAnswers: { q1: { r1: 'yes', r2: 'no' } } },
+			)
+			expect(wrapper.vm.renderedQuestion).toBe('r1: yes; r2: no')
+		})
+
+		it('leaves the token when the referenced answer is an empty array', () => {
+			// kills 710 answer.length > 0 -> true/>=0 : empty array yields null (no replace)
+			const wrapper = mountQ(
+				{ id: 'q2', type: 'text', question: 'X {{q1}}' },
+				{ value: '', allQuestions: [{ id: 'q1' }], allAnswers: { q1: [] } },
+			)
+			expect(wrapper.vm.renderedQuestion).toBe('X {{q1}}')
+		})
+
+		it('leaves the token when the referenced answer is an empty string', () => {
+			// kills 705 answer === '' branch removal
+			const wrapper = mountQ(
+				{ id: 'q2', type: 'text', question: 'X {{q1}}' },
+				{ value: '', allQuestions: [{ id: 'q1' }], allAnswers: { q1: '' } },
+			)
+			expect(wrapper.vm.renderedQuestion).toBe('X {{q1}}')
+		})
+	})
+
+	describe('piping numeric reference regex', () => {
+		it('resolves a two-digit {{Q12}} reference (kills \\d -> \\d+ narrowing)', () => {
+			const allQuestions = Array.from({ length: 12 }, (_, i) => ({ id: `q${i + 1}` }))
+			const wrapper = mountQ(
+				{ id: 'q13', type: 'text', question: 'Hi {{Q12}}' },
+				{ value: '', allQuestions, allAnswers: { q12: 'Twelve' } },
+			)
+			expect(wrapper.vm.renderedQuestion).toBe('Hi Twelve')
+		})
+	})
+
+	describe('parseDateLocal — guard and anchor', () => {
+		it('returns null for a non-string truthy value (kills || -> &&)', () => {
+			// a number is truthy but not a string; original returns null, && mutant would proceed
+			const wrapper = mountQ({ id: 'q1', type: 'date' }, { value: '' })
+			expect(wrapper.vm.parseDateLocal(20260517)).toBe(null)
+		})
+
+		it('parses when the date prefix is anchored at the start', () => {
+			// kills 918 anchor removal: a leading non-date prefix must NOT parse
+			const wrapper = mountQ({ id: 'q1', type: 'date' }, { value: '' })
+			expect(wrapper.vm.parseDateLocal('xx2026-05-17')).toBe(null)
+			const ok = wrapper.vm.parseDateLocal('2026-05-17T10:00')
+			expect(ok.getFullYear()).toBe(2026)
+			expect(ok.getMonth()).toBe(4)
+			expect(ok.getDate()).toBe(17)
+		})
+	})
+
+	describe('formatDate padding', () => {
+		it('zero-pads single-digit month and day', () => {
+			// kills 909 padStart(2, '') -> would leave "5"/"7" unpadded
+			const wrapper = mountQ({ id: 'q1', type: 'date' }, { value: '' })
+			expect(wrapper.vm.formatDate(new Date(2026, 4, 7))).toBe('2026-05-07')
+		})
+	})
+
+	describe('updateMatrix — preserves existing answers', () => {
+		it('merges into the existing value object rather than replacing it', () => {
+			// kills 864 spread mutants: prior rows must survive the update
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'matrix', rows: [{ id: 'r1' }, { id: 'r2' }], columns: [{ id: 'c1', value: 1 }] },
+				{ value: { r1: 1 } },
+			)
+			wrapper.vm.updateMatrix('r2', 2)
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([{ r1: 1, r2: 2 }])
+		})
+	})
+
+	describe('keyboard navigation (handleRadioGroupKeydown)', () => {
+		const scaleQ = { id: 'q1', type: 'scale', scaleMin: 1, scaleMax: 3 }
+
+		it('ArrowRight from the current value selects the next in range', () => {
+			// kills 643 boundary + currentIndex+1 arithmetic
+			const wrapper = mountQ(scaleQ, { value: 1 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'ArrowRight' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([2])
+		})
+
+		it('ArrowDown behaves like ArrowRight', () => {
+			const wrapper = mountQ(scaleQ, { value: 2 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'ArrowDown' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([3])
+		})
+
+		it('ArrowRight wraps from the last value to the first', () => {
+			// kills the `? currentIndex+1 : 0` false-branch mutant
+			const wrapper = mountQ(scaleQ, { value: 3 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'ArrowRight' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([1])
+		})
+
+		it('ArrowLeft from the current value selects the previous', () => {
+			// kills 648 currentIndex-1 arithmetic + boundary
+			const wrapper = mountQ(scaleQ, { value: 2 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'ArrowLeft' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([1])
+		})
+
+		it('ArrowUp wraps from the first value to the last', () => {
+			// kills the `? currentIndex-1 : range.length-1` false-branch mutant
+			const wrapper = mountQ(scaleQ, { value: 1 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'ArrowUp' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([3])
+		})
+
+		it('Home selects the first value', () => {
+			const wrapper = mountQ(scaleQ, { value: 3 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'Home' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([1])
+		})
+
+		it('End selects the last value', () => {
+			// kills range.length-1 arithmetic mutants
+			const wrapper = mountQ(scaleQ, { value: 1 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'End' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([3])
+		})
+
+		it('an unrelated key emits nothing (default: return)', () => {
+			// kills the whole-body-removal + default-branch mutants
+			const wrapper = mountQ(scaleQ, { value: 1 })
+			wrapper.get('.scale-options').trigger('keydown', { key: 'a' })
+			expect(wrapper.emitted('update:value')).toBeUndefined()
+		})
+
+		it('drives the rating group by keyboard too', () => {
+			const wrapper = mountQ({ id: 'q1', type: 'rating', ratingMax: 4 }, { value: 2 })
+			wrapper.get('.rating-input').trigger('keydown', { key: 'End' })
+			expect(wrapper.emitted('update:value').at(-1)).toEqual([4])
+		})
+	})
+
+	describe('tableRows — minRows default', () => {
+		it('seeds two rows when minRows is 2 (kills minRows && 1 / true mutants)', () => {
+			const wrapper = mountQ(
+				{ id: 'q1', type: 'table', minRows: 2, columns: [{ id: 'c1' }] },
+				{ value: [] },
+			)
+			expect(wrapper.vm.tableRows).toHaveLength(2)
+			expect(wrapper.vm.tableRows).toEqual([{ c1: '' }, { c1: '' }])
+		})
 	})
 })

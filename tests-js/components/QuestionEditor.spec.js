@@ -429,4 +429,441 @@ describe('QuestionEditor', () => {
 			expect(wrapper.classes()).toContain('is-descriptor')
 		})
 	})
+
+	// --- Hardening additions: kill surviving core-logic mutants ---------------
+
+	describe('isQuizMode uses .some, not .every', () => {
+		it('is true when SOME (not all) options carry a numeric score', () => {
+			// One scored, one not — .some => true, .every => false. Kills the
+			// .some -> .every method mutant (907).
+			const wrapper = mountEditor(
+				base({
+					type: 'choice',
+					options: [
+						{ id: 'a', label: 'A', value: 'a', score: 2 },
+						{ id: 'b', label: 'B', value: 'b' },
+					],
+				}),
+			)
+			expect(wrapper.vm.isQuizMode).toBe(true)
+		})
+	})
+
+	describe('hasValidation null-vs-undefined guard', () => {
+		it('is false when validation is explicitly null (not just undefined)', () => {
+			// Kills the `validation !== null` -> `true` conditional mutant (916):
+			// with a real null, the second clause must contribute a false.
+			const wrapper = mountEditor(base({ type: 'text', validation: null }))
+			expect(wrapper.vm.hasValidation).toBe(false)
+		})
+	})
+
+	describe('validationPreset watcher — pattern matching', () => {
+		it('selects the matching named preset when the pattern is a known one', async () => {
+			// digits_only pattern -> the digits_only option. Kills the find()
+			// predicate mutants at 956 (preset.pattern === pattern).
+			const wrapper = mountEditor(
+				base({ type: 'text', validation: { pattern: '^[0-9]+$', errorMessage: '' } }),
+			)
+			await wrapper.vm.$nextTick()
+			expect(wrapper.vm.validationPreset).toBeTruthy()
+			expect(wrapper.vm.validationPreset.value).toBe('digits_only')
+		})
+
+		it('falls back to the custom preset for an unknown pattern', async () => {
+			// A pattern that matches no preset must resolve to the 'custom'
+			// option — kills the find(opt => opt.value === 'custom') mutants (961).
+			const wrapper = mountEditor(
+				base({ type: 'text', validation: { pattern: '^ZZZ-unknown-999$', errorMessage: '' } }),
+			)
+			await wrapper.vm.$nextTick()
+			expect(wrapper.vm.validationPreset).toBeTruthy()
+			expect(wrapper.vm.validationPreset.value).toBe('custom')
+		})
+
+		it('clears the preset when there is no pattern', async () => {
+			const wrapper = mountEditor(
+				base({ type: 'text', validation: { pattern: '', errorMessage: '' } }),
+			)
+			await wrapper.vm.$nextTick()
+			expect(wrapper.vm.validationPreset).toBe(null)
+		})
+	})
+
+	describe('availableSections filter', () => {
+		it('returns only section-typed questions other than self', () => {
+			// self is a section, another section, and a plain question.
+			// Kills the filter predicate mutants at 988: type === 'section'
+			// AND id !== self.id.
+			const self = base({ id: 'me', type: 'section', question: 'Me' })
+			const other = base({ id: 'sec2', type: 'section', question: 'Other' })
+			const plain = base({ id: 'q9', type: 'text', question: 'Plain' })
+			const wrapper = mountEditor(self, { questions: [self, other, plain] })
+			const sections = wrapper.vm.availableSections
+			expect(sections).toHaveLength(1)
+			expect(sections[0].id).toBe('sec2')
+		})
+
+		it('excludes the current question even if it is a section', () => {
+			const self = base({ id: 'me', type: 'section' })
+			const wrapper = mountEditor(self, { questions: [self] })
+			expect(wrapper.vm.availableSections).toHaveLength(0)
+		})
+	})
+
+	describe('otherPages filter', () => {
+		it('returns an empty array when there is one page or fewer', () => {
+			// Kills the guard mutants at 1001 (return [] when pages<=1).
+			const wrapper = mountEditor(base(), { pages: [{ id: 'p0', title: 'One' }] })
+			expect(wrapper.vm.otherPages).toEqual([])
+		})
+
+		it('returns every page except the current one, index-tagged', () => {
+			// Three pages, current is index 1 -> pages 0 and 2 remain, keeping
+			// their original indices. Kills 1001 (<=1 boundary) and 1004
+			// (index !== currentPageIndex).
+			const pages = [
+				{ id: 'p0', title: 'A' },
+				{ id: 'p1', title: 'B' },
+				{ id: 'p2', title: 'C' },
+			]
+			const wrapper = mountEditor(base(), { pages, currentPageIndex: 1 })
+			const result = wrapper.vm.otherPages
+			expect(result.map((p) => p.index)).toEqual([0, 2])
+			expect(result.map((p) => p.id)).toEqual(['p0', 'p2'])
+		})
+	})
+
+	describe('assignToSection / removeFromSection / moveToPage emits', () => {
+		it('assignToSection emits move-to-section with the section id', () => {
+			const wrapper = mountEditor(base())
+			wrapper.vm.assignToSection('sec42')
+			expect(wrapper.emitted('move-to-section').at(-1)).toEqual(['sec42'])
+		})
+
+		it('removeFromSection deletes sectionId and emits update', () => {
+			const wrapper = mountEditor(base({ sectionId: 's1' }))
+			wrapper.vm.removeFromSection()
+			expect('sectionId' in wrapper.vm.localQuestion).toBe(false)
+			expect(wrapper.emitted('update')).toBeTruthy()
+		})
+
+		it('moveToPage emits move with the target index', () => {
+			const wrapper = mountEditor(base())
+			wrapper.vm.moveToPage(3)
+			expect(wrapper.emitted('move').at(-1)).toEqual([3])
+		})
+	})
+
+	describe('onTypeChange — preserves options between choice types', () => {
+		it('does NOT strip options when moving choice -> multiple', () => {
+			// Both are option types, so the !hasOpts strip must not fire (kills
+			// the `if (!hasOpts)` -> `if (true)` mutant at 1067) and the existing
+			// non-empty options must be kept (kills 1108).
+			const q = base({
+				type: 'choice',
+				options: [
+					{ id: 'a', label: 'Keep A', value: 'a' },
+					{ id: 'b', label: 'Keep B', value: 'b' },
+				],
+			})
+			const wrapper = mountEditor(q)
+			wrapper.vm.localQuestion.type = 'multiple'
+			wrapper.vm.onTypeChange()
+			expect(wrapper.vm.localQuestion.options).toHaveLength(2)
+			expect(wrapper.vm.localQuestion.options[0].label).toBe('Keep A')
+		})
+	})
+
+	describe('onTypeChange — type guards only fire for their type', () => {
+		it('does not set scale bounds when switching to a non-scale type', () => {
+			// Kills the `type === 'scale'` -> `true` mutant at 1117.
+			const wrapper = mountEditor(base({ type: 'text' }))
+			wrapper.vm.localQuestion.type = 'rating'
+			wrapper.vm.onTypeChange()
+			expect('scaleMin' in wrapper.vm.localQuestion).toBe(false)
+			expect('scaleMax' in wrapper.vm.localQuestion).toBe(false)
+			// rating branch DID fire
+			expect(wrapper.vm.localQuestion.ratingMax).toBe(5)
+		})
+
+		it('does not set file defaults when switching to a non-file type', () => {
+			// Kills the `type === 'file'` -> `true` mutant at 1147.
+			const wrapper = mountEditor(base({ type: 'text' }))
+			wrapper.vm.localQuestion.type = 'scale'
+			wrapper.vm.onTypeChange()
+			expect('allowedTypePreset' in wrapper.vm.localQuestion).toBe(false)
+			expect('maxFiles' in wrapper.vm.localQuestion).toBe(false)
+		})
+
+		it('sets allowedTypes to the "all" preset list when switching to file', () => {
+			// Kills the `?? fileTypePresets.all` -> `&& fileTypePresets.all`
+			// logical mutant at 1149: with no prior allowedTypes the fallback
+			// must produce the concrete list, not undefined.
+			const wrapper = mountEditor(base({ type: 'text' }))
+			wrapper.vm.localQuestion.type = 'file'
+			wrapper.vm.onTypeChange()
+			expect(wrapper.vm.localQuestion.allowedTypes).toEqual(['*/*'])
+		})
+
+		it('initialises matrix rows and columns when switching to matrix', () => {
+			const wrapper = mountEditor(base({ type: 'text' }))
+			wrapper.vm.localQuestion.type = 'matrix'
+			wrapper.vm.onTypeChange()
+			expect(wrapper.vm.localQuestion.rows).toHaveLength(2)
+			expect(wrapper.vm.localQuestion.columns).toHaveLength(3)
+		})
+
+		it('initialises table columns and row bounds when switching to table', () => {
+			const wrapper = mountEditor(base({ type: 'text' }))
+			wrapper.vm.localQuestion.type = 'table'
+			wrapper.vm.onTypeChange()
+			expect(wrapper.vm.localQuestion.columns).toHaveLength(2)
+			expect(wrapper.vm.localQuestion.minRows).toBe(1)
+			expect(wrapper.vm.localQuestion.maxRows).toBe(50)
+		})
+
+		it('strips validation when switching to a non-text type', () => {
+			// Kills the strip conditional for validation.
+			const wrapper = mountEditor(base({ type: 'text', validation: { pattern: 'x' } }))
+			wrapper.vm.localQuestion.type = 'choice'
+			wrapper.vm.onTypeChange()
+			expect('validation' in wrapper.vm.localQuestion).toBe(false)
+		})
+
+		it('strips date range bounds when switching away from a date type', () => {
+			const wrapper = mountEditor(base({ type: 'date', dateMin: '2026-01-01', dateMax: '2026-12-31' }))
+			wrapper.vm.localQuestion.type = 'text'
+			wrapper.vm.onTypeChange()
+			expect('dateMin' in wrapper.vm.localQuestion).toBe(false)
+			expect('dateMax' in wrapper.vm.localQuestion).toBe(false)
+		})
+	})
+
+	describe('onFileTypePresetChange', () => {
+		it('replaces allowedTypes with the preset list for a named preset', () => {
+			const wrapper = mountEditor(base({ type: 'file', allowedTypePreset: 'images' }))
+			wrapper.vm.onFileTypePresetChange()
+			expect(wrapper.vm.localQuestion.allowedTypes).toContain('image/png')
+		})
+
+		it('leaves allowedTypes untouched for the custom preset', () => {
+			const wrapper = mountEditor(
+				base({ type: 'file', allowedTypePreset: 'custom', allowedTypes: ['.foo'] }),
+			)
+			wrapper.vm.onFileTypePresetChange()
+			expect(wrapper.vm.localQuestion.allowedTypes).toEqual(['.foo'])
+		})
+	})
+
+	describe('onCustomTypesChange', () => {
+		it('parses a comma-separated list, trimming and dropping blanks', () => {
+			const wrapper = mountEditor(base({ type: 'file', allowedTypePreset: 'custom' }))
+			wrapper.vm.onCustomTypesChange('.pdf, , image/* ,.docx')
+			expect(wrapper.vm.localQuestion.allowedTypes).toEqual(['.pdf', 'image/*', '.docx'])
+			expect(wrapper.vm.customTypesString).toBe('.pdf, , image/* ,.docx')
+		})
+	})
+
+	describe('addTableColumn creates the columns array when absent', () => {
+		it('initialises columns then appends when localQuestion has no columns', () => {
+			// Kills the `!localQuestion.columns` guard mutant at 1269: with the
+			// key absent, the method must create the array rather than throw.
+			const wrapper = mountEditor(base({ type: 'table' }))
+			delete wrapper.vm.localQuestion.columns
+			wrapper.vm.addTableColumn()
+			expect(wrapper.vm.localQuestion.columns).toHaveLength(1)
+			expect(wrapper.vm.localQuestion.columns[0].id.startsWith('col')).toBe(true)
+		})
+	})
+
+	describe('updateTableColumnOptions edge cases', () => {
+		it('drops empty entries produced by trailing/duplicate commas', () => {
+			// Kills the filter(s => s.length > 0) mutants at 1293.
+			const wrapper = mountEditor(
+				base({ type: 'table', columns: [{ id: 'c1', label: 'C', inputType: 'dropdown', optionsText: 'a,, ,b,' }] }),
+			)
+			wrapper.vm.updateTableColumnOptions(0)
+			expect(wrapper.vm.localQuestion.columns[0].options).toEqual(['a', 'b'])
+		})
+
+		it('is a no-op for an out-of-range column index', () => {
+			// Kills the `if (col)` -> `if (true)` mutant at 1289: an undefined
+			// col must not be dereferenced.
+			const wrapper = mountEditor(
+				base({ type: 'table', columns: [{ id: 'c1', label: 'C', inputType: 'text', optionsText: '' }] }),
+			)
+			expect(() => wrapper.vm.updateTableColumnOptions(99)).not.toThrow()
+		})
+	})
+
+	describe('updateDateMax and datetime formatting', () => {
+		it('stores a full ISO timestamp for a datetime question', () => {
+			// Kills the `type === 'datetime'` branch mutants at 1300 and the
+			// date/datetime distinction: a datetime keeps the time component.
+			const wrapper = mountEditor(base({ type: 'datetime' }))
+			const d = new Date(Date.UTC(2026, 4, 17, 9, 30, 0))
+			wrapper.vm.updateDateMin(d)
+			expect(wrapper.vm.localQuestion.dateMin).toBe('2026-05-17T09:30:00.000Z')
+		})
+
+		it('updateDateMax stores a plain date for type=date', () => {
+			const wrapper = mountEditor(base({ type: 'date' }))
+			wrapper.vm.updateDateMax(new Date(Date.UTC(2026, 4, 17, 12, 0, 0)))
+			expect(wrapper.vm.localQuestion.dateMax).toBe('2026-05-17')
+		})
+
+		it('updateDateMax deletes the key when cleared', () => {
+			const wrapper = mountEditor(base({ type: 'date', dateMax: '2026-01-01' }))
+			wrapper.vm.updateDateMax(null)
+			expect('dateMax' in wrapper.vm.localQuestion).toBe(false)
+		})
+	})
+
+	describe('generated id prefixes and emitted updates', () => {
+		it('addOption gives the new option an opt-prefixed id equal to its value', () => {
+			const wrapper = mountEditor(base({ type: 'choice', options: [] }))
+			wrapper.vm.addOption()
+			const opt = wrapper.vm.localQuestion.options.at(-1)
+			expect(opt.id.startsWith('opt')).toBe(true)
+			expect(opt.value).toBe(opt.id)
+		})
+
+		it('addOption creates the options array when absent', () => {
+			const wrapper = mountEditor(base({ type: 'choice' }))
+			delete wrapper.vm.localQuestion.options
+			wrapper.vm.addOption()
+			expect(wrapper.vm.localQuestion.options).toHaveLength(1)
+		})
+
+		it('addRow gives the new row an r-prefixed id and emits', () => {
+			const wrapper = mountEditor(base({ type: 'matrix', rows: [], columns: [] }))
+			wrapper.vm.addRow()
+			const before = wrapper.emitted('update').length
+			expect(wrapper.vm.localQuestion.rows.at(-1).id.startsWith('r')).toBe(true)
+			expect(before).toBeGreaterThan(0)
+		})
+
+		it('addRow creates the rows array when absent', () => {
+			const wrapper = mountEditor(base({ type: 'matrix', columns: [] }))
+			delete wrapper.vm.localQuestion.rows
+			wrapper.vm.addRow()
+			expect(wrapper.vm.localQuestion.rows).toHaveLength(1)
+		})
+
+		it('addColumn gives the new column a c-prefixed id', () => {
+			const wrapper = mountEditor(base({ type: 'matrix', rows: [], columns: [] }))
+			wrapper.vm.addColumn()
+			expect(wrapper.vm.localQuestion.columns.at(-1).id.startsWith('c')).toBe(true)
+		})
+
+		it('addColumn creates the columns array when absent', () => {
+			const wrapper = mountEditor(base({ type: 'matrix', rows: [] }))
+			delete wrapper.vm.localQuestion.columns
+			wrapper.vm.addColumn()
+			expect(wrapper.vm.localQuestion.columns).toHaveLength(1)
+			// first column value is length(0)+1 = 1
+			expect(wrapper.vm.localQuestion.columns[0].value).toBe(1)
+		})
+
+		it('addTableColumn gives the new column a col-prefixed id and text default', () => {
+			const wrapper = mountEditor(base({ type: 'table', columns: [] }))
+			wrapper.vm.addTableColumn()
+			const col = wrapper.vm.localQuestion.columns.at(-1)
+			expect(col.id.startsWith('col')).toBe(true)
+			expect(col.inputType).toBe('text')
+			expect(col.options).toEqual([])
+			expect(col.optionsText).toBe('')
+		})
+	})
+
+	describe('mutating methods each emit an update', () => {
+		const optsQ = () =>
+			base({
+				type: 'choice',
+				options: [
+					{ id: 'a', label: 'A', value: 'a' },
+					{ id: 'b', label: 'B', value: 'b' },
+				],
+			})
+
+		it('removeOption emits update after splicing', () => {
+			const wrapper = mountEditor(optsQ())
+			wrapper.vm.removeOption(0)
+			expect(lastUpdate(wrapper).options).toHaveLength(1)
+			expect(lastUpdate(wrapper).options[0].id).toBe('b')
+		})
+
+		it('toggleQuizMode emits the scored copy', () => {
+			const wrapper = mountEditor(optsQ())
+			wrapper.vm.toggleQuizMode(true)
+			expect(lastUpdate(wrapper).options.every((o) => o.score === 0)).toBe(true)
+		})
+
+		it('toggleValidation emits the new validation object', () => {
+			const wrapper = mountEditor(base({ type: 'text' }))
+			wrapper.vm.toggleValidation(true)
+			expect(lastUpdate(wrapper).validation).toEqual({ pattern: '', errorMessage: '' })
+		})
+
+		it('removeRow emits the trimmed rows', () => {
+			const wrapper = mountEditor(
+				base({ type: 'matrix', rows: [{ id: 'r1', label: 'R1' }, { id: 'r2', label: 'R2' }], columns: [] }),
+			)
+			wrapper.vm.removeRow(0)
+			expect(lastUpdate(wrapper).rows).toHaveLength(1)
+			expect(lastUpdate(wrapper).rows[0].id).toBe('r2')
+		})
+
+		it('removeColumn emits the trimmed columns', () => {
+			const wrapper = mountEditor(
+				base({ type: 'matrix', rows: [], columns: [{ id: 'c1', label: 'C1', value: 1 }, { id: 'c2', label: 'C2', value: 2 }] }),
+			)
+			wrapper.vm.removeColumn(1)
+			expect(lastUpdate(wrapper).columns).toHaveLength(1)
+			expect(lastUpdate(wrapper).columns[0].id).toBe('c1')
+		})
+
+		it('removeTableColumn emits the trimmed columns', () => {
+			const wrapper = mountEditor(
+				base({ type: 'table', columns: [{ id: 'x1', label: 'X1', inputType: 'text' }, { id: 'x2', label: 'X2', inputType: 'text' }] }),
+			)
+			wrapper.vm.removeTableColumn(0)
+			expect(lastUpdate(wrapper).columns).toHaveLength(1)
+			expect(lastUpdate(wrapper).columns[0].id).toBe('x2')
+		})
+
+		it('updateDescriptorAlign sets the align and emits', () => {
+			const wrapper = mountEditor(base({ type: 'descriptor', description: 'hi' }))
+			wrapper.vm.updateDescriptorAlign('center')
+			expect(wrapper.vm.localQuestion.descriptorAlign).toBe('center')
+			expect(lastUpdate(wrapper).descriptorAlign).toBe('center')
+		})
+	})
+
+	describe('onValidationPresetChange', () => {
+		it('applies the preset pattern and default error when a preset is picked', () => {
+			const wrapper = mountEditor(base({ type: 'text', validation: { pattern: '', errorMessage: '' } }))
+			wrapper.vm.onValidationPresetChange({ value: 'digits_only' })
+			expect(wrapper.vm.localQuestion.validation.pattern).toBe('^[0-9]+$')
+			expect(wrapper.vm.localQuestion.validation.errorMessage).toBeTruthy()
+		})
+
+		it('does not overwrite a user-customised error message', () => {
+			const wrapper = mountEditor(
+				base({ type: 'text', validation: { pattern: '', errorMessage: 'Mine' } }),
+			)
+			wrapper.vm.onValidationPresetChange({ value: 'digits_only' })
+			expect(wrapper.vm.localQuestion.validation.errorMessage).toBe('Mine')
+		})
+
+		it('clears pattern and error when the preset is deselected (null)', () => {
+			const wrapper = mountEditor(
+				base({ type: 'text', validation: { pattern: '^[0-9]+$', errorMessage: 'x' } }),
+			)
+			wrapper.vm.onValidationPresetChange(null)
+			expect(wrapper.vm.localQuestion.validation.pattern).toBe('')
+			expect(wrapper.vm.localQuestion.validation.errorMessage).toBe('')
+		})
+	})
 })
