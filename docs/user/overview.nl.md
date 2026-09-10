@@ -35,7 +35,7 @@ FormVox ondersteunt 12+ vraagtypen:
 
 ### Deel-opties
 
-- Delen met Nextcloud-gebruikers en -groepen
+- Delen met Nextcloud-gebruikers en -groepen door het formulier-bestand via de Files-app te delen
 - Publieke links maken met optioneel:
   - Wachtwoord-bescherming
   - Vervaldatums

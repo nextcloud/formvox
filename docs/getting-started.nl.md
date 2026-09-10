@@ -56,10 +56,14 @@ Voeg vragen toe door:
 
 Zodra je formulier klaar is:
 
-1. Klik op de **Deel**-knop in de toolbar
-2. Kies hoe te delen:
-   - **Nextcloud-gebruikers** — Deel met specifieke gebruikers of groepen
-   - **Publieke link** — Maak een link die iedereen kan openen
+Er zijn twee routes, en ze doen iets verschillends:
+
+- **Publieke link** — klik op **Share** in de toolbar en maak een antwoord-link aan.
+  Iedereen met de link kan reageren; je kunt er een wachtwoord, een vervaldatum of
+  een beperking tot specifieke gebruikers en groepen op zetten.
+- **Nextcloud-gebruikers** — deel het `.fvform`-bestand (of de map ervan) via de
+  **Files**-app. De ontvanger heeft het formulier dan in zijn eigen FormVox, met de
+  rechten die je bestands-share geeft.
 
 ### Stap 6: Bekijk antwoorden
 

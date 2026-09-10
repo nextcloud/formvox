@@ -6,24 +6,43 @@ FormVox biedt flexibele opties voor het delen van je formulieren.
 
 ### Delen met Nextcloud-gebruikers
 
-Deel formulieren met specifieke Nextcloud-gebruikers of -groepen:
+FormVox is bestands-gebaseerd: elk formulier is een `.fvform`-bestand in je Files. Je
+deelt een formulier dus net als elk ander bestand — via de **Files**-app, niet via het
+Delen-dialoog binnen FormVox.
 
-1. Open je formulier
-2. Klik op de **Delen**-knop in de toolbar
-3. Zoek gebruikers of groepen
-4. Stel permissies in:
-   - **Bekijken** — kan het formulier bekijken en antwoorden indienen
-   - **Bewerken** — kan de formulier-structuur wijzigen
-   - **Beheren** — volledige toegang inclusief delen
+1. Open de **Files**-app
+2. Zoek het `.fvform`-bestand op (of de map waarin je formulieren staan)
+3. Open de deel-zijbalk en deel het zoals gebruikelijk met een gebruiker of groep
+4. De ontvanger opent het bestand en FormVox start ermee op
+
+Wat de ontvanger mag, volgt direct uit de Nextcloud-bestandsrechten die je geeft:
+
+| Bestandsrecht | Rol in FormVox | Wat diegene kan |
+| --- | --- | --- |
+| Eigenaar | Owner | Alles, inclusief het formulier verwijderen |
+| Lezen + bewerken | Editor | Vragen, instellingen, branding bewerken en antwoorden inzien |
+| Alleen lezen | Viewer | Formulier openen, bekijken en een antwoord indienen |
+| Deel-recht | — | Mag de publieke antwoord-link aanmaken en beheren |
+
+De map delen waarin de formulieren staan is meestal het handigst: elk formulier dat je
+erin zet, is dan automatisch mee-gedeeld.
+
+> **Let op:** de **Share**-knop binnen FormVox deelt het formulier *niet* met andere
+> Nextcloud-gebruikers. Die knop beheert de publieke antwoord-link en de bijbehorende
+> instellingen. De gebruikers- en groeps-kiezers die je daar ziet, dienen twee andere
+> doelen: kiezen wie een melding krijgt bij nieuwe antwoorden, en beperken wie er via
+> de publieke link mag indienen (zie [Gebruikers-/groeps-beperkingen](#gebruikers-groeps-beperkingen)
+> hieronder).
 
 ### Publieke links
 
 Maak een link die iedereen kan benaderen:
 
 1. Open je formulier
-2. Klik op **Delen** → **Publieke link**
-3. Configureer opties (zie hieronder)
-4. Kopieer de link
+2. Klik op **Share** in de toolbar
+3. Klik onder **Response link** op **Create response link** als er nog geen is
+4. Configureer de opties onder **Link settings** (zie hieronder)
+5. Kopieer de link, of download de QR-code
 
 ## Publieke-link-opties
 
@@ -31,15 +50,15 @@ Maak een link die iedereen kan benaderen:
 
 Vereist een wachtwoord om het formulier te benaderen:
 
-1. Schakel **Wachtwoord-bescherming** in
-2. Voer een wachtwoord in
+1. Open **Link settings** en schakel **Password protect** in
+2. Voer een wachtwoord in en klik op **Save**
 3. Deel het wachtwoord apart met de beoogde respondenten
 
 ### Vervaldatum
 
 Stel een deadline in voor formulier-toegang:
 
-1. Schakel **Vervaldatum** in
+1. Open **Link settings** en schakel **Set expiration** in
 2. Kies een datum en tijd
 3. Na verloop geeft de link een error terug
 
@@ -47,9 +66,12 @@ Stel een deadline in voor formulier-toegang:
 
 Beperk wie een publiek formulier kan benaderen:
 
-1. Schakel **Toegang beperken** in
+1. Open **Link settings** en schakel **Restrict to specific users/groups** in
 2. Selecteer Nextcloud-gebruikers of -groepen
-3. Alleen deze gebruikers kunnen antwoorden indienen (ze moeten inloggen)
+3. Alleen deze gebruikers kunnen het formulier openen en indienen (ze moeten inloggen)
+
+Dit beperkt de toegang *via de publieke link*. Deze gebruikers krijgen het formulier
+hiermee niet in hun eigen FormVox — deel daarvoor het bestand (zie hierboven).
 
 Dit is handig voor:
 
@@ -79,8 +101,8 @@ Omdat FormVox standaard iframe-embedding gebruikt, werkt het overal waar HTML on
 De makkelijkste manier om een formulier te embedden:
 
 1. Open je formulier
-2. Klik op **Delen** in de toolbar
-3. Klik op het **Embed**-tabblad
+2. Klik op **Share** in de toolbar
+3. Open de sectie **Advanced** en zoek **Embed code**
 4. Configureer opties:
    - **Breedte** — vaste pixels of responsive (100%)
    - **Hoogte** — frame-hoogte in pixels
@@ -120,7 +142,7 @@ Voor mobile-friendly embedding dat zich aanpast aan elke scherm-grootte:
 
 Om een FormVox-formulier in SharePoint te embedden:
 
-1. Genereer de embed-code via het **Embed**-tabblad in het Delen-dialoog
+1. Genereer de embed-code via **Advanced → Embed code** in het Delen-dialoog
 2. Bewerk je pagina in SharePoint
 3. Voeg een **Embed**-webpart toe (of **Script Editor**)
 4. Plak de iframe-code
@@ -141,8 +163,8 @@ FormVox kan een QR-code genereren voor elke publieke-formulier-link, wat het mak
 ### Een QR-code genereren
 
 1. Open je formulier
-2. Klik op **Delen** in de toolbar
-3. Schakel een publieke link in (indien nog niet ingeschakeld)
+2. Klik op **Share** in de toolbar
+3. Maak een antwoord-link aan (indien nog niet aanwezig)
 4. De QR-code wordt automatisch gegenereerd en getoond in het Delen-dialoog
 
 ### De QR-code downloaden
