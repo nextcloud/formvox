@@ -46,7 +46,12 @@ jobs:
           RENOVATE_REPOSITORIES: voxcloud-apps/formvox
           # Onboard silently against the committed renovate.json (no onboarding PR).
           RENOVATE_ONBOARDING: 'false'
-          RENOVATE_REQUIRE_CONFIG: required
+          # `optional`, not `required`: Renovate reads its config from the DEFAULT
+          # branch (main). Until this branch is merged, renovate.json isn't on
+          # main yet, and `required` would hard-fail. `optional` lets it run (and
+          # simply find nothing to do) pre-merge; once merged it picks up the
+          # committed renovate.json normally.
+          RENOVATE_REQUIRE_CONFIG: optional
           LOG_LEVEL: info
         run: |
           docker run --rm \
