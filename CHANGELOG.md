@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [1.4.6] - 2026-09-10
+
+### Fixed
+- **AI form generation settings could not be saved.** Saving the admin AI settings — enabling generation, the question or document-size limits, the source-upload and conditional-logic switches — failed silently: the panel errored the moment it tried to persist, so no change ever stuck and the toggles snapped back. The settings now save as expected. The subscription notice on the same admin page was affected by the same underlying flaw and showed blank or malformed text; it now renders correctly, including the user count in the support message.
+
 ## [1.4.5] - 2026-09-04
 
 ### Fixed
