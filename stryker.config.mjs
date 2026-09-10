@@ -27,8 +27,12 @@ export default {
 	// low for the first full run — a smoke run of the tightest component
 	// (NumberField) scored ~54%, and declaration-level mutants (prop `type`,
 	// `emits` arrays) legitimately survive without changing behaviour, so the
-	// full-tree score will be lower. Establish the real baseline from the first
-	// main run, then raise `break`. `high`/`low` only colour the report.
+	// full-tree score is dragged down by boilerplate + the ~40 icon components.
+	// After the mutation-hardening pass the big components climbed a lot
+	// (QuestionRenderer 33→49, QuestionEditor 32→61, ShareDialog 18→50, covered
+	// scores ~79-90%). Once the next full main run reports the real post-
+	// hardening TOTAL, set `break` just below it. Kept at 20 until then to avoid
+	// a false-red. `high`/`low` only colour the report.
 	thresholds: { high: 70, low: 40, break: 20 },
 	// Keep the machine usable; the CI runner can override via --concurrency.
 	concurrency: 4,
