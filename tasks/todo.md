@@ -224,15 +224,30 @@ becomes unnecessary and step 3 gets simpler.
   hex, which un-themes the instance wherever that stylesheet loads. Highest-value
   fix of the three, unrelated to this one.
 
-## Checklist
+## Status
 
-- [ ] Step 1 — token layer defined from NC tokens
-- [ ] Step 2 — branding assigns tokens
-- [ ] Step 3 — literal colours replaced
-- [ ] Step 4 — conflicting `!important` rules removed
-- [ ] Step 5 — derived foreground (only if the background picker stays)
-- [ ] Step 6 — default follows the instance theme
-- [ ] Verified: unbranded, light and dark
-- [ ] Verified: branded, light and dark
-- [ ] Verified: per-form branding overriding admin defaults
-- [ ] Verified on a themed instance (non-default primary colour)
+- [x] Step 1 — token layer defined from NC tokens
+- [x] Step 2 — branding assigns tokens
+- [x] Step 3 — literal colours replaced (8 blues + 4 stale fallbacks; the
+      datepicker block's light/dark pairs remain)
+- [x] Step 4 — the `!important` that discarded branding is gone; the header one
+      stays, since it out-specifies Nextcloud's rule rather than ours
+- [x] Step 5 — derived foreground, `src/utils/contrast.js`
+- [~] Step 6 — frontend defaults removed; `BrandingService::DEFAULT_GLOBAL_STYLES`
+      still holds `#0082c9` because that value also populates the admin colour
+      picker. Emptying it is a UI decision — see the open question.
+
+Automated: JS 865/865 across 48 files, PHP 491/491, build clean.
+`public.css`: 0 → 12 Nextcloud theme tokens, 82 → 54 hardcoded colours.
+
+## Still to do — visual verification
+
+None of this has been looked at in a browser. It changes every visual surface of
+the public page, so it needs checking before it ships:
+
+- [ ] Unbranded, light and dark
+- [ ] Branded, light and dark
+- [ ] Per-form branding overriding admin defaults
+- [ ] A themed instance with a non-default primary colour — the case that is
+      currently broken and the main thing this is meant to fix
+- [ ] The datepicker popup, whose hardcoded light/dark palette is untouched
