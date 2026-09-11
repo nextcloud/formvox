@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Public links still returned 404 for a Team Folder with more than 20 groups.** The 1.4.6 fix resolved Team Folder members through Nextcloud's group API, but only ever looked at the first twenty groups the folder applied to, so a form in a folder with more groups than that was unreachable again — and raising the number would only have moved the limit. The cause was that every applicable group was resolved to its members up front, at one directory round-trip each, which had to be bounded to stay affordable; the accounts are then tried in order and nearly always the first one works. Groups are now resolved one at a time and the search stops as soon as an account can open the form, so the usual case costs a single round-trip no matter how many groups the folder carries and the limit could be removed entirely. Reported on a folder with 27 groups used to delegate responsibilities through Advanced Permissions. ([#136](https://github.com/nextcloud/formvox/issues/136))
+
 ## [1.4.6] - 2026-09-11
 
 > **Upgrading from 1.4.4?** This release also contains everything listed under 1.4.5 below. Version 1.4.5 was tagged but never published to the App Store, so 1.4.6 is the first release to carry those two fixes — the stable public share link ([#135](https://github.com/nextcloud/formvox/issues/135)) and Team Folder links on LDAP/AD ([#136](https://github.com/nextcloud/formvox/issues/136)).
