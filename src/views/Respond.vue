@@ -1,5 +1,5 @@
 <template>
-  <div class="respond-container" :style="containerStyles">
+  <div class="respond-container" :style="brandingStyles">
     <!-- Skip link -->
     <a v-if="!submitted && !isLimitReached" href="#formvox-form-content" class="sr-only sr-only-focusable">
       {{ t('Skip to form questions') }}
@@ -40,7 +40,7 @@
         />
       </template>
       <template v-else>
-        <CheckIcon :size="64" :fill-color="globalStyles.primaryColor || '#0082c9'" />
+        <CheckIcon :size="64" fill-color="var(--formvox-accent)" />
         <h2>{{ t('Thank you!') }}</h2>
         <p>{{ t('Your response has been recorded.') }}</p>
       </template>
@@ -156,7 +156,6 @@
           type="submit"
           variant="primary"
           :disabled="submitting || isPreview"
-          :style="submitButtonStyles"
         >
           {{ uploadProgress || (submitting ? t('Submitting …') : t('Submit')) }}
         </NcButton>
@@ -216,6 +215,7 @@ import axios from '@nextcloud/axios';
 import { solveChallengeWorkers } from 'altcha-lib';
 import { t } from '@/utils/l10n';
 import { useTts } from '../composables/useTts';
+import { readableForeground } from '@/utils/contrast';
 import QuestionRenderer from '../components/QuestionRenderer.vue';
 import BlockRenderer from '../components/pagebuilder/BlockRenderer.vue';
 import CheckIcon from '../components/icons/CheckIcon.vue';
@@ -301,10 +301,9 @@ export default {
       stop: ttsStop,
     } = useTts();
 
-    const globalStyles = computed(() => props.branding?.globalStyles || {
-      primaryColor: '#0082c9',
-      backgroundColor: '#ffffff',
-    });
+    // No literal defaults: an unconfigured instance should follow its own
+    // Nextcloud theme, not a frozen Nextcloud-default blue (#142).
+    const globalStyles = computed(() => props.branding?.globalStyles || {});
 
     // Check if response limit is reached
     const isLimitReached = computed(() => {
@@ -315,23 +314,38 @@ export default {
     });
 
     // Container styles based on global styles
-    const containerStyles = computed(() => {
-      const bg = globalStyles.value.backgroundColor;
-      if (bg && bg !== '#ffffff') {
-        return { backgroundColor: bg };
-      }
-      return {};
-    });
+    // Branding is applied by overriding the design tokens public.css already
+    // uses, not by styling individual elements (#142). Setting four inline
+    // styles left every rule in the stylesheet on its own colour, and one of
+    // those rules used !important and discarded the inline style anyway.
+    //
+    // Anything not configured is left unset, so the token keeps its default —
+    // which is the instance's own theme.
+    const brandingStyles = computed(() => {
+      const styles = {};
+      const { primaryColor, backgroundColor } = globalStyles.value;
 
-    const submitButtonStyles = computed(() => {
-      const primary = globalStyles.value.primaryColor;
-      if (primary) {
-        return {
-          backgroundColor: primary,
-          borderColor: primary,
-        };
+      if (primaryColor) {
+        styles['--formvox-accent'] = primaryColor;
+        styles['--formvox-accent-hover'] = primaryColor;
+        const onAccent = readableForeground(primaryColor);
+        if (onAccent) {
+          styles['--formvox-accent-text'] = onAccent;
+        }
       }
-      return {};
+
+      if (backgroundColor) {
+        styles['--formvox-bg-primary'] = backgroundColor;
+        // The author picks a background but no text colour, so derive one.
+        // Without this a light background keeps the theme's foreground, which
+        // in dark mode is light grey on a light card.
+        const onBackground = readableForeground(backgroundColor);
+        if (onBackground) {
+          styles['--formvox-text-primary'] = onBackground;
+        }
+      }
+
+      return styles;
     });
 
     // Initialize answers
@@ -1144,8 +1158,7 @@ export default {
       footerBlocks,
       thankYouBlocks,
       globalStyles,
-      containerStyles,
-      submitButtonStyles,
+      brandingStyles,
       isLimitReached,
       updateAnswer,
       updatePendingFiles,
