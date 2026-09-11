@@ -168,7 +168,7 @@ class FormFactory {
 						'question' => $this->l->t('Tell us about yourself'),
 						'description' => $this->l->t('Multi-line text area for longer responses'),
 						'required' => false,
-						'placeholder' => $this->l->t('Write a short bio …'),
+						'placeholder' => $this->l->t('Write a short bio …'),
 					],
 					// Section 2: Choice Questions
 					[
@@ -382,7 +382,7 @@ class FormFactory {
 						'question' => $this->l->t('Any final thoughts or feedback?'),
 						'description' => $this->l->t('Thank you for trying this demo form!'),
 						'required' => false,
-						'placeholder' => $this->l->t('Share your thoughts …'),
+						'placeholder' => $this->l->t('Share your thoughts …'),
 					],
 				],
 				'settings' => [
