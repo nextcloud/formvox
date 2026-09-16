@@ -85,7 +85,7 @@ class FormFileLocatorTest extends TestCase {
 			$cursor = 0;
 
 			$result = $this->createMock(IResult::class);
-			$result->method('fetch')->willReturnCallback(function () use ($rows, &$cursor) {
+			$result->method('fetch')->willReturnCallback(function () use (&$rows, &$cursor) {
 				if ($cursor >= count($rows)) {
 					return false;
 				}
@@ -95,9 +95,20 @@ class FormFileLocatorTest extends TestCase {
 
 			$qb = $this->createMock(IQueryBuilder::class);
 			// Fluent chain: every builder call returns the builder itself.
-			foreach (['select', 'from', 'innerJoin', 'where', 'andWhere', 'orderBy', 'setMaxResults'] as $m) {
+			foreach (['select', 'from', 'innerJoin', 'where', 'andWhere', 'orderBy'] as $m) {
 				$qb->method($m)->willReturnSelf();
 			}
+			// setMaxResults is honoured rather than ignored: the LIMIT is
+			// applied by the database, so a mock that drops it cannot show a
+			// row cap excluding rows the code needs (#136 follow-up).
+			$qb->method('setMaxResults')->willReturnCallback(
+				function (?int $max) use ($qb, &$rows): IQueryBuilder {
+					if ($max !== null) {
+						$rows = array_slice($rows, 0, $max);
+					}
+					return $qb;
+				}
+			);
 			$qb->method('expr')->willReturn($expr);
 			$qb->method('createNamedParameter')->willReturnArgument(0);
 			$qb->method('executeQuery')->willReturn($result);
@@ -204,6 +215,123 @@ class FormFileLocatorTest extends TestCase {
 		], $fileId);
 
 		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
+	/**
+	 * #136 follow-up: a Team Folder with more than 20 applicable groups.
+	 *
+	 * The reporter delegates responsibilities through Advanced Permissions and
+	 * has 27 groups on one folder. Everything beyond the twentieth was never
+	 * consulted, so a form in that folder answered 404 again — the same symptom
+	 * the 1.4.6 fix removed, from a different cause.
+	 *
+	 * The writer here sits at position 27 deliberately: it is the case a bound
+	 * of any size still gets wrong.
+	 */
+	public function testGroupFolderBeyondTwentyGroupsStillResolves(): void {
+		$fileId = 77;
+		$groupRows = [];
+		for ($i = 1; $i <= 27; $i++) {
+			$groupRows[] = ['group_id' => sprintf('team%02d', $i), 'circle_id' => null, 'permissions' => 31];
+		}
+
+		$this->programDb([
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+			[['circle_id' => null]],
+			$groupRows,
+		]);
+
+		// Only the 27th group holds the account that can open the file.
+		$this->groupManager->method('get')->willReturnCallback(
+			function (string $groupId): IGroup {
+				$group = $this->createMock(IGroup::class);
+				$group->method('searchUsers')->willReturn([$this->userWithUid('user-' . $groupId)]);
+				return $group;
+			}
+		);
+
+		$writable = $this->fileFor(true);
+		$this->programUserFolders(['user-team27' => [$writable]], $fileId);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
+	/**
+	 * Members are resolved one group at a time, stopping at the first account
+	 * that can open the file.
+	 *
+	 * This is what makes removing the bound affordable. Resolving a group costs
+	 * an LDAP round-trip, and groups are ordered so a write-capable one comes
+	 * first, so the common case should cost one query — not one per group on
+	 * the folder. Resolving all of them up front is what forced a cap in the
+	 * first place.
+	 */
+	public function testStopsResolvingGroupsOnceAWriterIsFound(): void {
+		$fileId = 78;
+		$groupRows = [];
+		for ($i = 1; $i <= 10; $i++) {
+			$groupRows[] = ['group_id' => sprintf('team%02d', $i), 'circle_id' => null, 'permissions' => 31];
+		}
+
+		$this->programDb([
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+			[['circle_id' => null]],
+			$groupRows,
+		]);
+
+		$resolved = [];
+		$this->groupManager->method('get')->willReturnCallback(
+			function (string $groupId) use (&$resolved): IGroup {
+				$resolved[] = $groupId;
+				$group = $this->createMock(IGroup::class);
+				$group->method('searchUsers')->willReturn([$this->userWithUid('user-' . $groupId)]);
+				return $group;
+			}
+		);
+
+		// The very first group yields a usable account.
+		$writable = $this->fileFor(true);
+		$this->programUserFolders(['user-team01' => [$writable]], $fileId);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+		$this->assertSame(
+			['team01'],
+			$resolved,
+			'only the first group should have been resolved; the other nine cost an LDAP query each'
+		);
+	}
+
+	/**
+	 * A read-only caller on a folder whose first groups cannot write still gets
+	 * the file: every group is consulted when needed, and read-only candidates
+	 * are not skipped (#90).
+	 */
+	public function testReadOnlyCallerWalksPastNonWritableGroups(): void {
+		$fileId = 79;
+		$groupRows = [];
+		for ($i = 1; $i <= 25; $i++) {
+			$groupRows[] = ['group_id' => sprintf('team%02d', $i), 'circle_id' => null, 'permissions' => 1];
+		}
+
+		$this->programDb([
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+			[['circle_id' => null]],
+			$groupRows,
+		]);
+
+		$this->groupManager->method('get')->willReturnCallback(
+			function (string $groupId): IGroup {
+				$group = $this->createMock(IGroup::class);
+				$group->method('searchUsers')->willReturn([$this->userWithUid('user-' . $groupId)]);
+				return $group;
+			}
+		);
+
+		// Nobody before the 25th can even see the file.
+		$readable = $this->fileFor(false);
+		$this->programUserFolders(['user-team25' => [$readable]], $fileId);
+
+		$this->assertSame($readable, $this->locator()->getFileByIdPublic($fileId, false));
 	}
 
 	public function testGroupFolderMissingGroupInBackendYieldsNoWriter(): void {

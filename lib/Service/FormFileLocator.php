@@ -21,25 +21,31 @@ use OCP\IUserSession;
  * mount must be opened through *some* account that can see it — and, when the
  * caller intends to write, one that can actually update it. This class owns the
  * candidate-account search over group/team folders (incl. Circles) and external
- * storage, the deterministic bounded member lookup (#90/#136), and the
- * per-request memo that keeps that lookup cheap across the several
- * getFileByIdPublic() calls a single public request makes.
+ * storage, the deterministic member lookup (#90/#136) — lazy per group, so a
+ * folder with many groups costs no more than one with few — and the per-request
+ * memo that keeps that lookup cheap across the several getFileByIdPublic()
+ * calls a single public request makes.
  *
- * Extracted verbatim from FormService so the #90/#101/#136 logic can be
- * unit-tested in isolation against mocked IDBConnection/IGroupManager, with no
- * running server.
+ * Extracted from FormService so the #90/#101/#136 logic can be unit-tested in
+ * isolation against mocked IDBConnection/IGroupManager, with no running server.
  */
 class FormFileLocator {
 	/**
-	 * How many groups / accounts to consider when looking for an account that
-	 * can open a form on a shared mount. Each candidate costs a filesystem
-	 * setup, so the search is bounded; candidates are ordered deterministically
-	 * and the caller stops at the first that can actually write. A groupfolders
-	 * ACL can grant write on a path to a single member of an otherwise low-
-	 * permission group, so the per-group cap is generous rather than tight —
-	 * otherwise the only writable account could sit just outside it (#90).
+	 * How many accounts to consider per group when looking for one that can
+	 * open a form on a shared mount. A groupfolders ACL can grant write on a
+	 * path to a single member of an otherwise low-permission group, so this is
+	 * generous rather than tight — otherwise the only writable account could
+	 * sit just outside it (#90).
+	 *
+	 * There is deliberately no cap on the number of GROUPS. There used to be
+	 * one (20), because every applicable group was resolved to its members up
+	 * front and each resolution costs an LDAP round-trip. That bound silently
+	 * excluded groups beyond the twentieth, so a Team Folder with 27 groups —
+	 * a normal way to delegate with Advanced Permissions — answered 404 for
+	 * every public link (#136). Groups are now resolved lazily, one at a time,
+	 * stopping at the first account that can open the file, so the common case
+	 * costs one round-trip regardless of how many groups the folder has.
 	 */
-	private const ACCESS_CANDIDATE_GROUPS = 20;
 	private const ACCESS_CANDIDATE_USERS_PER_GROUP = 50;
 
 	private IRootFolder $rootFolder;
@@ -49,13 +55,16 @@ class FormFileLocator {
 	private IServerContainer $serverContainer;
 	private ?bool $hasCircleIdColumn = null;
 	/**
-	 * Per-request memo of resolved group-folder member candidates, keyed by
-	 * folder id. Resolving members hits the group backend (an LDAP round-trip
-	 * per group), and getFileByIdPublic() is called several times over a single
-	 * public request (render, capacity check, branding, uploads), so caching
-	 * the result for the request avoids repeating that work. Not persisted —
-	 * it lives only for the lifetime of this service instance.
-	 * @var array<int, list<string>>
+	 * Per-request memo of group-folder member candidates, keyed by folder id
+	 * and then by entity id. getFileByIdPublic() runs several times over a
+	 * single public request (render, capacity check, branding, uploads), so
+	 * without this each of those repeats the group backend's round-trips.
+	 *
+	 * Keyed per entity rather than per folder because members are now resolved
+	 * lazily: a request that stops at the first group must not cache an empty
+	 * or partial list for the whole folder. Not persisted — it lives only for
+	 * the lifetime of this service instance.
+	 * @var array<int, array<string, list<string>>>
 	 */
 	private array $groupFolderMembersCache = [];
 
@@ -236,6 +245,14 @@ class FormFileLocator {
 	/**
 	 * Candidate accounts for opening a file in a group/team folder.
 	 *
+	 * Yields lazily, one group at a time, so the caller can stop as soon as an
+	 * account works. That is what allows there to be no cap on the number of
+	 * groups: resolving a group costs a round-trip to the group backend, and
+	 * groups are ordered so a write-capable one comes first, so the common case
+	 * costs one round-trip however many groups the folder has. Resolving them
+	 * all up front is what previously forced a bound of 20 — which then
+	 * silently excluded the rest and returned 404 (#136).
+	 *
 	 * Groups whose membership grants write are listed first, so a writable
 	 * account is normally found on the first try. The permission column is
 	 * only a hint though — a groupfolders ACL rule can still deny writing to
@@ -243,25 +260,39 @@ class FormFileLocator {
 	 * falls through to the next candidate. Read-only groups stay in the list
 	 * because read-only callers must keep working (#90).
 	 *
-	 * @return list<string> user ids, best candidates first
+	 * @return \Generator<string> user ids, best candidates first, deduplicated
 	 */
-	private function findUsersWithGroupFolderAccess(int $groupFolderId): array {
-		// Reuse the result within this request — the member lookup below can do
-		// one LDAP round-trip per group, and this runs on every public
-		// getFileByIdPublic() call (render + capacity + branding + upload).
-		if (isset($this->groupFolderMembersCache[$groupFolderId])) {
-			return $this->groupFolderMembersCache[$groupFolderId];
+	private function findUsersWithGroupFolderAccess(int $groupFolderId): \Generator {
+		$seen = [];
+		foreach ($this->groupFolderEntities($groupFolderId) as $entity) {
+			foreach ($this->membersOfEntity($groupFolderId, $entity) as $uid) {
+				if (isset($seen[$uid])) {
+					continue;
+				}
+				$seen[$uid] = true;
+				yield $uid;
+			}
 		}
-		// Get groups that have access to this group folder, most-permissive
-		// first. Members of several groups get their permissions OR'd together
-		// by groupfolders, so a write-capable group is the better bet.
-		// groupfolders stores group and circle entries in the same table
-		// (group_folders_groups): a row is a circle when its circle_id column is
-		// set, and we read the circle id from that circle_id column; otherwise
-		// it is a plain group and we read group_id. The circle_id column exists
-		// since groupfolders 14.1, well below our minimum, but stay defensive —
-		// an older or patched schema should degrade to groups-only (detected by
-		// groupFolderGroupsHasCircleId()) rather than break every lookup.
+	}
+
+	/**
+	 * The groups and circles a group folder applies to, most-permissive first.
+	 *
+	 * Members of several groups get their permissions OR'd together by
+	 * groupfolders, so a write-capable group is the better bet and is tried
+	 * first.
+	 *
+	 * groupfolders stores group and circle entries in the same table
+	 * (group_folders_groups): a row is a circle when its circle_id column is
+	 * set, and we read the circle id from that circle_id column; otherwise it
+	 * is a plain group and we read group_id. The circle_id column exists since
+	 * groupfolders 14.1, well below our minimum, but stay defensive — an older
+	 * or patched schema should degrade to groups-only (detected by
+	 * groupFolderGroupsHasCircleId()) rather than break every lookup.
+	 *
+	 * @return list<array{id: string, isCircle: bool}>
+	 */
+	private function groupFolderEntities(int $groupFolderId): array {
 		$hasCircles = $this->groupFolderGroupsHasCircleId();
 
 		$qb = $this->db->getQueryBuilder();
@@ -271,8 +302,7 @@ class FormFileLocator {
 		$qb->select(...$columns)
 			->from('group_folders_groups')
 			->where($qb->expr()->eq('folder_id', $qb->createNamedParameter($groupFolderId, \PDO::PARAM_INT)))
-			->orderBy('permissions', 'DESC')
-			->setMaxResults(self::ACCESS_CANDIDATE_GROUPS);
+			->orderBy('permissions', 'DESC');
 
 		$result = $qb->executeQuery();
 		$entities = [];
@@ -285,19 +315,27 @@ class FormFileLocator {
 		}
 		$result->closeCursor();
 
-		$userIds = [];
-		foreach ($entities as $entity) {
-			$members = $entity['isCircle']
-				? $this->membersOfCircle($entity['id'])
-				: $this->membersOfGroup($entity['id']);
-			foreach ($members as $uid) {
-				$userIds[] = $uid;
-			}
+		return $entities;
+	}
+
+	/**
+	 * Members of one group or circle, memoised for this request.
+	 *
+	 * @param array{id: string, isCircle: bool} $entity
+	 * @return list<string>
+	 */
+	private function membersOfEntity(int $groupFolderId, array $entity): array {
+		$key = ($entity['isCircle'] ? 'circle:' : 'group:') . $entity['id'];
+		if (isset($this->groupFolderMembersCache[$groupFolderId][$key])) {
+			return $this->groupFolderMembersCache[$groupFolderId][$key];
 		}
 
-		$result = array_values(array_unique($userIds));
-		$this->groupFolderMembersCache[$groupFolderId] = $result;
-		return $result;
+		$members = $entity['isCircle']
+			? $this->membersOfCircle($entity['id'])
+			: $this->membersOfGroup($entity['id']);
+
+		$this->groupFolderMembersCache[$groupFolderId][$key] = $members;
+		return $members;
 	}
 
 	/**
