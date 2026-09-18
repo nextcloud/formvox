@@ -55,7 +55,7 @@
     <screenshot>https://raw.githubusercontent.com/nextcloud/formvox/main/screenshots/Result.png</screenshot>
 
     <dependencies>
-        <nextcloud min-version="30" max-version="34"/>
+        <nextcloud min-version="30" max-version="35"/>
         <php min-version="8.2"/>
     </dependencies>
 

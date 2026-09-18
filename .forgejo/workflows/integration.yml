@@ -1,6 +1,6 @@
 # Forgejo Actions: FormVox INTEGRATION tests against a real Nextcloud + DB.
 #
-# NC 30-34 across SQLite, MySQL/MariaDB and Postgres, exercising the paths unit
+# NC 30-35 across SQLite, MySQL/MariaDB and Postgres, exercising the paths unit
 # tests can't (real DB lock, real filecache resolution, real .fvform round-trips,
 # real DataDownloadResponse). Heavy, so PR + manual dispatch only — the fast
 # unit/lint/psalm gate lives in ci.yml on every push.
@@ -30,19 +30,29 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        server: [stable30, stable31, stable32, stable33, stable34]
+        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 30-34
+        # still run on our 8.2 floor. Pin the PHP each server version installs so
+        # the 35 job doesn't fail on the NC install step under 8.2.
+        include:
+          - { server: stable30, php: '8.2' }
+          - { server: stable31, php: '8.2' }
+          - { server: stable32, php: '8.2' }
+          - { server: stable33, php: '8.2' }
+          - { server: stable34, php: '8.2' }
+          - { server: stable35, php: '8.3' }
     steps:
-      - name: Install PHP 8.2 + Composer
+      - name: Install PHP ${{ matrix.php }} + Composer
         run: |
           set -e
           export DEBIAN_FRONTEND=noninteractive
+          PHP=${{ matrix.php }}
           apt-get update -qq
           apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git >/dev/null
           add-apt-repository -y ppa:ondrej/php >/dev/null
           apt-get update -qq
           apt-get install -y --no-install-recommends \
-            php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
-            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-sqlite3 >/dev/null
+            php$PHP-cli php$PHP-xml php$PHP-mbstring php$PHP-zip php$PHP-curl \
+            php$PHP-gd php$PHP-intl php$PHP-bcmath php$PHP-gmp php$PHP-sqlite3 >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
       - name: Clone Nextcloud server ${{ matrix.server }} from GitHub
         # NOT actions/checkout: on this Forgejo runner it clones from the local
@@ -73,9 +83,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        server: [stable30, stable31, stable32, stable33, stable34]
+        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 30-34
+        # still run on our 8.2 floor. Pin the PHP each server version installs so
+        # the 35 job doesn't fail on the NC install step under 8.2.
+        include:
+          - { server: stable30, php: '8.2' }
+          - { server: stable31, php: '8.2' }
+          - { server: stable32, php: '8.2' }
+          - { server: stable33, php: '8.2' }
+          - { server: stable34, php: '8.2' }
+          - { server: stable35, php: '8.3' }
     steps:
-      - name: Install PHP 8.2 + Composer + MariaDB on the host
+      - name: Install PHP ${{ matrix.php }} + Composer + MariaDB on the host
         # DB on the host (not a services: container): the single Forgejo runner
         # collided on the fixed host port when service containers from parallel
         # matrix jobs bound the same port. A host DB reached via 127.0.0.1:3306
@@ -83,13 +102,14 @@ jobs:
         run: |
           set -e
           export DEBIAN_FRONTEND=noninteractive
+          PHP=${{ matrix.php }}
           apt-get update -qq
           apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git mariadb-server >/dev/null
           add-apt-repository -y ppa:ondrej/php >/dev/null
           apt-get update -qq
           apt-get install -y --no-install-recommends \
-            php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
-            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-mysql >/dev/null
+            php$PHP-cli php$PHP-xml php$PHP-mbstring php$PHP-zip php$PHP-curl \
+            php$PHP-gd php$PHP-intl php$PHP-bcmath php$PHP-gmp php$PHP-mysql >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
           # Start MariaDB and create the nextcloud db + user.
           mkdir -p /var/run/mysqld && chown mysql:mysql /var/run/mysqld
@@ -128,22 +148,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        server: [stable30, stable31, stable32, stable33, stable34]
+        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 30-34
+        # still run on our 8.2 floor. Pin the PHP each server version installs so
+        # the 35 job doesn't fail on the NC install step under 8.2.
+        include:
+          - { server: stable30, php: '8.2' }
+          - { server: stable31, php: '8.2' }
+          - { server: stable32, php: '8.2' }
+          - { server: stable33, php: '8.2' }
+          - { server: stable34, php: '8.2' }
+          - { server: stable35, php: '8.3' }
     steps:
-      - name: Install PHP 8.2 + Composer + Postgres on the host
+      - name: Install PHP ${{ matrix.php }} + Composer + Postgres on the host
         # DB on the host (not a services: container) — see the mysql job: avoids
         # the fixed-host-port collision between parallel matrix jobs on the
         # single Forgejo runner. Reached via 127.0.0.1:5432.
         run: |
           set -e
           export DEBIAN_FRONTEND=noninteractive
+          PHP=${{ matrix.php }}
           apt-get update -qq
           apt-get install -y --no-install-recommends software-properties-common ca-certificates curl unzip git postgresql postgresql-contrib >/dev/null
           add-apt-repository -y ppa:ondrej/php >/dev/null
           apt-get update -qq
           apt-get install -y --no-install-recommends \
-            php8.2-cli php8.2-xml php8.2-mbstring php8.2-zip php8.2-curl \
-            php8.2-gd php8.2-intl php8.2-bcmath php8.2-gmp php8.2-pgsql >/dev/null
+            php$PHP-cli php$PHP-xml php$PHP-mbstring php$PHP-zip php$PHP-curl \
+            php$PHP-gd php$PHP-intl php$PHP-bcmath php$PHP-gmp php$PHP-pgsql >/dev/null
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
           # Start Postgres and create the nextcloud db + user (listen on localhost).
           service postgresql start || pg_ctlcluster "$(ls /etc/postgresql)" main start
