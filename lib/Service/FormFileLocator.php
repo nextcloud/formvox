@@ -49,15 +49,19 @@ class FormFileLocator {
 	private IServerContainer $serverContainer;
 	private ?bool $hasCircleIdColumn = null;
 	/**
-	 * Per-request memo of resolved group-folder member candidates, keyed by
-	 * folder id. Resolving members hits the group backend (an LDAP round-trip
-	 * per group), and getFileByIdPublic() is called several times over a single
-	 * public request (render, capacity check, branding, uploads), so caching
-	 * the result for the request avoids repeating that work. Not persisted —
-	 * it lives only for the lifetime of this service instance.
-	 * @var array<int, list<string>>
+	 * Per-request memo of the account resolved for a group-folder file, keyed by
+	 * "{fileId}:{requireWrite}". getFileByIdPublic() is called several times over
+	 * a single public request (render, capacity check, branding, uploads), and
+	 * each resolution walks the group backend (an LDAP round-trip per group) and
+	 * builds a filesystem view, so caching the resolved File for the request
+	 * avoids repeating that work. Keyed by requireWrite because a read-only and a
+	 * write resolution can legitimately land on different accounts. Not the
+	 * candidate list: the candidate walk stops early at the first writable member
+	 * (see findUsersWithGroupFolderAccess), so a half-consumed list must never be
+	 * cached as if complete — the resolved File is the safe thing to memo.
+	 * @var array<string, File>
 	 */
-	private array $groupFolderMembersCache = [];
+	private array $groupFolderFileCache = [];
 
 	public function __construct(
 		IRootFolder $rootFolder,
@@ -164,9 +168,23 @@ class FormFileLocator {
 		) {
 			$groupFolderId = (int)$matches[1];
 
+			$cacheKey = $fileId . ':' . ($requireWrite ? '1' : '0');
+			if (isset($this->groupFolderFileCache[$cacheKey])) {
+				return $this->groupFolderFileCache[$cacheKey];
+			}
+
+			// The candidate stream yields the owner (most-permissive) group's
+			// members first and only descends into further groups/circles when
+			// those are exhausted or ACL-blocked, so the common case resolves on
+			// the first member of the first group. The isUpdateable() gate inside
+			// resolveFileAsUser (and the fall-through to the next candidate) is
+			// what keeps this #90-safe: a per-path ACL can deny the first member
+			// while allowing a later one, so we must confirm each candidate can
+			// actually write rather than trusting the group-level permission.
 			foreach ($this->findUsersWithGroupFolderAccess($groupFolderId) as $userId) {
 				$file = $this->resolveFileAsUser($userId, $fileId, $requireWrite);
 				if ($file !== null) {
+					$this->groupFolderFileCache[$cacheKey] = $file;
 					return $file;
 				}
 			}
@@ -240,18 +258,22 @@ class FormFileLocator {
 	 * account is normally found on the first try. The permission column is
 	 * only a hint though — a groupfolders ACL rule can still deny writing to
 	 * this particular path — so the caller confirms with isUpdateable() and
-	 * falls through to the next candidate. Read-only groups stay in the list
+	 * falls through to the next candidate. Read-only groups stay in the stream
 	 * because read-only callers must keep working (#90).
 	 *
-	 * @return list<string> user ids, best candidates first
+	 * Candidates are produced lazily, one group at a time in most-permissive
+	 * order, so the caller's early return (getFileByIdPublic Case 2) stops the
+	 * walk as soon as it finds a writable account. In the common case — the
+	 * owner group's first member can write the file — this touches exactly one
+	 * group and does a single group-backend lookup, instead of eagerly building
+	 * every group's membership up front. The 20-group / 50-member caps stay as
+	 * the bounded tail for the rare case where advanced ACL grants write only to
+	 * a member the owner group does not list first (#90); they are the ceiling
+	 * of the walk, no longer always paid.
+	 *
+	 * @return \Generator<string> user ids, best candidates first, deduplicated
 	 */
-	private function findUsersWithGroupFolderAccess(int $groupFolderId): array {
-		// Reuse the result within this request — the member lookup below can do
-		// one LDAP round-trip per group, and this runs on every public
-		// getFileByIdPublic() call (render + capacity + branding + upload).
-		if (isset($this->groupFolderMembersCache[$groupFolderId])) {
-			return $this->groupFolderMembersCache[$groupFolderId];
-		}
+	private function findUsersWithGroupFolderAccess(int $groupFolderId): \Generator {
 		// Get groups that have access to this group folder, most-permissive
 		// first. Members of several groups get their permissions OR'd together
 		// by groupfolders, so a write-capable group is the better bet.
@@ -285,19 +307,23 @@ class FormFileLocator {
 		}
 		$result->closeCursor();
 
-		$userIds = [];
+		// Resolve members one group at a time and yield as we go, so a caller
+		// that returns on the first writable account never triggers the lookup
+		// for the remaining groups. Dedup across groups here: the same uid can
+		// appear in several groups, and resolving it twice is wasted work.
+		$seen = [];
 		foreach ($entities as $entity) {
 			$members = $entity['isCircle']
 				? $this->membersOfCircle($entity['id'])
 				: $this->membersOfGroup($entity['id']);
 			foreach ($members as $uid) {
-				$userIds[] = $uid;
+				if (isset($seen[$uid])) {
+					continue;
+				}
+				$seen[$uid] = true;
+				yield $uid;
 			}
 		}
-
-		$result = array_values(array_unique($userIds));
-		$this->groupFolderMembersCache[$groupFolderId] = $result;
-		return $result;
 	}
 
 	/**

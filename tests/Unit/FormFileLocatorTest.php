@@ -221,6 +221,121 @@ class FormFileLocatorTest extends TestCase {
 		$this->locator()->getFileByIdPublic($fileId, true);
 	}
 
+	/**
+	 * Owner-group-first + lazy early-exit: when the most-permissive group's
+	 * first member can write, the walk must stop before ever resolving a
+	 * lower-permission group. Programming only ONE group_folders_groups query
+	 * row-set and asserting the second group is never fetched pins that the
+	 * candidate stream is lazy (the performance win, previously untested).
+	 */
+	public function testGroupFolderStopsAtFirstWritableWithoutTouchingLaterGroups(): void {
+		$fileId = 55;
+		$this->programDb([
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+			[['circle_id' => null]],
+			// Two rows, owner group (perms 31) first, a read group second.
+			[
+				['group_id' => 'owners', 'circle_id' => null, 'permissions' => 31],
+				['group_id' => 'readers', 'circle_id' => null, 'permissions' => 1],
+			],
+		]);
+
+		$owners = $this->createMock(IGroup::class);
+		$owners->method('searchUsers')->with('', 50)->willReturn([$this->userWithUid('alice')]);
+
+		// The 'readers' group must NEVER be resolved: alice (owners) writes the
+		// file, so the generator must not descend into the second group.
+		$readers = $this->createMock(IGroup::class);
+		$readers->expects($this->never())->method('searchUsers');
+
+		$this->groupManager->method('get')->willReturnCallback(
+			function (string $gid) use ($owners, $readers): ?IGroup {
+				return match ($gid) {
+					'owners' => $owners,
+					'readers' => $readers,
+					default => null,
+				};
+			}
+		);
+
+		$writable = $this->fileFor(true);
+		$this->programUserFolders(['alice' => [$writable]], $fileId);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
+	/**
+	 * #90 fall-through still holds under the lazy walk: when advanced ACL denies
+	 * the owner group's only member on THIS path, the generator must descend to
+	 * the next group and find the writable member there — not stop at group one.
+	 */
+	public function testGroupFolderDescendsPastAclBlockedOwnerGroup(): void {
+		$fileId = 55;
+		$this->programDb([
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+			[['circle_id' => null]],
+			[
+				['group_id' => 'owners', 'circle_id' => null, 'permissions' => 31],
+				['group_id' => 'editors', 'circle_id' => null, 'permissions' => 3],
+			],
+		]);
+
+		$owners = $this->createMock(IGroup::class);
+		$owners->method('searchUsers')->with('', 50)->willReturn([$this->userWithUid('alice')]);
+		$editors = $this->createMock(IGroup::class);
+		$editors->method('searchUsers')->with('', 50)->willReturn([$this->userWithUid('frank')]);
+		$this->groupManager->method('get')->willReturnCallback(
+			fn (string $gid): ?IGroup => match ($gid) {
+				'owners' => $owners, 'editors' => $editors, default => null,
+			}
+		);
+
+		// alice (owner group) is ACL-denied write on this file; frank (editors)
+		// can write it. The walk must reach frank rather than give up at alice.
+		$writable = $this->fileFor(true);
+		$this->programUserFolders([
+			'alice' => [$this->fileFor(false)],
+			'frank' => [$writable],
+		], $fileId);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
+	/**
+	 * Per-request memo: two getFileByIdPublic() calls for the same file in one
+	 * request (e.g. render then capacity check) must resolve the group backend
+	 * only ONCE. The cheap filecache lookup still runs per call (it is not the
+	 * expensive part), so query 1 is programmed for BOTH calls; the circle-probe
+	 * and group_folders_groups queries plus searchUsers() are programmed once —
+	 * a second resolution would need row-sets that are not queued. searchUsers()
+	 * asserted exactly once pins that the resolved File is reused.
+	 */
+	public function testGroupFolderResolutionIsMemoisedWithinRequest(): void {
+		$fileId = 55;
+		$this->programDb([
+			// Call 1: filecache + circle-probe + group rows.
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+			[['circle_id' => null]],
+			[['group_id' => 'staff', 'circle_id' => null, 'permissions' => 31]],
+			// Call 2: only the filecache lookup runs again; the group resolution
+			// is served from the memo, so no further group queries are needed.
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+		]);
+
+		$group = $this->createMock(IGroup::class);
+		$group->expects($this->once())   // resolved once, reused on the second call
+			->method('searchUsers')
+			->willReturn([$this->userWithUid('bob')]);
+		$this->groupManager->method('get')->with('staff')->willReturn($group);
+
+		$writable = $this->fileFor(true);
+		$this->programUserFolders(['bob' => [$writable]], $fileId);
+
+		$locator = $this->locator();
+		$this->assertSame($writable, $locator->getFileByIdPublic($fileId, true));
+		$this->assertSame($writable, $locator->getFileByIdPublic($fileId, true));
+	}
+
 	// ---- Case 3: external storage ------------------------------------------
 
 	public function testExternalStorageResolvesFirstWritableCandidate(): void {
