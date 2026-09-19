@@ -2,10 +2,14 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [Unreleased]
+## [1.4.7] - 2026-09-19
 
 ### Fixed
-- **Public links still returned 404 for a Team Folder with more than 20 groups.** The 1.4.6 fix resolved Team Folder members through Nextcloud's group API, but only ever looked at the first twenty groups the folder applied to, so a form in a folder with more groups than that was unreachable again — and raising the number would only have moved the limit. The cause was that every applicable group was resolved to its members up front, at one directory round-trip each, which had to be bounded to stay affordable; the accounts are then tried in order and nearly always the first one works. Groups are now resolved one at a time and the search stops as soon as an account can open the form, so the usual case costs a single round-trip no matter how many groups the folder carries and the limit could be removed entirely. Reported on a folder with 27 groups used to delegate responsibilities through Advanced Permissions. ([#136](https://github.com/nextcloud/formvox/issues/136))
+- **Public links to forms in a Team Folder with many groups returned 404.** A form stored in a Team Folder that was shared through a large number of groups — one had 27 on a single folder — could become unreachable: its public link answered 404 for everyone, while the same form opened fine for logged-in members. Those links open again now, whatever the number of groups on the folder, and opening a public form is a little quicker too. This follows on from the Team Folder fixes shipped in 1.4.5. ([#136](https://github.com/nextcloud/formvox/issues/136))
+- **Branding colours were saved but not fully applied on the public form page.** A chosen accent colour and background colour would save, yet much of the public page stayed Nextcloud-default blue. The whole page now follows the branding you set — the header, the buttons (including the Next and Previous buttons), input outlines and accents — not just a few elements, and the page background takes your chosen background colour instead of staying blue behind the form. Whatever background colour you pick stays readable in both light and dark mode. Branding set on a single form keeps working over the global house style, so a form with its own colours is not changed when an admin later adjusts the default. (One part is still outstanding: the date-picker popup does not yet follow branding.) ([#142](https://github.com/nextcloud/formvox/issues/142))
+
+### Changed
+- **Now compatible with Nextcloud 35.** FormVox now runs on Nextcloud 30 through 35.
 
 ## [1.4.6] - 2026-09-11
 
