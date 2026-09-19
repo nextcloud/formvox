@@ -2,10 +2,18 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [1.4.6] - 2026-09-10
+## [Unreleased]
+
+### Fixed
+- **Public links still returned 404 for a Team Folder with more than 20 groups.** The 1.4.6 fix resolved Team Folder members through Nextcloud's group API, but only ever looked at the first twenty groups the folder applied to, so a form in a folder with more groups than that was unreachable again — and raising the number would only have moved the limit. The cause was that every applicable group was resolved to its members up front, at one directory round-trip each, which had to be bounded to stay affordable; the accounts are then tried in order and nearly always the first one works. Groups are now resolved one at a time and the search stops as soon as an account can open the form, so the usual case costs a single round-trip no matter how many groups the folder carries and the limit could be removed entirely. Reported on a folder with 27 groups used to delegate responsibilities through Advanced Permissions. ([#136](https://github.com/nextcloud/formvox/issues/136))
+
+## [1.4.6] - 2026-09-11
+
+> **Upgrading from 1.4.4?** This release also contains everything listed under 1.4.5 below. Version 1.4.5 was tagged but never published to the App Store, so 1.4.6 is the first release to carry those two fixes — the stable public share link ([#135](https://github.com/nextcloud/formvox/issues/135)) and Team Folder links on LDAP/AD ([#136](https://github.com/nextcloud/formvox/issues/136)).
 
 ### Fixed
 - **AI form generation settings could not be saved.** Saving the admin AI settings — enabling generation, the question or document-size limits, the source-upload and conditional-logic switches — failed silently: the panel errored the moment it tried to persist, so no change ever stuck and the toggles snapped back. The settings now save as expected. The subscription notice on the same admin page was affected by the same underlying flaw and showed blank or malformed text; it now renders correctly, including the user count in the support message.
+- **Two demo-form placeholders lost their translations.** The internal service split dropped a non-breaking space before the ellipsis in the "Write a short bio …" and "Share your thoughts …" placeholders of the example form. Every translation is keyed on the original text, so both fell back to English in Dutch, German, French, Catalan and Ukrainian. The original spelling is restored and the translations apply again.
 
 ## [1.4.5] - 2026-09-04
 

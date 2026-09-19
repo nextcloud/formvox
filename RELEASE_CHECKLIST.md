@@ -311,6 +311,17 @@ curl -s -w "\nHTTP %{http_code}\n" -X POST https://apps.nextcloud.com/api/v1/app
 verkeerde token**, niet een verlopen token: `appstore-api-token.txt` is van Sam
 en bezit alleen `metavox`. De rechtencheck komt vóór de signature-check.
 
+**Verifieer daarna mét cache-buster.** Na de `201` bleven zowel `apps.json` als
+`platform/*/apps.json` bij 1.4.6 nog minutenlang de vórige versie teruggeven,
+terwijl de app-pagina de nieuwe al toonde. Zonder cache-buster lijkt een
+geslaagde upload dus mislukt — niet opnieuw POSTen, gewoon zo controleren:
+
+```bash
+curl -sL -H "Accept: application/json" \
+  "https://apps.nextcloud.com/api/v1/platform/34.0.0/apps.json?cb=$(date +%s)" | \
+  python3 -c "import json,sys; [print(sorted(r['version'] for r in a['releases'])[-1]) for a in json.load(sys.stdin) if a['id']=='formvox']"
+```
+
 ### 8. Archive the release artefacts
 
 The signature and release record belong in the private tooling repo, **not**
