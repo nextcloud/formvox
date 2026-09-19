@@ -31,15 +31,16 @@ use OCP\IUserSession;
  */
 class FormFileLocator {
 	/**
-	 * How many groups / accounts to consider when looking for an account that
-	 * can open a form on a shared mount. Each candidate costs a filesystem
-	 * setup, so the search is bounded; candidates are ordered deterministically
-	 * and the caller stops at the first that can actually write. A groupfolders
-	 * ACL can grant write on a path to a single member of an otherwise low-
-	 * permission group, so the per-group cap is generous rather than tight —
-	 * otherwise the only writable account could sit just outside it (#90).
+	 * How many accounts per group to consider when looking for one that can open
+	 * a form on a shared mount. Each candidate costs a filesystem setup, and an
+	 * LDAP group can hold thousands of accounts, so the per-group membership is
+	 * bounded. Candidates are ordered deterministically and the caller stops at
+	 * the first that can actually write, so this cap is only ever reached inside
+	 * a single very large group. There is deliberately NO cap on the number of
+	 * groups a folder may have: a folder can delegate through many groups and a
+	 * per-path ACL can grant write to a member of one that sorts well down the
+	 * list, so capping the groups would drop the only writable account (#136).
 	 */
-	private const ACCESS_CANDIDATE_GROUPS = 20;
 	private const ACCESS_CANDIDATE_USERS_PER_GROUP = 50;
 
 	private IRootFolder $rootFolder;
@@ -266,10 +267,19 @@ class FormFileLocator {
 	 * walk as soon as it finds a writable account. In the common case — the
 	 * owner group's first member can write the file — this touches exactly one
 	 * group and does a single group-backend lookup, instead of eagerly building
-	 * every group's membership up front. The 20-group / 50-member caps stay as
-	 * the bounded tail for the rare case where advanced ACL grants write only to
-	 * a member the owner group does not list first (#90); they are the ceiling
-	 * of the walk, no longer always paid.
+	 * every group's membership up front.
+	 *
+	 * All applicable group rows are read: there is NO cap on how many groups a
+	 * folder may have. A folder can delegate through many groups (advanced
+	 * permissions), and a per-path ACL can grant write to a member of an
+	 * otherwise low-permission group that sorts well down the list — capping the
+	 * groups dropped that account and 404'd the form (#136 follow-up: a folder
+	 * with 27 delegated groups). Reading the group rows is one cheap query; only
+	 * the per-group member lookup is expensive, and that stays lazy, so removing
+	 * the cap costs nothing in the common case and only walks further when the
+	 * earlier groups genuinely yield no writable account. Membership per group
+	 * is still bounded (ACCESS_CANDIDATE_USERS_PER_GROUP) so one huge LDAP group
+	 * cannot pull in thousands of accounts.
 	 *
 	 * @return \Generator<string> user ids, best candidates first, deduplicated
 	 */
@@ -293,8 +303,7 @@ class FormFileLocator {
 		$qb->select(...$columns)
 			->from('group_folders_groups')
 			->where($qb->expr()->eq('folder_id', $qb->createNamedParameter($groupFolderId, \PDO::PARAM_INT)))
-			->orderBy('permissions', 'DESC')
-			->setMaxResults(self::ACCESS_CANDIDATE_GROUPS);
+			->orderBy('permissions', 'DESC');
 
 		$result = $qb->executeQuery();
 		$entities = [];

@@ -336,6 +336,50 @@ class FormFileLocatorTest extends TestCase {
 		$this->assertSame($writable, $locator->getFileByIdPublic($fileId, true));
 	}
 
+	/**
+	 * #136 follow-up: a folder that delegates through many groups (GaelBe: 27)
+	 * must still resolve when the only account that can write THIS file lives in
+	 * a group past the old 20-group cap. An advanced-permission ACL can grant
+	 * write on a path to a member of a group that sorts well down the list, so
+	 * capping the number of groups would drop that account and 404 the form.
+	 * With the cap removed, the walk reaches the 25th group and finds the writer.
+	 */
+	public function testGroupFolderResolvesWriterBeyondTheOldTwentyGroupCap(): void {
+		$fileId = 55;
+
+		// 25 groups on the folder, ordered by permissions DESC. Only the last one
+		// ('team-24') has a member who can write this specific file — every
+		// higher-listed group is read-only on this path (ACL).
+		$rows = [];
+		for ($i = 0; $i < 25; $i++) {
+			$rows[] = ['group_id' => 'team-' . $i, 'circle_id' => null, 'permissions' => 31];
+		}
+		$this->programDb([
+			[['id' => 'local::/mnt/data/__groupfolders/12/', 'numeric_id' => 9]],
+			[['circle_id' => null]],
+			$rows,
+		]);
+
+		$this->groupManager->method('get')->willReturnCallback(
+			function (string $gid): IGroup {
+				$g = $this->createMock(IGroup::class);
+				// Each group has one member named after the group.
+				$g->method('searchUsers')->willReturn([$this->userWithUid('u-' . $gid)]);
+				return $g;
+			}
+		);
+
+		// Only u-team-24 can write; all earlier candidates are read-only.
+		$writable = $this->fileFor(true);
+		$byUser = [];
+		for ($i = 0; $i < 25; $i++) {
+			$byUser['u-team-' . $i] = [$i === 24 ? $writable : $this->fileFor(false)];
+		}
+		$this->programUserFolders($byUser, $fileId);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
 	// ---- Case 3: external storage ------------------------------------------
 
 	public function testExternalStorageResolvesFirstWritableCandidate(): void {
