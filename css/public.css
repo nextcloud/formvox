@@ -2,47 +2,34 @@
  * FormVox - Public (anonymous) styles
  */
 
-/* CSS Variables for theming */
+/* Design tokens.
+ *
+ * These are defined from the Nextcloud theme so a public form follows the
+ * instance's own colours — the same thing every other FormVox stylesheet does,
+ * and what upstream nextcloud/forms does for its public page. The literals are
+ * fallbacks only, for the case where the themed stylesheet somehow did not load.
+ *
+ * Branding overrides these same tokens at runtime (see Respond.vue), so the
+ * whole page follows a configured accent or background without any rule needing
+ * to know branding exists.
+ *
+ * There is deliberately no hand-written dark-mode block: the --color-* tokens
+ * already carry light and dark, including the visitor's system preference and
+ * an explicitly chosen Nextcloud theme.
+ */
 :root {
-  --formvox-bg-primary: #ffffff;
-  --formvox-bg-secondary: #f8f8f8;
-  --formvox-bg-hover: #f0f0f0;
-  --formvox-text-primary: #1a1a1a;
-  --formvox-text-secondary: #555;
-  --formvox-text-muted: #666;
-  --formvox-border: #e0e0e0;
-  --formvox-border-dark: #d0d0d0;
-  --formvox-page-bg: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --formvox-bg-primary: #2c2c2c;
-    --formvox-bg-secondary: #3a3a3a;
-    --formvox-bg-hover: #444444;
-    --formvox-text-primary: #e0e0e0;
-    --formvox-text-secondary: #b0b0b0;
-    --formvox-text-muted: #999999;
-    --formvox-border: #555555;
-    --formvox-border-dark: #666666;
-    --formvox-page-bg: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  }
-}
-
-/* Nextcloud dark mode class support */
-[data-themes*="dark"],
-.theme--dark,
-body.theme--dark {
-  --formvox-bg-primary: #2c2c2c;
-  --formvox-bg-secondary: #3a3a3a;
-  --formvox-bg-hover: #444444;
-  --formvox-text-primary: #e0e0e0;
-  --formvox-text-secondary: #b0b0b0;
-  --formvox-text-muted: #999999;
-  --formvox-border: #555555;
-  --formvox-border-dark: #666666;
-  --formvox-page-bg: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  --formvox-bg-primary: var(--color-main-background, #ffffff);
+  --formvox-bg-secondary: var(--color-background-dark, #f8f8f8);
+  --formvox-bg-hover: var(--color-background-hover, #f0f0f0);
+  --formvox-text-primary: var(--color-main-text, #1a1a1a);
+  --formvox-text-secondary: var(--color-text-maxcontrast, #555);
+  --formvox-text-muted: var(--color-text-maxcontrast, #666);
+  --formvox-border: var(--color-border, #e0e0e0);
+  --formvox-border-dark: var(--color-border-dark, #d0d0d0);
+  --formvox-accent: var(--color-primary-element, #0082c9);
+  --formvox-accent-text: var(--color-primary-element-text, #ffffff);
+  --formvox-accent-hover: var(--color-primary-element-hover, #0070b0);
+  --formvox-page-bg: var(--color-background-plain, var(--color-main-background, #f5f7fa));
 }
 
 /* Reset for public pages */
@@ -54,16 +41,18 @@ body.theme--dark {
   min-height: 100vh;
 }
 
-/* Nextcloud-style header: blue background with white logo/text */
+/* Header follows the accent (instance theme, or branding when configured).
+ * !important stays: it out-specifies Nextcloud's own public-layout header
+ * rule, not anything of ours. */
 #body-public #header {
-  background-color: #0082c9 !important;
+  background-color: var(--formvox-accent) !important;
 }
 
 #body-public #header,
 #body-public #header .header-appname,
 #body-public #header .header-appname-container,
 #body-public #header a {
-  color: #fff !important;
+  color: var(--formvox-accent-text) !important;
 }
 
 /* Dark mode background for body - explicit rule for iOS Safari */
@@ -157,7 +146,7 @@ body.theme--dark#body-public {
   text-align: center;
   padding: 12px 20px;
   background: rgba(0, 130, 201, 0.1);
-  color: #0082c9;
+  color: var(--formvox-accent);
   border-radius: 8px;
   margin-bottom: 24px;
   font-weight: 500;
@@ -235,7 +224,7 @@ body.theme--dark#body-public {
 #formvox-public textarea:focus,
 #formvox-public select:focus {
   outline: none;
-  border-color: #0082c9;
+  border-color: var(--formvox-accent);
 }
 
 /* Fix Nextcloud Vue components width */
@@ -300,12 +289,12 @@ body.theme--dark#body-public {
 }
 
 #formvox-public .scale-option:hover {
-  border-color: #0082c9;
+  border-color: var(--formvox-accent);
 }
 
 #formvox-public .scale-option.selected {
-  background: #0082c9;
-  border-color: #0082c9;
+  background: var(--formvox-accent);
+  border-color: var(--formvox-accent);
   color: white;
 }
 
@@ -434,7 +423,7 @@ body.theme--dark#body-public {
 }
 
 #formvox-public .table-cell-input:focus {
-  border-color: var(--formvox-accent, #0060df);
+  border-color: var(--formvox-accent);
   outline: none;
 }
 
@@ -472,14 +461,14 @@ body.theme--dark#body-public {
 
 #formvox-public .add-row-btn:hover {
   background: var(--formvox-bg-primary);
-  border-color: var(--formvox-accent, #0060df);
-  color: var(--formvox-accent, #0060df);
+  border-color: var(--formvox-accent);
+  color: var(--formvox-accent);
 }
 
 /* Section (fieldset) styling */
 #formvox-public .form-section {
   border: none;
-  border-left: 4px solid var(--formvox-accent, #0060df);
+  border-left: 4px solid var(--formvox-accent);
   border-radius: 0 12px 12px 0;
   padding: 20px 24px;
   margin: 24px 0;
@@ -540,22 +529,25 @@ body.theme--dark#body-public {
   min-width: 140px;
 }
 
+/* No !important here: this rule used to out-specify the inline style the
+ * frontend sets from branding, so a configured accent colour was applied and
+ * then thrown away (#142). The accent token carries the branding instead. */
 #formvox-public .form-actions button[type="submit"],
-#formvox-public .form-actions .button-vue--vue-primary {
-  background: linear-gradient(135deg, #0082c9 0%, #0070b0 100%) !important;
-  color: white !important;
-  box-shadow: 0 4px 12px rgba(0, 130, 201, 0.3);
+#formvox-public .form-actions .button-vue--primary {
+  background: var(--formvox-accent);
+  color: var(--formvox-accent-text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 #formvox-public .form-actions button[type="submit"]:hover,
-#formvox-public .form-actions .button-vue--vue-primary:hover {
-  background: linear-gradient(135deg, #0070b0 0%, #005a90 100%) !important;
-  box-shadow: 0 6px 16px rgba(0, 130, 201, 0.4);
+#formvox-public .form-actions .button-vue--primary:hover {
+  background: var(--formvox-accent-hover);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
   transform: translateY(-1px);
 }
 
 #formvox-public .form-actions button[type="submit"]:disabled,
-#formvox-public .form-actions .button-vue--vue-primary:disabled {
+#formvox-public .form-actions .button-vue--primary:disabled {
   background: #ccc !important;
   box-shadow: none;
   cursor: not-allowed;
@@ -618,7 +610,7 @@ body.theme--dark#body-public {
 
 #formvox-public .score-percentage {
   font-size: 32px;
-  color: #0082c9;
+  color: var(--formvox-accent);
 }
 
 /* Responsive */

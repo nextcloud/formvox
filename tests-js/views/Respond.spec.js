@@ -247,9 +247,12 @@ describe('views/Respond', () => {
 		expect(wrapper.vm.validationErrors.c1).toBeUndefined()
 	})
 
-	it('globalStyles falls back to defaults without branding', () => {
+	it('sets no branding overrides without branding, so the instance theme shows', () => {
+		// Previously this defaulted to a literal #0082c9, which meant a themed
+		// instance still got Nextcloud-default blue on its public forms (#142).
 		const wrapper = mountRespond()
-		expect(wrapper.vm.globalStyles.primaryColor).toBe('#0082c9')
+		expect(wrapper.vm.globalStyles.primaryColor).toBeUndefined()
+		expect(wrapper.vm.brandingTokens).toEqual({})
 	})
 
 	it('globalStyles reflects branding overrides', () => {
@@ -257,9 +260,50 @@ describe('views/Respond', () => {
 		expect(wrapper.vm.globalStyles.primaryColor).toBe('#ff0000')
 	})
 
-	it('containerStyles applies a non-white background', () => {
+	it('applies branding by overriding the design tokens', () => {
 		const wrapper = mountRespond({}, { branding: { globalStyles: { backgroundColor: '#eee' } } })
-		expect(wrapper.vm.containerStyles).toEqual({ backgroundColor: '#eee' })
+		expect(wrapper.vm.brandingTokens['--formvox-bg-primary']).toBe('#eee')
+	})
+
+	it('derives a readable foreground for a chosen background', () => {
+		// The author sets a background but no text colour. Without deriving one,
+		// a light background keeps the theme's foreground — light grey on cream
+		// in dark mode (#142).
+		const light = mountRespond({}, { branding: { globalStyles: { backgroundColor: '#fff8f0' } } })
+		expect(light.vm.brandingTokens['--formvox-text-primary']).toBe('#1a1a1a')
+
+		const dark = mountRespond({}, { branding: { globalStyles: { backgroundColor: '#102030' } } })
+		expect(dark.vm.brandingTokens['--formvox-text-primary']).toBe('#ffffff')
+	})
+
+	it('derives a page background from the chosen background', () => {
+		// The page behind the cards must follow the chosen background, not stay
+		// on the Nextcloud theme colour — otherwise the cards float on blue (#142).
+		const wrapper = mountRespond({}, { branding: { globalStyles: { backgroundColor: '#fff8f0' } } })
+		const page = wrapper.vm.brandingTokens['--formvox-page-bg']
+		expect(page).toBeTruthy()
+		expect(page).not.toBe('#fff8f0') // shifted so the cards still stand out
+	})
+
+	it('sets the branding tokens on the document root so #body-public inherits them', () => {
+		// #body-public (the page background element) is an ANCESTOR of this
+		// component; CSS custom properties inherit downward, so the tokens must
+		// live on :root, not on the form container, to reach the page background.
+		document.documentElement.style.removeProperty('--formvox-page-bg')
+		mountRespond({}, { branding: { globalStyles: { backgroundColor: '#fff8f0' } } })
+		expect(document.documentElement.style.getPropertyValue('--formvox-page-bg')).toBeTruthy()
+	})
+
+	it('derives a readable foreground for the accent colour', () => {
+		const wrapper = mountRespond({}, { branding: { globalStyles: { primaryColor: '#d8a906' } } })
+		expect(wrapper.vm.brandingTokens['--formvox-accent']).toBe('#d8a906')
+		expect(wrapper.vm.brandingTokens['--formvox-accent-text']).toBe('#1a1a1a')
+	})
+
+	it('leaves tokens alone for a colour it cannot parse', () => {
+		const wrapper = mountRespond({}, { branding: { globalStyles: { backgroundColor: 'rebeccapurple' } } })
+		expect(wrapper.vm.brandingTokens['--formvox-bg-primary']).toBe('rebeccapurple')
+		expect(wrapper.vm.brandingTokens['--formvox-text-primary']).toBeUndefined()
 	})
 
 	it('preview submit emits the answers instead of posting', async () => {

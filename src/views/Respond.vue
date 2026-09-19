@@ -1,5 +1,5 @@
 <template>
-  <div class="respond-container" :style="containerStyles">
+  <div class="respond-container">
     <!-- Skip link -->
     <a v-if="!submitted && !isLimitReached" href="#formvox-form-content" class="sr-only sr-only-focusable">
       {{ t('Skip to form questions') }}
@@ -40,7 +40,7 @@
         />
       </template>
       <template v-else>
-        <CheckIcon :size="64" :fill-color="globalStyles.primaryColor || '#0082c9'" />
+        <CheckIcon :size="64" fill-color="var(--formvox-accent)" />
         <h2>{{ t('Thank you!') }}</h2>
         <p>{{ t('Your response has been recorded.') }}</p>
       </template>
@@ -156,7 +156,6 @@
           type="submit"
           variant="primary"
           :disabled="submitting || isPreview"
-          :style="submitButtonStyles"
         >
           {{ uploadProgress || (submitting ? t('Submitting …') : t('Submit')) }}
         </NcButton>
@@ -188,7 +187,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, nextTick, onBeforeUnmount } from 'vue';
+import { ref, reactive, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { NcButton } from '@nextcloud/vue';
 import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
@@ -216,6 +215,7 @@ import axios from '@nextcloud/axios';
 import { solveChallengeWorkers } from 'altcha-lib';
 import { t } from '@/utils/l10n';
 import { useTts } from '../composables/useTts';
+import { readableForeground, pageBackground } from '@/utils/contrast';
 import QuestionRenderer from '../components/QuestionRenderer.vue';
 import BlockRenderer from '../components/pagebuilder/BlockRenderer.vue';
 import CheckIcon from '../components/icons/CheckIcon.vue';
@@ -301,10 +301,9 @@ export default {
       stop: ttsStop,
     } = useTts();
 
-    const globalStyles = computed(() => props.branding?.globalStyles || {
-      primaryColor: '#0082c9',
-      backgroundColor: '#ffffff',
-    });
+    // No literal defaults: an unconfigured instance should follow its own
+    // Nextcloud theme, not a frozen Nextcloud-default blue (#142).
+    const globalStyles = computed(() => props.branding?.globalStyles || {});
 
     // Check if response limit is reached
     const isLimitReached = computed(() => {
@@ -315,23 +314,74 @@ export default {
     });
 
     // Container styles based on global styles
-    const containerStyles = computed(() => {
-      const bg = globalStyles.value.backgroundColor;
-      if (bg && bg !== '#ffffff') {
-        return { backgroundColor: bg };
+    // Branding is applied by overriding the design tokens public.css already
+    // uses, not by styling individual elements (#142). Setting four inline
+    // styles left every rule in the stylesheet on its own colour, and one of
+    // those rules used !important and discarded the inline style anyway.
+    //
+    // Anything not configured is left unset, so the token keeps its default —
+    // which is the instance's own theme.
+    // The branding tokens FormVox overrides. Computed from the branding config;
+    // an empty string means "leave the theme default in place" for that token.
+    const brandingTokens = computed(() => {
+      const tokens = {};
+      const { primaryColor, backgroundColor } = globalStyles.value;
+
+      if (primaryColor) {
+        tokens['--formvox-accent'] = primaryColor;
+        tokens['--formvox-accent-hover'] = primaryColor;
+        const onAccent = readableForeground(primaryColor);
+        if (onAccent) {
+          tokens['--formvox-accent-text'] = onAccent;
+        }
       }
-      return {};
+
+      if (backgroundColor) {
+        tokens['--formvox-bg-primary'] = backgroundColor;
+        // The author picks a background but no text colour, so derive one.
+        // Without this a light background keeps the theme's foreground, which
+        // in dark mode is light grey on a light card.
+        const onBackground = readableForeground(backgroundColor);
+        if (onBackground) {
+          tokens['--formvox-text-primary'] = onBackground;
+        }
+        // The page behind the cards must follow the chosen background too,
+        // otherwise the cards float on the untouched Nextcloud theme colour
+        // (#142). It is a slightly shifted shade so the cards still stand out.
+        const page = pageBackground(backgroundColor);
+        if (page) {
+          tokens['--formvox-page-bg'] = page;
+        }
+      }
+
+      return tokens;
     });
 
-    const submitButtonStyles = computed(() => {
-      const primary = globalStyles.value.primaryColor;
-      if (primary) {
-        return {
-          backgroundColor: primary,
-          borderColor: primary,
-        };
+    // Apply the branding tokens to the document root, not to the form container.
+    // #body-public — the page background element (see respond.php) — is an
+    // ANCESTOR of this component, and CSS custom properties inherit downward, so
+    // setting them on the container never reaches the page background (#142).
+    // :root sits above #body-public, so every element inherits them.
+    const appliedBrandingTokens = [];
+    const applyBrandingTokens = () => {
+      const root = document.documentElement;
+      // Clear anything we set on a previous run so a removed colour reverts.
+      while (appliedBrandingTokens.length) {
+        root.style.removeProperty(appliedBrandingTokens.pop());
       }
-      return {};
+      for (const [name, value] of Object.entries(brandingTokens.value)) {
+        root.style.setProperty(name, value);
+        appliedBrandingTokens.push(name);
+      }
+    };
+
+    onMounted(applyBrandingTokens);
+    watch(brandingTokens, applyBrandingTokens);
+    onBeforeUnmount(() => {
+      const root = document.documentElement;
+      while (appliedBrandingTokens.length) {
+        root.style.removeProperty(appliedBrandingTokens.pop());
+      }
     });
 
     // Initialize answers
@@ -1144,8 +1194,7 @@ export default {
       footerBlocks,
       thankYouBlocks,
       globalStyles,
-      containerStyles,
-      submitButtonStyles,
+      brandingTokens,
       isLimitReached,
       updateAnswer,
       updatePendingFiles,
