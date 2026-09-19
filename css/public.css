@@ -533,21 +533,21 @@ body.theme--dark#body-public {
  * frontend sets from branding, so a configured accent colour was applied and
  * then thrown away (#142). The accent token carries the branding instead. */
 #formvox-public .form-actions button[type="submit"],
-#formvox-public .form-actions .button-vue--vue-primary {
+#formvox-public .form-actions .button-vue--primary {
   background: var(--formvox-accent);
   color: var(--formvox-accent-text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 #formvox-public .form-actions button[type="submit"]:hover,
-#formvox-public .form-actions .button-vue--vue-primary:hover {
+#formvox-public .form-actions .button-vue--primary:hover {
   background: var(--formvox-accent-hover);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
   transform: translateY(-1px);
 }
 
 #formvox-public .form-actions button[type="submit"]:disabled,
-#formvox-public .form-actions .button-vue--vue-primary:disabled {
+#formvox-public .form-actions .button-vue--primary:disabled {
   background: #ccc !important;
   box-shadow: none;
   cursor: not-allowed;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseHex, relativeLuminance, readableForeground } from '@/utils/contrast.js'
+import { parseHex, relativeLuminance, readableForeground, pageBackground } from '@/utils/contrast.js'
 
 const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
 
@@ -105,5 +105,35 @@ describe('readableForeground', () => {
 
 	it('returns null for a colour it cannot parse, so the caller leaves the token alone', () => {
 		expect(readableForeground('var(--color-main-background)')).toBeNull()
+	})
+})
+
+describe('pageBackground', () => {
+	it('darkens a light card so the page sits just behind it', () => {
+		// The reporter's cream #fff8f0 is light, so the page is a touch darker —
+		// the cards stay visible instead of floating on the theme colour (#142).
+		const page = pageBackground('#fff8f0')
+		expect(page).not.toBeNull()
+		expect(relativeLuminance(page)).toBeLessThan(relativeLuminance('#fff8f0'))
+	})
+
+	it('lightens a dark card so the page sits just behind it', () => {
+		const page = pageBackground('#1a2b3c')
+		expect(page).not.toBeNull()
+		expect(relativeLuminance(page)).toBeGreaterThan(relativeLuminance('#1a2b3c'))
+	})
+
+	it('stays close to the card colour rather than a full shade', () => {
+		// A small shift: the page should read as the same family as the card,
+		// not black or white. Cream #fff8f0 must not collapse toward grey.
+		const page = pageBackground('#fff8f0')
+		const [r, g, b] = parseHex(page)
+		// Still clearly warm and light, just dimmer than the card.
+		expect(r).toBeGreaterThan(220)
+		expect(r).toBeGreaterThan(b) // warmth preserved (more red than blue)
+	})
+
+	it('returns null for a colour it cannot parse', () => {
+		expect(pageBackground('var(--color-main-background)')).toBeNull()
 	})
 })

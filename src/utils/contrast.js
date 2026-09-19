@@ -96,3 +96,45 @@ export function readableForeground(background) {
 	const onLight = contrastRatio(luminance, relativeLuminance(LIGHT_FOREGROUND))
 	return onDark >= onLight ? DARK_FOREGROUND : LIGHT_FOREGROUND
 }
+
+/**
+ * Mix a colour towards black or white by a fraction (0 keeps it, 1 is the target).
+ *
+ * @param {string} color a hex colour
+ * @param {number} amount 0..1, how far to move each channel toward `target`
+ * @param {number} target the channel value to move toward (0 = black, 255 = white)
+ * @return {?string} the shaded hex colour, or null when color is not hex
+ */
+function shade(color, amount, target) {
+	const rgb = parseHex(color)
+	if (rgb === null) {
+		return null
+	}
+	const mixed = rgb.map((channel) => Math.round(channel + (target - channel) * amount))
+	return '#' + mixed.map((c) => c.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Derive the page background behind the form cards from the card background.
+ *
+ * Branding offers a single background colour, which is applied to the cards. The
+ * page around them must follow that same colour — otherwise a chosen background
+ * leaves the cards floating on the untouched Nextcloud theme colour (#142) — but
+ * it cannot be the *same* colour, or the cards stop standing out. So the page is
+ * a slightly shifted shade of the card: a light card gets a marginally darker
+ * page, a dark card a marginally lighter one, keeping the cards visible whatever
+ * colour the author picks.
+ *
+ * @param {string} cardBackground a hex colour (the branding backgroundColor)
+ * @return {?string} the page background, or null when cardBackground is not hex
+ */
+export function pageBackground(cardBackground) {
+	const luminance = relativeLuminance(cardBackground)
+	if (luminance === null) {
+		return null
+	}
+	// Light cards: darken the page a touch; dark cards: lighten it a touch.
+	return luminance > 0.5
+		? shade(cardBackground, 0.06, 0)
+		: shade(cardBackground, 0.12, 255)
+}
