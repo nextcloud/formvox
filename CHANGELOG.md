@@ -2,9 +2,10 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [1.4.7] - 2026-09-19
+## [1.4.7] - 2026-09-21
 
 ### Fixed
+- **Captured email addresses disappeared from the results.** Turning on "Send confirmation email" adds a hidden email question to the form, and respondents' addresses are stored against it. Turning the setting back off deleted that question, so the collected email answers no longer had a column to show in — every other answer stayed, only the emails vanished from the results and exports. Disabling the setting now keeps the question (it is simply no longer used for sending) once responses exist, so the addresses stay visible. If you already hit this, the addresses were never lost — they are still in the form and come through in a JSON export. ([#143](https://github.com/nextcloud/formvox/issues/143))
 - **Public links to forms in a Team Folder with many groups returned 404.** A form stored in a Team Folder that was shared through a large number of groups — one had 27 on a single folder — could become unreachable: its public link answered 404 for everyone, while the same form opened fine for logged-in members. Those links open again now, whatever the number of groups on the folder, and opening a public form is a little quicker too. This follows on from the Team Folder fixes shipped in 1.4.5. ([#136](https://github.com/nextcloud/formvox/issues/136))
 - **Branding colours were saved but not fully applied on the public form page.** A chosen accent colour and background colour would save, yet much of the public page stayed Nextcloud-default blue. The whole page now follows the branding you set — the header, the buttons (including the Next and Previous buttons), input outlines and accents — not just a few elements, and the page background takes your chosen background colour instead of staying blue behind the form. Whatever background colour you pick stays readable in both light and dark mode. Branding set on a single form keeps working over the global house style, so a form with its own colours is not changed when an admin later adjusts the default. (One part is still outstanding: the date-picker popup does not yet follow branding.) ([#142](https://github.com/nextcloud/formvox/issues/142))
 
