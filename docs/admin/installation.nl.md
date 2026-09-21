@@ -6,8 +6,8 @@ Deze gids beschrijft het installeren en updaten van FormVox op je Nextcloud-serv
 
 ### Nextcloud-versie
 
-- **Minimum:** Nextcloud 28
-- **Maximum:** Nextcloud 33
+- **Minimum:** Nextcloud 32
+- **Maximum:** Nextcloud 35
 - **Aanbevolen:** laatste stabiele release
 
 ### PHP-versie

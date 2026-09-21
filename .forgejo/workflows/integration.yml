@@ -1,6 +1,6 @@
 # Forgejo Actions: FormVox INTEGRATION tests against a real Nextcloud + DB.
 #
-# NC 30-35 across SQLite, MySQL/MariaDB and Postgres, exercising the paths unit
+# NC 32-35 across SQLite, MySQL/MariaDB and Postgres, exercising the paths unit
 # tests can't (real DB lock, real filecache resolution, real .fvform round-trips,
 # real DataDownloadResponse). Heavy, so PR + manual dispatch only — the fast
 # unit/lint/psalm gate lives in ci.yml on every push.
@@ -30,12 +30,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 30-34
+        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 32-34
         # still run on our 8.2 floor. Pin the PHP each server version installs so
         # the 35 job doesn't fail on the NC install step under 8.2.
         include:
-          - { server: stable30, php: '8.2' }
-          - { server: stable31, php: '8.2' }
           - { server: stable32, php: '8.2' }
           - { server: stable33, php: '8.2' }
           - { server: stable34, php: '8.2' }
@@ -83,12 +81,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 30-34
+        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 32-34
         # still run on our 8.2 floor. Pin the PHP each server version installs so
         # the 35 job doesn't fail on the NC install step under 8.2.
         include:
-          - { server: stable30, php: '8.2' }
-          - { server: stable31, php: '8.2' }
           - { server: stable32, php: '8.2' }
           - { server: stable33, php: '8.2' }
           - { server: stable34, php: '8.2' }
@@ -148,12 +144,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 30-34
+        # NC 35 requires PHP >=8.3 (server composer.json "php": "^8.3"); NC 32-34
         # still run on our 8.2 floor. Pin the PHP each server version installs so
         # the 35 job doesn't fail on the NC install step under 8.2.
         include:
-          - { server: stable30, php: '8.2' }
-          - { server: stable31, php: '8.2' }
           - { server: stable32, php: '8.2' }
           - { server: stable33, php: '8.2' }
           - { server: stable34, php: '8.2' }

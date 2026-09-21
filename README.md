@@ -75,7 +75,7 @@ FormVox is available in:
 
 ## Requirements
 
-- Nextcloud 28 - 33
+- Nextcloud 32 - 35
 - PHP 8.2+
 
 ## Installation

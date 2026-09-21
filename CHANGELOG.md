@@ -2,7 +2,9 @@
 
 All notable changes to FormVox will be documented in this file.
 
-## [1.4.7] - 2026-09-21
+## [1.5.0] - 2026-09-21
+
+> **Upgrading from 1.4.6?** Version 1.4.7 was tagged but never published to the App Store, so its three fixes are listed here: 1.5.0 is the first release to carry them — the captured email addresses ([#143](https://github.com/nextcloud/formvox/issues/143)), Team Folder links on folders with many groups ([#136](https://github.com/nextcloud/formvox/issues/136)) and branding on the public form page ([#142](https://github.com/nextcloud/formvox/issues/142)).
 
 ### Fixed
 - **Captured email addresses disappeared from the results.** Turning on "Send confirmation email" adds a hidden email question to the form, and respondents' addresses are stored against it. Turning the setting back off deleted that question, so the collected email answers no longer had a column to show in — every other answer stayed, only the emails vanished from the results and exports. Disabling the setting now keeps the question (it is simply no longer used for sending) once responses exist, so the addresses stay visible. If you already hit this, the addresses were never lost — they are still in the form and come through in a JSON export. ([#143](https://github.com/nextcloud/formvox/issues/143))
@@ -10,7 +12,7 @@ All notable changes to FormVox will be documented in this file.
 - **Branding colours were saved but not fully applied on the public form page.** A chosen accent colour and background colour would save, yet much of the public page stayed Nextcloud-default blue. The whole page now follows the branding you set — the header, the buttons (including the Next and Previous buttons), input outlines and accents — not just a few elements, and the page background takes your chosen background colour instead of staying blue behind the form. Whatever background colour you pick stays readable in both light and dark mode. Branding set on a single form keeps working over the global house style, so a form with its own colours is not changed when an admin later adjusts the default. (One part is still outstanding: the date-picker popup does not yet follow branding.) ([#142](https://github.com/nextcloud/formvox/issues/142))
 
 ### Changed
-- **Now compatible with Nextcloud 35.** FormVox now runs on Nextcloud 30 through 35.
+- **Nextcloud 35 is now supported, and Nextcloud 30 and 31 are not.** The supported range is now Nextcloud 32 to 35, matching the rest of the Vox app family. Verified on a 35.0.0 instance: enabling the app, the migration, creating and editing a form, minting a public link, and an anonymous submission through the proof-of-work challenge all work, with no errors or deprecation warnings in the server log. If you run Nextcloud 30 or 31, stay on 1.4.6 until you have upgraded the server. Nextcloud 35 itself requires PHP 8.3; FormVox keeps a PHP 8.2 floor so it still installs on Nextcloud 32–34 instances that run 8.2.
 
 ## [1.4.6] - 2026-09-11
 
