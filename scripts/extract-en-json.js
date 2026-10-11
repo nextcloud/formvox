@@ -14,6 +14,8 @@
  *   - src/**\/*.{vue,js}   t('formvox', '…')   this.t('…')   $t('…')   this.$t('…')
  *                          n('formvox', 's', 'p', …)   this.n(…)   $n('s', 'p', …)
  *   - lib/**\/*.php        ->t('…')             ->n('…', '…', …)            $l->t('…')
+ *   - templates/**\/*.php  the same, plus the double-quoted forms ->t("…") / ->n("…", "…")
+ *                          (PHP strings with a quote in them are written that way)
  *
  * Note: $t/$n are the Vue global aliases bound to the formvox appId in
  * src/main.js (translate('formvox', …)), so they carry NO 'formvox' first arg.
@@ -43,6 +45,8 @@ const MANIFEST = path.join(ROOT, 'l10n', '.source-strings.json');
 // A single-quoted JS/PHP string literal, allowing backslash escapes
 // (e.g. \' and \\). Captured group 1 is the raw, still-escaped contents.
 const STR = "'((?:[^'\\\\]|\\\\.)*)'";
+// A double-quoted PHP string literal ("Question '%s' is required").
+const DQ_STR = '"((?:[^"\\\\]|\\\\.)*)"';
 
 // Translation-call patterns. Each yields singular (and plural where present).
 //
@@ -56,15 +60,22 @@ const STR = "'((?:[^'\\\\]|\\\\.)*)'";
 // of an identifier (impor`t(`) or method (spli`t(`). Family 2 anchors on the
 // literal `$t(`/`$n(` token, which can't be a false positive.
 const T_PREFIX = `(?:this\\.|\\$\\w+->|->)?`;
+// The app id itself is never a msgid: in t('formvox', SOME_MAP[key]) the
+// optional app-id group would otherwise backtrack and capture 'formvox'.
+const NOT_APPID = `(?!'formvox'\\s*,)`;
 
 // Factory functions so every caller gets fresh, non-shared RegExp instances
 // (a shared /g regex carries lastIndex state between files).
 function makeRegexes() {
 	return {
-		T_RE: new RegExp(`(?<![\\w$])${T_PREFIX}t\\(\\s*(?:'formvox'\\s*,\\s*)?${STR}`, 'g'),
-		N_RE: new RegExp(`(?<![\\w$])${T_PREFIX}n\\(\\s*(?:'formvox'\\s*,\\s*)?${STR}\\s*,\\s*${STR}`, 'g'),
+		T_RE: new RegExp(`(?<![\\w$])${T_PREFIX}t\\(\\s*(?:'formvox'\\s*,\\s*)?${NOT_APPID}${STR}`, 'g'),
+		N_RE: new RegExp(`(?<![\\w$])${T_PREFIX}n\\(\\s*(?:'formvox'\\s*,\\s*)?${NOT_APPID}${STR}\\s*,\\s*${STR}`, 'g'),
 		DT_RE: new RegExp(`(?:this\\.)?\\$t\\(\\s*${STR}`, 'g'),
 		DN_RE: new RegExp(`(?:this\\.)?\\$n\\(\\s*${STR}\\s*,\\s*${STR}`, 'g'),
+		// PHP only: ->t("…") / ->n("…", "…"). xgettext (the bot's PHP pass)
+		// reads both quote styles, so the manifest must too.
+		PT_RE: new RegExp(`->t\\(\\s*${DQ_STR}`, 'g'),
+		PN_RE: new RegExp(`->n\\(\\s*${DQ_STR}\\s*,\\s*${DQ_STR}`, 'g'),
 	};
 }
 
@@ -75,6 +86,81 @@ function unescapeLiteral(raw) {
 		if (ch === 't') return '\t';
 		return ch; // \' -> '   \\ -> \
 	});
+}
+
+// Un-escape a captured double-quoted PHP literal (\$, \", \\, \n, \t).
+function unescapePhpDouble(raw) {
+	return raw.replace(/\\([$"\\nt])/g, (_, ch) => {
+		if (ch === 'n') return '\n';
+		if (ch === 't') return '\t';
+		return ch;
+	});
+}
+
+/**
+ * The TRANSLATORS hint that the Nextcloud bot attaches to a call at `index`,
+ * or null. Mirrors translationtool:
+ *   - only the first translation call on a line gets a hint, together with
+ *     calls nested in its arguments (the match may start a little earlier,
+ *     at "$l->t(", or later, at "t(");
+ *   - Vue <template>: the comment on the call's own line, else on the line
+ *     directly above, if it contains TRANSLATORS (one line only);
+ *   - scripts and PHP (xgettext --add-comments=TRANSLATORS): the // comment
+ *     block directly above the line, from its TRANSLATORS line down.
+ */
+const HINT_TEXT = /TRANSLATORS[: ]*(.*)/;
+
+// Where the call starting at `from` ends on its line (its closing parenthesis),
+// so a call nested in its arguments counts as part of it, as for xgettext:
+// t('formvox', 'Move to {section}', { section: x || t('formvox', 'Untitled') }).
+function callEnd(line, from) {
+	let depth = 0;
+	let quote = null;
+	for (let i = line.indexOf('(', from); i >= 0 && i < line.length; i++) {
+		const ch = line[i];
+		if (quote) {
+			if (ch === '\\') i++;
+			else if (ch === quote) quote = null;
+		} else if (ch === "'" || ch === '"' || ch === '`') quote = ch;
+		else if (ch === '(') depth++;
+		else if (ch === ')' && --depth === 0) return i;
+	}
+	return line.length;
+}
+function hintFor(content, index, inTemplate, callRe) {
+	const lineStart = content.lastIndexOf('\n', index - 1) + 1;
+	let lineEnd = content.indexOf('\n', index);
+	if (lineEnd === -1) lineEnd = content.length;
+	const line = content.slice(lineStart, lineEnd);
+	const before = content.slice(0, lineStart).split('\n');
+	before.pop(); // the empty piece after the last newline
+	const clean = (text) => text.replace(/-->.*$/, '').replace(/\*\/\s*$/, '').trim();
+
+	// Only the first call on the line gets the comment: the bot's template regex
+	// is greedy per line, and xgettext gives a comment to the first keyword only.
+	callRe.lastIndex = 0;
+	const first = callRe.exec(line);
+	if (!first || index > lineStart + callEnd(line, first.index)) return null;
+
+	if (inTemplate) {
+		const own = line.match(HINT_TEXT);
+		if (own) return clean(own[1]);
+		const above = (before[before.length - 1] || '').match(HINT_TEXT);
+		return above ? clean(above[1]) : null;
+	}
+
+	const block = [];
+	for (let i = before.length - 1; i >= 0; i--) {
+		// "<?php // …  ?>" in templates/ counts as a // comment too
+		const c = before[i].trim().replace(/^<\?php\s+/, '').replace(/\s*\?>$/, '').match(/^(?:\/\/|\/\*|\*)\s?(.*)$/);
+		if (!c) break;
+		block.unshift(c[1]);
+		if (HINT_TEXT.test(c[1])) {
+			const first = block[0].match(HINT_TEXT)[1];
+			return clean([first, ...block.slice(1)].join(' '));
+		}
+	}
+	return null;
 }
 
 // Recursively collect files under dir matching one of the extensions.
@@ -98,41 +184,60 @@ function walk(dir, exts, acc = []) {
 }
 
 /**
- * Scan src/ + lib/ for translation calls and return the deterministic source
+ * Scan src/ + lib/ + templates/ for translation calls and return the deterministic source
  * string set. Single source of truth for both the POT extractor (this file's
  * CLI) and the prebuild guard (check-l10n-sync.js).
  *
- * @returns {{ singulars: string[], plurals: [string,string][], files: string[] }}
+ * @returns {{ singulars: string[], plurals: [string,string][], files: string[], hints: Map<string, string[]> }}
  *   singulars and plurals are sorted (localeCompare); a string used in n() is a
  *   plural pair and never also appears in singulars.
  */
 function computeSourceStrings() {
 	const singulars = new Set();
 	const plurals = new Map(); // singular -> plural
+	const hints = new Map(); // msgid -> TRANSLATORS hints, in source order
+	const addHint = (msgid, hint) => {
+		if (!hint) return;
+		const list = hints.get(msgid) || [];
+		if (!list.includes(hint)) list.push(hint);
+		hints.set(msgid, list);
+	};
 
 	const files = [
 		...walk(path.join(ROOT, 'src'), ['.vue', '.js']),
 		...walk(path.join(ROOT, 'lib'), ['.php']),
+		...walk(path.join(ROOT, 'templates'), ['.php']),
 	];
 
 	for (const file of files) {
 		const content = fs.readFileSync(file, 'utf8');
-		const { T_RE, N_RE, DT_RE, DN_RE } = makeRegexes();
+		const { T_RE, N_RE, DT_RE, DN_RE, PT_RE, PN_RE } = makeRegexes();
+		const isPhp = file.endsWith('.php');
+		const template = file.endsWith('.vue') ? content.match(/<template>([\s\S]*)<\/template>/) : null;
+		const inTemplate = (i) => template !== null && i >= template.index && i < template.index + template[0].length;
+		const callRe = isPhp ? /->[tn]\(/g : /(?<![\w$])(?:this\.)?[tn]\(\s*'formvox'/g;
+		const hintAt = (i) => hintFor(content, i, inTemplate(i), callRe);
 
 		// Plurals first so we can record the pairing; their singular also counts.
 		let m;
-		for (const re of [N_RE, DN_RE]) {
+		for (const [re, unescape] of [[N_RE, unescapeLiteral], [DN_RE, unescapeLiteral], ...(isPhp ? [[PN_RE, unescapePhpDouble]] : [])]) {
 			while ((m = re.exec(content)) !== null) {
-				const sing = unescapeLiteral(m[1]);
-				const plur = unescapeLiteral(m[2]);
-				if (sing) plurals.set(sing, plur);
+				const sing = unescape(m[1]);
+				const plur = unescape(m[2]);
+				if (sing) {
+					plurals.set(sing, plur);
+					addHint(sing, hintAt(m.index));
+				}
 			}
 		}
 
-		for (const re of [T_RE, DT_RE]) {
+		for (const [re, unescape] of [[T_RE, unescapeLiteral], [DT_RE, unescapeLiteral], ...(isPhp ? [[PT_RE, unescapePhpDouble]] : [])]) {
 			while ((m = re.exec(content)) !== null) {
-				const s = unescapeLiteral(m[1]);
-				if (s) singulars.add(s);
+				const s = unescape(m[1]);
+				if (s) {
+					singulars.add(s);
+					addHint(s, hintAt(m.index));
+				}
 			}
 		}
 	}
@@ -148,7 +253,7 @@ function computeSourceStrings() {
 		.sort((a, b) => a.localeCompare(b))
 		.map(s => [s, plurals.get(s)]);
 
-	return { singulars: sortedSingulars, plurals: sortedPlurals, files };
+	return { singulars: sortedSingulars, plurals: sortedPlurals, files, hints };
 }
 
 /**

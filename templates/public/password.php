@@ -9,7 +9,7 @@ declare(strict_types=1);
 $appId = $_['appId'];
 $token = $_['token'];
 $error = $_['error'] ?? null;
-$title = $_['title'] ?? 'Protected Form';
+$title = $_['title'] ?? $l->t('Protected form');
 ?>
 
 <style>
@@ -121,6 +121,7 @@ html, body, #body-public, #content, #content-wrapper, .content {
         <input
             type="password"
             name="password"
+            <?php // TRANSLATORS: Placeholder of the password field of a protected form?>
             placeholder="<?php p($l->t('Enter password')); ?>"
             required
             autofocus

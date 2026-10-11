@@ -18,8 +18,10 @@ const app = createApp(Editor, {
   adminBranding,
 });
 
-// Make translation functions globally available
-app.config.globalProperties.t = (text, vars = {}) => translate('formvox', text, vars);
-app.config.globalProperties.n = (singular, plural, count, vars = {}) => translatePlural('formvox', singular, plural, count, vars);
+// Make translation functions globally available. Call sites pass the app id
+// first, because that is the only form the Nextcloud
+// Transifex extractor can see.
+app.config.globalProperties.t = translate;
+app.config.globalProperties.n = translatePlural;
 
 app.mount('#formvox-editor');

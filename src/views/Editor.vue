@@ -7,7 +7,8 @@
             <template #icon>
               <ArrowLeftIcon :size="20" />
             </template>
-            {{ t('All forms') }}
+            <!-- TRANSLATORS: Link back to the list of all forms -->
+            {{ t('formvox', 'All forms') }}
           </NcButton>
 
           <div class="editor-topbar__tabs" role="tablist">
@@ -20,7 +21,7 @@
               <template #icon>
                 <PencilIcon :size="20" />
               </template>
-              {{ t('Edit') }}
+              {{ t('formvox', 'Edit') }}
             </NcButton>
             <NcButton
               role="tab"
@@ -31,7 +32,7 @@
               <template #icon>
                 <EyeIcon :size="20" />
               </template>
-              {{ t('Preview') }}
+              {{ t('formvox', 'Preview') }}
             </NcButton>
           </div>
 
@@ -39,27 +40,29 @@
             <NcButton
               type="secondary"
               :disabled="!canShare"
-              :title="t('Share')"
-              :aria-label="t('Share')"
+              :title="t('formvox', 'Share')"
+              :aria-label="t('formvox', 'Share')"
               @click="showShare = true"
             >
               <template #icon>
                 <ShareIcon :size="20" />
               </template>
-              {{ t('Share') }}
+              <!-- TRANSLATORS: Verb: button that opens the share dialog -->
+              {{ t('formvox', 'Share') }}
             </NcButton>
 
             <NcButton
               v-if="canViewResponses"
               type="primary"
-              :title="t('Results')"
-              :aria-label="t('Results')"
+              :title="t('formvox', 'Results')"
+              :aria-label="t('formvox', 'Results')"
               @click="viewResults"
             >
               <template #icon>
                 <ChartIcon :size="20" />
               </template>
-              {{ t('Results') }}
+              <!-- TRANSLATORS: Noun: button that opens the results -->
+              {{ t('formvox', 'Results') }}
             </NcButton>
 
             <NcActions>
@@ -67,27 +70,32 @@
                 <template #icon>
                   <PagesIcon :size="20" />
                 </template>
-                {{ t('Add page') }}
+                <!-- TRANSLATORS: Verb: button -->
+                {{ t('formvox', 'Add page') }}
               </NcActionButton>
               <NcActionButton :disabled="!canEdit" @click="togglePages">
                 <template #icon>
                   <PagesOffIcon v-if="hasPages" :size="20" />
                   <PagesOnIcon v-else :size="20" />
                 </template>
-                {{ hasPages ? t('Disable pages') : t('Enable pages') }}
+                <!-- TRANSLATORS: Verb: button that turns off splitting the form into pages -->
+                <template v-if="hasPages">{{ t('formvox', 'Disable pages') }}</template>
+                <!-- TRANSLATORS: Verb: button that splits the form into pages -->
+                <template v-else>{{ t('formvox', 'Enable pages') }}</template>
               </NcActionButton>
               <NcActionSeparator />
               <NcActionButton :disabled="!canEditSettings" @click="showBranding = true">
                 <template #icon>
                   <PaletteIcon :size="20" />
                 </template>
-                {{ t('Branding') }}
+                {{ t('formvox', 'Branding') }}
               </NcActionButton>
               <NcActionButton :disabled="!canEditSettings" @click="showSettings = true">
                 <template #icon>
                   <CogIcon :size="20" />
                 </template>
-                {{ t('Work together') }}
+                <!-- TRANSLATORS: Verb: button to edit the form together with others -->
+                {{ t('formvox', 'Work together') }}
               </NcActionButton>
             </NcActions>
           </div>
@@ -98,37 +106,38 @@
           <div class="lock-editor-info">
             <NcAvatar :user="lockingEditor?.userId" :display-name="lockingEditor?.displayName" :size="32" />
             <div class="lock-editor-text">
-              <strong>{{ lockingEditor?.displayName || t('Someone') }}</strong>
-              {{ t('is currently editing this form') }}
+              <!-- TRANSLATORS: Shown instead of a name when it is not known who is editing -->
+              <strong>{{ lockingEditor?.displayName || t('formvox', 'Someone') }}</strong>
+              {{ t('formvox', 'is currently editing this form') }}
             </div>
           </div>
-          <span class="lock-subtitle">{{ t('You can view the form but not make changes right now.') }}</span>
+          <span class="lock-subtitle">{{ t('formvox', 'You can view the form but not make changes right now.') }}</span>
         </div>
 
         <!-- Permission banner for read-only users -->
         <div v-else-if="!hasEditPermission" class="permission-banner">
           <span class="permission-icon">🔒</span>
-          <span>{{ t('You have read-only access to this form. Contact the owner to request edit permissions.') }}</span>
+          <span>{{ t('formvox', 'You have read-only access to this form. Contact the owner to request edit permissions.') }}</span>
         </div>
 
         <div class="editor-header">
           <div class="form-field">
-            <label class="form-label">{{ t('Form title') }}</label>
+            <label class="form-label">{{ t('formvox', 'Form title') }}</label>
             <NcTextField
               v-model="form.title"
               :disabled="!canEdit"
-              :placeholder="t('Enter form title')"
+              :placeholder="t('formvox', 'Enter form title')"
               class="title-input"
               @update:model-value="debouncedSave"
             />
           </div>
           <div class="form-field">
-            <label class="form-label">{{ t('Description') }}</label>
+            <label class="form-label">{{ t('formvox', 'Description') }}</label>
             <MarkdownEditor
               v-model="form.description"
               :align="form.descriptionAlign || 'left'"
               :disabled="!canEdit"
-              :placeholder="t('Enter description (optional)')"
+              :placeholder="t('formvox', 'Enter description (optional)')"
               class="description-input"
               @update:model-value="debouncedSave"
               @update:align="updateDescriptionAlign"
@@ -145,20 +154,22 @@
             :class="{ active: currentPageIndex === pageIndex }"
             @click="currentPageIndex = pageIndex"
           >
-            <span class="page-title">{{ page.title || t('Page {n}', { n: pageIndex + 1 }) }}</span>
+            <span class="page-title">{{ page.title || t('formvox', 'Page {n}', { n: pageIndex + 1 }) }}</span>
             <span class="page-question-count">({{ page.questions.length }})</span>
             <NcActions v-if="form.pages.length > 1" class="page-actions">
               <NcActionButton @click.stop="renamePage(pageIndex)">
-                {{ t('Rename') }}
+                <!-- TRANSLATORS: Verb: menu entry -->
+                {{ t('formvox', 'Rename') }}
               </NcActionButton>
               <NcActionButton @click.stop="openRouting(pageIndex)">
                 <template #icon>
                   <RouteIcon :size="20" />
                 </template>
-                {{ t('Routing') }}
+                <!-- TRANSLATORS: Menu entry that opens the page routing rules -->
+                {{ t('formvox', 'Routing') }}
               </NcActionButton>
               <NcActionButton @click.stop="deletePage(pageIndex)">
-                {{ t('Delete') }}
+                {{ t('formvox', 'Delete') }}
               </NcActionButton>
             </NcActions>
           </div>
@@ -173,9 +184,9 @@
             />
           </div>
           <div v-else class="preview-no-link">
-            <p>{{ t('Create a public link first to preview the form.') }}</p>
+            <p>{{ t('formvox', 'Create a public link first to preview the form.') }}</p>
             <NcButton type="primary" @click="showShare = true">
-              {{ t('Create public link') }}
+              {{ t('formvox', 'Create public link') }}
             </NcButton>
           </div>
         </div>
@@ -211,7 +222,7 @@
             </draggable>
 
             <div v-if="currentPageQuestions.length === 0" class="empty-questions">
-              <p>{{ t('No questions on this page. Click "Add question" to add one.') }}</p>
+              <p>{{ t('formvox', 'No questions on this page. Click "Add question" to add one.') }}</p>
             </div>
           </template>
 
@@ -241,7 +252,7 @@
             </draggable>
 
             <div v-if="form.questions.length === 0" class="empty-questions">
-              <p>{{ t('No questions yet. Click "Add question" to get started.') }}</p>
+              <p>{{ t('formvox', 'No questions yet. Click "Add question" to get started.') }}</p>
             </div>
           </template>
 
@@ -250,19 +261,21 @@
               <template #icon>
                 <PlusIcon :size="20" />
               </template>
-              {{ t('Add question') }}
+              <!-- TRANSLATORS: Verb: button -->
+              {{ t('formvox', 'Add question') }}
             </NcButton>
             <NcButton type="tertiary" @click="addSection">
               <template #icon>
                 <SectionIcon :size="20" />
               </template>
-              {{ t('Add section') }}
+              <!-- TRANSLATORS: Verb: button -->
+              {{ t('formvox', 'Add section') }}
             </NcButton>
             <NcButton type="tertiary" @click="addDescriptor">
               <template #icon>
                 <InfoIcon :size="20" />
               </template>
-              {{ t('Add info block') }}
+              {{ t('formvox', 'Add info block') }}
             </NcButton>
           </div>
         </div>
@@ -508,7 +521,7 @@ export default {
 
     const save = async () => {
       if (!canEdit.value) {
-        showError(t('You do not have permission to edit this form'));
+        showError(t('formvox', 'You do not have permission to edit this form'));
         return;
       }
       saving.value = true;
@@ -525,12 +538,12 @@ export default {
             branding: form.branding,
           }
         );
-        showSuccess(t('All changes saved'));
+        showSuccess(t('formvox', 'All changes saved'));
       } catch (error) {
         if (error.response?.status === 403) {
-          showError(t('You do not have permission to edit this form'));
+          showError(t('formvox', 'You do not have permission to edit this form'));
         } else {
-          showError(t('Failed to save form'));
+          showError(t('formvox', 'Failed to save form'));
         }
         console.error(error);
       } finally {
@@ -806,7 +819,8 @@ export default {
 
     const renamePage = (pageIndex) => {
       const page = form.pages[pageIndex];
-      const newTitle = prompt(t('Enter page title:'), page.title || '');
+      // TRANSLATORS: Prompt in a browser dialog
+      const newTitle = prompt(t('formvox', 'Enter page title:'), page.title || '');
       if (newTitle !== null) {
         page.title = newTitle;
         debouncedSave();

@@ -5,8 +5,8 @@ import ImportModal from '@/components/ImportModal.vue'
 
 /**
  * Characterization tests for the multi-step ImportModal (Microsoft Forms wizard).
- * Its local t() reads window.t and otherwise returns the raw English string, so
- * assertions match the untranslated text.
+ * Translation goes through the identity @nextcloud/l10n stub, so assertions
+ * match the untranslated text.
  */
 describe('ImportModal', () => {
 	const mountModal = (props = {}) =>

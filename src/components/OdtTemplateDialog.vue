@@ -5,28 +5,35 @@
     size="normal"
   >
     <div class="odt-template-dialog">
-      <h2>{{ t('ODT Template') }}</h2>
+      <!-- TRANSLATORS: Heading of the dialog for an OpenDocument text template -->
+      <h2>{{ t('formvox', 'ODT template') }}</h2>
 
       <p class="description">
-        {{ t('Design your own document layout in LibreOffice or Word, and use placeholders where you want answers to appear. When you export responses as ODT, each response will be filled into your template.') }}
+        {{ t('formvox', 'Design your own document layout in LibreOffice or Word, and use placeholders where you want answers to appear. When you export responses as ODT, each response will be filled into your template.') }}
       </p>
 
       <div v-if="hasTemplate" class="template-status">
-        <p class="status-active">{{ t('Template active — exports will use this template.') }}</p>
+        <p class="status-active">{{ t('formvox', 'Template active — exports will use this template.') }}</p>
         <div class="template-actions">
           <NcButton type="secondary" @click="downloadTemplate">
-            {{ t('Download template') }}
+            <!-- TRANSLATORS: Verb: button -->
+            {{ t('formvox', 'Download template') }}
           </NcButton>
           <NcButton type="error" @click="deleteTemplate">
-            {{ t('Delete template') }}
+            <!-- TRANSLATORS: Verb: button -->
+            {{ t('formvox', 'Delete template') }}
           </NcButton>
         </div>
       </div>
 
       <div class="upload-section">
-        <h3>{{ hasTemplate ? t('Replace template') : t('Upload template') }}</h3>
+        <!-- TRANSLATORS: Heading: replace the uploaded template -->
+        <h3 v-if="hasTemplate">{{ t('formvox', 'Replace template') }}</h3>
+        <!-- TRANSLATORS: Heading: upload a template -->
+        <h3 v-else>{{ t('formvox', 'Upload template') }}</h3>
         <p class="help-text">
-          {{ t('Upload an ODT file with placeholders like {Q1}, {Q2}, etc. These will be replaced with the actual answers when exporting.') }}
+          <!-- TRANSLATORS: {Q1} and {Q2} are literal placeholders the user types in the document; keep them exactly as they are -->
+          {{ t('formvox', 'Upload an ODT file with placeholders like {Q1}, {Q2}, etc. These will be replaced with the actual answers when exporting.') }}
         </p>
         <input
           ref="fileInput"
@@ -40,24 +47,29 @@
           :disabled="uploading"
           @click="uploadTemplate"
         >
-          {{ uploading ? t('Uploading …') : t('Upload') }}
+          <!-- TRANSLATORS: Button text while uploading -->
+          {{ uploading ? t('formvox', 'Uploading …') : t('formvox', 'Upload') }}
         </NcButton>
       </div>
 
       <div class="placeholders-section">
-        <h3>{{ t('Available placeholders') }}</h3>
+        <!-- TRANSLATORS: Heading above the placeholders a template can use -->
+        <h3>{{ t('formvox', 'Available placeholders') }}</h3>
         <div class="placeholders-list">
           <div class="placeholder-item">
             <code>{form_title}</code>
-            <span>{{ t('Form title') }}</span>
+            <!-- TRANSLATORS: Label of the title field of a form -->
+            <span>{{ t('formvox', 'Form title') }}</span>
           </div>
           <div class="placeholder-item">
             <code>{submitted_at}</code>
-            <span>{{ t('Submission date') }}</span>
+            <!-- TRANSLATORS: Explanation of a template placeholder: the date a response was sent -->
+            <span>{{ t('formvox', 'Submission date') }}</span>
           </div>
           <div class="placeholder-item">
             <code>{respondent_name}</code>
-            <span>{{ t('Respondent name') }}</span>
+            <!-- TRANSLATORS: Explanation of a template placeholder: who answered -->
+            <span>{{ t('formvox', 'Respondent name') }}</span>
           </div>
           <div
             v-for="(question, index) in form.questions"
@@ -124,10 +136,11 @@ export default {
         hasTemplate.value = true;
         selectedFile.value = null;
         if (fileInput.value) fileInput.value.value = '';
-        showSuccess(t('Template uploaded'));
+        // TRANSLATORS: Confirmation message
+        showSuccess(t('formvox', 'Template uploaded'));
         emit('template-changed', true);
       } catch (error) {
-        showError(t('Failed to upload template'));
+        showError(t('formvox', 'Failed to upload template'));
         console.error(error);
       } finally {
         uploading.value = false;
@@ -139,16 +152,17 @@ export default {
     };
 
     const deleteTemplate = async () => {
-      if (!confirm(t('Are you sure you want to delete the template?'))) return;
+      if (!confirm(t('formvox', 'Are you sure you want to delete the template?'))) return;
       try {
         await axios.delete(
           generateUrl('/apps/formvox/api/form/{fileId}/odt-template', { fileId: props.fileId })
         );
         hasTemplate.value = false;
-        showSuccess(t('Template deleted'));
+        // TRANSLATORS: Confirmation message
+        showSuccess(t('formvox', 'Template deleted'));
         emit('template-changed', false);
       } catch (error) {
-        showError(t('Failed to delete template'));
+        showError(t('formvox', 'Failed to delete template'));
         console.error(error);
       }
     };

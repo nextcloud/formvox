@@ -2,8 +2,9 @@
   <NcModal :show="true" size="large" @close="$emit('close')">
     <div class="form-branding-editor">
       <div class="modal-header">
-        <h2>{{ t('Form theme') }}</h2>
-        <p class="description">{{ t('Customize the look and feel of this form. Leave disabled to use the admin defaults.') }}</p>
+        <!-- TRANSLATORS: Heading of the dialog that sets the colors and layout of one form -->
+        <h2>{{ t('formvox', 'Form theme') }}</h2>
+        <p class="description">{{ t('formvox', 'Customize the look and feel of this form. Leave disabled to use the administration defaults.') }}</p>
       </div>
 
       <div class="branding-toggle">
@@ -11,7 +12,7 @@
           :model-value="useCustomBranding"
           @update:model-value="toggleCustomBranding"
         >
-          {{ t('Use custom theme for this form') }}
+          {{ t('formvox', 'Use custom theme for this form') }}
         </NcCheckboxRadioSwitch>
       </div>
 
@@ -27,13 +28,14 @@
       <div v-else class="using-defaults">
         <div class="info-box">
           <InfoIcon :size="20" />
-          <span>{{ t('This form uses the default theme. Enable custom theme above to customize.') }}</span>
+          <span>{{ t('formvox', 'This form uses the default theme. Enable custom theme above to customize.') }}</span>
         </div>
       </div>
 
       <div class="modal-actions">
         <NcButton @click="$emit('close')">
-          {{ t('Close') }}
+          <!-- TRANSLATORS: Verb: button that closes a dialog -->
+          {{ t('formvox', 'Close') }}
         </NcButton>
       </div>
     </div>
@@ -47,7 +49,8 @@ import { t } from '@/utils/l10n';
 import PageBuilder from './pagebuilder/PageBuilder.vue';
 import InfoIcon from './icons/InfoIcon.vue';
 
-const DEFAULT_BRANDING = {
+// A function, so the default thank-you text is translated when it is used.
+const defaultBranding = () => ({
   layout: {
     header: [],
     footer: [],
@@ -58,7 +61,7 @@ const DEFAULT_BRANDING = {
         alignment: 'center',
         settings: {
           level: 'h1',
-          text: 'Thank you!',
+          text: t('formvox', 'Thank you!'),
         },
       },
       {
@@ -66,7 +69,7 @@ const DEFAULT_BRANDING = {
         type: 'text',
         alignment: 'center',
         settings: {
-          content: 'Your response has been submitted successfully.',
+          content: t('formvox', 'Your response has been submitted successfully.'),
         },
       },
     ],
@@ -76,7 +79,7 @@ const DEFAULT_BRANDING = {
     backgroundColor: '#ffffff',
     fontFamily: 'default',
   },
-};
+});
 
 export default {
   name: 'FormBrandingEditor',
@@ -107,7 +110,7 @@ export default {
     const localBranding = reactive(
       (props.branding != null && Object.keys(props.branding).length > 0)
         ? JSON.parse(JSON.stringify(props.branding))
-        : JSON.parse(JSON.stringify(DEFAULT_BRANDING))
+        : defaultBranding()
     );
 
     const toggleCustomBranding = (enabled) => {

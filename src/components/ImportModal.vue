@@ -1,9 +1,9 @@
 <template>
-  <NcModal
+  <!-- TRANSLATORS: Title of the import dialog; verb phrase: import a form -->
+  <NcModal :title="t('formvox', 'Import form')"
     :show="show"
     @close="$emit('close')"
     size="large"
-    :title="t('formvox', 'Import form')"
   >
     <div class="import-modal">
       <!-- Step Indicator -->
@@ -35,7 +35,7 @@
               @click="selectSource('msforms')"
             >
               <MicrosoftIcon :size="32" />
-              <span class="option-title">{{ t('formvox', 'Microsoft Forms') }}</span>
+              <span class="option-title">Microsoft Forms</span>
               <span class="option-desc">{{ t('formvox', 'Import form structure and responses') }}</span>
             </button>
 
@@ -46,6 +46,7 @@
               disabled
             >
               <FileExcelIcon :size="32" />
+              <!-- TRANSLATORS: Import source: a Microsoft Excel file -->
               <span class="option-title">{{ t('formvox', 'Excel file') }}</span>
               <span class="option-desc">{{ t('formvox', 'Import responses only (coming soon)') }}</span>
             </button>
@@ -58,7 +59,7 @@
 
           <div v-if="!msConfigured" class="not-configured">
             <NcNoteCard type="warning">
-              {{ t('formvox', 'Microsoft Forms import is not configured. Please ask your administrator to configure it in Settings > FormVox > Integrations.') }}
+              {{ t('formvox', 'Microsoft Forms import is not configured. Please ask your administrator to configure it in Administration settings > FormVox > Integrations.') }}
             </NcNoteCard>
           </div>
 
@@ -67,6 +68,7 @@
               {{ t('formvox', 'You are connected to Microsoft. Click Next to select a form to import.') }}
             </NcNoteCard>
             <NcButton type="tertiary" @click="disconnectMs">
+              <!-- TRANSLATORS: Verb: button that disconnects the Microsoft account -->
               {{ t('formvox', 'Disconnect') }}
             </NcButton>
           </div>
@@ -77,6 +79,7 @@
               <template #icon>
                 <MicrosoftIcon :size="20" />
               </template>
+              <!-- TRANSLATORS: Button text while connecting to Microsoft -->
               {{ connecting ? t('formvox', 'Connecting …') : t('formvox', 'Connect Microsoft account') }}
             </NcButton>
           </div>
@@ -107,7 +110,8 @@
               <div class="form-info">
                 <span class="form-title">{{ form.title }}</span>
                 <span class="form-meta">
-                  {{ form.responseCount }} {{ t('formvox', 'responses') }}
+                  <!-- TRANSLATORS: %n is the number of responses to a form -->
+                  {{ n('formvox', '%n response', '%n responses', form.responseCount) }}
                 </span>
               </div>
               <CheckIcon v-if="selectedMsForm?.id === form.id" :size="20" />
@@ -117,6 +121,7 @@
 
         <!-- Step 3: Import Options -->
         <div v-if="currentStep === 3" class="step-panel">
+          <!-- TRANSLATORS: Heading in the import dialog -->
           <h2>{{ t('formvox', 'Import options') }}</h2>
 
           <div v-if="selectedMsForm" class="selected-form-preview">
@@ -133,6 +138,7 @@
             </NcCheckboxRadioSwitch>
 
             <div class="path-selector">
+              <!-- TRANSLATORS: Label of the folder where the new form is saved -->
               <label>{{ t('formvox', 'Save location') }}</label>
               <input
                 type="text"
@@ -144,6 +150,7 @@
           </div>
 
           <div v-if="previewWarnings.length > 0" class="warnings">
+            <!-- TRANSLATORS: Heading above notes about an import -->
             <h4>{{ t('formvox', 'Notes') }}</h4>
             <ul>
               <li v-for="(warning, idx) in previewWarnings" :key="idx">{{ warning }}</li>
@@ -153,6 +160,7 @@
 
         <!-- Step 4: Importing -->
         <div v-if="currentStep === 4" class="step-panel">
+          <!-- TRANSLATORS: Shown while a form is being imported -->
           <h2>{{ t('formvox', 'Importing …') }}</h2>
 
           <div v-if="importing" class="importing">
@@ -165,6 +173,7 @@
               {{ importError }}
             </NcNoteCard>
             <NcButton @click="currentStep = 3">
+              <!-- TRANSLATORS: Verb: button to return to the previous step -->
               {{ t('formvox', 'Go back') }}
             </NcButton>
           </div>
@@ -176,13 +185,16 @@
 
             <div class="import-summary">
               <p><strong>{{ importResult.title }}</strong></p>
-              <p>{{ importResult.questionsImported }} {{ t('formvox', 'questions imported') }}</p>
+              <!-- TRANSLATORS: %n is the number of questions that were imported -->
+              <p>{{ n('formvox', '%n question imported', '%n questions imported', importResult.questionsImported) }}</p>
               <p v-if="importResult.responsesImported > 0">
-                {{ importResult.responsesImported }} {{ t('formvox', 'responses imported') }}
+                <!-- TRANSLATORS: %n is the number of responses that were imported -->
+                {{ n('formvox', '%n response imported', '%n responses imported', importResult.responsesImported) }}
               </p>
             </div>
 
             <div v-if="importResult.warnings?.length > 0" class="import-warnings">
+              <!-- TRANSLATORS: Heading above a list of import warnings -->
               <h4>{{ t('formvox', 'Warnings') }}</h4>
               <ul>
                 <li v-for="(warning, idx) in importResult.warnings" :key="idx">{{ warning }}</li>
@@ -191,6 +203,7 @@
 
             <div class="import-actions">
               <NcButton type="primary" @click="openImportedForm">
+                <!-- TRANSLATORS: Verb: button that opens the imported form -->
                 {{ t('formvox', 'Open form') }}
               </NcButton>
               <NcButton @click="$emit('close')">
@@ -204,6 +217,7 @@
       <!-- Navigation -->
       <div v-if="currentStep < 4 || importError" class="step-navigation">
         <NcButton v-if="currentStep > 0" @click="prevStep">
+          <!-- TRANSLATORS: Verb: button to the previous step -->
           {{ t('formvox', 'Back') }}
         </NcButton>
         <div class="spacer"></div>
@@ -216,6 +230,7 @@
           :disabled="!canProceed"
           @click="nextStep"
         >
+          <!-- TRANSLATORS: Verb: button to the next step or page -->
           {{ t('formvox', 'Next') }}
         </NcButton>
         <NcButton
@@ -224,7 +239,8 @@
           :disabled="!selectedMsForm"
           @click="startImport"
         >
-          {{ t('formvox', 'Import') }}
+          <!-- TRANSLATORS: Verb: button that starts importing the form -->
+          {{ t('formvox', 'Start import') }}
         </NcButton>
       </div>
     </div>
@@ -237,6 +253,7 @@ import { NcModal, NcButton, NcNoteCard, NcCheckboxRadioSwitch, NcLoadingIcon } f
 import axios from '@nextcloud/axios';
 import { generateUrl } from '@nextcloud/router';
 import { showError } from '@nextcloud/dialogs';
+import { t, n } from '@/utils/l10n';
 import MicrosoftIcon from 'vue-material-design-icons/Microsoft.vue';
 import FileExcelIcon from 'vue-material-design-icons/FileExcel.vue';
 import CheckIcon from 'vue-material-design-icons/Check.vue';
@@ -291,16 +308,23 @@ export default {
     const steps = computed(() => {
       if (importSource.value === 'msforms') {
         return [
+          // TRANSLATORS: Step name in the import dialog: choose where to import from; keep it short
           { label: t('formvox', 'Source') },
+          // TRANSLATORS: Step name in the import dialog: connect to Microsoft; keep it short
           { label: t('formvox', 'Connect') },
+          // TRANSLATORS: Step name in the import dialog: choose a form; keep it short
           { label: t('formvox', 'Select') },
+          // TRANSLATORS: Noun: step name in the import dialog, and the heading above answer options
           { label: t('formvox', 'Options') },
+          // TRANSLATORS: Step name in the import dialog (the last step); keep it short
           { label: t('formvox', 'Import') },
         ];
       }
       return [
         { label: t('formvox', 'Source') },
+        // TRANSLATORS: Verb: step name in the import dialog and button that uploads a file
         { label: t('formvox', 'Upload') },
+        // TRANSLATORS: Verb: step name in the import dialog: match columns to questions; keep it short
         { label: t('formvox', 'Map') },
         { label: t('formvox', 'Import') },
       ];
@@ -434,13 +458,6 @@ export default {
       }
     };
 
-    const t = (app, text, vars) => {
-      if (window.t) {
-        return vars ? window.t(app, text, vars) : window.t(app, text);
-      }
-      return text;
-    };
-
     onMounted(() => {
       checkMsConnection();
     });
@@ -470,6 +487,7 @@ export default {
       startImport,
       openImportedForm,
       t,
+      n,
     };
   },
 };

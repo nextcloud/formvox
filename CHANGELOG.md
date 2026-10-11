@@ -2,6 +2,11 @@
 
 All notable changes to FormVox will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **The English interface text now uses American spelling throughout** ("license", "organization"), as Nextcloud itself does. Until now the source strings mixed British and American forms. The existing Dutch, German, French, Catalan and Ukrainian translations carry over to the new spelling.
+
 ## [1.5.0] - 2026-09-21
 
 > **Upgrading from 1.4.6?** Version 1.4.7 was tagged but never published to the App Store, so its three fixes are listed here: 1.5.0 is the first release to carry them — the captured email addresses ([#143](https://github.com/nextcloud/formvox/issues/143)), Team Folder links on folders with many groups ([#136](https://github.com/nextcloud/formvox/issues/136)) and branding on the public form page ([#142](https://github.com/nextcloud/formvox/issues/142)).

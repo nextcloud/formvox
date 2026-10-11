@@ -1,14 +1,16 @@
 <template>
   <NcModal @close="$emit('close')">
     <div class="share-dialog">
-      <h2>{{ t('Share form') }}</h2>
+      <!-- TRANSLATORS: Heading of the share dialog -->
+      <h2>{{ t('formvox', 'Share form') }}</h2>
 
       <p class="share-description">
-        {{ t('Share this form with others to collect responses.') }}
+        {{ t('formvox', 'Share this form with others to collect responses.') }}
       </p>
 
       <div class="share-link-section">
-        <h3>{{ t('Response link') }}</h3>
+        <!-- TRANSLATORS: Heading: the public link people use to fill in the form -->
+        <h3>{{ t('formvox', 'Response link') }}</h3>
 
         <div v-if="shareLink" class="share-link-display">
           <input
@@ -22,7 +24,7 @@
             <template #icon>
               <CopyIcon :size="20" />
             </template>
-            {{ copied ? t('Copied!') : t('Copy') }}
+            {{ copied ? t('formvox', 'Copied!') : t('formvox', 'Copy') }}
           </NcButton>
         </div>
 
@@ -33,15 +35,15 @@
             <template #icon>
               <DownloadIcon :size="20" />
             </template>
-            {{ t('Download QR code') }}
+            {{ t('formvox', 'Download QR code') }}
           </NcButton>
         </div>
 
         <div v-else class="create-link">
-          <p v-if="canShare">{{ t('No link yet. Create one to start collecting responses.') }}</p>
-          <p v-else>{{ t('You do not have permission to create a response link.') }}</p>
+          <p v-if="canShare">{{ t('formvox', 'No link yet. Create one to start collecting responses.') }}</p>
+          <p v-else>{{ t('formvox', 'You do not have permission to create a response link.') }}</p>
           <NcButton type="primary" :disabled="creatingLink || !canShare" @click="createShareLink">
-            {{ creatingLink ? t('Creating …') : t('Create response link') }}
+            {{ creatingLink ? t('formvox', 'Creating …') : t('formvox', 'Create response link') }}
           </NcButton>
         </div>
       </div>
@@ -50,28 +52,30 @@
       <div v-if="shareLink" class="settings-section">
         <h3>
           <CogIcon :size="18" />
-          {{ t('Response settings') }}
+          <!-- TRANSLATORS: Heading -->
+          {{ t('formvox', 'Response settings') }}
         </h3>
         <div class="section-content">
           <NcCheckboxRadioSwitch
             :model-value="responseSettings.allowAnonymous"
             @update:model-value="updateResponseSetting('anonymous', $event)"
           >
-            {{ t('Collect anonymously') }}
+            <!-- TRANSLATORS: Switch: do not record who answered -->
+            {{ t('formvox', 'Collect anonymously') }}
           </NcCheckboxRadioSwitch>
 
           <NcCheckboxRadioSwitch
             :model-value="responseSettings.allowMultiple"
             @update:model-value="updateResponseSetting('allow_multiple', $event)"
           >
-            {{ t('Allow multiple submissions') }}
+            {{ t('formvox', 'Allow multiple submissions') }}
           </NcCheckboxRadioSwitch>
 
           <NcCheckboxRadioSwitch
             :model-value="responseSettings.requireLogin"
             @update:model-value="updateResponseSetting('require_login', $event)"
           >
-            {{ t('Require login to respond') }}
+            {{ t('formvox', 'Require login to respond') }}
           </NcCheckboxRadioSwitch>
 
           <!-- Confirmation email to respondent (#103) -->
@@ -79,25 +83,25 @@
             :model-value="responseSettings.sendConfirmationEmail"
             @update:model-value="toggleConfirmationEmail"
           >
-            {{ t('Email confirmation to respondent') }}
+            {{ t('formvox', 'Email confirmation to respondent') }}
           </NcCheckboxRadioSwitch>
           <div v-if="responseSettings.sendConfirmationEmail" class="confirmation-email-fields">
-            <small class="hint">{{ t('An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there.') }}</small>
+            <small class="hint">{{ t('formvox', 'An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there.') }}</small>
             <NcTextField
               :model-value="responseSettings.confirmationEmailSubject"
-              :placeholder="t('Subject (optional, default uses form title)')"
+              :placeholder="t('formvox', 'Subject (optional, default uses form title)')"
               @update:model-value="updateResponseSetting('confirmationEmailSubject', $event)"
             />
             <NcTextArea
               :model-value="responseSettings.confirmationEmailBody"
-              :placeholder="t('Body (optional, default thanks the respondent)')"
+              :placeholder="t('formvox', 'Body (optional, default thanks the respondent)')"
               :rows="3"
               @update:model-value="updateResponseSetting('confirmationEmailBody', $event)"
             />
           </div>
 
           <div class="notify-recipients">
-            <span class="section-label">{{ t('Notify on new responses') }}</span>
+            <span class="section-label">{{ t('formvox', 'Notify on new responses') }}</span>
             <div class="chips">
               <div
                 v-for="r in notifyRecipients"
@@ -113,8 +117,8 @@
             <div class="search-field">
               <NcTextField
                 v-model="notifySearchTerm"
-                :label="t('Search users and groups')"
-                :placeholder="t('Type to search …')"
+                :label="t('formvox', 'Search accounts and groups')"
+                :placeholder="t('formvox', 'Type to search …')"
                 @input="searchNotifySharees"
               />
             </div>
@@ -144,12 +148,13 @@
             :model-value="responseSettings.limitResponses"
             @update:model-value="toggleResponseLimit"
           >
-            {{ t('Limit total responses') }}
+            {{ t('formvox', 'Limit total responses') }}
           </NcCheckboxRadioSwitch>
 
           <div v-if="responseSettings.limitResponses" class="response-limit-settings">
             <div class="limit-input-row">
-              <label>{{ t('Maximum responses') }}:</label>
+              <!-- TRANSLATORS: Label of the response limit -->
+              <label>{{ t('formvox', 'Maximum responses:') }}</label>
               <input
                 type="number"
                 v-model.number="responseSettings.maxResponses"
@@ -160,15 +165,16 @@
               >
             </div>
             <div class="limit-input-row">
-              <label>{{ t('Message when full') }}:</label>
+              <label>{{ t('formvox', 'Message when full:') }}</label>
               <NcTextField
                 v-model="responseSettings.limitMessage"
-                :placeholder="t('This form has reached its response limit')"
+                :placeholder="t('formvox', 'This form has reached its response limit')"
                 @update:model-value="saveResponseLimit"
               />
             </div>
             <p v-if="responseCount > 0" class="limit-status">
-              {{ t('Current responses: {current} / {max}', { current: responseCount, max: responseSettings.maxResponses }) }}
+              <!-- TRANSLATORS: {current} is the number of responses so far, {max} the limit -->
+              {{ t('formvox', 'Current responses: {current} / {max}', { current: responseCount, max: responseSettings.maxResponses }) }}
             </p>
           </div>
         </div>
@@ -178,25 +184,27 @@
       <div v-if="shareLink" class="settings-section">
         <h3>
           <LinkIcon :size="18" />
-          {{ t('Link settings') }}
+          <!-- TRANSLATORS: Heading of the settings of the public link -->
+          {{ t('formvox', 'Link settings') }}
         </h3>
         <div class="section-content">
           <NcCheckboxRadioSwitch
             :model-value="linkSettings.passwordProtected"
             @update:model-value="togglePassword"
           >
-            {{ t('Password protect') }}
+            <!-- TRANSLATORS: Switch: require a password for the public link -->
+            {{ t('formvox', 'Password protect') }}
           </NcCheckboxRadioSwitch>
 
           <div v-if="linkSettings.passwordProtected" class="password-field">
-            <NcTextField
+            <!-- TRANSLATORS: Label of the password field -->
+            <NcTextField :label="t('formvox', 'Password')"
               v-model="linkSettings.password"
               type="password"
-              :label="t('Password')"
-              :placeholder="t('Enter new password')"
+              :placeholder="t('formvox', 'Enter new password')"
             />
             <NcButton type="primary" @click="savePassword">
-              {{ t('Save') }}
+              {{ t('formvox', 'Save') }}
             </NcButton>
           </div>
 
@@ -204,19 +212,20 @@
             :model-value="linkSettings.hasStart"
             @update:model-value="toggleLinkStart"
           >
-            {{ t('Schedule opening') }}
+            <!-- TRANSLATORS: Switch: the link only works from a set date -->
+            {{ t('formvox', 'Schedule opening') }}
           </NcCheckboxRadioSwitch>
 
           <div v-if="linkSettings.hasStart" class="expiration-fields">
             <NcDateTimePickerNative
               v-model="startDate"
               type="date"
-              :label="t('Date')"
+              :label="t('formvox', 'Date')"
             />
             <NcDateTimePickerNative
               v-model="startTime"
               type="time"
-              :label="t('Time')"
+              :label="t('formvox', 'Time')"
             />
           </div>
 
@@ -224,19 +233,20 @@
             :model-value="linkSettings.expires"
             @update:model-value="toggleLinkExpiration"
           >
-            {{ t('Set expiration') }}
+            <!-- TRANSLATORS: Switch: the link stops working after a set date -->
+            {{ t('formvox', 'Set expiration') }}
           </NcCheckboxRadioSwitch>
 
           <div v-if="linkSettings.expires" class="expiration-fields">
             <NcDateTimePickerNative
               v-model="expirationDate"
               type="date"
-              :label="t('Date')"
+              :label="t('formvox', 'Date')"
             />
             <NcDateTimePickerNative
               v-model="expirationTime"
               type="time"
-              :label="t('Time')"
+              :label="t('formvox', 'Time')"
             />
           </div>
 
@@ -244,26 +254,27 @@
             :model-value="accessRestrictions.enabled"
             @update:model-value="toggleAccessRestrictions"
           >
-            {{ t('Restrict to specific users/groups') }}
+            {{ t('formvox', 'Restrict to specific accounts or groups') }}
           </NcCheckboxRadioSwitch>
 
           <div v-if="accessRestrictions.enabled" class="access-restrictions">
             <p class="restriction-note">
-              {{ t('Only selected users and group members can access this form. They will need to log in.') }}
+              {{ t('formvox', 'Only selected accounts and group members can access this form. They will need to log in.') }}
             </p>
 
             <div class="search-field">
               <NcTextField
                 v-model="searchTerm"
-                :label="t('Search users and groups')"
-                :placeholder="t('Type to search …')"
+                :label="t('formvox', 'Search accounts and groups')"
+                :placeholder="t('formvox', 'Type to search …')"
                 @input="searchSharees"
               />
             </div>
 
             <div v-if="searchResults.users.length || searchResults.groups.length" class="search-results">
               <div v-if="searchResults.users.length" class="result-section">
-                <span class="section-label">{{ t('Users') }}</span>
+                <!-- TRANSLATORS: Heading above the accounts found by a search -->
+                <span class="section-label">{{ t('formvox', 'Accounts') }}</span>
                 <div
                   v-for="user in searchResults.users"
                   :key="'user-' + user.id"
@@ -276,7 +287,8 @@
               </div>
 
               <div v-if="searchResults.groups.length" class="result-section">
-                <span class="section-label">{{ t('Groups') }}</span>
+                <!-- TRANSLATORS: Heading above the groups found by a search -->
+                <span class="section-label">{{ t('formvox', 'Groups') }}</span>
                 <div
                   v-for="group in searchResults.groups"
                   :key="'group-' + group.id"
@@ -290,7 +302,8 @@
             </div>
 
             <div v-if="accessRestrictions.users.length" class="selected-items">
-              <span class="section-label">{{ t('Allowed users') }}</span>
+              <!-- TRANSLATORS: Heading above the accounts that may fill in the form -->
+              <span class="section-label">{{ t('formvox', 'Allowed accounts') }}</span>
               <div class="chips">
                 <div
                   v-for="user in accessRestrictions.users"
@@ -305,7 +318,8 @@
             </div>
 
             <div v-if="accessRestrictions.groups.length" class="selected-items">
-              <span class="section-label">{{ t('Allowed groups') }}</span>
+              <!-- TRANSLATORS: Heading above the groups that may fill in the form -->
+              <span class="section-label">{{ t('formvox', 'Allowed groups') }}</span>
               <div class="chips">
                 <div
                   v-for="group in accessRestrictions.groups"
@@ -322,10 +336,10 @@
 
           <div class="delete-link-section">
             <NcButton type="tertiary" @click="replaceShareLink">
-              {{ t('Replace with a new link') }}
+              {{ t('formvox', 'Replace with a new link') }}
             </NcButton>
             <NcButton type="tertiary" @click="deleteShareLink">
-              {{ t('Delete response link') }}
+              {{ t('formvox', 'Delete response link') }}
             </NcButton>
           </div>
         </div>
@@ -335,7 +349,8 @@
       <div v-if="shareLink" class="collapsible-section">
         <button type="button" class="section-toggle" @click="showAdvanced = !showAdvanced">
           <CogIcon :size="18" />
-          <span>{{ t('Advanced') }}</span>
+          <!-- TRANSLATORS: Heading of a collapsed section with more settings -->
+          <span>{{ t('formvox', 'Advanced') }}</span>
           <ChevronDownIcon :size="20" :class="{ rotated: showAdvanced }" />
         </button>
         <div v-if="showAdvanced" class="section-content advanced-content">
@@ -343,23 +358,27 @@
           <div class="advanced-subsection">
             <h4>
               <CodeIcon :size="16" />
-              {{ t('Embed code') }}
+              <!-- TRANSLATORS: Heading: HTML code to put the form on another website -->
+              {{ t('formvox', 'Embed code') }}
             </h4>
             <p class="embed-description">
-              {{ t('Copy this code to embed the form in your website, SharePoint, or intranet.') }}
+              {{ t('formvox', 'Copy this code to embed the form in your website, SharePoint, or intranet.') }}
             </p>
 
             <div class="embed-options">
               <label class="embed-option">
                 <input type="checkbox" v-model="embedOptions.responsive">
-                {{ t('Responsive width') }}
+                <!-- TRANSLATORS: Checkbox: the embedded form adapts to the page width -->
+                {{ t('formvox', 'Responsive width') }}
               </label>
               <label v-if="!embedOptions.responsive" class="embed-option">
-                {{ t('Width') }}:
+                <!-- TRANSLATORS: Label; a number in pixels follows -->
+                {{ t('formvox', 'Width:') }}
                 <input type="number" v-model.number="embedOptions.width" min="300" max="1200" class="size-input"> px
               </label>
               <label class="embed-option">
-                {{ t('Height') }}:
+                <!-- TRANSLATORS: Label; a number in pixels follows -->
+                {{ t('formvox', 'Height:') }}
                 <input type="number" v-model.number="embedOptions.height" min="400" max="2000" class="size-input"> px
               </label>
             </div>
@@ -370,7 +389,7 @@
                 <template #icon>
                   <CopyIcon :size="20" />
                 </template>
-                {{ embedCopied ? t('Copied!') : t('Copy') }}
+                {{ embedCopied ? t('formvox', 'Copied!') : t('formvox', 'Copy') }}
               </NcButton>
             </div>
           </div>
@@ -379,7 +398,7 @@
           <div class="advanced-subsection">
             <h4>
               <ApiIcon :size="16" />
-              {{ t('API & Webhooks') }}
+              {{ t('formvox', 'API and webhooks') }}
             </h4>
             <IntegrationSettings :file-id="fileId" :form="form" />
           </div>
@@ -388,13 +407,15 @@
           <div v-if="responseCount > 0" class="advanced-subsection">
             <h4>
               <ChartIcon :size="16" />
-              {{ t('Responses') }} ({{ responseCount }})
+              <!-- TRANSLATORS: Heading; {count} is the number of responses -->
+              {{ t('formvox', 'Responses ({count})', { count: responseCount }) }}
             </h4>
             <p class="response-count">
-              {{ t('{count} responses collected', { count: responseCount }) }}
+              <!-- TRANSLATORS: %n is the number of responses -->
+              {{ n('formvox', '%n response collected', '%n responses collected', responseCount) }}
             </p>
             <NcButton type="error" @click="confirmDeleteResponses">
-              {{ t('Delete all responses') }}
+              {{ t('formvox', 'Delete all responses') }}
             </NcButton>
           </div>
         </div>
@@ -402,7 +423,7 @@
 
       <div class="actions">
         <NcButton @click="$emit('close')">
-          {{ t('Done') }}
+          {{ t('formvox', 'Done') }}
         </NcButton>
       </div>
     </div>
@@ -410,7 +431,7 @@
 </template>
 
 <script>
-import { t } from '@/utils/l10n';
+import { t, n } from '@/utils/l10n';
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
 import QRCode from 'qrcode';
@@ -592,7 +613,9 @@ export default {
     // Add current user (owner) if notify_owner is true and not already in the list
     if ((props.form.settings?.notify_owner ?? true) !== false && currentUserId) {
       if (!initialRecipients.find(r => r.type === 'user' && r.id === currentUserId)) {
-        initialRecipients.unshift({ type: 'user', id: currentUserId, displayName: currentUserDisplayName + ' (' + t('you') + ')' });
+        // TRANSLATORS: {name} is the name of the person looking at the dialog
+        const displayName = t('formvox', '{name} (you)', { name: currentUserDisplayName });
+        initialRecipients.unshift({ type: 'user', id: currentUserId, displayName });
       }
     }
     const notifyRecipients = reactive(initialRecipients);
@@ -709,9 +732,9 @@ export default {
         // Update local form object
         props.form.settings.public_token = token;
 
-        showSuccess(t('Response link created'));
+        showSuccess(t('formvox', 'Response link created'));
       } catch (error) {
-        showError(t('Failed to create response link'));
+        showError(t('formvox', 'Failed to create response link'));
         console.error(error);
       } finally {
         creatingLink.value = false;
@@ -757,12 +780,12 @@ export default {
       try {
         await navigator.clipboard.writeText(embedCode());
         embedCopied.value = true;
-        showSuccess(t('Embed code copied to clipboard'));
+        showSuccess(t('formvox', 'Embed code copied to clipboard'));
         setTimeout(() => {
           embedCopied.value = false;
         }, 2000);
       } catch (error) {
-        showError(t('Failed to copy embed code'));
+        showError(t('formvox', 'Failed to copy embed code'));
       }
     };
 
@@ -842,9 +865,10 @@ export default {
         props.form.settings.share_expires_at = settings.share_expires_at;
         props.form.settings.share_starts_at = settings.share_starts_at;
 
-        showSuccess(t('Settings saved'));
+        // TRANSLATORS: Confirmation message
+        showSuccess(t('formvox', 'Settings saved'));
       } catch (error) {
-        showError(t('Failed to save settings'));
+        showError(t('formvox', 'Failed to save settings'));
         console.error(error);
       }
     };
@@ -853,7 +877,7 @@ export default {
     // loses access, so this is confirmed and never happens as a side effect of
     // saving the form (#135).
     const replaceShareLink = async () => {
-      if (!confirm(t('Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form.'))) {
+      if (!confirm(t('formvox', 'Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form.'))) {
         return;
       }
 
@@ -873,15 +897,15 @@ export default {
         props.form.settings.public_token = token;
         generateQr();
 
-        showSuccess(t('New response link created — the previous link no longer works'));
+        showSuccess(t('formvox', 'New response link created — the previous link no longer works'));
       } catch (error) {
-        showError(t('Failed to replace response link'));
+        showError(t('formvox', 'Failed to replace response link'));
         console.error(error);
       }
     };
 
     const deleteShareLink = async () => {
-      if (!confirm(t('Are you sure you want to delete this link? Anyone with this link will no longer be able to submit responses.'))) {
+      if (!confirm(t('formvox', 'Are you sure you want to delete this link? Anyone with this link will no longer be able to submit responses.'))) {
         return;
       }
 
@@ -915,15 +939,15 @@ export default {
         props.form.settings.share_expires_at = null;
         props.form.settings.share_starts_at = null;
 
-        showSuccess(t('Response link deleted'));
+        showSuccess(t('formvox', 'Response link deleted'));
       } catch (error) {
-        showError(t('Failed to delete response link'));
+        showError(t('formvox', 'Failed to delete response link'));
         console.error(error);
       }
     };
 
     const confirmDeleteResponses = async () => {
-      if (!confirm(t('Are you sure you want to delete ALL responses? This action cannot be undone.'))) {
+      if (!confirm(t('formvox', 'Are you sure you want to delete ALL responses? This action cannot be undone.'))) {
         return;
       }
 
@@ -935,9 +959,9 @@ export default {
         responseCount.value = 0;
         emit('responsesDeleted');
 
-        showSuccess(t('All responses deleted'));
+        showSuccess(t('formvox', 'All responses deleted'));
       } catch (error) {
-        showError(t('Failed to delete responses'));
+        showError(t('formvox', 'Failed to delete responses'));
         console.error(error);
       }
     };
@@ -1024,9 +1048,9 @@ export default {
         props.form.settings.allowed_users = settings.allowed_users;
         props.form.settings.allowed_groups = settings.allowed_groups;
 
-        showSuccess(t('Access restrictions saved'));
+        showSuccess(t('formvox', 'Access restrictions saved'));
       } catch (error) {
-        showError(t('Failed to save access restrictions'));
+        showError(t('formvox', 'Failed to save access restrictions'));
         console.error(error);
       }
     };
@@ -1093,7 +1117,7 @@ export default {
         props.form.settings.notify_owner = ownerInList;
         props.form.settings.notify_recipients = otherRecipients;
       } catch (error) {
-        showError(t('Failed to save notification recipients'));
+        showError(t('formvox', 'Failed to save notification recipients'));
         console.error(error);
       }
     };
@@ -1132,9 +1156,9 @@ export default {
         );
 
         props.form.settings[key] = value;
-        showSuccess(t('Settings saved'));
+        showSuccess(t('formvox', 'Settings saved'));
       } catch (error) {
-        showError(t('Failed to save settings'));
+        showError(t('formvox', 'Failed to save settings'));
         console.error(error);
       }
     };
@@ -1165,15 +1189,15 @@ export default {
             const newQuestion = {
               id: 'q' + uuidv4().split('-')[0],
               type: 'text',
-              question: t('Your email address'),
-              description: t('We will send you a confirmation when you submit this form.'),
+              question: t('formvox', 'Your email address'),
+              description: t('formvox', 'We will send you a confirmation when you submit this form.'),
               required: true,
               options: [],
               showIf: null,
               validation: {
                 type: 'email',
                 pattern: '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$',
-                errorMessage: t('Please enter a valid email address'),
+                errorMessage: t('formvox', 'Please enter a valid email address'),
               },
               useAsRespondentEmail: true,
               // Hidden from the editor — the respond view still renders it.
@@ -1225,10 +1249,10 @@ export default {
         props.form.settings.sendConfirmationEmail = !!enabled;
         props.form.questions = questions;
         if (pages) props.form.pages = pages;
-        showSuccess(t('Settings saved'));
+        showSuccess(t('formvox', 'Settings saved'));
       } catch (error) {
         responseSettings.sendConfirmationEmail = !enabled;
-        showError(t('Failed to save settings'));
+        showError(t('formvox', 'Failed to save settings'));
         console.error(error);
       }
     };
@@ -1253,9 +1277,9 @@ export default {
 
         props.form.settings.max_responses = settings.max_responses;
         props.form.settings.limit_message = settings.limit_message;
-        showSuccess(t('Settings saved'));
+        showSuccess(t('formvox', 'Settings saved'));
       } catch (error) {
-        showError(t('Failed to save settings'));
+        showError(t('formvox', 'Failed to save settings'));
         console.error(error);
       }
     };
@@ -1314,6 +1338,7 @@ export default {
       addNotifyRecipient,
       removeNotifyRecipient,
       t,
+      n,
     };
   },
 };

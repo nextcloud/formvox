@@ -73,7 +73,7 @@ class ResponseService {
 		// Check for duplicate submission
 		if (!($form['settings']['allow_multiple'] ?? false)) {
 			if ($this->indexService->hasFingerprint($form, $fingerprint)) {
-				throw new \RuntimeException('You have already submitted a response to this form');
+				throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
 			}
 		}
 
@@ -103,7 +103,7 @@ class ResponseService {
 			$this->validateFormAcceptsResponses($freshForm);
 			if (!($freshForm['settings']['allow_multiple'] ?? false)) {
 				if ($this->indexService->hasFingerprint($freshForm, $fingerprint)) {
-					throw new \RuntimeException('You have already submitted a response to this form');
+					throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
 				}
 			}
 			$this->validateCapacity($freshForm, $answers);
@@ -140,7 +140,7 @@ class ResponseService {
 		// Check for duplicate submission
 		if (!($form['settings']['allow_multiple'] ?? false)) {
 			if ($this->indexService->hasUserResponse($form, $userId)) {
-				throw new \RuntimeException('You have already submitted a response to this form');
+				throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
 			}
 		}
 
@@ -169,7 +169,7 @@ class ResponseService {
 			$this->validateFormAcceptsResponses($freshForm);
 			if (!($freshForm['settings']['allow_multiple'] ?? false)) {
 				if ($this->indexService->hasUserResponse($freshForm, $userId)) {
-					throw new \RuntimeException('You have already submitted a response to this form');
+					throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
 				}
 			}
 			$this->validateCapacity($freshForm, $answers);
@@ -222,14 +222,13 @@ class ResponseService {
 			$formTitle = $form['title'] ?? $this->l->t('Form');
 			$subject = trim((string)($form['settings']['confirmationEmailSubject'] ?? ''));
 			if ($subject === '') {
+				// TRANSLATORS: Subject of the confirmation email to a respondent; %s is the form title
 				$subject = $this->l->t('Confirmation: %s', [$formTitle]);
 			}
 			$body = trim((string)($form['settings']['confirmationEmailBody'] ?? ''));
 			if ($body === '') {
-				$body = $this->l->t(
-					"Thank you for filling in \"%s\".\n\nWe have received your response.",
-					[$formTitle]
-				);
+				// TRANSLATORS: Body of the confirmation email to a respondent; %s is the form title
+				$body = $this->l->t("Thank you for filling in \"%s\".\n\nWe have received your response.", [$formTitle]);
 			}
 
 			$message = $this->mailer->createMessage();
@@ -255,9 +254,13 @@ class ResponseService {
 				? ($response['respondent']['user_id'] ?? '')
 				: '';
 
-			$respondentName = ($response['respondent']['type'] ?? '') === 'user'
-				? ($response['respondent']['display_name'] ?? 'Unknown')
-				: 'Anonymous';
+			// Left out for anonymous respondents, and the title when there is none,
+			// so the Notifier translates its fallbacks in the recipient's language.
+			$subject = isset($form['title']) ? ['formTitle' => $form['title']] : [];
+			if (($response['respondent']['type'] ?? '') === 'user') {
+				$subject['respondentName'] = $response['respondent']['display_name'] ?? $respondentId;
+			}
+			$subject['fileId'] = $fileId;
 
 			// Collect all user IDs to notify
 			$recipientIds = [];
@@ -296,11 +299,7 @@ class ResponseService {
 					->setUser($userId)
 					->setDateTime(new \DateTime())
 					->setObject('response', $response['id'])
-					->setSubject('response_submitted', [
-						'formTitle' => $form['title'] ?? 'Untitled',
-						'respondentName' => $respondentName,
-						'fileId' => $fileId,
-					]);
+					->setSubject('response_submitted', $subject);
 
 				$this->notificationManager->notify($notification);
 			}
@@ -435,7 +434,16 @@ class ResponseService {
 
 		// Header row (question titles are sanitised too — a title beginning
 		// with a formula char would otherwise inject on the owner's export).
-		$headers = ['Response ID', 'Submitted At', 'Respondent Type', 'Respondent ID'];
+		$headers = [
+			// TRANSLATORS: Column header in the CSV and Excel export: the identifier of a response
+			$this->l->t('Response ID'),
+			// TRANSLATORS: Column header in the CSV and Excel export: date and time of a response
+			$this->l->t('Submitted at'),
+			// TRANSLATORS: Column header in the CSV and Excel export: anonymous, account or API
+			$this->l->t('Respondent type'),
+			// TRANSLATORS: Column header in the CSV and Excel export: who answered
+			$this->l->t('Respondent ID'),
+		];
 		foreach ($questions as $question) {
 			$headers[] = $this->sanitizeCsvCell($question['question'] ?? '');
 		}
@@ -454,7 +462,7 @@ class ResponseService {
 
 				// Consent: render boolean as Yes/No so it is human-readable (#94).
 				if (($question['type'] ?? '') === 'consent') {
-					$answer = $answer === true ? 'Yes' : ($answer === false ? 'No' : '');
+					$answer = $answer === true ? $this->l->t('Yes') : ($answer === false ? $this->l->t('No') : '');
 				}
 
 				// Matrix questions: format as "Row: Column" pairs
@@ -714,7 +722,7 @@ class ResponseService {
 		if (!empty($settings['expires_at'])) {
 			$expiresAt = new \DateTime($settings['expires_at']);
 			if ($expiresAt < new \DateTime()) {
-				throw new \RuntimeException('This form has expired');
+				throw new \RuntimeException($this->l->t('This form has expired'));
 			}
 		}
 
@@ -725,7 +733,7 @@ class ResponseService {
 			if ($currentCount >= $maxResponses) {
 				$limitMessage = $settings['limit_message'] ?? '';
 				if (empty($limitMessage)) {
-					$limitMessage = 'This form has reached its response limit';
+					$limitMessage = $this->l->t('This form has reached its response limit');
 				}
 				throw new \RuntimeException($limitMessage);
 			}
@@ -766,7 +774,8 @@ class ResponseService {
 					$missing = $a !== true;
 				}
 				if ($missing) {
-					throw new \RuntimeException("Question '{$question['question']}' is required");
+					// TRANSLATORS: Error shown to a respondent; %s is the text of the question
+					throw new \RuntimeException($this->l->t("Question '%s' is required", [$question['question']]));
 				}
 			}
 		}
@@ -813,7 +822,8 @@ class ResponseService {
 				$used = (int)($counts[$qid][$optValue] ?? 0);
 				if ($used >= (int)$capacity) {
 					$label = $option['label'] ?? $optValue;
-					throw new \RuntimeException("The option '{$label}' is no longer available — capacity reached");
+					// TRANSLATORS: Error shown to a respondent; %s is the label of an answer option that has no places left
+					throw new \RuntimeException($this->l->t("The option '%s' is no longer available — capacity reached", [$label]));
 				}
 			}
 		}
@@ -830,13 +840,14 @@ class ResponseService {
 			case 'scale':
 			case 'rating':
 				if ($answer !== '' && !is_numeric($answer)) {
-					throw new \RuntimeException("Invalid answer type for question '{$question['question']}'");
+					// TRANSLATORS: Error shown to a respondent; %s is the question text
+					throw new \RuntimeException($this->l->t("Invalid answer for question '%s'", [$question['question']]));
 				}
 				break;
 
 			case 'multiple':
 				if (!is_array($answer)) {
-					throw new \RuntimeException('Multiple choice question requires array answer');
+					throw new \RuntimeException($this->l->t('Multiple choice question requires array answer'));
 				}
 				// Min/max selection limits (#113). Empty answers are handled by
 				// the required-check; only enforce bounds on a non-empty answer.
@@ -844,10 +855,12 @@ class ResponseService {
 				$min = (int)($question['minSelections'] ?? 0);
 				$max = (int)($question['maxSelections'] ?? 0);
 				if ($count > 0 && $min > 0 && $count < $min) {
-					throw new \RuntimeException("Select at least {$min} option(s) for question '{$question['question']}'");
+					// TRANSLATORS: Error shown to a respondent; %n is the minimum number of options to tick, %s the question text
+					throw new \RuntimeException($this->l->n("Select at least %n option for question '%s'", "Select at least %n options for question '%s'", $min, [$question['question']]));
 				}
 				if ($max > 0 && $count > $max) {
-					throw new \RuntimeException("Select at most {$max} option(s) for question '{$question['question']}'");
+					// TRANSLATORS: Error shown to a respondent; %n is the maximum number of options to tick, %s the question text
+					throw new \RuntimeException($this->l->n("Select at most %n option for question '%s'", "Select at most %n options for question '%s'", $max, [$question['question']]));
 				}
 				break;
 
@@ -857,7 +870,8 @@ class ResponseService {
 				// multi-byte umlaut counts as one, matching the browser counter.
 				$maxLength = (int)($question['maxLength'] ?? 0);
 				if ($maxLength > 0 && is_string($answer) && mb_strlen($answer) > $maxLength) {
-					throw new \RuntimeException("Answer for question '{$question['question']}' exceeds the {$maxLength}-character limit");
+					// TRANSLATORS: Error shown to a respondent; %1$s is the question text, %2$d the maximum number of characters
+					throw new \RuntimeException($this->l->t("Answer for question '%1\$s' exceeds the %2\$d-character limit", [$question['question'], $maxLength]));
 				}
 				break;
 
@@ -865,25 +879,28 @@ class ResponseService {
 				// Accept boolean true/false. The required-check enforces
 				// that 'true' is mandatory when the question is required.
 				if (!is_bool($answer) && $answer !== '' && $answer !== null) {
-					throw new \RuntimeException('Consent question requires boolean answer');
+					throw new \RuntimeException($this->l->t('Consent question requires boolean answer'));
 				}
 				break;
 
 			case 'date':
 				if ($answer !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $answer)) {
-					throw new \RuntimeException("Invalid date format for question '{$question['question']}'");
+					// TRANSLATORS: Error; %s is the question text
+					throw new \RuntimeException($this->l->t("Invalid date format for question '%s'", [$question['question']]));
 				}
 				break;
 
 			case 'datetime':
 				if ($answer !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/', $answer)) {
-					throw new \RuntimeException("Invalid datetime format for question '{$question['question']}'");
+					// TRANSLATORS: Error; %s is the question text; a datetime is a date with a time
+					throw new \RuntimeException($this->l->t("Invalid datetime format for question '%s'", [$question['question']]));
 				}
 				break;
 
 			case 'time':
 				if ($answer !== '' && !preg_match('/^\d{2}:\d{2}$/', $answer)) {
-					throw new \RuntimeException("Invalid time format for question '{$question['question']}'");
+					// TRANSLATORS: Error; %s is the question text
+					throw new \RuntimeException($this->l->t("Invalid time format for question '%s'", [$question['question']]));
 				}
 				break;
 		}
@@ -901,7 +918,8 @@ class ResponseService {
 				}
 				if (!preg_match($escapedPattern, (string)$answer)) {
 					$errorMsg = $question['validation']['errorMessage']
-						?? "Answer does not match the required format for question '{$question['question']}'";
+						// TRANSLATORS: Error shown to a respondent; %s is the question text
+						?? $this->l->t("Answer does not match the required format for question '%s'", [$question['question']]);
 					throw new \RuntimeException($errorMsg);
 				}
 			}
@@ -911,18 +929,22 @@ class ResponseService {
 		if ($answer !== '' && $answer !== null) {
 			if (in_array($type, ['date', 'datetime'])) {
 				if (!empty($question['dateMin']) && $answer < $question['dateMin']) {
-					throw new \RuntimeException("Date is before the allowed minimum for question '{$question['question']}'");
+					// TRANSLATORS: Error shown to a respondent; %s is the question text
+					throw new \RuntimeException($this->l->t("Date is before the allowed minimum for question '%s'", [$question['question']]));
 				}
 				if (!empty($question['dateMax']) && $answer > $question['dateMax']) {
-					throw new \RuntimeException("Date is after the allowed maximum for question '{$question['question']}'");
+					// TRANSLATORS: Error shown to a respondent; %s is the question text
+					throw new \RuntimeException($this->l->t("Date is after the allowed maximum for question '%s'", [$question['question']]));
 				}
 			}
 			if ($type === 'time') {
 				if (!empty($question['timeMin']) && $answer < $question['timeMin']) {
-					throw new \RuntimeException("Time is before the allowed minimum for question '{$question['question']}'");
+					// TRANSLATORS: Error shown to a respondent; %s is the question text
+					throw new \RuntimeException($this->l->t("Time is before the allowed minimum for question '%s'", [$question['question']]));
 				}
 				if (!empty($question['timeMax']) && $answer > $question['timeMax']) {
-					throw new \RuntimeException("Time is after the allowed maximum for question '{$question['question']}'");
+					// TRANSLATORS: Error shown to a respondent; %s is the question text
+					throw new \RuntimeException($this->l->t("Time is after the allowed maximum for question '%s'", [$question['question']]));
 				}
 			}
 		}

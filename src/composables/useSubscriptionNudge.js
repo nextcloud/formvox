@@ -1,4 +1,7 @@
-import { translate as t } from '@nextcloud/l10n'
+import { translate as t, translatePlural as n } from '@nextcloud/l10n'
+
+// Outside the translated text: an address is not something to translate.
+const SALES_EMAIL = 'sales@nextcloud.com'
 
 /**
  * The one subscription message an unlicensed instance sees, or null when there
@@ -31,7 +34,8 @@ export function subscriptionNudge(stats) {
 	}
 
 	if (stats.hasValidSubscription || stats.hasExtendedSupport) {
-		return t('formvox', 'Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or sales@nextcloud.com.')
+		// TRANSLATORS: {email} is an email address
+		return t('formvox', 'Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or {email}.', { email: SALES_EMAIL })
 	}
 
 	// A missing threshold means an older backend: say nothing rather than
@@ -42,5 +46,8 @@ export function subscriptionNudge(stats) {
 		return null
 	}
 
-	return t('formvox', 'FormVox is running for {count} users here and keeps working in full without a subscription. If your organisation gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or sales@nextcloud.com.', { count: users })
+	// TRANSLATORS: %n is the number of accounts on this server; {email} is an email address
+	return n('formvox', 'FormVox is running for %n account here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}.',
+		'FormVox is running for %n accounts here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}.',
+		users, { email: SALES_EMAIL })
 }

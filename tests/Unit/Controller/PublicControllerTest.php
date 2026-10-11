@@ -10,6 +10,7 @@ use OCA\FormVox\Service\ChallengeService;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\UploadService;
+use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\RedirectResponse;
@@ -79,7 +80,8 @@ class PublicControllerTest extends TestCase {
 			$this->responseService,
 			$this->brandingService,
 			$this->challengeService,
-			$this->initialState
+			$this->initialState,
+			new EnglishL10N(),
 		);
 	}
 
@@ -761,7 +763,7 @@ class PublicControllerTest extends TestCase {
 		]);
 		$resp = $this->controller()->uploadFile(1, 'TOKEN');
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertSame('File is too large. Maximum size is 1 MB', $resp->getData()['error']);
+		$this->assertSame('File is too large. The maximum size is 1 MB.', $resp->getData()['error']);
 	}
 
 	public function testUploadFileBadRequestWhenDisallowedType(): void {

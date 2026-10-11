@@ -6,6 +6,7 @@ namespace OCA\FormVox\Tests\Unit;
 
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\UploadService;
+use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IAppData;
@@ -42,7 +43,8 @@ class BrandingServiceTest extends TestCase {
 			$this->config,
 			$this->appData,
 			$this->uploadService,
-			$this->urlGenerator
+			$this->urlGenerator,
+			new EnglishL10N(),
 		);
 	}
 

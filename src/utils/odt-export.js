@@ -2,6 +2,10 @@ import { OdtDocument, fillTemplate } from 'odf-kit';
 import { zipSync } from 'fflate';
 import axios from '@nextcloud/axios';
 import { generateUrl } from '@nextcloud/router';
+import { t } from './l10n.js';
+
+// An ODT is not HTML: placeholders go in as they are, not HTML-escaped.
+const RAW = { escape: false, sanitize: false };
 
 /**
  * Format an answer value for ODT display.
@@ -22,7 +26,8 @@ function formatAnswerForOdt(answer, question) {
 				const cells = (question.columns || []).map(col =>
 					`${col.label}: ${row[col.id] || '-'}`
 				);
-				return `Row ${i + 1}: ${cells.join(', ')}`;
+				// TRANSLATORS: Line in an exported document; {n} is the row number, {cells} the answers in that row
+				return t('formvox', 'Row {n}: {cells}', { n: i + 1, cells: cells.join(', ') }, undefined, RAW);
 			}).join('\n');
 		}
 		if (question && question.options) {
@@ -138,14 +143,18 @@ export async function generateResponseOdt(form, response, fileId) {
 	const submittedAt = new Date(response.submitted_at).toLocaleString();
 	const respondent = response.respondent.type === 'user'
 		? response.respondent.display_name
-		: 'Anonymous';
+		: t('formvox', 'Anonymous');
 
 	doc.addParagraph((p) => {
-		p.addText('Submitted: ', { bold: true });
+		// TRANSLATORS: Label in an exported document; the date of the response follows
+		p.addText(t('formvox', 'Submitted:'), { bold: true });
+		p.addText(' ');
 		p.addText(submittedAt);
 	});
 	doc.addParagraph((p) => {
-		p.addText('Respondent: ', { bold: true });
+		// TRANSLATORS: Label in an exported document; the name of who answered follows
+		p.addText(t('formvox', 'Respondent:'), { bold: true });
+		p.addText(' ');
 		p.addText(respondent);
 	});
 
@@ -269,7 +278,7 @@ function buildTemplateData(form, response) {
 		submitted_at: new Date(response.submitted_at).toLocaleString(),
 		respondent_name: response.respondent.type === 'user'
 			? response.respondent.display_name
-			: 'Anonymous',
+			: t('formvox', 'Anonymous'),
 		respondent_type: response.respondent.type,
 		form_title: form.title,
 	};

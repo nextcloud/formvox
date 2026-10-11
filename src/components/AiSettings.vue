@@ -1,7 +1,7 @@
 <template>
   <div class="ai-settings">
     <div class="settings-section">
-      <h2>{{ t('formvox', 'AI Form Generation') }}</h2>
+      <h2>{{ t('formvox', 'AI form generation') }}</h2>
       <p class="settings-section-desc">
         {{ t('formvox', 'Let FormVox use the built-in Nextcloud AI (TaskProcessing) to generate forms from a description or uploaded document.') }}
       </p>
@@ -24,6 +24,7 @@
               {{ t('formvox', 'No AI provider configured') }}
             </strong>
             <span v-if="settings.providerAvailable">
+              <!-- TRANSLATORS: Label before the technical name of the AI task type, which stays in English -->
               {{ t('formvox', 'Task type:') }} <code>{{ settings.providerTaskType }}</code>
             </span>
             <span v-else>
@@ -39,7 +40,7 @@
             :disabled="!settings.providerAvailable || saving"
             @update:model-value="onToggleEnabled"
           >
-            {{ t('formvox', 'Enable AI form generation for all users') }}
+            {{ t('formvox', 'Enable AI form generation for everyone') }}
           </NcCheckboxRadioSwitch>
         </div>
 
@@ -64,7 +65,8 @@
           <div class="setting-row">
             <label class="setting-label">
               <span>{{ t('formvox', 'Maximum source document size') }}</span>
-              <span class="setting-hint">{{ settings.maxDocSizeMb }} MB</span>
+              <!-- TRANSLATORS: {size} is a number of megabytes, for example 8 -->
+              <span class="setting-hint">{{ t('formvox', '{size} MB', { size: settings.maxDocSizeMb }) }}</span>
             </label>
             <input
               :value="settings.maxDocSizeMb"
@@ -84,7 +86,7 @@
               :model-value="settings.allowSourceUpload"
               @update:model-value="onToggleSourceUpload"
             >
-              {{ t('formvox', 'Allow users to upload a source document (PDF/DOCX/ODT)') }}
+              {{ t('formvox', 'Allow people to upload a source document (PDF/DOCX/ODT)') }}
             </NcCheckboxRadioSwitch>
           </div>
 

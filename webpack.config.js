@@ -28,6 +28,9 @@ module.exports = {
       {
         test: /\.vue$/,
         loader: 'vue-loader',
+        // Template comments are notes for developers and translator hints,
+        // not content: keep them out of the bundle and out of component slots.
+        options: { compilerOptions: { comments: false } },
       },
       {
         test: /\.css$/,

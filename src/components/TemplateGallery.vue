@@ -1,16 +1,19 @@
 <template>
 	<div class="template-gallery" :class="{ 'template-gallery--collapsed': isCollapsed }">
 		<div class="template-gallery__header">
-			<h3 class="template-gallery__title">{{ t('New form') }}</h3>
+			<h3 class="template-gallery__title">{{ t('formvox', 'New form') }}</h3>
 			<NcButton
 				type="tertiary"
-				:aria-label="isCollapsed ? t('Show templates') : t('Hide templates')"
+				:aria-expanded="!isCollapsed"
 				@click="toggleCollapsed"
 			>
 				<template #icon>
 					<ChevronIcon :size="20" :class="{ 'chevron--up': !isCollapsed }" />
 				</template>
-				{{ isCollapsed ? t('Show templates') : t('Hide templates') }}
+				<!-- TRANSLATORS: Button that shows the list of form templates -->
+				<template v-if="isCollapsed">{{ t('formvox', 'Show templates') }}</template>
+				<!-- TRANSLATORS: Button that hides the list of form templates -->
+				<template v-else>{{ t('formvox', 'Hide templates') }}</template>
 			</NcButton>
 		</div>
 
@@ -21,8 +24,8 @@
 					<TemplateCard
 						v-if="aiAvailable"
 						key="ai"
-						:name="aiBusy ? t('AI is generating …') : t('Generate with AI')"
-						:description="aiBusy ? t('Wait until current generation finishes') : t('Describe and let AI build it')"
+						:name="aiBusy ? t('formvox', 'AI is generating …') : t('formvox', 'Generate with AI')"
+						:description="aiBusy ? t('formvox', 'Wait until current generation finishes') : t('formvox', 'Describe and let AI build it')"
 						:icon="AiIcon"
 						color="#7C4DFF"
 						:class="{ 'template-card--disabled': aiBusy }"
@@ -41,8 +44,8 @@
 					<TemplateCard
 						v-if="msFormsConfigured"
 						key="import"
-						:name="t('Import')"
-						:description="t('From Microsoft Forms')"
+						:name="t('formvox', 'Import')"
+						:description="t('formvox', 'From Microsoft Forms')"
 						:icon="ImportIcon"
 						color="#00A4EF"
 						@select="showImportModal = true"
@@ -117,36 +120,36 @@ export default {
 		const builtinTemplates = [
 			{
 				id: 'survey',
-				name: t('Survey'),
-				description: t('Feedback and opinions'),
+				name: t('formvox', 'Survey'),
+				description: t('formvox', 'Feedback and opinions'),
 				icon: SurveyIcon,
 				color: '#9C27B0',
 			},
 			{
 				id: 'poll',
-				name: t('Poll'),
-				description: t('Quick voting form'),
+				name: t('formvox', 'Poll'),
+				description: t('formvox', 'Quick voting form'),
 				icon: PollIcon,
 				color: '#FF9800',
 			},
 			{
 				id: 'registration',
-				name: t('Registration'),
-				description: t('Collect contact info'),
+				name: t('formvox', 'Registration'),
+				description: t('formvox', 'Collect contact info'),
 				icon: RegistrationIcon,
 				color: '#4CAF50',
 			},
 			{
 				id: 'demo',
-				name: t('Demo form'),
-				description: t('All features showcase'),
+				name: t('formvox', 'Demo form'),
+				description: t('formvox', 'All features showcase'),
 				icon: DemoIcon,
 				color: '#E91E63',
 			},
 			{
 				id: 'blank',
-				name: t('Blank form'),
-				description: t('Start from scratch'),
+				name: t('formvox', 'Blank form'),
+				description: t('formvox', 'Start from scratch'),
 				icon: FormIcon,
 				color: '#2196F3',
 			},

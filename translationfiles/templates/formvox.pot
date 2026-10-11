@@ -4,9 +4,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: FormVox 1.4.4\n"
+"Project-Id-Version: FormVox 1.5.0\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"POT-Creation-Date: 2026-09-03 15:30+0000\n"
+"POT-Creation-Date: 2026-10-09 17:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,37 +15,36 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+#. TRANSLATORS: {question} is the question text
 msgid "\"{question}\" does not match the required format"
 msgstr ""
 
+#. TRANSLATORS: Shown after a mandatory question
 msgid "(required)"
 msgstr ""
 
+#. TRANSLATORS: Shown for a question without text
 msgid "(untitled)"
 msgstr ""
 
-msgid "{count} others editing"
-msgstr ""
-
-msgid "{count} responses"
-msgstr ""
-
-msgid "{count} responses collected"
-msgstr ""
-
-msgid "{count} rows total across all responses"
-msgstr ""
-
+#. TRANSLATORS: Character counter under a text answer; {n} is the number typed, {max} the limit
 msgid "{n} / {max} characters"
 msgstr ""
 
+#. TRANSLATORS: Badge on an answer option; {n} is the number of places left; keep it short
 msgid "{n} left"
 msgstr ""
 
+#. TRANSLATORS: Counter under a multiple choice question; {n} is the number picked, {max} the limit
 msgid "{n} of max {max} selected"
 msgstr ""
 
-msgid "{n} stars"
+#. TRANSLATORS: {name} is the name of the person looking at the dialog
+msgid "{name} (you)"
+msgstr ""
+
+#. TRANSLATORS: {size} is a number of megabytes, for example 8
+msgid "{size} MB"
 msgstr ""
 
 msgid "* (all domains)"
@@ -54,54 +53,89 @@ msgstr ""
 msgid "/ (root folder)"
 msgstr ""
 
+#. TRANSLATORS: %1$s is the form title; a date and time follow below
+msgid "%1$s is scheduled to open at:"
+msgstr ""
+
 msgid "+ Add condition"
+msgstr ""
+
+msgid "A server extension blocked the upload"
 msgstr ""
 
 msgid "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development."
 msgstr ""
 
+msgid "A title is required."
+msgstr ""
+
 msgid "A unique hash of your instance URL (privacy-friendly identifier)"
 msgstr ""
 
+#. TRANSLATORS: Heading
 msgid "Access control"
+msgstr ""
+
+#. TRANSLATORS: Error when the account may not open the form
+msgid "Access denied"
+msgstr ""
+
+#. TRANSLATORS: Heading when an account may not open a form
+msgid "Access restricted"
 msgstr ""
 
 msgid "Access restrictions saved"
 msgstr ""
 
-msgid "Active Users (30 days)"
+msgid "Account names or email addresses"
+msgstr ""
+
+#. TRANSLATORS: Heading above the accounts found by a search
+msgid "Accounts"
+msgstr ""
+
+msgid "Active accounts (30 days)"
 msgstr ""
 
 msgid "Add a description or instructions"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Add column"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that adds a condition for showing a question
 msgid "Add condition"
 msgstr ""
 
 msgid "Add info block"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that adds more files
 msgid "Add more"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that adds an answer option
 msgid "Add option"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Add page"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Add question"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Add row"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Add rule"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Add section"
 msgstr ""
 
@@ -114,46 +148,47 @@ msgstr ""
 msgid "Add your expenses below. Click \"+ Add row\" to add more items."
 msgstr ""
 
-msgid "Add your expenses below. Click \\\"+ Add row\\\" to add more items."
-msgstr ""
-
+#. TRANSLATORS: Column header: the date a template was added
 msgid "Added"
 msgstr ""
 
+#. TRANSLATORS: Heading of a collapsed section with more settings
 msgid "Advanced"
 msgstr ""
 
+#. TRANSLATORS: Artificial intelligence; name of a settings tab
 msgid "AI"
 msgstr ""
 
+#. TRANSLATORS: Notification; {formTitle} is the title the user gave the form to generate
 msgid "AI could not generate \"{formTitle}\""
 msgstr ""
 
+#. TRANSLATORS: Notification; %1$s is the title the user gave the form to generate
 msgid "AI could not generate \"%1$s\""
 msgstr ""
 
-msgid "AI could not generate \\\"{formTitle}\\\""
+msgid "AI did not generate any questions."
 msgstr ""
 
-msgid "AI could not generate \\\"%1$s\\\""
+msgid "AI did not generate any usable questions."
 msgstr ""
 
+#. TRANSLATORS: Notification; {formTitle} is the title of the generated form
 msgid "AI finished generating \"{formTitle}\""
 msgstr ""
 
+#. TRANSLATORS: Notification; %1$s is the title of the generated form
 msgid "AI finished generating \"%1$s\""
-msgstr ""
-
-msgid "AI finished generating \\\"{formTitle}\\\""
-msgstr ""
-
-msgid "AI finished generating \\\"%1$s\\\""
 msgstr ""
 
 msgid "AI form created. Check your notifications to open it."
 msgstr ""
 
-msgid "AI Form Generation"
+msgid "AI form generation"
+msgstr ""
+
+msgid "AI form generation is not available on this instance."
 msgstr ""
 
 msgid "AI generation failed."
@@ -174,36 +209,50 @@ msgstr ""
 msgid "AI provider available"
 msgstr ""
 
+msgid "AI returned an invalid response. Try a shorter or simpler description."
+msgstr ""
+
 msgid "AI settings saved"
 msgstr ""
 
 msgid "AI will base questions on the document and your description. Generation can take up to 2 minutes."
 msgstr ""
 
+#. TRANSLATORS: Default title of a form that the AI will create
+msgid "AI-generated form"
+msgstr ""
+
+#. TRANSLATORS: Tooltip of a text editor button
 msgid "Align center"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of a text editor button
 msgid "Align left"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of a text editor button
 msgid "Align right"
 msgstr ""
 
+#. TRANSLATORS: Label
 msgid "Alignment"
 msgstr ""
 
 msgid "All changes saved"
 msgstr ""
 
+#. TRANSLATORS: Shown for a webhook that reacts to every event
 msgid "All events"
 msgstr ""
 
 msgid "All features showcase"
 msgstr ""
 
+#. TRANSLATORS: Choice of which files may be uploaded
 msgid "All files"
 msgstr ""
 
+#. TRANSLATORS: Link back to the list of all forms
 msgid "All forms"
 msgstr ""
 
@@ -222,7 +271,11 @@ msgstr ""
 msgid "Allow multiple submissions"
 msgstr ""
 
-msgid "Allow users to upload a source document (PDF/DOCX/ODT)"
+msgid "Allow people to upload a source document (PDF/DOCX/ODT)"
+msgstr ""
+
+#. TRANSLATORS: Heading above the accounts that may fill in the form
+msgid "Allowed accounts"
 msgstr ""
 
 msgid "Allowed domains for embedding"
@@ -231,21 +284,29 @@ msgstr ""
 msgid "Allowed file types"
 msgstr ""
 
+#. TRANSLATORS: Heading above the groups that may fill in the form
 msgid "Allowed groups"
 msgstr ""
 
-msgid "Allowed users"
-msgstr ""
-
+#. TRANSLATORS: Label: a text that describes an image for screen readers
 msgid "Alt text"
 msgstr ""
 
+#. TRANSLATORS: Column of an example expense table: a sum of money
 msgid "Amount"
 msgstr ""
 
 msgid "An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there."
 msgstr ""
 
+msgid "An error occurred"
+msgstr ""
+
+#. TRANSLATORS: Button that adds a second condition; both must match (logical AND)
+msgid "AND"
+msgstr ""
+
+#. TRANSLATORS: Name shown for a respondent who answered without an account
 msgid "Anonymous"
 msgstr ""
 
@@ -253,6 +314,14 @@ msgid "Anonymous usage statistics"
 msgstr ""
 
 msgid "Another quiz question - correct answer: In Nextcloud files"
+msgstr ""
+
+#. TRANSLATORS: Error shown to a respondent; %s is the question text
+msgid "Answer does not match the required format for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Error shown to a respondent; %1$s is the question text, %2$d the maximum number of characters
+msgid "Answer for question '%1$s' exceeds the %2$d-character limit"
 msgstr ""
 
 msgid "Any final thoughts or feedback?"
@@ -264,13 +333,15 @@ msgstr ""
 msgid "Any personal or sensitive data"
 msgstr ""
 
-msgid "API & Webhooks"
+#. TRANSLATORS: Heading of the section with API keys for other software
+msgid "API access"
 msgstr ""
 
-msgid "API Access"
+msgid "API and webhooks"
 msgstr ""
 
-msgid "API Documentation"
+#. TRANSLATORS: Heading above the list of API endpoints
+msgid "API documentation"
 msgstr ""
 
 msgid "API key created"
@@ -300,24 +371,31 @@ msgstr ""
 msgid "Are you sure you want to delete this webhook?"
 msgstr ""
 
+#. TRANSLATORS: Heading above the placeholders a template can use
 msgid "Available placeholders"
 msgstr ""
 
+#. TRANSLATORS: Heading above the list of form templates
 msgid "Available templates"
 msgstr ""
 
+#. TRANSLATORS: Noun: the mean of the numeric answers
 msgid "Average"
 msgstr ""
 
+#. TRANSLATORS: Verb: button to the previous step
 msgid "Back"
 msgstr ""
 
+#. TRANSLATORS: Label
 msgid "Background color"
 msgstr ""
 
+#. TRANSLATORS: Chart type: bar chart; keep it short
 msgid "Bar"
 msgstr ""
 
+#. TRANSLATORS: Label: the color of a progress bar
 msgid "Bar color"
 msgstr ""
 
@@ -327,39 +405,50 @@ msgstr ""
 msgid "Beginner - Just getting started"
 msgstr ""
 
+#. TRANSLATORS: Name of the template for an empty form
 msgid "Blank form"
 msgstr ""
 
+#. TRANSLATORS: Heading of the settings of the selected page block
 msgid "Block settings"
 msgstr ""
 
+#. TRANSLATORS: Color name
 msgid "Blue"
 msgstr ""
 
 msgid "Body (optional, default thanks the respondent)"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of a text editor button
 msgid "Bold"
 msgstr ""
 
+#. TRANSLATORS: Noun: name of a settings tab for colors and logo
 msgid "Branding"
 msgstr ""
 
+#. TRANSLATORS: Color name
 msgid "Brown"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of a text editor button
 msgid "Bulleted list"
 msgstr ""
 
+#. TRANSLATORS: Noun: page block type
 msgid "Button"
 msgstr ""
 
+#. TRANSLATORS: Label
 msgid "Button text"
 msgstr ""
 
+#. TRANSLATORS: Nextcloud share permission
 msgid "Can delete"
 msgstr ""
 
+#. TRANSLATORS: Nextcloud share permission
 msgid "Can edit"
 msgstr ""
 
@@ -369,24 +458,33 @@ msgstr ""
 msgid "Can modify questions and settings"
 msgstr ""
 
+#. TRANSLATORS: Nextcloud share permission
 msgid "Can view"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that closes a dialog without saving
 msgid "Cancel"
 msgstr ""
 
+#. TRANSLATORS: Column of an example expense table
 msgid "Category"
 msgstr ""
 
+#. TRANSLATORS: Alignment option
 msgid "Center"
+msgstr ""
+
+msgid "Challenge verification failed. Please refresh the page."
 msgstr ""
 
 msgid "Change source document"
 msgstr ""
 
+#. TRANSLATORS: Group of question types where the respondent picks options
 msgid "Choice"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that opens the folder picker
 msgid "Choose folder"
 msgstr ""
 
@@ -402,42 +500,55 @@ msgstr ""
 msgid "Click \"Grant admin consent\" for your organization"
 msgstr ""
 
+#. TRANSLATORS: Default text of a new button block
+msgid "Click here"
+msgstr ""
+
 msgid "Client ID (Application ID)"
 msgstr ""
 
+#. TRANSLATORS: Technical term of Microsoft Azure: a password for an app registration
 msgid "Client secret"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that closes a dialog
 msgid "Close"
 msgstr ""
 
+#. TRANSLATORS: Name of a settings tab
 msgid "Collaboration"
 msgstr ""
 
+#. TRANSLATORS: Switch: do not record who answered
 msgid "Collect anonymously"
 msgstr ""
 
 msgid "Collect contact info"
 msgstr ""
 
+#. TRANSLATORS: Label
 msgid "Color"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of an empty column; {n} is its number
 msgid "Column {n}"
 msgstr ""
 
+#. TRANSLATORS: Heading above the columns of a grid or table question
 msgid "Columns"
 msgstr ""
 
 msgid "Comma-separated list of extensions (.pdf) or MIME types (image/*)"
 msgstr ""
 
+#. TRANSLATORS: Label: this question has a condition for being shown
 msgid "Condition active"
 msgstr ""
 
-msgid "Conditional logic / Branching"
+msgid "Conditional logic / branching"
 msgstr ""
 
+#. TRANSLATORS: Menu entry that opens the conditions for showing a question
 msgid "Conditions"
 msgstr ""
 
@@ -447,12 +558,15 @@ msgstr ""
 msgid "Configure which external websites can embed FormVox forms."
 msgstr ""
 
+#. TRANSLATORS: Status: a secret has been saved
 msgid "Configured"
 msgstr ""
 
+#. TRANSLATORS: Subject of the confirmation email to a respondent; %s is the form title
 msgid "Confirmation: %s"
 msgstr ""
 
+#. TRANSLATORS: Step name in the import dialog: connect to Microsoft; keep it short
 msgid "Connect"
 msgstr ""
 
@@ -465,27 +579,39 @@ msgstr ""
 msgid "Connect your Microsoft account to access your forms."
 msgstr ""
 
+#. TRANSLATORS: Button text while connecting to Microsoft
 msgid "Connecting …"
 msgstr ""
 
 msgid "Consent (single checkbox)"
 msgstr ""
 
+msgid "Consent question requires boolean answer"
+msgstr ""
+
+msgid "Contact the form owner if you believe this is an error."
+msgstr ""
+
+#. TRANSLATORS: Comparison operator in a condition: the answer contains the value
 msgid "contains"
 msgstr ""
 
+#. TRANSLATORS: Label of the text of a block
 msgid "Content"
 msgstr ""
 
+#. TRANSLATORS: Verb: button to continue with the saved answers
 msgid "Continue"
 msgstr ""
 
 msgid "Control who can edit this form using Nextcloud's native sharing."
 msgstr ""
 
+#. TRANSLATORS: Button text right after copying to the clipboard; keep it short
 msgid "Copied!"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that copies to the clipboard
 msgid "Copy"
 msgstr ""
 
@@ -495,13 +621,34 @@ msgstr ""
 msgid "Copy this code to embed the form in your website, SharePoint, or intranet."
 msgstr ""
 
+#. TRANSLATORS: Answer option in the demo form (something a user may find important)
 msgid "Cost"
 msgstr ""
 
-msgid "Could not reach the licence server, so the FormVox subscription status could not be confirmed."
+#. TRANSLATORS: {error} is a technical message, often in English
+msgid "Could not create FormVox form: {error}"
 msgstr ""
 
-msgid "Could not reach the licence server, so the subscription status could not be confirmed."
+#. TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
+msgid "Could not fetch your forms: %s"
+msgstr ""
+
+#. TRANSLATORS: Import warning; %s is the technical reason, usually in English
+msgid "Could not import responses: %s"
+msgstr ""
+
+#. TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
+msgid "Could not import the form: %s"
+msgstr ""
+
+#. TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
+msgid "Could not load the form: %s"
+msgstr ""
+
+msgid "Could not reach the license server, so the FormVox subscription status could not be confirmed."
+msgstr ""
+
+msgid "Could not reach the license server, so the subscription status could not be confirmed."
 msgstr ""
 
 msgid "Could not reach the telemetry server. Please try again later."
@@ -510,6 +657,10 @@ msgstr ""
 msgid "Could not resolve the selected file."
 msgstr ""
 
+msgid "Could not schedule the AI task."
+msgstr ""
+
+#. TRANSLATORS: Verb: button that creates the form
 msgid "Create"
 msgstr ""
 
@@ -525,6 +676,7 @@ msgstr ""
 msgid "Create API keys to integrate this form with external systems like Power Automate, Zapier, or custom applications."
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Create form"
 msgstr ""
 
@@ -534,30 +686,37 @@ msgstr ""
 msgid "Create public link"
 msgstr ""
 
+#. TRANSLATORS: Description of an API endpoint
 msgid "Create response"
 msgstr ""
 
 msgid "Create response link"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Create webhook"
 msgstr ""
 
 msgid "Create your first form to get started."
 msgstr ""
 
+#. TRANSLATORS: Short name of a webhook event: a response was created
 msgid "Created"
 msgstr ""
 
+#. TRANSLATORS: Button text while something is being created; keep it short
 msgid "Creating …"
 msgstr ""
 
+#. TRANSLATORS: {current} is the number of responses so far, {max} the limit
 msgid "Current responses: {current} / {max}"
 msgstr ""
 
+#. TRANSLATORS: Choice: the user sets which file types are allowed
 msgid "Custom"
 msgstr ""
 
+#. TRANSLATORS: Name of an input check where the user writes their own pattern
 msgid "Custom (advanced)"
 msgstr ""
 
@@ -567,15 +726,22 @@ msgstr ""
 msgid "Customize the appearance of your public forms."
 msgstr ""
 
-msgid "Customize the look and feel of this form. Leave disabled to use the admin defaults."
+msgid "Customize the look and feel of this form. Leave disabled to use the administration defaults."
 msgstr ""
 
+#. TRANSLATORS: Color name
 msgid "Cyan"
 msgstr ""
 
+#. TRANSLATORS: Name of a color theme for a form page
+msgid "Dark"
+msgstr ""
+
+#. TRANSLATORS: Line style of a divider
 msgid "Dashed"
 msgstr ""
 
+#. TRANSLATORS: Noun: a calendar date; column label and question type
 msgid "Date"
 msgstr ""
 
@@ -585,45 +751,72 @@ msgstr ""
 msgid "Date and time picker"
 msgstr ""
 
+#. TRANSLATORS: Error shown to a respondent; %s is the question text
+msgid "Date is after the allowed maximum for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Error shown to a respondent; %s is the question text
+msgid "Date is before the allowed minimum for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: {min} is a date
 msgid "Date must be on or after {min}"
 msgstr ""
 
+#. TRANSLATORS: {max} is a date
 msgid "Date must be on or before {max}"
 msgstr ""
 
+#. TRANSLATORS: Description of an example date question in the demo form
 msgid "Date picker"
 msgstr ""
 
+#. TRANSLATORS: Placeholder: the default color is used
 msgid "Default"
 msgstr ""
 
 msgid "Define rules to skip to a specific page based on answers. If no rule matches, the next page is shown."
 msgstr ""
 
+#. TRANSLATORS: Permission type as the Microsoft Azure portal names it, shown in parentheses
+msgid "Delegated"
+msgstr ""
+
+#. TRANSLATORS: Verb: button, and the name of an API key permission
 msgid "Delete"
 msgstr ""
 
 msgid "Delete all responses"
 msgstr ""
 
+#. TRANSLATORS: Verb: menu entry
 msgid "Delete form"
 msgstr ""
 
+#. TRANSLATORS: Description of an API endpoint
 msgid "Delete response"
 msgstr ""
 
 msgid "Delete response link"
 msgstr ""
 
+#. TRANSLATORS: API key permission: delete responses
 msgid "Delete responses"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Delete template"
 msgstr ""
 
+#. TRANSLATORS: Short name of a webhook event: a response was deleted
 msgid "Deleted"
 msgstr ""
 
+#. TRANSLATORS: Noun: label of a form created from the demo template; keep it short, it is a badge
+msgid "Demo"
+msgstr ""
+
+#. TRANSLATORS: Name of the template with example questions, and its default title
 msgid "Demo form"
 msgstr ""
 
@@ -636,33 +829,41 @@ msgstr ""
 msgid "Describe the form you want to create"
 msgstr ""
 
+#. TRANSLATORS: Column or field label: a description
 msgid "Description"
 msgstr ""
 
+#. TRANSLATORS: Label of the description field of a question
 msgid "Description (optional)"
 msgstr ""
 
+#. TRANSLATORS: Row of an example rating grid in the demo form: how a product looks
 msgid "Design"
 msgstr ""
 
 msgid "Design your own document layout in LibreOffice or Word, and use placeholders where you want answers to appear. When you export responses as ODT, each response will be filled into your template."
 msgstr ""
 
+#. TRANSLATORS: Name of an input check
 msgid "Digits only"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that turns off splitting the form into pages
 msgid "Disable pages"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that disconnects the Microsoft account
 msgid "Disconnect"
 msgstr ""
 
+#. TRANSLATORS: Page block type: a horizontal line
 msgid "Divider"
 msgstr ""
 
 msgid "Do you have any additional comments?"
 msgstr ""
 
+#. TRANSLATORS: Kind of file that may be uploaded
 msgid "Documents"
 msgstr ""
 
@@ -675,49 +876,56 @@ msgstr ""
 msgid "does not equal"
 msgstr ""
 
+#. TRANSLATORS: Button that closes the dialog
 msgid "Done"
 msgstr ""
 
+#. TRANSLATORS: Line style of a divider
 msgid "Dotted"
 msgstr ""
 
+#. TRANSLATORS: Chart type: doughnut chart; keep it short
 msgid "Doughnut"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Download all"
 msgstr ""
 
 msgid "Download QR code"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Download template"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of the handle that changes the editor's height
 msgid "Drag to resize"
 msgstr ""
 
+#. TRANSLATORS: Text of the area for uploading files
 msgid "Drop files here or click to upload"
 msgstr ""
 
+#. TRANSLATORS: Question type: pick one option from a dropdown list
 msgid "Dropdown"
 msgstr ""
 
 msgid "Dropdown select for longer option lists"
 msgstr ""
 
+#. TRANSLATORS: Verb: menu entry that copies a question
 msgid "Duplicate"
 msgstr ""
 
 msgid "e.g. .pdf, .docx, image/*"
 msgstr ""
 
-msgid "e.g. ^[0-9]{4}[A-Z]{2}$"
+#. TRANSLATORS: Placeholder of an input field; {example} is a sample value such as a pattern or a key, kept as is
+msgid "e.g. {example}"
 msgstr ""
 
 msgid "e.g. A customer satisfaction survey with 8 questions about service quality, food, and value for money."
-msgstr ""
-
-msgid "e.g. FVOX-XXXX-XXXX-XXXX-XXXX"
 msgstr ""
 
 msgid "e.g. Not at all"
@@ -729,15 +937,13 @@ msgstr ""
 msgid "e.g. Very much"
 msgstr ""
 
-msgid "e.g., 12345678-1234-1234-1234-123456789012"
-msgstr ""
-
 msgid "e.g., Notify on submission"
 msgstr ""
 
 msgid "e.g., Power Automate"
 msgstr ""
 
+#. TRANSLATORS: Label of the earliest allowed time
 msgid "Earliest time"
 msgstr ""
 
@@ -747,36 +953,46 @@ msgstr ""
 msgid "Easy to use interface"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Edit"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Edit form"
 msgstr ""
 
+msgid "Edit with FormVox"
+msgstr ""
+
+#. TRANSLATORS: Noun: contact method in an example question
 msgid "Email"
 msgstr ""
 
+#. TRANSLATORS: Example question, and the name of an input check that only accepts email addresses
 msgid "Email address"
 msgstr ""
 
 msgid "Email confirmation to respondent"
 msgstr ""
 
+#. TRANSLATORS: Heading: HTML code to put the form on another website
 msgid "Embed code"
 msgstr ""
 
 msgid "Embed code copied to clipboard"
 msgstr ""
 
+#. TRANSLATORS: Heading: settings for showing forms on other websites
 msgid "Embed settings"
 msgstr ""
 
 msgid "Embed settings saved"
 msgstr ""
 
-msgid "Enable AI form generation for all users"
+msgid "Enable AI form generation for everyone"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that splits the form into pages
 msgid "Enable pages"
 msgstr ""
 
@@ -810,7 +1026,12 @@ msgstr ""
 msgid "Enter new password"
 msgstr ""
 
+#. TRANSLATORS: Prompt in a browser dialog
 msgid "Enter page title:"
+msgstr ""
+
+#. TRANSLATORS: Placeholder of the password field of a protected form
+msgid "Enter password"
 msgstr ""
 
 msgid "Enter text …"
@@ -825,43 +1046,63 @@ msgstr ""
 msgid "Enter your question"
 msgstr ""
 
+#. TRANSLATORS: Comparison operator in a condition: the answer equals the value
 msgid "equals"
 msgstr ""
 
+#. TRANSLATORS: Title of the browser tab on an error page
+msgid "Error"
+msgstr ""
+
+#. TRANSLATORS: Label of the message shown when the check fails
 msgid "Error message"
 msgstr ""
 
+#. TRANSLATORS: Label above the events that trigger a webhook
 msgid "Events"
 msgstr ""
 
-msgid "Examples: ^[A-Z]{2}[0-9]{4}$ (license plate), ^\\d{10}$ (10 digits)"
+#. TRANSLATORS: {pattern1} and {pattern2} are regular expressions; they stay as they are
+msgid "Examples: {pattern1} (license plate), {pattern2} (10 digits)"
 msgstr ""
 
+#. TRANSLATORS: Import source: a Microsoft Excel file
 msgid "Excel file"
 msgstr ""
 
+#. TRANSLATORS: Answer option in an example rating question (best of five)
 msgid "Excellent"
 msgstr ""
 
+#. TRANSLATORS: Example question in the demo form: a table to list expenses
 msgid "Expense declaration"
 msgstr ""
 
 msgid "Expert - I create forms daily"
 msgstr ""
 
+#. TRANSLATORS: Verb: button; CSV is a file format
 msgid "Export CSV"
 msgstr ""
 
+#. TRANSLATORS: Verb: button; Excel is a product name
 msgid "Export Excel"
 msgstr ""
 
+#. TRANSLATORS: Verb: button; JSON is a file format
 msgid "Export JSON"
 msgstr ""
 
+#. TRANSLATORS: Verb: button; ODT is the OpenDocument text format
 msgid "Export ODT"
 msgstr ""
 
+#. TRANSLATORS: Answer option in the demo form (ways to export responses)
 msgid "Export options"
+msgstr ""
+
+#. TRANSLATORS: Label at the high end of an imported 0 to 10 recommendation scale
+msgid "Extremely likely"
 msgstr ""
 
 msgid "Failed to connect to Microsoft"
@@ -969,6 +1210,10 @@ msgstr ""
 msgid "Failed to send report"
 msgstr ""
 
+#. TRANSLATORS: {error} is a technical message, in English
+msgid "Failed to send report: {error}"
+msgstr ""
+
 msgid "Failed to submit response"
 msgstr ""
 
@@ -984,72 +1229,90 @@ msgstr ""
 msgid "Failed to upload template"
 msgstr ""
 
+#. TRANSLATORS: Answer option in an example rating question (the middle of the scale)
 msgid "Fair"
 msgstr ""
 
+#. TRANSLATORS: Row of an example rating grid in the demo form: the features of a product
 msgid "Feature set"
 msgstr ""
 
 msgid "Feedback and opinions"
 msgstr ""
 
+#. TRANSLATORS: {name} is a file name
 msgid "File \"{name}\" is not an allowed file type"
 msgstr ""
 
+#. TRANSLATORS: {name} is a file name, {size} a number of megabytes
 msgid "File \"{name}\" is too large. Maximum size is {size} MB"
 msgstr ""
 
+#. TRANSLATORS: Upload error; %s is a number of megabytes, for example 2
+msgid "File is too large. The maximum size is %s MB."
+msgstr ""
+
+#. TRANSLATORS: Question type: the respondent uploads files
 msgid "File upload"
 msgstr ""
 
+#. TRANSLATORS: Answer option in the demo form: FormVox stores forms as files
 msgid "File-based storage"
 msgstr ""
 
-msgid "files uploaded"
-msgstr ""
-
+#. TRANSLATORS: Answer option in the demo form (something a user may find important)
 msgid "Flexibility"
 msgstr ""
 
+#. TRANSLATORS: Noun: the area below the form
 msgid "Footer"
 msgstr ""
 
+#. TRANSLATORS: Name of a color theme for a form page
+msgid "Forest"
+msgstr ""
+
+#. TRANSLATORS: Fallback page title for a form without a title
 msgid "Form"
 msgstr ""
 
 msgid "Form content or titles"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Form deleted"
 msgstr ""
 
 msgid "Form imported successfully!"
 msgstr ""
 
+msgid "Form not found"
+msgstr ""
+
+#. TRANSLATORS: Heading
 msgid "Form statistics"
 msgstr ""
 
+#. TRANSLATORS: Heading of the administration section that manages form templates
 msgid "Form templates"
 msgstr ""
 
+#. TRANSLATORS: Heading of the dialog that sets the colors and layout of one form
 msgid "Form theme"
 msgstr ""
 
+#. TRANSLATORS: Label of the title field of a form
 msgid "Form title"
 msgstr ""
 
+#. TRANSLATORS: Invisible label of the text editor's toolbar, read by screen readers
 msgid "Formatting"
-msgstr ""
-
-msgid "FormVox"
 msgstr ""
 
 msgid "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support."
 msgstr ""
 
-msgid "FormVox is running for {count} users here and keeps working in full without a subscription. If your organisation gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or sales@nextcloud.com."
-msgstr ""
-
+#. TRANSLATORS: {reason} comes from the license server, in English
 msgid "FormVox subscription key was refused: {reason}"
 msgstr ""
 
@@ -1059,24 +1322,29 @@ msgstr ""
 msgid "From Microsoft Forms"
 msgstr ""
 
+#. TRANSLATORS: Badge on an answer option that has no places left; keep it short
 msgid "Full"
 msgstr ""
 
 msgid "Full admin access"
 msgstr ""
 
+#. TRANSLATORS: Example question in a registration form
 msgid "Full name"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that asks the AI to create the form
 msgid "Generate"
 msgstr ""
 
 msgid "Generate with AI"
 msgstr ""
 
+#. TRANSLATORS: Button text while the AI creates the form
 msgid "Generating …"
 msgstr ""
 
+#. TRANSLATORS: Heading of the error when the AI could not create a form
 msgid "Generation failed"
 msgstr ""
 
@@ -1095,9 +1363,11 @@ msgstr ""
 msgid "Get single response"
 msgstr ""
 
+#. TRANSLATORS: Heading of the colors and fonts that apply to the whole page
 msgid "Global styles"
 msgstr ""
 
+#. TRANSLATORS: Verb: button to return to the previous step
 msgid "Go back"
 msgstr ""
 
@@ -1113,30 +1383,38 @@ msgstr ""
 msgid "Go to page"
 msgstr ""
 
+#. TRANSLATORS: Answer option in an example rating question
 msgid "Good"
 msgstr ""
 
+#. TRANSLATORS: Comparison operator in a routing rule
 msgid "greater than"
 msgstr ""
 
+#. TRANSLATORS: Color name
 msgid "Green"
 msgstr ""
 
+#. TRANSLATORS: Heading above the groups found by a search
 msgid "Groups"
 msgstr ""
 
+#. TRANSLATORS: Noun: the area above the form
 msgid "Header"
 msgstr ""
 
+#. TRANSLATORS: Noun: tooltip of a text editor button, and a page block type
 msgid "Heading"
 msgstr ""
 
-msgid "Height"
+#. TRANSLATORS: Label; a number in pixels follows
+msgid "Height:"
 msgstr ""
 
 msgid "Help improve FormVox by sharing anonymous usage statistics."
 msgstr ""
 
+#. TRANSLATORS: Button that hides the list of form templates
 msgid "Hide templates"
 msgstr ""
 
@@ -1155,33 +1433,39 @@ msgstr ""
 msgid "How would you rate your overall experience?"
 msgstr ""
 
-msgid "HTML"
+#. TRANSLATORS: Label of a block with HTML code
+msgid "HTML content"
 msgstr ""
 
-msgid "HTML Content"
-msgstr ""
-
+#. TRANSLATORS: Default text of a consent checkbox
 msgid "I agree"
 msgstr ""
 
+#. TRANSLATORS: Label at the start of a routing rule: if question … equals …, go to page …
 msgid "If question"
 msgstr ""
 
+#. TRANSLATORS: Noun: tooltip of the text editor button that inserts an image, and a page block type
 msgid "Image"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of the alt text field
 msgid "Image description"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Image uploaded"
 msgstr ""
 
+#. TRANSLATORS: Kind of file that may be uploaded
 msgid "Images"
 msgstr ""
 
+#. TRANSLATORS: Choice of which files may be uploaded
 msgid "Images only"
 msgstr ""
 
+#. TRANSLATORS: Step name in the import dialog (the last step); keep it short
 msgid "Import"
 msgstr ""
 
@@ -1191,18 +1475,25 @@ msgstr ""
 msgid "Import failed. Please try again."
 msgstr ""
 
+#. TRANSLATORS: Title of the import dialog; verb phrase: import a form
 msgid "Import form"
 msgstr ""
 
 msgid "Import form structure and responses"
 msgstr ""
 
+#. TRANSLATORS: Heading in the import dialog
 msgid "Import options"
 msgstr ""
 
 msgid "Import responses only (coming soon)"
 msgstr ""
 
+#. TRANSLATORS: Default title of a form imported from Microsoft Forms without a title
+msgid "Imported form"
+msgstr ""
+
+#. TRANSLATORS: Shown while a form is being imported
 msgid "Importing …"
 msgstr ""
 
@@ -1218,27 +1509,64 @@ msgstr ""
 msgid "Include your API key in the X-FormVox-API-Key header."
 msgstr ""
 
+#. TRANSLATORS: Error on the password prompt of a protected form
+msgid "Incorrect password"
+msgstr ""
+
+#. TRANSLATORS: Name of a tab
 msgid "Individual responses"
 msgstr ""
 
+#. TRANSLATORS: Badge of a text-only block in the editor; keep it short
 msgid "Info block"
 msgstr ""
 
 msgid "Install an AI provider app (e.g. Integration OpenAI) to enable form generation."
 msgstr ""
 
+#. TRANSLATORS: Answer option in the demo form: connecting with other software
 msgid "Integration"
 msgstr ""
 
+#. TRANSLATORS: Name of a settings tab
 msgid "Integrations"
 msgstr ""
 
 msgid "Intermediate - Some experience"
 msgstr ""
 
+#. TRANSLATORS: Title of the first page that the Microsoft Forms import creates
+msgid "Introduction"
+msgstr ""
+
+#. TRANSLATORS: Error shown to a respondent; %s is the question text
+msgid "Invalid answer for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Error; %s is the question text
+msgid "Invalid date format for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Error; %s is the question text; a datetime is a date with a time
+msgid "Invalid datetime format for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Upload error; %s is a list of file formats such as "PNG, JPEG, SVG, GIF, WebP"
+msgid "Invalid file type. Allowed: %s"
+msgstr ""
+
+#. TRANSLATORS: Upload error: the upload does not belong to a file question of this form
+msgid "Invalid question"
+msgstr ""
+
+#. TRANSLATORS: Error; %s is the question text
+msgid "Invalid time format for question '%s'"
+msgstr ""
+
 msgid "is currently editing this form"
 msgstr ""
 
+#. TRANSLATORS: Comparison operator in a condition: the question has no answer
 msgid "is empty"
 msgstr ""
 
@@ -1257,18 +1585,23 @@ msgstr ""
 msgid "is one of"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of a text editor button
 msgid "Italic"
 msgstr ""
 
+#. TRANSLATORS: Label of the name field of a new API key
 msgid "Key name"
 msgstr ""
 
+#. TRANSLATORS: Size of a spacer block
 msgid "Large (64px)"
 msgstr ""
 
-msgid "Last report sent"
+#. TRANSLATORS: {date} is a date and time
+msgid "Last report sent: {date}"
 msgstr ""
 
+#. TRANSLATORS: Label of the latest allowed time
 msgid "Latest time"
 msgstr ""
 
@@ -1281,9 +1614,11 @@ msgstr ""
 msgid "Leave empty to keep existing secret. Enter a new value to update."
 msgstr ""
 
+#. TRANSLATORS: Alignment option
 msgid "Left"
 msgstr ""
 
+#. TRANSLATORS: Comparison operator in a routing rule
 msgid "less than"
 msgstr ""
 
@@ -1293,9 +1628,11 @@ msgstr ""
 msgid "Letters and numbers"
 msgstr ""
 
+#. TRANSLATORS: Name of an input check
 msgid "Letters only"
 msgstr ""
 
+#. TRANSLATORS: Label: the size level of a heading, H1 to H4
 msgid "Level"
 msgstr ""
 
@@ -1305,12 +1642,15 @@ msgstr ""
 msgid "Linear scale (1-10)"
 msgstr ""
 
+#. TRANSLATORS: Noun: tooltip of the text editor button that inserts a link
 msgid "Link"
 msgstr ""
 
+#. TRANSLATORS: Heading of the settings of the public link
 msgid "Link settings"
 msgstr ""
 
+#. TRANSLATORS: Shown while a list loads
 msgid "Loading …"
 msgstr ""
 
@@ -1320,39 +1660,49 @@ msgstr ""
 msgid "Loading your forms …"
 msgstr ""
 
+#. TRANSLATORS: Noun: page block type, and the alternative text of the logo image
 msgid "Logo"
 msgstr ""
 
+#. TRANSLATORS: Question type: an answer of several lines
 msgid "Long text"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that opens Nextcloud's sharing
 msgid "Manage sharing"
 msgstr ""
 
+#. TRANSLATORS: Verb: step name in the import dialog: match columns to questions; keep it short
 msgid "Map"
 msgstr ""
 
 msgid "Markdown content shown to respondents (no answer required)"
 msgstr ""
 
+#. TRANSLATORS: Question type: a grid of rows and columns
 msgid "Matrix"
+msgstr ""
+
+#. TRANSLATORS: Default text of a grid question imported without a text
+msgid "Matrix question"
 msgstr ""
 
 msgid "Matrix/grid question with multiple rows and columns"
 msgstr ""
 
+#. TRANSLATORS: Short for maximum; keep it short
 msgid "Max"
 msgstr ""
 
+#. TRANSLATORS: {size} is the maximum file size in megabytes
 msgid "Max {size} MB"
 msgstr ""
 
+#. TRANSLATORS: Label of the text at the high end of a scale
 msgid "Max label"
 msgstr ""
 
-msgid "Maximum {n} files allowed"
-msgstr ""
-
+#. TRANSLATORS: Label of the length limit of a text answer
 msgid "Maximum characters"
 msgstr ""
 
@@ -1365,106 +1715,153 @@ msgstr ""
 msgid "Maximum questions per generated form"
 msgstr ""
 
-msgid "Maximum responses"
+#. TRANSLATORS: Label of the response limit
+msgid "Maximum responses:"
 msgstr ""
 
+#. TRANSLATORS: Label: how many options may be picked at most
 msgid "Maximum selections"
 msgstr ""
 
 msgid "Maximum source document size"
 msgstr ""
 
+#. TRANSLATORS: Label of the number of stars in a rating question
 msgid "Maximum stars"
 msgstr ""
 
-msgid "Maximum times this option can be selected — leave empty for unlimited (#104)"
+#. TRANSLATORS: Tooltip of the capacity field of an answer option
+msgid "Maximum times this option can be selected — leave empty for unlimited"
 msgstr ""
 
+#. TRANSLATORS: Size of a spacer block
 msgid "Medium (32px)"
 msgstr ""
 
-msgid "Message when full"
-msgstr ""
-
-msgid "Microsoft Forms"
+msgid "Message when full:"
 msgstr ""
 
 msgid "Microsoft Forms import"
 msgstr ""
 
-msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Settings > FormVox > Integrations."
+msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Administration settings > FormVox > Integrations."
+msgstr ""
+
+msgid "Microsoft Forms is not configured. Ask your administrator to configure it."
 msgstr ""
 
 msgid "Microsoft Forms settings saved"
 msgstr ""
 
+#. TRANSLATORS: Short for minimum; keep it short
 msgid "Min"
 msgstr ""
 
+#. TRANSLATORS: Label of the text at the low end of a scale
 msgid "Min label"
 msgstr ""
 
+#. TRANSLATORS: Name of a color theme for a form page
+msgid "Minimal"
+msgstr ""
+
+#. TRANSLATORS: Label: how many options must be picked at least
 msgid "Minimum selections"
 msgstr ""
 
+#. TRANSLATORS: Menu entry; {section} is the title of a section
 msgid "Move to \"{section}\""
 msgstr ""
 
+#. TRANSLATORS: Menu entry; {page} is the title of a page, or "Page 2"
 msgid "Move to {page}"
 msgstr ""
 
 msgid "Multi-line text area for longer responses"
 msgstr ""
 
+#. TRANSLATORS: Question type: pick one or more options
 msgid "Multiple choice"
 msgstr ""
 
 msgid "Multiple choice (checkboxes) - select all that apply"
 msgstr ""
 
+msgid "Multiple choice question requires array answer"
+msgstr ""
+
+#. TRANSLATORS: Name of a tab
 msgid "My forms"
 msgstr ""
 
+#. TRANSLATORS: Shown instead of a date when no report was sent yet
 msgid "Never"
 msgstr ""
 
+#. TRANSLATORS: Default title and file name of a new form, and the name of the menu entry
 msgid "New form"
+msgstr ""
+
+#. TRANSLATORS: Default title of a new form made from the poll template
+msgid "New poll"
+msgstr ""
+
+#. TRANSLATORS: Default title of a new form made from the registration template
+msgid "New registration"
 msgstr ""
 
 msgid "New response link created — the previous link no longer works"
 msgstr ""
 
+#. TRANSLATORS: Notification; {formTitle} is the form title, {respondentName} the name of the person who answered or "Anonymous"
 msgid "New response to \"{formTitle}\" from {respondentName}"
 msgstr ""
 
+#. TRANSLATORS: Notification; %1$s is the form title, %2$s the name of the person who answered or "Anonymous"
 msgid "New response to \"%1$s\" from %2$s"
 msgstr ""
 
-msgid "New response to \\\"{formTitle}\\\" from {respondentName}"
+#. TRANSLATORS: Default title of a new form made from the survey template
+msgid "New survey"
 msgstr ""
 
-msgid "New response to \\\"%1$s\\\" from %2$s"
-msgstr ""
-
+#. TRANSLATORS: Verb: button to the next step or page
 msgid "Next"
 msgstr ""
 
-msgid "Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or sales@nextcloud.com."
+#. TRANSLATORS: Name of a color theme for a form page; Nextcloud is the product name
+msgid "Nextcloud dark"
 msgstr ""
 
+#. TRANSLATORS: {email} is an email address
+msgid "Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or {email}."
+msgstr ""
+
+#. TRANSLATORS: Answer to a consent question, in results and exports
 msgid "No"
 msgstr ""
 
 msgid "No AI provider configured"
 msgstr ""
 
+msgid "No AI text-to-text provider is available on this Nextcloud instance."
+msgstr ""
+
+#. TRANSLATORS: %s is the technical name of a Nextcloud app, "integration_openai"; keep it as is
+msgid "No AI text-to-text provider is configured on this instance. Install an AI provider (for example %s) first."
+msgstr ""
+
 msgid "No blocks yet. Add one below."
 msgstr ""
 
+#. TRANSLATORS: Choice in the color list of a section
 msgid "No color"
 msgstr ""
 
 msgid "No custom templates yet."
+msgstr ""
+
+msgid "No file was uploaded"
 msgstr ""
 
 msgid "No forms found in your Microsoft Forms account."
@@ -1476,15 +1873,18 @@ msgstr ""
 msgid "No forms yet"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of an empty limit field
 msgid "No limit"
 msgstr ""
 
 msgid "No link yet. Create one to start collecting responses."
 msgstr ""
 
+#. TRANSLATORS: Placeholder of an empty maximum field
 msgid "No maximum"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of an empty minimum field
 msgid "No minimum"
 msgstr ""
 
@@ -1503,37 +1903,61 @@ msgstr ""
 msgid "No routing rules yet. Add one to get started."
 msgstr ""
 
+#. TRANSLATORS: Answer option declining to be contacted
 msgid "No, thanks"
 msgstr ""
 
+#. TRANSLATORS: Shown for a question without an answer
 msgid "Not answered"
 msgstr ""
 
+#. TRANSLATORS: Label at the low end of an imported 0 to 10 recommendation scale
+msgid "Not at all likely"
+msgstr ""
+
+#. TRANSLATORS: Error when a request has no logged-in account
+msgid "Not authenticated"
+msgstr ""
+
+msgid "Not connected to Microsoft. Please connect first."
+msgstr ""
+
+#. TRANSLATORS: Comparison operator in a routing rule
 msgid "not equals"
 msgstr ""
 
+#. TRANSLATORS: Label at the low end of an example rating scale
 msgid "Not likely"
 msgstr ""
 
 msgid "Note: Search for \"Microsoft Forms\" under \"APIs my organization uses\""
 msgstr ""
 
+#. TRANSLATORS: Heading above notes about an import
 msgid "Notes"
 msgstr ""
 
 msgid "Notify on new responses"
 msgstr ""
 
+#. TRANSLATORS: Question type, and a table column type
 msgid "Number"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of a text editor button
 msgid "Numbered list"
 msgstr ""
 
+#. TRANSLATORS: Description of an example number question in the demo form
 msgid "Numeric input"
 msgstr ""
 
-msgid "ODT Template"
+#. TRANSLATORS: Name of a color theme for a form page
+msgid "Ocean"
+msgstr ""
+
+#. TRANSLATORS: Heading of the dialog for an OpenDocument text template
+msgid "ODT template"
 msgstr ""
 
 msgid "ODT template …"
@@ -1542,9 +1966,10 @@ msgstr ""
 msgid "On external servers"
 msgstr ""
 
-msgid "Only selected users and group members can access this form. They will need to log in."
+msgid "Only selected accounts and group members can access this form. They will need to log in."
 msgstr ""
 
+#. TRANSLATORS: Verb: button that opens the imported form
 msgid "Open form"
 msgstr ""
 
@@ -1554,72 +1979,105 @@ msgstr ""
 msgid "Open the form to review the AI-generated questions."
 msgstr ""
 
+#. TRANSLATORS: Label of the comparison in a routing rule (equals, contains …)
 msgid "Operator"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of an empty answer option; {n} is its number
 msgid "Option {n}"
 msgstr ""
 
+#. TRANSLATORS: Default label of an answer column; %d is its number, for example 1
+msgid "Option %d"
+msgstr ""
+
+#. TRANSLATORS: Example answer option in the demo form
 msgid "Option A"
 msgstr ""
 
+#. TRANSLATORS: Example answer option in the demo form
 msgid "Option B"
 msgstr ""
 
+#. TRANSLATORS: Example answer option in the demo form
 msgid "Option C"
 msgstr ""
 
+#. TRANSLATORS: Noun: step name in the import dialog, and the heading above answer options
 msgid "Options"
 msgstr ""
 
 msgid "Options (comma separated)"
 msgstr ""
 
+#. TRANSLATORS: Button that adds a second condition; either may match (logical OR)
+msgid "OR"
+msgstr ""
+
+#. TRANSLATORS: Color name
 msgid "Orange"
 msgstr ""
 
+#. TRANSLATORS: Group of remaining question types
 msgid "Other"
 msgstr ""
 
 msgid "Overview of forms and responses in your FormVox installation."
 msgstr ""
 
+#. TRANSLATORS: {current} is the page number, {total} the number of pages
 msgid "Page {current} of {total}"
 msgstr ""
 
+#. TRANSLATORS: Name of a page without a title; {n} is its number, for example 2
 msgid "Page {n}"
 msgstr ""
 
+#. TRANSLATORS: Heading of the editor for the page around a form
 msgid "Page builder"
 msgstr ""
 
+#. TRANSLATORS: Heading of the dialog with rules that choose the next page
 msgid "Page routing"
 msgstr ""
 
+#. TRANSLATORS: Label of the password field
 msgid "Password"
 msgstr ""
 
+#. TRANSLATORS: Switch: require a password for the public link
 msgid "Password protect"
 msgstr ""
 
-msgid "PDF"
+#. TRANSLATORS: Error when a password-protected form is submitted without the password
+msgid "Password required"
 msgstr ""
 
+#. TRANSLATORS: Choice of which files may be uploaded
 msgid "PDF only"
 msgstr ""
 
+#. TRANSLATORS: Label of the number of rows per page
 msgid "Per page:"
 msgstr ""
 
+#. TRANSLATORS: Row of an example rating grid in the demo form: how fast a product is
 msgid "Performance"
 msgstr ""
 
+#. TRANSLATORS: Error when the account may not do this with the form
+msgid "Permission denied"
+msgstr ""
+
+#. TRANSLATORS: Label above what an API key may do
 msgid "Permissions"
 msgstr ""
 
+#. TRANSLATORS: Noun: contact method in an example question
 msgid "Phone"
 msgstr ""
 
+#. TRANSLATORS: Example question in a registration form
 msgid "Phone number"
 msgstr ""
 
@@ -1632,6 +2090,7 @@ msgstr ""
 msgid "Pick a form you already created — its structure (questions, settings, branding) is copied. Responses and share links are stripped."
 msgstr ""
 
+#. TRANSLATORS: Chart type: pie chart; keep it short
 msgid "Pie"
 msgstr ""
 
@@ -1639,6 +2098,9 @@ msgid "Please answer all required questions"
 msgstr ""
 
 msgid "Please answer all rows in this question"
+msgstr ""
+
+msgid "Please describe the form you want to create or pick a source document."
 msgstr ""
 
 msgid "Please enter a subscription key"
@@ -1680,9 +2142,11 @@ msgstr ""
 msgid "PNG, JPEG, SVG, GIF or WebP. Max 2MB."
 msgstr ""
 
+#. TRANSLATORS: Noun: a type of form
 msgid "Poll"
 msgstr ""
 
+#. TRANSLATORS: Answer option in an example rating question
 msgid "Poor"
 msgstr ""
 
@@ -1692,36 +2156,76 @@ msgstr ""
 msgid "Postal code (NL)"
 msgstr ""
 
+#. TRANSLATORS: Noun: heading of the preview, and a button that shows it
 msgid "Preview"
 msgstr ""
 
+#. TRANSLATORS: Button to the previous page
 msgid "Previous"
 msgstr ""
 
+#. TRANSLATORS: Link to the price list
 msgid "Pricing details"
 msgstr ""
 
+#. TRANSLATORS: Label: the main color of buttons and accents
 msgid "Primary color"
 msgstr ""
 
-msgid "Privacy / Self-hosted"
+msgid "Privacy / self-hosted"
 msgstr ""
 
+#. TRANSLATORS: Page block type
 msgid "Progress bar"
 msgstr ""
 
+#. TRANSLATORS: Page title of the password prompt for a form without a title
+msgid "Protected form"
+msgstr ""
+
+msgid "Provide a description, an uploaded document, or both."
+msgstr ""
+
+#. TRANSLATORS: Color name, also the name of a color theme
 msgid "Purple"
 msgstr ""
 
+#. TRANSLATORS: Label of the question text field
 msgid "Question"
 msgstr ""
 
+#. TRANSLATORS: Import warning; %1$s is the question text, %2$s a technical question type from Microsoft Forms
+msgid "Question '%1$s': Unknown type '%2$s' converted to text"
+msgstr ""
+
+#. TRANSLATORS: Error shown to a respondent; %s is the text of the question
+msgid "Question '%s' is required"
+msgstr ""
+
+#. TRANSLATORS: Import warning; %s is the question text
+msgid "Question '%s': File upload question imported, but uploaded files cannot be migrated"
+msgstr ""
+
+#. TRANSLATORS: Import warning; %s is the question text; Likert is a kind of rating scale
+msgid "Question '%s': Matrix/Likert columns could not be imported from the Microsoft Forms API. Please edit the column options manually."
+msgstr ""
+
+#. TRANSLATORS: Import warning; %s is the question text; a matrix is a grid question
+msgid "Question '%s': Ranking converted to matrix (ranking functionality lost)"
+msgstr ""
+
+#. TRANSLATORS: Placeholder name of a question without text; {n} is its number, for example 3
+msgid "Question {n}"
+msgstr ""
+
+msgid "Question ID is required"
+msgstr ""
+
+#. TRANSLATORS: Column header: the number of questions
 msgid "Questions"
 msgstr ""
 
-msgid "questions imported"
-msgstr ""
-
+#. TRANSLATORS: Link to contact information
 msgid "Questions?"
 msgstr ""
 
@@ -1743,57 +2247,73 @@ msgstr ""
 msgid "Rate this demo form"
 msgstr ""
 
+#. TRANSLATORS: Group of question types for rating something
 msgid "Rating"
 msgstr ""
 
+#. TRANSLATORS: Short name of an API key permission; keep it short, it is a badge
 msgid "Read"
 msgstr ""
 
+#. TRANSLATORS: API key permission: read the form's questions
 msgid "Read form"
 msgstr ""
 
+#. TRANSLATORS: Invisible label of the speaker button that reads the question aloud
 msgid "Read question aloud"
 msgstr ""
 
+#. TRANSLATORS: API key permission: read the responses
 msgid "Read responses"
 msgstr ""
 
+#. TRANSLATORS: Name of a tab with recently used forms
 msgid "Recent"
 msgstr ""
 
+#. TRANSLATORS: Color name
 msgid "Red"
 msgstr ""
 
+#. TRANSLATORS: Noun: a type of form, for signing up
 msgid "Registration"
 msgstr ""
 
+#. TRANSLATORS: Technical term: a search pattern; use the common term in your language
 msgid "Regular expression"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Remove"
 msgstr ""
 
+#. TRANSLATORS: Invisible label of the button that removes a chosen file; {name} is the file name
 msgid "Remove file {name}"
 msgstr ""
 
 msgid "Remove from section"
 msgstr ""
 
+#. TRANSLATORS: Invisible label of the button that removes a table row
 msgid "Remove row"
 msgstr ""
 
+#. TRANSLATORS: Tooltip of the button that removes a routing rule
 msgid "Remove rule"
 msgstr ""
 
+#. TRANSLATORS: Invisible label of the button that removes the chosen source document
 msgid "Remove source"
 msgstr ""
 
 msgid "Remove subscription key"
 msgstr ""
 
+#. TRANSLATORS: Verb: menu entry
 msgid "Rename"
 msgstr ""
 
+#. TRANSLATORS: Heading: replace the uploaded template
 msgid "Replace template"
 msgstr ""
 
@@ -1809,24 +2329,46 @@ msgstr ""
 msgid "Require login to respond"
 msgstr ""
 
+#. TRANSLATORS: Switch that makes a question mandatory, and the tooltip of the * marker
 msgid "Required"
 msgstr ""
 
+#. TRANSLATORS: Column header: who answered
 msgid "Respondent"
 msgstr ""
 
+#. TRANSLATORS: Column header in the CSV and Excel export: who answered
+msgid "Respondent ID"
+msgstr ""
+
+#. TRANSLATORS: Explanation of a template placeholder: who answered
 msgid "Respondent name"
 msgstr ""
 
+#. TRANSLATORS: Column header in the CSV and Excel export: anonymous, account or API
+msgid "Respondent type"
+msgstr ""
+
+#. TRANSLATORS: Label in an exported document; the name of who answered follows
+msgid "Respondent:"
+msgstr ""
+
+#. TRANSLATORS: Webhook event: a response was submitted
 msgid "Response created"
 msgstr ""
 
 msgid "Response data or answers"
 msgstr ""
 
+#. TRANSLATORS: Webhook event, and a confirmation message
 msgid "Response deleted"
 msgstr ""
 
+#. TRANSLATORS: Column header in the CSV and Excel export: the identifier of a response
+msgid "Response ID"
+msgstr ""
+
+#. TRANSLATORS: Heading: the public link people use to fill in the form
 msgid "Response link"
 msgstr ""
 
@@ -1836,48 +2378,57 @@ msgstr ""
 msgid "Response link deleted"
 msgstr ""
 
+#. TRANSLATORS: Heading
 msgid "Response settings"
 msgstr ""
 
+#. TRANSLATORS: Webhook event: a response was changed
 msgid "Response updated"
 msgstr ""
 
-msgid "responses"
+#. TRANSLATORS: Heading; {count} is the number of responses
+msgid "Responses ({count})"
 msgstr ""
 
-msgid "Responses"
-msgstr ""
-
-msgid "responses imported"
-msgstr ""
-
+#. TRANSLATORS: Checkbox: the embedded form adapts to the page width
 msgid "Responsive width"
 msgstr ""
 
 msgid "Restrict selectable range (optional)"
 msgstr ""
 
-msgid "Restrict to specific users/groups"
+msgid "Restrict to specific accounts or groups"
 msgstr ""
 
+#. TRANSLATORS: Noun: button that opens the results
 msgid "Results"
 msgstr ""
 
+#. TRANSLATORS: Alignment option
 msgid "Right"
 msgstr ""
 
+#. TRANSLATORS: Menu entry that opens the page routing rules
 msgid "Routing"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of an empty row; {n} is its number
 msgid "Row {n}"
 msgstr ""
 
+#. TRANSLATORS: Line in an exported document; {n} is the row number, {cells} the answers in that row
+msgid "Row {n}: {cells}"
+msgstr ""
+
+#. TRANSLATORS: Heading above the rows of a grid question
 msgid "Rows"
 msgstr ""
 
+#. TRANSLATORS: Example text in the preview
 msgid "Sample question"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Save"
 msgstr ""
 
@@ -1887,6 +2438,7 @@ msgstr ""
 msgid "Save as template"
 msgstr ""
 
+#. TRANSLATORS: Label of the folder where the new form is saved
 msgid "Save location"
 msgstr ""
 
@@ -1896,36 +2448,45 @@ msgstr ""
 msgid "Save this webhook secret now!"
 msgstr ""
 
+#. TRANSLATORS: Button text while saving; keep it short
 msgid "Saving …"
 msgstr ""
 
+#. TRANSLATORS: Question type: a numbered scale, for example 1 to 10
 msgid "Scale"
 msgstr ""
 
+#. TRANSLATORS: Switch: the link only works from a set date
 msgid "Schedule opening"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of the points an answer option is worth in a quiz
 msgid "Score"
 msgstr ""
 
-msgid "Search users and groups"
+msgid "Search accounts and groups"
 msgstr ""
 
+#. TRANSLATORS: Noun: badge of a section heading in the editor; keep it short
 msgid "Section"
 msgstr ""
 
 msgid "Section description (optional)"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of the title field of a section
 msgid "Section title"
 msgstr ""
 
+#. TRANSLATORS: Answer option in the demo form (something a user may find important)
 msgid "Security"
 msgstr ""
 
+#. TRANSLATORS: Step name in the import dialog: choose a form; keep it short
 msgid "Select"
 msgstr ""
 
+#. TRANSLATORS: First entry of a dropdown list, before a choice is made
 msgid "Select …"
 msgstr ""
 
@@ -1953,27 +2514,39 @@ msgstr ""
 msgid "Send report now"
 msgstr ""
 
+#. TRANSLATORS: Button text while sending the report
 msgid "Sending …"
 msgstr ""
 
+msgid "Server configuration error: missing temporary folder"
+msgstr ""
+
+msgid "Server error: could not write the file"
+msgstr ""
+
+#. TRANSLATORS: Switch: the link stops working after a set date
 msgid "Set expiration"
 msgstr ""
 
 msgid "Set the Redirect URI (Web) to:"
 msgstr ""
 
+#. TRANSLATORS: Name of a settings tab
 msgid "Settings"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Settings saved"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that opens the share dialog
 msgid "Share"
 msgstr ""
 
 msgid "Share anonymous usage statistics"
 msgstr ""
 
+#. TRANSLATORS: Heading of the share dialog
 msgid "Share form"
 msgstr ""
 
@@ -1983,99 +2556,147 @@ msgstr ""
 msgid "Share your thoughts …"
 msgstr ""
 
+#. TRANSLATORS: Question type: a one-line answer
 msgid "Short text"
 msgstr ""
 
+#. TRANSLATORS: Checkbox
 msgid "Show percentage"
 msgstr ""
 
+#. TRANSLATORS: Button that shows the list of form templates
 msgid "Show templates"
 msgstr ""
 
 msgid "Show this question when …"
 msgstr ""
 
+#. TRANSLATORS: {start} and {end} are row numbers, {total} the number of responses
 msgid "Showing {start}-{end} of {total}"
 msgstr ""
 
+#. TRANSLATORS: Question type: pick one option
 msgid "Single choice"
 msgstr ""
 
 msgid "Single choice (radio buttons)"
 msgstr ""
 
+#. TRANSLATORS: Label of the height of a spacer block
 msgid "Size"
 msgstr ""
 
 msgid "Skip to form questions"
 msgstr ""
 
+#. TRANSLATORS: Size of a spacer block
 msgid "Small (16px)"
 msgstr ""
 
 msgid "Snapshot a form as a template"
 msgstr ""
 
+#. TRANSLATORS: Page block type with links to social media
 msgid "Social links"
 msgstr ""
 
+#. TRANSLATORS: Line style of a divider
 msgid "Solid"
 msgstr ""
 
+#. TRANSLATORS: Shown instead of a name when it is not known who is editing
 msgid "Someone"
 msgstr ""
 
+msgid "Something went wrong"
+msgstr ""
+
+#. TRANSLATORS: Step name in the import dialog: choose where to import from; keep it short
 msgid "Source"
 msgstr ""
 
+#. TRANSLATORS: Error; %s is a number of megabytes, for example 8
+msgid "Source document is too large. The maximum is %s MB."
+msgstr ""
+
+msgid "Source document not found."
+msgstr ""
+
+msgid "Source document uploads are disabled by the administrator."
+msgstr ""
+
+#. TRANSLATORS: Page block type: empty space
 msgid "Spacer"
 msgstr ""
 
+#. TRANSLATORS: Answer option in the demo form (something a user may find important)
 msgid "Speed"
 msgstr ""
 
 msgid "Star rating (1-5 stars)"
 msgstr ""
 
+#. TRANSLATORS: Question type: a rating with stars
 msgid "Stars"
 msgstr ""
 
 msgid "Start from scratch"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that starts importing the form
+msgid "Start import"
+msgstr ""
+
+#. TRANSLATORS: Verb: button to throw away the saved answers
 msgid "Start over"
 msgstr ""
 
+#. TRANSLATORS: Name of a settings tab
 msgid "Statistics"
 msgstr ""
 
+#. TRANSLATORS: Invisible label of the speaker button while the question is being read aloud
 msgid "Stop reading question aloud"
 msgstr ""
 
+#. TRANSLATORS: Label of the line style of a divider (solid, dashed, dotted)
 msgid "Style"
 msgstr ""
 
 msgid "Subject (optional, default uses form title)"
 msgstr ""
 
+#. TRANSLATORS: Explanation of a template placeholder: the date a response was sent
 msgid "Submission date"
 msgstr ""
 
+#. TRANSLATORS: Verb: button that sends the answers of a form
 msgid "Submit"
 msgstr ""
 
+#. TRANSLATORS: Column header in the CSV and Excel export: date and time of a response
+msgid "Submitted at"
+msgstr ""
+
+#. TRANSLATORS: Label in an exported document; the date of the response follows
+msgid "Submitted:"
+msgstr ""
+
+#. TRANSLATORS: Button text while the answers are sent
 msgid "Submitting …"
 msgstr ""
 
 msgid "Submitting your response …"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Subscription activated!"
 msgstr ""
 
 msgid "Subscription active — thank you for supporting FormVox!"
 msgstr ""
 
+#. TRANSLATORS: Heading and label: the key of a paid support subscription
 msgid "Subscription key"
 msgstr ""
 
@@ -2085,70 +2706,95 @@ msgstr ""
 msgid "Subscription key removed."
 msgstr ""
 
+#. TRANSLATORS: {reason} comes from the license server, in English
 msgid "Subscription key saved but validation failed: {reason}"
 msgstr ""
 
+#. TRANSLATORS: {reason} comes from the license server, in English
 msgid "Subscription key was refused: {reason}"
 msgstr ""
 
+#. TRANSLATORS: Noun: name of a tab
 msgid "Summary"
 msgstr ""
 
+#. TRANSLATORS: Name of a color theme for a form page
+msgid "Sunset"
+msgstr ""
+
+#. TRANSLATORS: Noun: name of a settings tab about the support subscription
 msgid "Support"
 msgstr ""
 
+#. TRANSLATORS: Heading; FormVox is the product name
 msgid "Support FormVox"
 msgstr ""
 
+#. TRANSLATORS: Noun: a type of form
 msgid "Survey"
 msgstr ""
 
+#. TRANSLATORS: Question type: rows the respondent fills in
 msgid "Table"
 msgstr ""
 
+#. TRANSLATORS: Label before the technical name of the AI task type, which stays in English
 msgid "Task type:"
 msgstr ""
 
 msgid "Tell us about yourself"
 msgstr ""
 
-msgid "Template"
-msgstr ""
-
 msgid "Template active — exports will use this template."
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Template deleted"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Template removed"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Template saved"
 msgstr ""
 
 msgid "Template title (optional)"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Template uploaded"
 msgstr ""
 
+#. TRANSLATORS: Label before the name of the chosen template
+msgid "Template:"
+msgstr ""
+
+#. TRANSLATORS: Name of a settings tab
 msgid "Templates"
 msgstr ""
 
-msgid "Templates appear in the \"New form\" dialog for every user. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
+msgid "Templates appear in the \"New form\" dialog for everyone. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
 msgstr ""
 
+#. TRANSLATORS: Technical term of Microsoft Azure: the ID of an organization
 msgid "Tenant ID"
 msgstr ""
 
+#. TRANSLATORS: Noun: group of text question types, and a label for text
 msgid "Text"
 msgstr ""
 
+#. TRANSLATORS: Label
 msgid "Text color"
 msgstr ""
 
 msgid "Text field with email validation"
+msgstr ""
+
+#. TRANSLATORS: Body of the confirmation email to a respondent; %s is the form title
+msgid "Thank you for filling in \"%s\".\n\nWe have received your response."
 msgstr ""
 
 msgid "Thank you for helping improve FormVox!"
@@ -2160,15 +2806,44 @@ msgstr ""
 msgid "Thank you page"
 msgstr ""
 
+#. TRANSLATORS: Heading of the page a respondent sees after submitting a form
 msgid "Thank you!"
+msgstr ""
+
+#. TRANSLATORS: Error; %s is the reason given by the AI provider, often in English
+msgid "The AI task failed: %s"
 msgstr ""
 
 msgid "The AI will draft questions based on your description. Generation can take up to 2 minutes."
 msgstr ""
 
-msgid "The telemetry server returned an error:"
+msgid "The file exceeds the maximum size allowed"
 msgstr ""
 
+msgid "The file exceeds the maximum upload size"
+msgstr ""
+
+msgid "The file was only partially uploaded"
+msgstr ""
+
+msgid "The import is not available."
+msgstr ""
+
+msgid "The Microsoft Forms connection is not available."
+msgstr ""
+
+#. TRANSLATORS: Error shown to a respondent; %s is the label of an answer option that has no places left
+msgid "The option '%s' is no longer available — capacity reached"
+msgstr ""
+
+msgid "The source must be a file."
+msgstr ""
+
+#. TRANSLATORS: {error} is a technical message, in English
+msgid "The telemetry server returned an error: {error}"
+msgstr ""
+
+#. TRANSLATORS: Label above ready-made color themes
 msgid "Theme presets"
 msgstr ""
 
@@ -2184,10 +2859,25 @@ msgstr ""
 msgid "This field does not match the required format"
 msgstr ""
 
+msgid "This file type is not allowed"
+msgstr ""
+
+msgid "This form has expired"
+msgstr ""
+
 msgid "This form has reached its response limit"
 msgstr ""
 
 msgid "This form is no longer accepting responses."
+msgstr ""
+
+msgid "This form is not yet open"
+msgstr ""
+
+msgid "This form is password protected"
+msgstr ""
+
+msgid "This form requires you to be logged in"
 msgstr ""
 
 msgid "This form uses the default theme. Enable custom theme above to customize."
@@ -2199,7 +2889,7 @@ msgstr ""
 msgid "This FormVox subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
 msgstr ""
 
-msgid "This FormVox subscription key is not known to the licence server. Check it for typos."
+msgid "This FormVox subscription key is not known to the license server. Check it for typos."
 msgstr ""
 
 msgid "This FormVox subscription key is not valid yet."
@@ -2226,9 +2916,6 @@ msgstr ""
 msgid "This question only appears if you selected \"Yes\" above"
 msgstr ""
 
-msgid "This question only appears if you selected \\\"Yes\\\" above"
-msgstr ""
-
 msgid "This question will always be shown."
 msgstr ""
 
@@ -2238,84 +2925,130 @@ msgstr ""
 msgid "This subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
 msgstr ""
 
-msgid "This subscription key is not known to the licence server. Check it for typos."
+msgid "This subscription key is not known to the license server. Check it for typos."
 msgstr ""
 
 msgid "This subscription key is not valid yet."
 msgstr ""
 
+#. TRANSLATORS: Noun: time of day; question type and label of a time field
 msgid "Time"
 msgstr ""
 
+#. TRANSLATORS: Error shown to a respondent; %s is the question text
+msgid "Time is after the allowed maximum for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Error shown to a respondent; %s is the question text
+msgid "Time is before the allowed minimum for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: {min} is a time such as 09:00
 msgid "Time must be at or after {min}"
 msgstr ""
 
+#. TRANSLATORS: {max} is a time such as 17:00
 msgid "Time must be at or before {max}"
 msgstr ""
 
 msgid "Time picker only"
 msgstr ""
 
+#. TRANSLATORS: Column header: the title of a template
 msgid "Title"
 msgstr ""
 
 msgid "To enable Microsoft Forms import, you need to register an application in Azure AD."
 msgstr ""
 
+#. TRANSLATORS: Tooltip of the text editor button that shows or hides the preview
 msgid "Toggle preview"
+msgstr ""
+
+msgid "Total account count and active accounts"
+msgstr ""
+
+#. TRANSLATORS: Statistic label
+msgid "Total accounts"
 msgstr ""
 
 msgid "Total form and response counts"
 msgstr ""
 
+#. TRANSLATORS: Statistic label
 msgid "Total forms"
 msgstr ""
 
+#. TRANSLATORS: Statistic label
 msgid "Total responses"
-msgstr ""
-
-msgid "Total user count and active users"
-msgstr ""
-
-msgid "Total users"
 msgstr ""
 
 msgid "Type to search …"
 msgstr ""
 
-msgid "unique answers"
+#. TRANSLATORS: Shown when an error has no description
+msgid "Unknown error"
 msgstr ""
 
+#. TRANSLATORS: Shown in a notification when the form's title is not known
+msgid "Unknown form"
+msgstr ""
+
+msgid "Unknown upload error"
+msgstr ""
+
+msgid "Unsupported file type. Use PDF, DOCX, ODT, or a plain text file."
+msgstr ""
+
+#. TRANSLATORS: Default title of a form that has none
+msgid "Untitled form"
+msgstr ""
+
+#. TRANSLATORS: Name of a section without a title
 msgid "Untitled section"
 msgstr ""
 
+#. TRANSLATORS: Default name of a form template that has no title
+msgid "Untitled template"
+msgstr ""
+
+#. TRANSLATORS: Description of an API endpoint
 msgid "Update response"
 msgstr ""
 
+#. TRANSLATORS: Short name of a webhook event: a response was changed
 msgid "Updated"
 msgstr ""
 
+#. TRANSLATORS: Verb: step name in the import dialog and button that uploads a file
 msgid "Upload"
 msgstr ""
 
+#. TRANSLATORS: {Q1} and {Q2} are literal placeholders the user types in the document; keep them exactly as they are
 msgid "Upload an ODT file with placeholders like {Q1}, {Q2}, etc. These will be replaced with the actual answers when exporting."
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Upload image"
 msgstr ""
 
+#. TRANSLATORS: Verb: button
 msgid "Upload logo"
 msgstr ""
 
+#. TRANSLATORS: Heading: upload a template
 msgid "Upload template"
 msgstr ""
 
+#. TRANSLATORS: Button text while uploading
 msgid "Uploading …"
 msgstr ""
 
+#. TRANSLATORS: {name} is a file name
 msgid "Uploading {name} …"
 msgstr ""
 
+#. TRANSLATORS: Label of a web address field
 msgid "URL"
 msgstr ""
 
@@ -2334,27 +3067,27 @@ msgstr ""
 msgid "Use this secret to verify webhook signatures. It will not be shown again."
 msgstr ""
 
-msgid "User names or email addresses"
-msgstr ""
-
-msgid "Users"
-msgstr ""
-
+#. TRANSLATORS: Switch that turns on an input check for a text answer
 msgid "Validation pattern"
 msgstr ""
 
+#. TRANSLATORS: Label of the kind of input check
 msgid "Validation type"
 msgstr ""
 
+#. TRANSLATORS: Placeholder of the input for the value a condition compares with
 msgid "Value"
 msgstr ""
 
+#. TRANSLATORS: Label at the high end of an example rating scale
 msgid "Very likely"
 msgstr ""
 
+#. TRANSLATORS: Answer option in an example rating question (worst of five)
 msgid "Very poor"
 msgstr ""
 
+#. TRANSLATORS: Noun: contact method in an example question
 msgid "Video call"
 msgstr ""
 
@@ -2364,10 +3097,11 @@ msgstr ""
 msgid "Wait until current generation finishes"
 msgstr ""
 
+#. TRANSLATORS: Heading above a list of import warnings
 msgid "Warnings"
 msgstr ""
 
-msgid "We collect: form counts, response counts, user counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared."
+msgid "We collect: form counts, response counts, account counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared."
 msgstr ""
 
 msgid "We saved your progress. You can continue where you left off."
@@ -2376,27 +3110,39 @@ msgstr ""
 msgid "We will send you a confirmation when you submit this form."
 msgstr ""
 
+#. TRANSLATORS: Default name of a webhook when none was given
+msgid "Webhook"
+msgstr ""
+
+#. TRANSLATORS: Confirmation message
 msgid "Webhook created"
 msgstr ""
 
+#. TRANSLATORS: Confirmation message
 msgid "Webhook deleted"
 msgstr ""
 
+#. TRANSLATORS: Label of the name field of a new webhook
 msgid "Webhook name"
 msgstr ""
 
+#. TRANSLATORS: Label of the address a webhook sends to
 msgid "Webhook URL"
 msgstr ""
 
+#. TRANSLATORS: Technical term: messages sent to another system when something happens; keep the common term
 msgid "Webhooks"
 msgstr ""
 
+#. TRANSLATORS: Label of the link to a website among the social links
 msgid "Website"
 msgstr ""
 
+#. TRANSLATORS: Name of an input check that only accepts web addresses
 msgid "Website URL"
 msgstr ""
 
+#. TRANSLATORS: Heading when a respondent returns to a form they started
 msgid "Welcome back!"
 msgstr ""
 
@@ -2415,10 +3161,10 @@ msgstr ""
 msgid "What time works best for you?"
 msgstr ""
 
-msgid "What we collect"
+msgid "What we collect:"
 msgstr ""
 
-msgid "What we never collect"
+msgid "What we never collect:"
 msgstr ""
 
 msgid "When did you start using Nextcloud?"
@@ -2436,37 +3182,42 @@ msgstr ""
 msgid "Which form tools have you used before?"
 msgstr ""
 
-msgid "Width"
+#. TRANSLATORS: Label; a number in pixels follows
+msgid "Width:"
 msgstr ""
 
+#. TRANSLATORS: Verb: button to edit the form together with others
 msgid "Work together"
 msgstr ""
 
 msgid "Would you like us to contact you?"
 msgstr ""
 
+#. TRANSLATORS: Short name of an API key permission; keep it short, it is a badge
 msgid "Write"
 msgstr ""
 
 msgid "Write a short bio …"
 msgstr ""
 
+#. TRANSLATORS: API key permission: add and change responses
 msgid "Write responses"
 msgstr ""
 
+#. TRANSLATORS: Answer to a consent question, in results and exports
 msgid "Yes"
 msgstr ""
 
 msgid "Yes, please contact me"
 msgstr ""
 
-msgid "you"
-msgstr ""
-
 msgid "You are connected to Microsoft. Click Next to select a form to import."
 msgstr ""
 
 msgid "You can view the form but not make changes right now."
+msgstr ""
+
+msgid "You do not have permission to access this form."
 msgstr ""
 
 msgid "You do not have permission to create a response link."
@@ -2476,6 +3227,15 @@ msgid "You do not have permission to delete this form"
 msgstr ""
 
 msgid "You do not have permission to edit this form"
+msgstr ""
+
+msgid "You do not have permission to submit this form"
+msgstr ""
+
+msgid "You do not have permission to upload files to this form"
+msgstr ""
+
+msgid "You have already submitted a response to this form"
 msgstr ""
 
 msgid "You have no forms yet. Create one first."
@@ -2490,6 +3250,7 @@ msgstr ""
 msgid "Your email address"
 msgstr ""
 
+#. TRANSLATORS: {date} is a date
 msgid "Your FormVox subscription expired on {date}. Renew it to keep receiving support."
 msgstr ""
 
@@ -2499,17 +3260,110 @@ msgstr ""
 msgid "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support."
 msgstr ""
 
+msgid "Your HTML here …"
+msgstr ""
+
+#. TRANSLATORS: Heading above statistics of this Nextcloud server
 msgid "Your installation"
 msgstr ""
 
 msgid "Your response has been recorded."
 msgstr ""
 
+msgid "Your response has been submitted successfully."
+msgstr ""
+
+#. TRANSLATORS: Heading of the quiz score after submitting
 msgid "Your score"
 msgstr ""
 
+#. TRANSLATORS: {date} is a date
 msgid "Your subscription expired on {date}. Renew it to keep receiving support."
 msgstr ""
 
 msgid "Your subscription has expired. Renew it to keep receiving support."
 msgstr ""
+
+#. TRANSLATORS: %n is the number of uploaded files
+msgid "%n file uploaded"
+msgid_plural "%n files uploaded"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Shown next to the avatars of people editing the form at the same time; %n counts them
+msgid "%n other editing"
+msgid_plural "%n others editing"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: %n is the number of questions that were imported
+msgid "%n question imported"
+msgid_plural "%n questions imported"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: %n is the number of responses to a form
+msgid "%n response"
+msgid_plural "%n responses"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: %n is the number of responses
+msgid "%n response collected"
+msgid_plural "%n responses collected"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: %n is the number of responses that were imported
+msgid "%n response imported"
+msgid_plural "%n responses imported"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: %n is the number of table rows in all responses together
+msgid "%n row total across all responses"
+msgid_plural "%n rows total across all responses"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Invisible label of a star button in a rating question; %n is the rating it gives
+msgid "%n star"
+msgid_plural "%n stars"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: %n is the number of different answers
+msgid "%n unique answer"
+msgid_plural "%n unique answers"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: %n is the number of accounts on this server; {email} is an email address
+msgid "FormVox is running for %n account here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
+msgid_plural "FormVox is running for %n accounts here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Error when too many files are chosen; %n is the maximum number of files
+msgid "Maximum %n file allowed"
+msgid_plural "Maximum %n files allowed"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Error shown to a respondent; %n is the minimum number of options to tick, %s the question text
+msgid "Select at least %n option for question '%s'"
+msgid_plural "Select at least %n options for question '%s'"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Error shown to a respondent; %n is the maximum number of options to tick, %s the question text
+msgid "Select at most %n option for question '%s'"
+msgid_plural "Select at most %n options for question '%s'"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Error; %n is the number of seconds the app waited for the AI
+msgid "The AI task timed out after %n second"
+msgid_plural "The AI task timed out after %n seconds"
+msgstr[0] ""
+msgstr[1] ""

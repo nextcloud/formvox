@@ -13,6 +13,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IConfig;
+use OCP\IL10N;
 use OCP\IRequest;
 
 class SettingsController extends Controller {
@@ -20,6 +21,7 @@ class SettingsController extends Controller {
 	private MicrosoftFormsAuthService $msFormsAuthService;
 	private AiFormGeneratorService $aiService;
 	private TemplateService $templateService;
+	private IL10N $l;
 
 	public function __construct(
 		IRequest $request,
@@ -27,12 +29,14 @@ class SettingsController extends Controller {
 		MicrosoftFormsAuthService $msFormsAuthService,
 		AiFormGeneratorService $aiService,
 		TemplateService $templateService,
+		IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->config = $config;
 		$this->msFormsAuthService = $msFormsAuthService;
 		$this->aiService = $aiService;
 		$this->templateService = $templateService;
+		$this->l = $l;
 	}
 
 	/**
@@ -106,7 +110,8 @@ class SettingsController extends Controller {
 	): DataResponse {
 		if ($enabled && !$this->aiService->isProviderAvailable()) {
 			return new DataResponse(
-				['error' => 'No AI text-to-text provider is configured on this instance. Install an AI provider (e.g. integration_openai) first.'],
+				// TRANSLATORS: %s is the technical name of a Nextcloud app, "integration_openai"; keep it as is
+				['error' => $this->l->t('No AI text-to-text provider is configured on this instance. Install an AI provider (for example %s) first.', ['integration_openai'])],
 				Http::STATUS_CONFLICT
 			);
 		}

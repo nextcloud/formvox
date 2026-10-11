@@ -15,7 +15,7 @@
       </a>
     </div>
     <p v-if="editMode && visibleLinks.length === 0" class="placeholder">
-      {{ t('Add social links in settings') }}
+      {{ t('formvox', 'Add social links in settings') }}
     </p>
   </div>
 </template>

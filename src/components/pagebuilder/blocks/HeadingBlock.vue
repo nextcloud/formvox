@@ -2,7 +2,7 @@
   <div class="block-heading" :class="alignmentClass">
     <template v-if="editMode">
       <component :is="headingTag" class="heading-preview" :style="headingStyle">
-        {{ block.settings.text || t('Heading') }}
+        {{ block.settings.text || t('formvox', 'Heading') }}
       </component>
     </template>
     <template v-else>

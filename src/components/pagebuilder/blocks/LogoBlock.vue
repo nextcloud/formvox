@@ -2,9 +2,9 @@
   <div class="block-logo" :class="alignmentClass">
     <template v-if="editMode">
       <div v-if="block.settings.imageUrl" class="logo-preview">
-        <img :src="block.settings.imageUrl" alt="Logo" />
+        <img :src="block.settings.imageUrl" :alt="t('formvox', 'Logo')" />
         <NcButton type="error" @click="removeImage">
-          {{ t('Remove') }}
+          {{ t('formvox', 'Remove') }}
         </NcButton>
       </div>
       <div v-else class="logo-upload">
@@ -16,13 +16,14 @@
           @change="onFileSelect"
         >
         <NcButton @click="$refs.fileInput.click()">
-          {{ t('Upload logo') }}
+          <!-- TRANSLATORS: Verb: button -->
+          {{ t('formvox', 'Upload logo') }}
         </NcButton>
-        <p class="hint">{{ t('PNG, JPEG, SVG, GIF or WebP. Max 2MB.') }}</p>
+        <p class="hint">{{ t('formvox', 'PNG, JPEG, SVG, GIF or WebP. Max 2MB.') }}</p>
       </div>
     </template>
     <template v-else>
-      <img v-if="block.settings.imageUrl" :src="block.settings.imageUrl" alt="Logo" />
+      <img v-if="block.settings.imageUrl" :src="block.settings.imageUrl" :alt="t('formvox', 'Logo')" />
     </template>
   </div>
 </template>

@@ -1,19 +1,20 @@
 <template>
   <NcModal @close="$emit('close')">
     <div class="condition-editor">
-      <h2>{{ t('Show this question when …') }}</h2>
+      <h2>{{ t('formvox', 'Show this question when …') }}</h2>
 
       <div v-if="!localCondition" class="no-condition">
-        <p>{{ t('This question will always be shown.') }}</p>
+        <p>{{ t('formvox', 'This question will always be shown.') }}</p>
         <NcButton
           type="primary"
           :disabled="availableQuestions.length === 0"
           @click="addSimpleCondition"
         >
-          {{ t('Add condition') }}
+          <!-- TRANSLATORS: Verb: button that adds a condition for showing a question -->
+          {{ t('formvox', 'Add condition') }}
         </NcButton>
         <p v-if="availableQuestions.length === 0" class="no-questions-hint">
-          {{ t('No previous questions available. Conditions can only reference questions that appear before this one.') }}
+          {{ t('formvox', 'No previous questions available. Conditions can only reference questions that appear before this one.') }}
         </p>
       </div>
 
@@ -29,10 +30,12 @@
 
       <div class="actions">
         <NcButton @click="$emit('close')">
-          {{ t('Cancel') }}
+          <!-- TRANSLATORS: Verb: button that closes a dialog without saving -->
+          {{ t('formvox', 'Cancel') }}
         </NcButton>
         <NcButton type="primary" @click="save">
-          {{ t('Save') }}
+          <!-- TRANSLATORS: Verb: button -->
+          {{ t('formvox', 'Save') }}
         </NcButton>
       </div>
     </div>

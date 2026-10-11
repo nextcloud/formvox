@@ -9,3 +9,4 @@ vendor-bin/
 tests/
 releases/
 *.tar.gz
+tests-js/

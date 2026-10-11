@@ -15,6 +15,7 @@ use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\AppFramework\Http\DataResponse;
+use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserSession;
 
@@ -23,6 +24,7 @@ class BrandingController extends Controller {
 	private FormFileLocator $fileLocator;
 	private PermissionService $permissionService;
 	private IUserSession $userSession;
+	private IL10N $l;
 
 	public function __construct(
 		IRequest $request,
@@ -30,12 +32,14 @@ class BrandingController extends Controller {
 		FormFileLocator $fileLocator,
 		PermissionService $permissionService,
 		IUserSession $userSession,
+		IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->brandingService = $brandingService;
 		$this->fileLocator = $fileLocator;
 		$this->permissionService = $permissionService;
 		$this->userSession = $userSession;
+		$this->l = $l;
 	}
 
 	/**
@@ -68,7 +72,7 @@ class BrandingController extends Controller {
 		$file = $this->request->getUploadedFile('image');
 		if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
 			return new DataResponse(
-				['error' => 'No file uploaded'],
+				['error' => $this->l->t('No file was uploaded')],
 				Http::STATUS_BAD_REQUEST
 			);
 		}
@@ -76,7 +80,8 @@ class BrandingController extends Controller {
 		$allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
 		if (!in_array($file['type'], $allowedTypes)) {
 			return new DataResponse(
-				['error' => 'Invalid file type. Allowed: PNG, JPEG, SVG, GIF, WebP'],
+				// TRANSLATORS: Upload error; %s is a list of file formats such as "PNG, JPEG, SVG, GIF, WebP"
+				['error' => $this->l->t('Invalid file type. Allowed: %s', ['PNG, JPEG, SVG, GIF, WebP'])],
 				Http::STATUS_BAD_REQUEST
 			);
 		}
@@ -84,7 +89,8 @@ class BrandingController extends Controller {
 		$maxSize = 2 * 1024 * 1024; // 2MB
 		if ($file['size'] > $maxSize) {
 			return new DataResponse(
-				['error' => 'File too large. Maximum size: 2MB'],
+				// TRANSLATORS: Upload error; %s is a number of megabytes, for example 2
+				['error' => $this->l->t('File is too large. The maximum size is %s MB.', [2])],
 				Http::STATUS_BAD_REQUEST
 			);
 		}
@@ -131,14 +137,14 @@ class BrandingController extends Controller {
 
 		$file = $this->request->getUploadedFile('image');
 		if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
-			return new DataResponse(['error' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
+			return new DataResponse(['error' => $this->l->t('No file was uploaded')], Http::STATUS_BAD_REQUEST);
 		}
 		$allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
 		if (!in_array($file['type'], $allowedTypes)) {
-			return new DataResponse(['error' => 'Invalid file type. Allowed: PNG, JPEG, SVG, GIF, WebP'], Http::STATUS_BAD_REQUEST);
+			return new DataResponse(['error' => $this->l->t('Invalid file type. Allowed: %s', ['PNG, JPEG, SVG, GIF, WebP'])], Http::STATUS_BAD_REQUEST);
 		}
 		if ($file['size'] > 2 * 1024 * 1024) {
-			return new DataResponse(['error' => 'File too large. Maximum size: 2MB'], Http::STATUS_BAD_REQUEST);
+			return new DataResponse(['error' => $this->l->t('File is too large. The maximum size is %s MB.', [2])], Http::STATUS_BAD_REQUEST);
 		}
 
 		try {
@@ -175,17 +181,18 @@ class BrandingController extends Controller {
 	private function requireBrandingEditPermission(int $fileId): ?DataResponse {
 		$userId = $this->userSession->getUser()?->getUID();
 		if ($userId === null) {
-			return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
+			return new DataResponse(['error' => $this->l->t('Not authenticated')], Http::STATUS_UNAUTHORIZED);
 		}
 		try {
 			$file = $this->fileLocator->getFileById($fileId);
 			$role = $this->permissionService->getRoleFromFile($file, $userId);
 			if (!$this->permissionService->canEditSettings($role)) {
-				return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
+				// TRANSLATORS: Error when the account may not do this with the form
+				return new DataResponse(['error' => $this->l->t('Permission denied')], Http::STATUS_FORBIDDEN);
 			}
 			return null;
 		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(['error' => 'Form not found'], Http::STATUS_NOT_FOUND);
+			return new DataResponse(['error' => $this->l->t('Form not found')], Http::STATUS_NOT_FOUND);
 		} catch (\Exception $e) {
 			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
 		}

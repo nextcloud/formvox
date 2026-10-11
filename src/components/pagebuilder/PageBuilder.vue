@@ -1,8 +1,9 @@
 <template>
   <div class="page-builder">
     <div class="builder-header">
-      <h2>{{ t('Page builder') }}</h2>
-      <p class="description">{{ t('Customize the appearance of your public forms.') }}</p>
+      <!-- TRANSLATORS: Heading of the editor for the page around a form -->
+      <h2>{{ t('formvox', 'Page builder') }}</h2>
+      <p class="description">{{ t('formvox', 'Customize the appearance of your public forms.') }}</p>
     </div>
 
     <div class="builder-tabs">
@@ -21,7 +22,8 @@
         @click="activeZone = 'styles'"
       >
         <CogIcon :size="16" />
-        {{ t('Global styles') }}
+        <!-- TRANSLATORS: Heading of the colors and fonts that apply to the whole page -->
+        {{ t('formvox', 'Global styles') }}
       </button>
     </div>
 
@@ -30,7 +32,8 @@
       <div v-if="activeZone === 'styles'" class="styles-panel">
         <!-- Theme Presets -->
         <div class="style-field">
-          <label>{{ t('Theme presets') }}</label>
+          <!-- TRANSLATORS: Label above ready-made color themes -->
+          <label>{{ t('formvox', 'Theme presets') }}</label>
           <div class="theme-presets">
             <button
               v-for="preset in themePresets"
@@ -50,14 +53,16 @@
 
         <!-- Custom Colors -->
         <div class="style-field">
-          <label>{{ t('Primary color') }}</label>
+          <!-- TRANSLATORS: Label: the main color of buttons and accents -->
+          <label>{{ t('formvox', 'Primary color') }}</label>
           <div class="color-input">
             <input v-model="globalStyles.primaryColor" type="color" @change="saveStyles" />
             <input v-model="globalStyles.primaryColor" type="text" @change="saveStyles" />
           </div>
         </div>
         <div class="style-field">
-          <label>{{ t('Background color') }}</label>
+          <!-- TRANSLATORS: Label -->
+          <label>{{ t('formvox', 'Background color') }}</label>
           <div class="color-input">
             <input v-model="globalStyles.backgroundColor" type="color" @change="saveStyles" />
             <input v-model="globalStyles.backgroundColor" type="text" @change="saveStyles" />
@@ -105,7 +110,7 @@
             </draggable>
 
             <div v-if="currentBlocks.length === 0" class="empty-zone">
-              <p>{{ t('No blocks yet. Add one below.') }}</p>
+              <p>{{ t('formvox', 'No blocks yet. Add one below.') }}</p>
             </div>
 
             <NcActions class="add-block-menu">
@@ -126,29 +131,34 @@
           </div>
 
           <div v-if="selectedBlock" class="block-editor">
-            <h3>{{ t('Block settings') }}</h3>
+            <!-- TRANSLATORS: Heading of the settings of the selected page block -->
+            <h3>{{ t('formvox', 'Block settings') }}</h3>
 
             <!-- Alignment -->
             <div class="editor-field">
-              <label>{{ t('Alignment') }}</label>
+              <!-- TRANSLATORS: Label -->
+              <label>{{ t('formvox', 'Alignment') }}</label>
               <div class="alignment-buttons">
                 <button
                   :class="{ active: selectedBlock.alignment === 'left' }"
                   @click="updateBlockAlignment('left')"
                 >
-                  {{ t('Left') }}
+                  <!-- TRANSLATORS: Alignment option -->
+                  {{ t('formvox', 'Left') }}
                 </button>
                 <button
                   :class="{ active: selectedBlock.alignment === 'center' }"
                   @click="updateBlockAlignment('center')"
                 >
-                  {{ t('Center') }}
+                  <!-- TRANSLATORS: Alignment option -->
+                  {{ t('formvox', 'Center') }}
                 </button>
                 <button
                   :class="{ active: selectedBlock.alignment === 'right' }"
                   @click="updateBlockAlignment('right')"
                 >
-                  {{ t('Right') }}
+                  <!-- TRANSLATORS: Alignment option -->
+                  {{ t('formvox', 'Right') }}
                 </button>
               </div>
             </div>
@@ -156,7 +166,8 @@
             <!-- Block-specific settings -->
             <template v-if="selectedBlock.type === 'heading'">
               <div class="editor-field">
-                <label>{{ t('Level') }}</label>
+                <!-- TRANSLATORS: Label: the size level of a heading, H1 to H4 -->
+                <label>{{ t('formvox', 'Level') }}</label>
                 <NcSelect
                   v-model="selectedBlock.settings.level"
                   :options="headingLevels"
@@ -164,24 +175,25 @@
                 />
               </div>
               <div class="editor-field">
-                <label>{{ t('Text') }}</label>
+                <label>{{ t('formvox', 'Text') }}</label>
                 <NcTextField
                   v-model="selectedBlock.settings.text"
                   @update:model-value="debouncedSave"
                 />
               </div>
               <div class="editor-field">
-                <label>{{ t('Color') }}</label>
+                <!-- TRANSLATORS: Label -->
+                <label>{{ t('formvox', 'Color') }}</label>
                 <div class="color-input">
                   <input
                     v-model="selectedBlock.settings.color"
                     type="color"
                     @change="saveLayout"
                   />
-                  <input
+                  <!-- TRANSLATORS: Placeholder: the default color is used -->
+                  <input :placeholder="t('formvox', 'Default')"
                     v-model="selectedBlock.settings.color"
                     type="text"
-                    :placeholder="t('Default')"
                     @change="saveLayout"
                   />
                   <button
@@ -197,7 +209,8 @@
 
             <template v-else-if="selectedBlock.type === 'text'">
               <div class="editor-field">
-                <label>{{ t('Content') }}</label>
+                <!-- TRANSLATORS: Label of the text of a block -->
+                <label>{{ t('formvox', 'Content') }}</label>
                 <NcTextArea
                   v-model="selectedBlock.settings.content"
                   :rows="4"
@@ -205,7 +218,7 @@
                 />
               </div>
               <div class="editor-field">
-                <label>{{ t('Color') }}</label>
+                <label>{{ t('formvox', 'Color') }}</label>
                 <div class="color-input">
                   <input
                     v-model="selectedBlock.settings.color"
@@ -215,7 +228,7 @@
                   <input
                     v-model="selectedBlock.settings.color"
                     type="text"
-                    :placeholder="t('Default')"
+                    :placeholder="t('formvox', 'Default')"
                     @change="saveLayout"
                   />
                   <button
@@ -231,7 +244,8 @@
 
             <template v-else-if="selectedBlock.type === 'spacer'">
               <div class="editor-field">
-                <label>{{ t('Size') }}</label>
+                <!-- TRANSLATORS: Label of the height of a spacer block -->
+                <label>{{ t('formvox', 'Size') }}</label>
                 <NcSelect
                   v-model="selectedBlock.settings.size"
                   :options="spacerSizes"
@@ -242,7 +256,7 @@
 
             <template v-else-if="selectedBlock.type === 'divider'">
               <div class="editor-field">
-                <label>{{ t('Color') }}</label>
+                <label>{{ t('formvox', 'Color') }}</label>
                 <input
                   v-model="selectedBlock.settings.color"
                   type="color"
@@ -250,7 +264,8 @@
                 />
               </div>
               <div class="editor-field">
-                <label>{{ t('Style') }}</label>
+                <!-- TRANSLATORS: Label of the line style of a divider (solid, dashed, dotted) -->
+                <label>{{ t('formvox', 'Style') }}</label>
                 <NcSelect
                   v-model="selectedBlock.settings.style"
                   :options="dividerStyles"
@@ -261,14 +276,16 @@
 
             <template v-else-if="selectedBlock.type === 'button'">
               <div class="editor-field">
-                <label>{{ t('Button text') }}</label>
+                <!-- TRANSLATORS: Label -->
+                <label>{{ t('formvox', 'Button text') }}</label>
                 <NcTextField
                   v-model="selectedBlock.settings.text"
                   @update:model-value="debouncedSave"
                 />
               </div>
               <div class="editor-field">
-                <label>{{ t('URL') }}</label>
+                <!-- TRANSLATORS: Label of a web address field -->
+                <label>{{ t('formvox', 'URL') }}</label>
                 <NcTextField
                   v-model="selectedBlock.settings.url"
                   placeholder="https://..."
@@ -276,7 +293,7 @@
                 />
               </div>
               <div class="editor-field">
-                <label>{{ t('Background color') }}</label>
+                <label>{{ t('formvox', 'Background color') }}</label>
                 <div class="color-input">
                   <input
                     v-model="selectedBlock.settings.backgroundColor"
@@ -286,7 +303,7 @@
                   <input
                     v-model="selectedBlock.settings.backgroundColor"
                     type="text"
-                    :placeholder="t('Primary color')"
+                    :placeholder="t('formvox', 'Primary color')"
                     @change="saveLayout"
                   />
                   <button
@@ -299,7 +316,8 @@
                 </div>
               </div>
               <div class="editor-field">
-                <label>{{ t('Text color') }}</label>
+                <!-- TRANSLATORS: Label -->
+                <label>{{ t('formvox', 'Text color') }}</label>
                 <div class="color-input">
                   <input
                     v-model="selectedBlock.settings.textColor"
@@ -326,18 +344,19 @@
                   :model-value="selectedBlock.settings.newTab"
                   @update:model-value="(val) => { selectedBlock.settings.newTab = val; saveLayout(); }"
                 >
-                  {{ t('Open in new tab') }}
+                  {{ t('formvox', 'Open in new tab') }}
                 </NcCheckboxRadioSwitch>
               </div>
             </template>
 
             <template v-else-if="selectedBlock.type === 'html'">
               <div class="editor-field">
-                <label>{{ t('HTML Content') }}</label>
+                <!-- TRANSLATORS: Label of a block with HTML code -->
+                <label>{{ t('formvox', 'HTML content') }}</label>
                 <NcTextArea
                   v-model="selectedBlock.settings.content"
                   :rows="6"
-                  placeholder="<p>Your HTML here...</p>"
+                  :placeholder="`<p>${t('formvox', 'Your HTML here …')}</p>`"
                   @update:model-value="debouncedSave"
                 />
               </div>
@@ -345,10 +364,11 @@
 
             <template v-else-if="selectedBlock.type === 'image'">
               <div class="editor-field">
-                <label>{{ t('Alt text') }}</label>
-                <NcTextField
+                <!-- TRANSLATORS: Label: a text that describes an image for screen readers -->
+                <label>{{ t('formvox', 'Alt text') }}</label>
+                <!-- TRANSLATORS: Placeholder of the alt text field -->
+                <NcTextField :placeholder="t('formvox', 'Image description')"
                   v-model="selectedBlock.settings.alt"
-                  :placeholder="t('Image description')"
                   @update:model-value="debouncedSave"
                 />
               </div>
@@ -356,7 +376,8 @@
 
             <template v-else-if="selectedBlock.type === 'socialLinks'">
               <div class="editor-field">
-                <label>{{ t('Social links') }}</label>
+                <!-- TRANSLATORS: Page block type with links to social media -->
+                <label>{{ t('formvox', 'Social links') }}</label>
                 <div
                   v-for="platform in socialPlatforms"
                   :key="platform.id"
@@ -374,7 +395,7 @@
 
             <template v-else-if="selectedBlock.type === 'progressBar'">
               <div class="editor-field">
-                <label>{{ t('Demo progress (%)') }}</label>
+                <label>{{ t('formvox', 'Demo progress (%)') }}</label>
                 <NcTextField
                   :model-value="String(selectedBlock.settings.demoProgress ?? 50)"
                   type="number"
@@ -384,7 +405,8 @@
                 />
               </div>
               <div class="editor-field">
-                <label>{{ t('Bar color') }}</label>
+                <!-- TRANSLATORS: Label: the color of a progress bar -->
+                <label>{{ t('formvox', 'Bar color') }}</label>
                 <div class="color-input">
                   <input
                     v-model="selectedBlock.settings.color"
@@ -394,7 +416,7 @@
                   <input
                     v-model="selectedBlock.settings.color"
                     type="text"
-                    :placeholder="t('Primary color')"
+                    :placeholder="t('formvox', 'Primary color')"
                     @change="saveLayout"
                   />
                   <button
@@ -411,7 +433,8 @@
                   :model-value="selectedBlock.settings.showPercentage"
                   @update:model-value="(val) => { selectedBlock.settings.showPercentage = val; saveLayout(); }"
                 >
-                  {{ t('Show percentage') }}
+                  <!-- TRANSLATORS: Checkbox -->
+                  {{ t('formvox', 'Show percentage') }}
                 </NcCheckboxRadioSwitch>
               </div>
             </template>
@@ -422,17 +445,20 @@
 
     <!-- Preview -->
     <div class="builder-preview">
-      <h3>{{ t('Preview') }}</h3>
+      <!-- TRANSLATORS: Noun: heading of the preview, and a button that shows it -->
+      <h3>{{ t('formvox', 'Preview') }}</h3>
       <div class="preview-container" :style="previewStyles">
         <div v-for="block in layout.header" :key="block.id" class="preview-block">
           <BlockRenderer :block="block" :edit-mode="true" :global-styles="globalStyles" />
         </div>
         <div class="preview-form-placeholder">
-          <div class="form-title">{{ t('Form title') }}</div>
-          <div class="form-question">{{ t('Sample question') }}</div>
+          <div class="form-title">{{ t('formvox', 'Form title') }}</div>
+          <!-- TRANSLATORS: Example text in the preview -->
+          <div class="form-question">{{ t('formvox', 'Sample question') }}</div>
           <div class="form-input"></div>
           <div class="form-button" :style="{ backgroundColor: globalStyles.primaryColor }">
-            {{ t('Submit') }}
+            <!-- TRANSLATORS: Verb: button that sends the answers of a form -->
+            {{ t('formvox', 'Submit') }}
           </div>
         </div>
         <div v-for="block in layout.footer" :key="block.id" class="preview-block">
@@ -442,7 +468,8 @@
     </div>
 
     <div v-if="saving" class="saving-indicator">
-      {{ t('Saving …') }}
+      <!-- TRANSLATORS: Button text while saving; keep it short -->
+      {{ t('formvox', 'Saving …') }}
     </div>
   </div>
 </template>
@@ -540,22 +567,29 @@ export default {
     let saveTimeout = null;
 
     const zones = [
-      { id: 'header', label: t('Header') },
-      { id: 'footer', label: t('Footer') },
-      { id: 'thankYou', label: t('Thank you page') },
+      // TRANSLATORS: Noun: the area above the form
+      { id: 'header', label: t('formvox', 'Header') },
+      // TRANSLATORS: Noun: the area below the form
+      { id: 'footer', label: t('formvox', 'Footer') },
+      { id: 'thankYou', label: t('formvox', 'Thank you page') },
     ];
 
     const blockTypes = [
-      { type: 'logo', label: t('Logo'), icon: ImageIcon },
-      { type: 'heading', label: t('Heading'), icon: TextIcon },
-      { type: 'text', label: t('Text'), icon: TextIcon },
-      { type: 'image', label: t('Image'), icon: ImageIcon },
-      { type: 'spacer', label: t('Spacer'), icon: TextIcon },
-      { type: 'divider', label: t('Divider'), icon: TextIcon },
-      { type: 'button', label: t('Button'), icon: TextIcon },
-      { type: 'socialLinks', label: t('Social links'), icon: TextIcon },
-      { type: 'html', label: t('HTML'), icon: TextIcon },
-      { type: 'progressBar', label: t('Progress bar'), icon: TextIcon },
+      // TRANSLATORS: Noun: page block type, and the alternative text of the logo image
+      { type: 'logo', label: t('formvox', 'Logo'), icon: ImageIcon },
+      { type: 'heading', label: t('formvox', 'Heading'), icon: TextIcon },
+      { type: 'text', label: t('formvox', 'Text'), icon: TextIcon },
+      { type: 'image', label: t('formvox', 'Image'), icon: ImageIcon },
+      // TRANSLATORS: Page block type: empty space
+      { type: 'spacer', label: t('formvox', 'Spacer'), icon: TextIcon },
+      // TRANSLATORS: Page block type: a horizontal line
+      { type: 'divider', label: t('formvox', 'Divider'), icon: TextIcon },
+      // TRANSLATORS: Noun: page block type
+      { type: 'button', label: t('formvox', 'Button'), icon: TextIcon },
+      { type: 'socialLinks', label: t('formvox', 'Social links'), icon: TextIcon },
+      { type: 'html', label: 'HTML', icon: TextIcon },
+      // TRANSLATORS: Page block type
+      { type: 'progressBar', label: t('formvox', 'Progress bar'), icon: TextIcon },
     ];
 
     const headingLevels = [
@@ -566,15 +600,21 @@ export default {
     ];
 
     const spacerSizes = [
-      { value: 'small', label: t('Small (16px)') },
-      { value: 'medium', label: t('Medium (32px)') },
-      { value: 'large', label: t('Large (64px)') },
+      // TRANSLATORS: Size of a spacer block
+      { value: 'small', label: t('formvox', 'Small (16px)') },
+      // TRANSLATORS: Size of a spacer block
+      { value: 'medium', label: t('formvox', 'Medium (32px)') },
+      // TRANSLATORS: Size of a spacer block
+      { value: 'large', label: t('formvox', 'Large (64px)') },
     ];
 
     const dividerStyles = [
-      { value: 'solid', label: t('Solid') },
-      { value: 'dashed', label: t('Dashed') },
-      { value: 'dotted', label: t('Dotted') },
+      // TRANSLATORS: Line style of a divider
+      { value: 'solid', label: t('formvox', 'Solid') },
+      // TRANSLATORS: Line style of a divider
+      { value: 'dashed', label: t('formvox', 'Dashed') },
+      // TRANSLATORS: Line style of a divider
+      { value: 'dotted', label: t('formvox', 'Dotted') },
     ];
 
     const socialPlatforms = [
@@ -583,19 +623,26 @@ export default {
       { id: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/...' },
       { id: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/...' },
       { id: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/...' },
-      { id: 'website', label: t('Website'), placeholder: 'https://...' },
+      // TRANSLATORS: Label of the link to a website among the social links
+      { id: 'website', label: t('formvox', 'Website'), placeholder: 'https://...' },
     ];
 
     // Theme presets
     const themePresets = [
       { id: 'nextcloud', name: 'Nextcloud', primaryColor: '#0082c9', backgroundColor: '#ffffff' },
-      { id: 'nextcloud-dark', name: 'Nextcloud Dark', primaryColor: '#0082c9', backgroundColor: '#171717' },
-      { id: 'ocean', name: 'Ocean', primaryColor: '#006494', backgroundColor: '#e8f4f8' },
-      { id: 'forest', name: 'Forest', primaryColor: '#2d6a4f', backgroundColor: '#f1faee' },
-      { id: 'sunset', name: 'Sunset', primaryColor: '#e07a5f', backgroundColor: '#fff8f0' },
-      { id: 'purple', name: 'Purple', primaryColor: '#7209b7', backgroundColor: '#faf5ff' },
-      { id: 'dark', name: 'Dark', primaryColor: '#818cf8', backgroundColor: '#1e1e2e' },
-      { id: 'minimal', name: 'Minimal', primaryColor: '#374151', backgroundColor: '#ffffff' },
+      // TRANSLATORS: Name of a color theme for a form page; Nextcloud is the product name
+      { id: 'nextcloud-dark', name: t('formvox', 'Nextcloud dark'), primaryColor: '#0082c9', backgroundColor: '#171717' },
+      // TRANSLATORS: Name of a color theme for a form page
+      { id: 'ocean', name: t('formvox', 'Ocean'), primaryColor: '#006494', backgroundColor: '#e8f4f8' },
+      // TRANSLATORS: Name of a color theme for a form page
+      { id: 'forest', name: t('formvox', 'Forest'), primaryColor: '#2d6a4f', backgroundColor: '#f1faee' },
+      // TRANSLATORS: Name of a color theme for a form page
+      { id: 'sunset', name: t('formvox', 'Sunset'), primaryColor: '#e07a5f', backgroundColor: '#fff8f0' },
+      { id: 'purple', name: t('formvox', 'Purple'), primaryColor: '#7209b7', backgroundColor: '#faf5ff' },
+      // TRANSLATORS: Name of a color theme for a form page
+      { id: 'dark', name: t('formvox', 'Dark'), primaryColor: '#818cf8', backgroundColor: '#1e1e2e' },
+      // TRANSLATORS: Name of a color theme for a form page
+      { id: 'minimal', name: t('formvox', 'Minimal'), primaryColor: '#374151', backgroundColor: '#ffffff' },
     ];
 
     const currentBlocks = computed({
@@ -633,7 +680,7 @@ export default {
       try {
         await axios.put(generateUrl('/apps/formvox/api/branding/layout'), { layout });
       } catch (error) {
-        showError(t('Failed to save layout'));
+        showError(t('formvox', 'Failed to save layout'));
         console.error(error);
       } finally {
         saving.value = false;
@@ -649,7 +696,7 @@ export default {
       try {
         await axios.put(generateUrl('/apps/formvox/api/branding/styles'), { globalStyles });
       } catch (error) {
-        showError(t('Failed to save styles'));
+        showError(t('formvox', 'Failed to save styles'));
         console.error(error);
       } finally {
         saving.value = false;
@@ -684,7 +731,8 @@ export default {
         case 'divider':
           return { color: '#cccccc', style: 'solid', thickness: 1 };
         case 'button':
-          return { text: 'Click here', url: '', newTab: false };
+          // TRANSLATORS: Default text of a new button block
+          return { text: t('formvox', 'Click here'), url: '', newTab: false };
         case 'socialLinks':
           return { links: [] };
         case 'progressBar':
@@ -755,9 +803,10 @@ export default {
           block.settings.imageUrl = viewUrl + '?t=' + Date.now();
           saveLayout();
         }
-        showSuccess(t('Image uploaded'));
+        // TRANSLATORS: Confirmation message
+        showSuccess(t('formvox', 'Image uploaded'));
       } catch (error) {
-        showError(error.response?.data?.error || t('Failed to upload image'));
+        showError(error.response?.data?.error || t('formvox', 'Failed to upload image'));
         console.error(error);
       } finally {
         saving.value = false;

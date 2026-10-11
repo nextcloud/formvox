@@ -118,7 +118,7 @@ describe('views/AdminSettings', () => {
 		await wrapper.vm.$nextTick()
 		const banner = wrapper.vm.licenseBanner
 		expect(banner.type).toBe('warning')
-		expect(banner.message).toContain('not known to the licence server')
+		expect(banner.message).toContain('not known to the license server')
 	})
 
 	it('licenseBanner reports an expired licence', async () => {
@@ -173,6 +173,6 @@ describe('views/AdminSettings', () => {
 		expect(banner).not.toBe(null)
 		expect(banner.type).toBe('info')
 		// {count} is interpolated now that translate() gets the app name.
-		expect(banner.message).toContain('250 users')
+		expect(banner.message).toContain('250 accounts')
 	})
 })

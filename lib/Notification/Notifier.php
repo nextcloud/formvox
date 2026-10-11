@@ -25,7 +25,8 @@ class Notifier implements INotifier {
 	}
 
 	public function getName(): string {
-		return $this->l10nFactory->get(Application::APP_ID)->t('FormVox');
+		// The product name, not translated.
+		return 'FormVox';
 	}
 
 	public function prepare(INotification $notification, string $languageCode): INotification {
@@ -38,10 +39,13 @@ class Notifier implements INotifier {
 
 		switch ($notification->getSubject()) {
 			case 'response_submitted':
-				$formTitle = $params['formTitle'] ?? 'Unknown form';
+				// TRANSLATORS: Shown in a notification when the form's title is not known
+				$formTitle = $params['formTitle'] ?? $l->t('Unknown form');
+				// TRANSLATORS: Name shown for a respondent who answered without an account
 				$respondentName = $params['respondentName'] ?? $l->t('Anonymous');
 
 				$notification->setRichSubject(
+					// TRANSLATORS: Notification; {formTitle} is the form title, {respondentName} the name of the person who answered or "Anonymous"
 					$l->t('New response to "{formTitle}" from {respondentName}'),
 					[
 						'formTitle' => [
@@ -58,6 +62,7 @@ class Notifier implements INotifier {
 				);
 
 				$notification->setParsedSubject(
+					// TRANSLATORS: Notification; %1$s is the form title, %2$s the name of the person who answered or "Anonymous"
 					$l->t('New response to "%1$s" from %2$s', [$formTitle, $respondentName])
 				);
 
@@ -73,9 +78,13 @@ class Notifier implements INotifier {
 
 				return $notification;
 			case 'ai_form_failed':
-				$formTitle = $params['formTitle'] ?? 'Untitled form';
-				$reason = $params['reason'] ?? '';
+				// TRANSLATORS: Default title of a form that has none
+				$formTitle = $params['formTitle'] ?? $l->t('Untitled form');
+				// Stored without a reason when the AI provider gave none.
+				// TRANSLATORS: Shown when an error has no description
+				$reason = ($params['reason'] ?? '') !== '' ? $params['reason'] : $l->t('Unknown error');
 				$notification->setRichSubject(
+					// TRANSLATORS: Notification; {formTitle} is the title the user gave the form to generate
 					$l->t('AI could not generate "{formTitle}"'),
 					[
 						'formTitle' => [
@@ -86,6 +95,7 @@ class Notifier implements INotifier {
 					]
 				);
 				$notification->setParsedSubject(
+					// TRANSLATORS: Notification; %1$s is the title the user gave the form to generate
 					$l->t('AI could not generate "%1$s"', [$formTitle])
 				);
 				if ($reason !== '') {
@@ -97,8 +107,9 @@ class Notifier implements INotifier {
 				);
 				return $notification;
 			case 'ai_form_ready':
-				$formTitle = $params['formTitle'] ?? 'Untitled form';
+				$formTitle = $params['formTitle'] ?? $l->t('Untitled form');
 				$notification->setRichSubject(
+					// TRANSLATORS: Notification; {formTitle} is the title of the generated form
 					$l->t('AI finished generating "{formTitle}"'),
 					[
 						'formTitle' => [
@@ -109,6 +120,7 @@ class Notifier implements INotifier {
 					]
 				);
 				$notification->setParsedSubject(
+					// TRANSLATORS: Notification; %1$s is the title of the generated form
 					$l->t('AI finished generating "%1$s"', [$formTitle])
 				);
 				$notification->setRichMessage(

@@ -85,10 +85,15 @@ class FormFactory {
 						'question' => $this->l->t('How would you rate your overall experience?'),
 						'required' => true,
 						'options' => [
+							// TRANSLATORS: Answer option in an example rating question (best of five)
 							['id' => 'opt1', 'label' => $this->l->t('Excellent'), 'value' => '5'],
+							// TRANSLATORS: Answer option in an example rating question
 							['id' => 'opt2', 'label' => $this->l->t('Good'), 'value' => '4'],
-							['id' => 'opt3', 'label' => $this->l->t('Average'), 'value' => '3'],
+							// TRANSLATORS: Answer option in an example rating question (the middle of the scale)
+							['id' => 'opt3', 'label' => $this->l->t('Fair'), 'value' => '3'],
+							// TRANSLATORS: Answer option in an example rating question
 							['id' => 'opt4', 'label' => $this->l->t('Poor'), 'value' => '2'],
+							// TRANSLATORS: Answer option in an example rating question (worst of five)
 							['id' => 'opt5', 'label' => $this->l->t('Very poor'), 'value' => '1'],
 						],
 					],
@@ -108,8 +113,11 @@ class FormFactory {
 						'question' => $this->l->t('What is your preferred option?'),
 						'required' => true,
 						'options' => [
+							// TRANSLATORS: Example answer option in the demo form
 							['id' => 'opt1', 'label' => $this->l->t('Option A'), 'value' => 'a'],
+							// TRANSLATORS: Example answer option in the demo form
 							['id' => 'opt2', 'label' => $this->l->t('Option B'), 'value' => 'b'],
+							// TRANSLATORS: Example answer option in the demo form
 							['id' => 'opt3', 'label' => $this->l->t('Option C'), 'value' => 'c'],
 						],
 					],
@@ -120,12 +128,14 @@ class FormFactory {
 					[
 						'id' => 'q1',
 						'type' => 'text',
+						// TRANSLATORS: Example question in a registration form
 						'question' => $this->l->t('Full name'),
 						'required' => true,
 					],
 					[
 						'id' => 'q2',
 						'type' => 'text',
+						// TRANSLATORS: Example question, and the name of an input check that only accepts email addresses
 						'question' => $this->l->t('Email address'),
 						'required' => true,
 						'validation' => ['type' => 'email'],
@@ -133,6 +143,7 @@ class FormFactory {
 					[
 						'id' => 'q3',
 						'type' => 'text',
+						// TRANSLATORS: Example question in a registration form
 						'question' => $this->l->t('Phone number'),
 						'required' => false,
 					],
@@ -211,9 +222,11 @@ class FormFactory {
 						'required' => true,
 						'options' => [
 							['id' => 'feat1', 'label' => $this->l->t('Easy to use interface'), 'value' => 'easy'],
-							['id' => 'feat2', 'label' => $this->l->t('Conditional logic / Branching'), 'value' => 'branching'],
+							['id' => 'feat2', 'label' => $this->l->t('Conditional logic / branching'), 'value' => 'branching'],
+							// TRANSLATORS: Answer option in the demo form: FormVox stores forms as files
 							['id' => 'feat3', 'label' => $this->l->t('File-based storage'), 'value' => 'files'],
-							['id' => 'feat4', 'label' => $this->l->t('Privacy / Self-hosted'), 'value' => 'privacy'],
+							['id' => 'feat4', 'label' => $this->l->t('Privacy / self-hosted'), 'value' => 'privacy'],
+							// TRANSLATORS: Answer option in the demo form (ways to export responses)
 							['id' => 'feat5', 'label' => $this->l->t('Export options'), 'value' => 'export'],
 						],
 					],
@@ -224,10 +237,15 @@ class FormFactory {
 						'description' => $this->l->t('Dropdown select for longer option lists'),
 						'required' => true,
 						'options' => [
+							// TRANSLATORS: Answer option in the demo form (something a user may find important)
 							['id' => 'pri1', 'label' => $this->l->t('Speed'), 'value' => 'speed'],
+							// TRANSLATORS: Answer option in the demo form (something a user may find important)
 							['id' => 'pri2', 'label' => $this->l->t('Security'), 'value' => 'security'],
+							// TRANSLATORS: Answer option in the demo form (something a user may find important)
 							['id' => 'pri3', 'label' => $this->l->t('Flexibility'), 'value' => 'flexibility'],
+							// TRANSLATORS: Answer option in the demo form: connecting with other software
 							['id' => 'pri4', 'label' => $this->l->t('Integration'), 'value' => 'integration'],
+							// TRANSLATORS: Answer option in the demo form (something a user may find important)
 							['id' => 'pri5', 'label' => $this->l->t('Cost'), 'value' => 'cost'],
 						],
 					],
@@ -236,6 +254,7 @@ class FormFactory {
 						'id' => 'demo_date',
 						'type' => 'date',
 						'question' => $this->l->t('When did you start using Nextcloud?'),
+						// TRANSLATORS: Description of an example date question in the demo form
 						'description' => $this->l->t('Date picker'),
 						'required' => false,
 					],
@@ -258,6 +277,7 @@ class FormFactory {
 						'id' => 'demo_number',
 						'type' => 'number',
 						'question' => $this->l->t('How many forms do you create per month?'),
+						// TRANSLATORS: Description of an example number question in the demo form
 						'description' => $this->l->t('Numeric input'),
 						'required' => false,
 						'min' => 0,
@@ -271,7 +291,9 @@ class FormFactory {
 						'required' => true,
 						'min' => 1,
 						'max' => 10,
+						// TRANSLATORS: Label at the low end of an example rating scale
 						'minLabel' => $this->l->t('Not likely'),
+						// TRANSLATORS: Label at the high end of an example rating scale
 						'maxLabel' => $this->l->t('Very likely'),
 					],
 					[
@@ -318,8 +340,11 @@ class FormFactory {
 						'required' => false,
 						'rows' => [
 							['id' => 'row1', 'label' => $this->l->t('Ease of use')],
+							// TRANSLATORS: Row of an example rating grid in the demo form: the features of a product
 							['id' => 'row2', 'label' => $this->l->t('Feature set')],
+							// TRANSLATORS: Row of an example rating grid in the demo form: how a product looks
 							['id' => 'row3', 'label' => $this->l->t('Design')],
+							// TRANSLATORS: Row of an example rating grid in the demo form: how fast a product is
 							['id' => 'row4', 'label' => $this->l->t('Performance')],
 						],
 						'columns' => [
@@ -333,13 +358,18 @@ class FormFactory {
 					[
 						'id' => 'demo_table',
 						'type' => 'table',
+						// TRANSLATORS: Example question in the demo form: a table to list expenses
 						'question' => $this->l->t('Expense declaration'),
 						'description' => $this->l->t('Add your expenses below. Click "+ Add row" to add more items.'),
 						'required' => false,
 						'columns' => [
+							// TRANSLATORS: Column or field label: a description
 							['id' => 'col_desc', 'label' => $this->l->t('Description'), 'inputType' => 'text', 'options' => []],
+							// TRANSLATORS: Column of an example expense table: a sum of money
 							['id' => 'col_amount', 'label' => $this->l->t('Amount'), 'inputType' => 'number', 'options' => []],
+							// TRANSLATORS: Noun: a calendar date; column label and question type
 							['id' => 'col_date', 'label' => $this->l->t('Date'), 'inputType' => 'date', 'options' => []],
+							// TRANSLATORS: Column of an example expense table
 							['id' => 'col_cat', 'label' => $this->l->t('Category'), 'inputType' => 'dropdown', 'options' => ['Travel', 'Food', 'Office', 'Other']],
 						],
 						'minRows' => 1,
@@ -355,6 +385,7 @@ class FormFactory {
 						'required' => true,
 						'options' => [
 							['id' => 'contact_yes', 'label' => $this->l->t('Yes, please contact me'), 'value' => 'yes'],
+							// TRANSLATORS: Answer option declining to be contacted
 							['id' => 'contact_no', 'label' => $this->l->t('No, thanks'), 'value' => 'no'],
 						],
 					],
@@ -365,8 +396,11 @@ class FormFactory {
 						'description' => $this->l->t('This question only appears if you selected "Yes" above'),
 						'required' => false,
 						'options' => [
+							// TRANSLATORS: Noun: contact method in an example question
 							['id' => 'method1', 'label' => $this->l->t('Email'), 'value' => 'email'],
+							// TRANSLATORS: Noun: contact method in an example question
 							['id' => 'method2', 'label' => $this->l->t('Phone'), 'value' => 'phone'],
+							// TRANSLATORS: Noun: contact method in an example question
 							['id' => 'method3', 'label' => $this->l->t('Video call'), 'value' => 'video'],
 						],
 						'showIf' => [

@@ -1,21 +1,34 @@
 <template>
-  <NcAppSidebar
-    :name="t('Collaboration')"
+  <!-- TRANSLATORS: Name of a settings tab -->
+  <NcAppSidebar :name="t('formvox', 'Collaboration')"
     @close="$emit('close')"
   >
     <div class="collaboration-content">
       <div class="collaboration-section">
-        <h3>{{ t('Access control') }}</h3>
+        <!-- TRANSLATORS: Heading -->
+        <h3>{{ t('formvox', 'Access control') }}</h3>
         <p class="section-description">
-          {{ t('Control who can edit this form using Nextcloud\'s native sharing.') }}
+          {{ t('formvox', 'Control who can edit this form using Nextcloud\'s native sharing.') }}
         </p>
 
         <div class="native-share-info">
-          <p>{{ t('Use Nextcloud sharing to control access:') }}</p>
+          <p>{{ t('formvox', 'Use Nextcloud sharing to control access:') }}</p>
           <ul>
-            <li><strong>{{ t('Can view') }}</strong> - {{ t('Can fill in and view the form') }}</li>
-            <li><strong>{{ t('Can edit') }}</strong> - {{ t('Can modify questions and settings') }}</li>
-            <li><strong>{{ t('Can delete') }}</strong> - {{ t('Full admin access') }}</li>
+            <li>
+              <!-- TRANSLATORS: Nextcloud share permission -->
+              <strong>{{ t('formvox', 'Can view') }}</strong>
+              - {{ t('formvox', 'Can fill in and view the form') }}
+            </li>
+            <li>
+              <!-- TRANSLATORS: Nextcloud share permission -->
+              <strong>{{ t('formvox', 'Can edit') }}</strong>
+              - {{ t('formvox', 'Can modify questions and settings') }}
+            </li>
+            <li>
+              <!-- TRANSLATORS: Nextcloud share permission -->
+              <strong>{{ t('formvox', 'Can delete') }}</strong>
+              - {{ t('formvox', 'Full admin access') }}
+            </li>
           </ul>
         </div>
 
@@ -23,7 +36,8 @@
           <template #icon>
             <ShareIcon :size="20" />
           </template>
-          {{ t('Manage sharing') }}
+          <!-- TRANSLATORS: Verb: button that opens Nextcloud's sharing -->
+          {{ t('formvox', 'Manage sharing') }}
         </NcButton>
       </div>
     </div>

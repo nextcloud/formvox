@@ -1,6 +1,7 @@
 <template>
   <div ref="wrapperEl" class="md-editor">
-    <div class="md-editor__toolbar" role="toolbar" :aria-label="t('Formatting')">
+    <!-- TRANSLATORS: Invisible label of the text editor's toolbar, read by screen readers -->
+    <div class="md-editor__toolbar" role="toolbar" :aria-label="t('formvox', 'Formatting')">
       <button v-for="a in actions" :key="a.id" type="button" class="md-editor__btn"
               :class="{ active: a.align ? align === a.align : activeStates[a.id] }"
               :title="a.title" :aria-label="a.title" @click="run(a)">
@@ -8,7 +9,8 @@
       </button>
     </div>
     <textarea ref="textareaEl" />
-    <div class="md-editor__resize" :title="t('Drag to resize')" @mousedown="startResize" />
+    <!-- TRANSLATORS: Tooltip of the handle that changes the editor's height -->
+    <div class="md-editor__resize" :title="t('formvox', 'Drag to resize')" @mousedown="startResize" />
   </div>
 </template>
 
@@ -157,17 +159,28 @@ export default {
     });
 
     const actions = [
-      { id: 'bold', title: t('Bold'), icon: BoldIcon, fn: 'toggleBold' },
-      { id: 'italic', title: t('Italic'), icon: ItalicIcon, fn: 'toggleItalic' },
-      { id: 'heading', title: t('Heading'), icon: HeadingIcon, fn: 'toggleHeadingSmaller' },
-      { id: 'ul', title: t('Bulleted list'), icon: ListIcon, fn: 'toggleUnorderedList' },
-      { id: 'ol', title: t('Numbered list'), icon: OrderedIcon, fn: 'toggleOrderedList' },
-      { id: 'link', title: t('Link'), icon: LinkIcon, fn: 'drawLink' },
-      { id: 'image', title: t('Image'), icon: ImageIcon, fn: 'drawImage' },
-      { id: 'align-left', title: t('Align left'), icon: AlignLeftIcon, align: 'left' },
-      { id: 'align-center', title: t('Align center'), icon: AlignCenterIcon, align: 'center' },
-      { id: 'align-right', title: t('Align right'), icon: AlignRightIcon, align: 'right' },
-      { id: 'preview', title: t('Toggle preview'), icon: EyeIcon, fn: 'togglePreview' },
+      // TRANSLATORS: Tooltip of a text editor button
+      { id: 'bold', title: t('formvox', 'Bold'), icon: BoldIcon, fn: 'toggleBold' },
+      // TRANSLATORS: Tooltip of a text editor button
+      { id: 'italic', title: t('formvox', 'Italic'), icon: ItalicIcon, fn: 'toggleItalic' },
+      // TRANSLATORS: Noun: tooltip of a text editor button, and a page block type
+      { id: 'heading', title: t('formvox', 'Heading'), icon: HeadingIcon, fn: 'toggleHeadingSmaller' },
+      // TRANSLATORS: Tooltip of a text editor button
+      { id: 'ul', title: t('formvox', 'Bulleted list'), icon: ListIcon, fn: 'toggleUnorderedList' },
+      // TRANSLATORS: Tooltip of a text editor button
+      { id: 'ol', title: t('formvox', 'Numbered list'), icon: OrderedIcon, fn: 'toggleOrderedList' },
+      // TRANSLATORS: Noun: tooltip of the text editor button that inserts a link
+      { id: 'link', title: t('formvox', 'Link'), icon: LinkIcon, fn: 'drawLink' },
+      // TRANSLATORS: Noun: tooltip of the text editor button that inserts an image, and a page block type
+      { id: 'image', title: t('formvox', 'Image'), icon: ImageIcon, fn: 'drawImage' },
+      // TRANSLATORS: Tooltip of a text editor button
+      { id: 'align-left', title: t('formvox', 'Align left'), icon: AlignLeftIcon, align: 'left' },
+      // TRANSLATORS: Tooltip of a text editor button
+      { id: 'align-center', title: t('formvox', 'Align center'), icon: AlignCenterIcon, align: 'center' },
+      // TRANSLATORS: Tooltip of a text editor button
+      { id: 'align-right', title: t('formvox', 'Align right'), icon: AlignRightIcon, align: 'right' },
+      // TRANSLATORS: Tooltip of the text editor button that shows or hides the preview
+      { id: 'preview', title: t('formvox', 'Toggle preview'), icon: EyeIcon, fn: 'togglePreview' },
     ];
 
     const run = (a) => {

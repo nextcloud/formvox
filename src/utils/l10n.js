@@ -1,25 +1,15 @@
-import { translate, translatePlural } from '@nextcloud/l10n';
-
-const APP_NAME = 'formvox';
-
 /**
- * Translate a string
- * @param {string} text - The text to translate
- * @param {object} vars - Variables to replace in the text
- * @returns {string} - The translated text
+ * Translation helpers for FormVox.
+ *
+ * These are @nextcloud/l10n's own translate/translatePlural under the names
+ * t and n, so every call site passes the app id first:
+ * t(appId, text, vars) and n(appId, singular, plural, count, vars), with
+ * appId the literal 'formvox' and text a string literal.
+ *
+ * Keep both the names and the app-id-first call form: the Nextcloud Transifex
+ * bot extracts strings with xgettext --keyword=t:2 --keyword=n:2,3 (and an own
+ * regex for <template> that needs the literal 'formvox' first). A one-argument
+ * wrapper called with only the text is invisible to it, so its strings never reach
+ * translators. tests-js/l10n-bot-visibility.spec.js guards this.
  */
-export function t(text, vars = {}) {
-  return translate(APP_NAME, text, vars);
-}
-
-/**
- * Translate a plural string
- * @param {string} singular - The singular form
- * @param {string} plural - The plural form
- * @param {number} count - The count
- * @param {object} vars - Variables to replace in the text
- * @returns {string} - The translated text
- */
-export function n(singular, plural, count, vars = {}) {
-  return translatePlural(APP_NAME, singular, plural, count, vars);
-}
+export { translate as t, translatePlural as n } from '@nextcloud/l10n';

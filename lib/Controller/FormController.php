@@ -16,6 +16,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IGroupManager;
+use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
@@ -32,6 +33,7 @@ class FormController extends Controller {
 	private IUserManager $userManager;
 	private IGroupManager $groupManager;
 	private INotificationManager $notificationManager;
+	private IL10N $l;
 
 	public function __construct(
 		IRequest $request,
@@ -45,6 +47,7 @@ class FormController extends Controller {
 		IUserManager $userManager,
 		IGroupManager $groupManager,
 		INotificationManager $notificationManager,
+		IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->formRepository = $formRepository;
@@ -57,6 +60,7 @@ class FormController extends Controller {
 		$this->userManager = $userManager;
 		$this->groupManager = $groupManager;
 		$this->notificationManager = $notificationManager;
+		$this->l = $l;
 	}
 
 	/**
@@ -85,7 +89,8 @@ class FormController extends Controller {
 		try {
 			$form = $this->formRepository->load($fileId);
 			$entry = $this->templateService->addTemplate(
-				$title !== '' ? $title : ($form['title'] ?? 'Untitled template'),
+				// TRANSLATORS: Default name of a form template that has no title
+				$title !== '' ? $title : ($form['title'] ?? $this->l->t('Untitled template')),
 				$description !== '' ? $description : ($form['description'] ?? ''),
 				$form
 			);
@@ -167,7 +172,8 @@ class FormController extends Controller {
 			// Deny access if user has no permissions
 			if ($role === PermissionService::ROLE_NONE) {
 				return new DataResponse(
-					['error' => 'Access denied'],
+					// TRANSLATORS: Error when the account may not open the form
+					['error' => $this->l->t('Access denied')],
 					Http::STATUS_FORBIDDEN
 				);
 			}
@@ -187,7 +193,7 @@ class FormController extends Controller {
 			]);
 		} catch (\OCP\Files\NotFoundException $e) {
 			return new DataResponse(
-				['error' => 'Form not found'],
+				['error' => $this->l->t('Form not found')],
 				Http::STATUS_NOT_FOUND
 			);
 		} catch (\Exception $e) {
@@ -254,7 +260,7 @@ class FormController extends Controller {
 
 			if (!$this->permissionService->canEditQuestions($role)) {
 				return new DataResponse(
-					['error' => 'Permission denied'],
+					['error' => $this->l->t('Permission denied')],
 					Http::STATUS_FORBIDDEN
 				);
 			}
@@ -315,7 +321,7 @@ class FormController extends Controller {
 			return new DataResponse(['form' => $updatedForm]);
 		} catch (\OCP\Files\NotFoundException $e) {
 			return new DataResponse(
-				['error' => 'Form not found'],
+				['error' => $this->l->t('Form not found')],
 				Http::STATUS_NOT_FOUND
 			);
 		} catch (\RuntimeException $e) {
@@ -345,7 +351,7 @@ class FormController extends Controller {
 			// Any user with at least view permission can favorite a form
 			if ($role === PermissionService::ROLE_NONE) {
 				return new DataResponse(
-					['error' => 'Permission denied'],
+					['error' => $this->l->t('Permission denied')],
 					Http::STATUS_FORBIDDEN
 				);
 			}
@@ -354,7 +360,7 @@ class FormController extends Controller {
 			return new DataResponse(['success' => true, 'favorite' => $favorite]);
 		} catch (\OCP\Files\NotFoundException $e) {
 			return new DataResponse(
-				['error' => 'Form not found'],
+				['error' => $this->l->t('Form not found')],
 				Http::STATUS_NOT_FOUND
 			);
 		} catch (\Exception $e) {
@@ -377,7 +383,7 @@ class FormController extends Controller {
 
 			if (!$this->permissionService->canDeleteForm($role)) {
 				return new DataResponse(
-					['error' => 'Permission denied'],
+					['error' => $this->l->t('Permission denied')],
 					Http::STATUS_FORBIDDEN
 				);
 			}
@@ -386,7 +392,7 @@ class FormController extends Controller {
 			return new DataResponse(['success' => true]);
 		} catch (\OCP\Files\NotFoundException $e) {
 			return new DataResponse(
-				['error' => 'Form not found'],
+				['error' => $this->l->t('Form not found')],
 				Http::STATUS_NOT_FOUND
 			);
 		} catch (\Exception $e) {
@@ -410,7 +416,7 @@ class FormController extends Controller {
 
 			if (!$this->permissionService->canEditSettings($role)) {
 				return new DataResponse(
-					['error' => 'Permission denied'],
+					['error' => $this->l->t('Permission denied')],
 					Http::STATUS_FORBIDDEN
 				);
 			}
@@ -481,7 +487,7 @@ class FormController extends Controller {
 
 			if (!$this->permissionService->canEditSettings($role)) {
 				return new DataResponse(
-					['error' => 'Permission denied'],
+					['error' => $this->l->t('Permission denied')],
 					Http::STATUS_FORBIDDEN
 				);
 			}
@@ -502,7 +508,7 @@ class FormController extends Controller {
 			$updatedForm = $this->formRepository->update($fileId, ['settings' => $settings]);
 			return new DataResponse(['form' => $updatedForm]);
 		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(['error' => 'Form not found'], Http::STATUS_NOT_FOUND);
+			return new DataResponse(['error' => $this->l->t('Form not found')], Http::STATUS_NOT_FOUND);
 		} catch (\RuntimeException $e) {
 			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_CONFLICT);
 		}

@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 $appId = $_['appId'];
-$title = $_['title'] ?? 'Form';
+$title = $_['title'] ?? $l->t('Form');
 ?>
 
 <style>
@@ -68,7 +68,8 @@ html, body, #body-public, #content, #content-wrapper, .content {
         </svg>
     </div>
 
-    <h2><?php p($l->t('Access Restricted')); ?></h2>
+    <?php // TRANSLATORS: Heading when an account may not open a form?>
+    <h2><?php p($l->t('Access restricted')); ?></h2>
     <p class="subtitle">
         <?php p($l->t('You do not have permission to access this form.')); ?><br>
         <?php p($l->t('Contact the form owner if you believe this is an error.')); ?>

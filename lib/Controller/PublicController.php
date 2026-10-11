@@ -22,6 +22,7 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\IConfig;
 use OCP\IGroupManager;
+use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUser;
@@ -39,6 +40,7 @@ class PublicController extends Controller {
 	private BrandingService $brandingService;
 	private ChallengeService $challengeService;
 	private IInitialState $initialState;
+	private IL10N $l;
 
 	public function __construct(
 		IRequest $request,
@@ -52,6 +54,7 @@ class PublicController extends Controller {
 		BrandingService $brandingService,
 		ChallengeService $challengeService,
 		IInitialState $initialState,
+		IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->config = $config;
@@ -64,6 +67,7 @@ class PublicController extends Controller {
 		$this->brandingService = $brandingService;
 		$this->challengeService = $challengeService;
 		$this->initialState = $initialState;
+		$this->l = $l;
 	}
 
 	/**
@@ -126,7 +130,8 @@ class PublicController extends Controller {
 			[
 				'appId' => Application::APP_ID,
 				'title' => $title,
-				'opensAt' => $opensAt->format('d-m-Y H:i'),
+				// Formatted for the visitor's language, not a fixed d-m-Y.
+				'opensAt' => (string)$this->l->l('datetime', $opensAt, ['width' => 'medium']),
 			],
 			'public'
 		);
@@ -166,7 +171,7 @@ class PublicController extends Controller {
 				$startsAt = new \DateTime($form['settings']['share_starts_at']);
 				if ($startsAt > new \DateTime()) {
 					return new DataResponse(
-						['error' => 'This form is not yet open', 'opensAt' => $startsAt->format(\DateTime::ATOM)],
+						['error' => $this->l->t('This form is not yet open'), 'opensAt' => $startsAt->format(\DateTime::ATOM)],
 						Http::STATUS_FORBIDDEN
 					);
 				}
@@ -180,7 +185,7 @@ class PublicController extends Controller {
 				$expiresAt = new \DateTime($form['settings']['share_expires_at']);
 				if ($expiresAt < new \DateTime()) {
 					return new DataResponse(
-						['error' => 'This form has expired'],
+						['error' => $this->l->t('This form has expired')],
 						Http::STATUS_GONE
 					);
 				}
@@ -203,7 +208,8 @@ class PublicController extends Controller {
 				$providedPassword = (string)$this->request->getParam('password', '');
 				if ($providedPassword === '' || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
 					return new DataResponse(
-						['error' => 'Password required'],
+						// TRANSLATORS: Error when a password-protected form is submitted without the password
+						['error' => $this->l->t('Password required')],
 						Http::STATUS_UNAUTHORIZED
 					);
 				}
@@ -248,7 +254,7 @@ class PublicController extends Controller {
 			$form = $this->loadAndValidateForm($fileId, $token);
 
 			if ($form === null) {
-				return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
+				return $this->errorResponse($this->l->t('Form not found'), Http::STATUS_NOT_FOUND);
 			}
 
 			// Check if form hasn't started yet
@@ -256,7 +262,8 @@ class PublicController extends Controller {
 				try {
 					$startsAt = new \DateTime($form['settings']['share_starts_at']);
 					if ($startsAt > new \DateTime()) {
-						return $this->showNotYetOpenForm($form['title'] ?? 'Form', $startsAt);
+						// TRANSLATORS: Fallback page title for a form without a title
+						return $this->showNotYetOpenForm($form['title'] ?? $this->l->t('Form'), $startsAt);
 					}
 				} catch (\Exception $e) {
 					// invalid date → ignore and continue
@@ -267,7 +274,7 @@ class PublicController extends Controller {
 			if (!empty($form['settings']['share_expires_at'])) {
 				$expiresAt = new \DateTime($form['settings']['share_expires_at']);
 				if ($expiresAt < new \DateTime()) {
-					return $this->errorResponse('This form has expired', Http::STATUS_GONE);
+					return $this->errorResponse($this->l->t('This form has expired'), Http::STATUS_GONE);
 				}
 			}
 
@@ -305,7 +312,7 @@ class PublicController extends Controller {
 
 				// Check if user is allowed
 				if (!$this->isUserAllowed($form, $user)) {
-					return $this->showUnauthorized($form['title'] ?? 'Form');
+					return $this->showUnauthorized($form['title'] ?? $this->l->t('Form'));
 				}
 			}
 
@@ -320,10 +327,17 @@ class PublicController extends Controller {
 				} else {
 					$providedPassword = $this->request->getParam('password');
 					if (empty($providedPassword)) {
-						return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form');
+						// TRANSLATORS: Page title of the password prompt for a form without a title
+						return $this->showPasswordForm($fileId, $token, $form['title'] ?? $this->l->t('Protected form'));
 					}
 					if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-						return $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
+						return $this->showPasswordForm(
+							$fileId,
+							$token,
+							$form['title'] ?? $this->l->t('Protected form'),
+							// TRANSLATORS: Error on the password prompt of a protected form
+							$this->l->t('Incorrect password'),
+						);
 					}
 					$passwordVerified = true;
 				}
@@ -470,7 +484,7 @@ class PublicController extends Controller {
 		if ($this->userSession->getUser() === null
 			&& !$this->challengeService->verify($altcha, $fileId)) {
 			$response = new DataResponse(
-				['error' => 'Challenge verification failed. Please refresh the page.'],
+				['error' => $this->l->t('Challenge verification failed. Please refresh the page.')],
 				Http::STATUS_TOO_MANY_REQUESTS
 			);
 			$response->throttle();
@@ -482,7 +496,7 @@ class PublicController extends Controller {
 
 			if ($form === null) {
 				$response = new DataResponse(
-					['error' => 'Form not found'],
+					['error' => $this->l->t('Form not found')],
 					Http::STATUS_NOT_FOUND
 				);
 				$response->throttle();
@@ -502,7 +516,7 @@ class PublicController extends Controller {
 				$user = $this->userSession->getUser();
 				if ($user === null || !$this->isUserAllowed($form, $user)) {
 					return new DataResponse(
-						['error' => 'You do not have permission to submit this form'],
+						['error' => $this->l->t('You do not have permission to submit this form')],
 						Http::STATUS_FORBIDDEN
 					);
 				}
@@ -513,7 +527,7 @@ class PublicController extends Controller {
 				$user = $this->userSession->getUser();
 				if ($user === null) {
 					return new DataResponse(
-						['error' => 'This form requires you to be logged in'],
+						['error' => $this->l->t('This form requires you to be logged in')],
 						Http::STATUS_FORBIDDEN
 					);
 				}
@@ -678,7 +692,7 @@ class PublicController extends Controller {
 			$form = $this->loadAndValidateForm($fileId, $token);
 
 			if ($form === null) {
-				return $this->errorResponse('Form not found', Http::STATUS_NOT_FOUND);
+				return $this->errorResponse($this->l->t('Form not found'), Http::STATUS_NOT_FOUND);
 			}
 
 			// Check if form hasn't started yet
@@ -686,7 +700,7 @@ class PublicController extends Controller {
 				try {
 					$startsAt = new \DateTime($form['settings']['share_starts_at']);
 					if ($startsAt > new \DateTime()) {
-						return $this->showNotYetOpenForm($form['title'] ?? 'Form', $startsAt);
+						return $this->showNotYetOpenForm($form['title'] ?? $this->l->t('Form'), $startsAt);
 					}
 				} catch (\Exception $e) {
 					// invalid date → ignore
@@ -697,7 +711,7 @@ class PublicController extends Controller {
 			if (!empty($form['settings']['share_expires_at'])) {
 				$expiresAt = new \DateTime($form['settings']['share_expires_at']);
 				if ($expiresAt < new \DateTime()) {
-					return $this->errorResponse('This form has expired', Http::STATUS_GONE);
+					return $this->errorResponse($this->l->t('This form has expired'), Http::STATUS_GONE);
 				}
 			}
 
@@ -706,7 +720,7 @@ class PublicController extends Controller {
 			if (!empty($form['settings']['share_password_hash'])) {
 				$providedPassword = $this->request->getParam('password');
 				if (empty($providedPassword) || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-					$response = $this->showPasswordForm($fileId, $token, $form['title'] ?? 'Protected Form', 'Incorrect password');
+					$response = $this->showPasswordForm($fileId, $token, $form['title'] ?? $this->l->t('Protected form'), $this->l->t('Incorrect password'));
 					$response->throttle();
 					return $response;
 				}
@@ -824,7 +838,7 @@ class PublicController extends Controller {
 
 			if ($form === null) {
 				return new DataResponse(
-					['error' => 'Form not found'],
+					['error' => $this->l->t('Form not found')],
 					Http::STATUS_NOT_FOUND
 				);
 			}
@@ -842,7 +856,7 @@ class PublicController extends Controller {
 				$user = $this->userSession->getUser();
 				if ($user === null || !$this->isUserAllowed($form, $user)) {
 					return new DataResponse(
-						['error' => 'You do not have permission to upload files to this form'],
+						['error' => $this->l->t('You do not have permission to upload files to this form')],
 						Http::STATUS_FORBIDDEN
 					);
 				}
@@ -853,7 +867,7 @@ class PublicController extends Controller {
 				$user = $this->userSession->getUser();
 				if ($user === null) {
 					return new DataResponse(
-						['error' => 'This form requires you to be logged in'],
+						['error' => $this->l->t('This form requires you to be logged in')],
 						Http::STATUS_FORBIDDEN
 					);
 				}
@@ -863,7 +877,7 @@ class PublicController extends Controller {
 			$questionId = $this->request->getParam('questionId');
 			if (empty($questionId)) {
 				return new DataResponse(
-					['error' => 'Question ID is required'],
+					['error' => $this->l->t('Question ID is required')],
 					Http::STATUS_BAD_REQUEST
 				);
 			}
@@ -872,7 +886,8 @@ class PublicController extends Controller {
 			$question = $this->findQuestion($form, $questionId);
 			if ($question === null || $question['type'] !== 'file') {
 				return new DataResponse(
-					['error' => 'Invalid question'],
+					// TRANSLATORS: Upload error: the upload does not belong to a file question of this form
+					['error' => $this->l->t('Invalid question')],
 					Http::STATUS_BAD_REQUEST
 				);
 			}
@@ -892,7 +907,7 @@ class PublicController extends Controller {
 			$maxSizeBytes = $maxSizeMB * 1024 * 1024;
 			if ($uploadedFile['size'] > $maxSizeBytes) {
 				return new DataResponse(
-					['error' => "File is too large. Maximum size is {$maxSizeMB} MB"],
+					['error' => $this->l->t('File is too large. The maximum size is %s MB.', [$maxSizeMB])],
 					Http::STATUS_BAD_REQUEST
 				);
 			}
@@ -900,7 +915,7 @@ class PublicController extends Controller {
 			// Validate file type
 			if (!$this->isAllowedFileType($uploadedFile, $question)) {
 				return new DataResponse(
-					['error' => 'This file type is not allowed'],
+					['error' => $this->l->t('This file type is not allowed')],
 					Http::STATUS_BAD_REQUEST
 				);
 			}
@@ -993,16 +1008,15 @@ class PublicController extends Controller {
 	 * Get human-readable upload error message
 	 */
 	private function getUploadErrorMessage(int $errorCode): string {
-		$messages = [
-			UPLOAD_ERR_INI_SIZE => 'The file exceeds the maximum upload size',
-			UPLOAD_ERR_FORM_SIZE => 'The file exceeds the maximum size allowed',
-			UPLOAD_ERR_PARTIAL => 'The file was only partially uploaded',
-			UPLOAD_ERR_NO_FILE => 'No file was uploaded',
-			UPLOAD_ERR_NO_TMP_DIR => 'Server configuration error: missing temp folder',
-			UPLOAD_ERR_CANT_WRITE => 'Server error: failed to write file',
-			UPLOAD_ERR_EXTENSION => 'Upload blocked by server extension',
-		];
-
-		return $messages[$errorCode] ?? 'Unknown upload error';
+		return match ($errorCode) {
+			UPLOAD_ERR_INI_SIZE => $this->l->t('The file exceeds the maximum upload size'),
+			UPLOAD_ERR_FORM_SIZE => $this->l->t('The file exceeds the maximum size allowed'),
+			UPLOAD_ERR_PARTIAL => $this->l->t('The file was only partially uploaded'),
+			UPLOAD_ERR_NO_FILE => $this->l->t('No file was uploaded'),
+			UPLOAD_ERR_NO_TMP_DIR => $this->l->t('Server configuration error: missing temporary folder'),
+			UPLOAD_ERR_CANT_WRITE => $this->l->t('Server error: could not write the file'),
+			UPLOAD_ERR_EXTENSION => $this->l->t('A server extension blocked the upload'),
+			default => $this->l->t('Unknown upload error'),
+		};
 	}
 }

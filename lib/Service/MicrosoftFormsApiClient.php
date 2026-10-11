@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCP\Http\Client\IClientService;
+use OCP\IL10N;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -21,6 +22,7 @@ class MicrosoftFormsApiClient {
 	public function __construct(
 		private IClientService $clientService,
 		private LoggerInterface $logger,
+		private IL10N $l,
 	) {
 	}
 
@@ -36,7 +38,7 @@ class MicrosoftFormsApiClient {
 		return array_map(function ($form) {
 			return [
 				'id' => $form['id'] ?? '',
-				'title' => $form['title'] ?? 'Untitled',
+				'title' => $form['title'] ?? $this->l->t('Untitled form'),
 				'description' => $form['description'] ?? '',
 				'createdDate' => $form['createdDate'] ?? null,
 				'modifiedDate' => $form['modifiedDate'] ?? null,
@@ -55,7 +57,7 @@ class MicrosoftFormsApiClient {
 
 		return [
 			'id' => $response['id'] ?? $formId,
-			'title' => $response['title'] ?? 'Untitled',
+			'title' => $response['title'] ?? $this->l->t('Untitled form'),
 			'description' => $response['description'] ?? '',
 			'createdDate' => $response['createdDate'] ?? null,
 			'modifiedDate' => $response['modifiedDate'] ?? null,
@@ -257,8 +259,8 @@ class MicrosoftFormsApiClient {
 
 			case 'Question.Net Promoter Score':
 			case 'Question.NPS':
-				$normalized['lowLabel'] = $questionInfo['LowLabel'] ?? $question['lowLabel'] ?? 'Not at all likely';
-				$normalized['highLabel'] = $questionInfo['HighLabel'] ?? $question['highLabel'] ?? 'Extremely likely';
+				$normalized['lowLabel'] = $questionInfo['LowLabel'] ?? $question['lowLabel'] ?? $this->l->t('Not at all likely');
+				$normalized['highLabel'] = $questionInfo['HighLabel'] ?? $question['highLabel'] ?? $this->l->t('Extremely likely');
 				break;
 
 			case 'Question.File':

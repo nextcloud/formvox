@@ -8,7 +8,7 @@
       :target="block.settings.newTab ? '_blank' : '_self'"
       rel="noopener noreferrer"
     >
-      {{ block.settings.text || t('Button') }}
+      {{ block.settings.text || t('formvox', 'Button') }}
     </a>
   </div>
 </template>

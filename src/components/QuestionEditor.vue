@@ -10,7 +10,8 @@
         <span class="drag-handle" :class="{ disabled: readonly }">
           <DragIcon :size="20" />
         </span>
-        <span class="section-badge">{{ t('Info block') }}</span>
+        <!-- TRANSLATORS: Badge of a text-only block in the editor; keep it short -->
+        <span class="section-badge">{{ t('formvox', 'Info block') }}</span>
         <div class="question-actions">
           <NcButton v-if="!readonly" type="error" @click="$emit('delete')">
             <template #icon>
@@ -25,16 +26,19 @@
           v-model="localQuestion.description"
           :align="localQuestion.descriptorAlign || 'left'"
           :disabled="readonly"
-          :placeholder="t('Markdown content shown to respondents (no answer required)')"
+          :placeholder="t('formvox', 'Markdown content shown to respondents (no answer required)')"
           @update:model-value="emitUpdate"
           @update:align="updateDescriptorAlign"
         />
 
         <div v-if="localQuestion.showIf && !showConditions" class="condition-section">
           <div class="condition-display">
-            <span class="condition-label">{{ t('Condition active') }}</span>
-            <NcButton type="tertiary" @click="showConditions = true">{{ t('Edit') }}</NcButton>
-            <NcButton type="tertiary" @click="updateCondition(null)">{{ t('Remove') }}</NcButton>
+            <!-- TRANSLATORS: Label: this question has a condition for being shown -->
+            <span class="condition-label">{{ t('formvox', 'Condition active') }}</span>
+            <!-- TRANSLATORS: Verb: button -->
+            <NcButton type="tertiary" @click="showConditions = true">{{ t('formvox', 'Edit') }}</NcButton>
+            <!-- TRANSLATORS: Verb: button -->
+            <NcButton type="tertiary" @click="updateCondition(null)">{{ t('formvox', 'Remove') }}</NcButton>
           </div>
         </div>
         <ConditionEditor
@@ -45,7 +49,7 @@
           @close="showConditions = false"
         />
         <NcButton v-else-if="!localQuestion.showIf && !readonly" type="tertiary" @click="showConditions = true">
-          {{ t('Add condition') }}
+          {{ t('formvox', 'Add condition') }}
         </NcButton>
       </div>
     </template>
@@ -56,7 +60,8 @@
         <span class="drag-handle" :class="{ disabled: readonly }">
           <DragIcon :size="20" />
         </span>
-        <span class="section-badge">{{ t('Section') }}</span>
+        <!-- TRANSLATORS: Noun: badge of a section heading in the editor; keep it short -->
+        <span class="section-badge">{{ t('formvox', 'Section') }}</span>
         <div class="question-actions">
           <NcButton v-if="!readonly" type="error" @click="$emit('delete')">
             <template #icon>
@@ -67,25 +72,25 @@
       </div>
 
       <div class="section-editor-body">
-        <NcTextField
+        <!-- TRANSLATORS: Placeholder of the title field of a section -->
+        <NcTextField :placeholder="t('formvox', 'Section title')"
           v-model="localQuestion.question"
           :disabled="readonly"
-          :placeholder="t('Section title')"
           class="section-title-input"
           @update:model-value="emitUpdate"
         />
         <MarkdownEditor
           v-model="localQuestion.description"
           :disabled="readonly"
-          :placeholder="t('Section description (optional)')"
+          :placeholder="t('formvox', 'Section description (optional)')"
           @update:model-value="emitUpdate"
         />
 
         <div v-if="localQuestion.showIf && !showConditions" class="condition-section">
           <div class="condition-display">
-            <span class="condition-label">{{ t('Condition active') }}</span>
-            <NcButton type="tertiary" @click="showConditions = true">{{ t('Edit') }}</NcButton>
-            <NcButton type="tertiary" @click="updateCondition(null)">{{ t('Remove') }}</NcButton>
+            <span class="condition-label">{{ t('formvox', 'Condition active') }}</span>
+            <NcButton type="tertiary" @click="showConditions = true">{{ t('formvox', 'Edit') }}</NcButton>
+            <NcButton type="tertiary" @click="updateCondition(null)">{{ t('formvox', 'Remove') }}</NcButton>
           </div>
         </div>
         <ConditionEditor
@@ -101,7 +106,7 @@
           class="add-condition-btn"
           @click="showConditions = true"
         >
-          {{ t('+ Add condition') }}
+          {{ t('formvox', '+ Add condition') }}
         </NcButton>
       </div>
     </template>
@@ -116,30 +121,46 @@
       <div class="question-number">{{ index + 1 }}</div>
 
       <select v-model="localQuestion.type" class="type-select" :disabled="readonly" @change="onTypeChange">
-        <optgroup :label="t('Text')">
-          <option value="text">{{ t('Short text') }}</option>
-          <option value="textarea">{{ t('Long text') }}</option>
-          <option value="number">{{ t('Number') }}</option>
+        <!-- TRANSLATORS: Noun: group of text question types, and a label for text -->
+        <optgroup :label="t('formvox', 'Text')">
+          <!-- TRANSLATORS: Question type: a one-line answer -->
+          <option value="text">{{ t('formvox', 'Short text') }}</option>
+          <!-- TRANSLATORS: Question type: an answer of several lines -->
+          <option value="textarea">{{ t('formvox', 'Long text') }}</option>
+          <!-- TRANSLATORS: Question type, and a table column type -->
+          <option value="number">{{ t('formvox', 'Number') }}</option>
         </optgroup>
-        <optgroup :label="t('Choice')">
-          <option value="choice">{{ t('Single choice') }}</option>
-          <option value="multiple">{{ t('Multiple choice') }}</option>
-          <option value="dropdown">{{ t('Dropdown') }}</option>
-          <option value="consent">{{ t('Consent (single checkbox)') }}</option>
+        <!-- TRANSLATORS: Group of question types where the respondent picks options -->
+        <optgroup :label="t('formvox', 'Choice')">
+          <!-- TRANSLATORS: Question type: pick one option -->
+          <option value="choice">{{ t('formvox', 'Single choice') }}</option>
+          <!-- TRANSLATORS: Question type: pick one or more options -->
+          <option value="multiple">{{ t('formvox', 'Multiple choice') }}</option>
+          <!-- TRANSLATORS: Question type: pick one option from a dropdown list -->
+          <option value="dropdown">{{ t('formvox', 'Dropdown') }}</option>
+          <option value="consent">{{ t('formvox', 'Consent (single checkbox)') }}</option>
         </optgroup>
-        <optgroup :label="t('Date & time')">
-          <option value="date">{{ t('Date') }}</option>
-          <option value="datetime">{{ t('Date & time') }}</option>
-          <option value="time">{{ t('Time') }}</option>
+        <optgroup :label="t('formvox', 'Date & time')">
+          <option value="date">{{ t('formvox', 'Date') }}</option>
+          <option value="datetime">{{ t('formvox', 'Date & time') }}</option>
+          <!-- TRANSLATORS: Noun: time of day; question type and label of a time field -->
+          <option value="time">{{ t('formvox', 'Time') }}</option>
         </optgroup>
-        <optgroup :label="t('Rating')">
-          <option value="scale">{{ t('Scale') }}</option>
-          <option value="rating">{{ t('Stars') }}</option>
-          <option value="matrix">{{ t('Matrix') }}</option>
+        <!-- TRANSLATORS: Group of question types for rating something -->
+        <optgroup :label="t('formvox', 'Rating')">
+          <!-- TRANSLATORS: Question type: a numbered scale, for example 1 to 10 -->
+          <option value="scale">{{ t('formvox', 'Scale') }}</option>
+          <!-- TRANSLATORS: Question type: a rating with stars -->
+          <option value="rating">{{ t('formvox', 'Stars') }}</option>
+          <!-- TRANSLATORS: Question type: a grid of rows and columns -->
+          <option value="matrix">{{ t('formvox', 'Matrix') }}</option>
         </optgroup>
-        <optgroup :label="t('Other')">
-          <option value="table">{{ t('Table') }}</option>
-          <option value="file">{{ t('File upload') }}</option>
+        <!-- TRANSLATORS: Group of remaining question types -->
+        <optgroup :label="t('formvox', 'Other')">
+          <!-- TRANSLATORS: Question type: rows the respondent fills in -->
+          <option value="table">{{ t('formvox', 'Table') }}</option>
+          <!-- TRANSLATORS: Question type: the respondent uploads files -->
+          <option value="file">{{ t('formvox', 'File upload') }}</option>
         </optgroup>
       </select>
 
@@ -185,13 +206,15 @@
             <template #icon>
               <CopyIcon :size="20" />
             </template>
-            {{ t('Duplicate') }}
+            <!-- TRANSLATORS: Verb: menu entry that copies a question -->
+            {{ t('formvox', 'Duplicate') }}
           </NcActionButton>
           <NcActionButton @click="showConditions = true">
             <template #icon>
               <BranchIcon :size="20" />
             </template>
-            {{ t('Conditions') }}
+            <!-- TRANSLATORS: Menu entry that opens the conditions for showing a question -->
+            {{ t('formvox', 'Conditions') }}
           </NcActionButton>
           <NcActionButton
             v-if="localQuestion.sectionId"
@@ -200,7 +223,7 @@
             <template #icon>
               <CloseIcon :size="20" />
             </template>
-            {{ t('Remove from section') }}
+            {{ t('formvox', 'Remove from section') }}
           </NcActionButton>
           <NcActionButton
             v-for="section in availableSections"
@@ -210,7 +233,8 @@
             <template #icon>
               <SectionIcon :size="20" />
             </template>
-            {{ t('Move to "{section}"', { section: section.question || t('Untitled section') }) }}
+            <!-- TRANSLATORS: Menu entry; {section} is the title of a section -->
+            {{ t('formvox', 'Move to "{section}"', { section: sectionName(section) }) }}
           </NcActionButton>
           <template v-if="otherPages.length > 0">
             <NcActionButton
@@ -221,14 +245,15 @@
               <template #icon>
                 <PagesIcon :size="20" />
               </template>
-              {{ t('Move to {page}', { page: page.title || t('Page {n}', { n: page.index + 1 }) }) }}
+              <!-- TRANSLATORS: Menu entry; {page} is the title of a page, or "Page 2" -->
+              {{ t('formvox', 'Move to {page}', { page: pageName(page) }) }}
             </NcActionButton>
           </template>
           <NcActionButton @click="$emit('delete')">
             <template #icon>
               <DeleteIcon :size="20" />
             </template>
-            {{ t('Delete') }}
+            {{ t('formvox', 'Delete') }}
           </NcActionButton>
         </NcActions>
       </div>
@@ -236,29 +261,31 @@
 
     <div v-show="!collapsed" class="question-body">
       <div class="form-field">
-        <label class="form-label">{{ t('Question') }}</label>
+        <!-- TRANSLATORS: Label of the question text field -->
+        <label class="form-label">{{ t('formvox', 'Question') }}</label>
         <NcTextField
           v-model="localQuestion.question"
           :disabled="readonly"
-          :placeholder="t('Enter your question')"
+          :placeholder="t('formvox', 'Enter your question')"
           class="question-input"
           @update:model-value="emitUpdate"
         />
       </div>
 
       <div class="form-field">
-        <label class="form-label">{{ t('Description (optional)') }}</label>
+        <!-- TRANSLATORS: Label of the description field of a question -->
+        <label class="form-label">{{ t('formvox', 'Description (optional)') }}</label>
         <MarkdownEditor
           v-model="localQuestion.description"
           :disabled="readonly"
-          :placeholder="t('Add a description or instructions')"
+          :placeholder="t('formvox', 'Add a description or instructions')"
           @update:model-value="emitUpdate"
         />
       </div>
 
       <!-- Options for choice-based questions -->
       <div v-if="hasOptions" class="options-editor">
-        <h4>{{ t('Options') }}</h4>
+        <h4>{{ t('formvox', 'Options') }}</h4>
         <draggable
           v-model="localQuestion.options"
           item-key="id"
@@ -271,27 +298,27 @@
               <span class="option-handle">
                 <DragIcon :size="16" />
               </span>
-              <NcTextField
+              <!-- TRANSLATORS: Placeholder of an empty answer option; {n} is its number -->
+              <NcTextField :placeholder="t('formvox', 'Option {n}', { n: optIndex + 1 })"
                 v-model="option.label"
                 :disabled="readonly"
-                :placeholder="t('Option {n}', { n: optIndex + 1 })"
                 class="option-label-input"
                 @update:model-value="emitUpdate"
               />
-              <NumberField
+              <!-- TRANSLATORS: Placeholder of the points an answer option is worth in a quiz -->
+              <NumberField :placeholder="t('formvox', 'Score')"
                 v-if="isQuizMode"
                 :model-value="option.score ?? null"
                 :disabled="readonly"
-                :placeholder="t('Score')"
                 class="score-input"
                 @update:model-value="(val) => updateOptionScore(option, val)"
               />
-              <NumberField
+              <!-- TRANSLATORS: Tooltip of the capacity field of an answer option -->
+              <NumberField :title="t('formvox', 'Maximum times this option can be selected — leave empty for unlimited')"
                 :model-value="option.capacity ?? null"
                 min="0"
                 :disabled="readonly"
-                :placeholder="t('Max')"
-                :title="t('Maximum times this option can be selected — leave empty for unlimited (#104)')"
+                :placeholder="t('formvox', 'Max')"
                 class="capacity-input"
                 @update:model-value="(val) => updateOptionCapacity(option, val)"
               />
@@ -311,7 +338,8 @@
           <template #icon>
             <PlusIcon :size="20" />
           </template>
-          {{ t('Add option') }}
+          <!-- TRANSLATORS: Verb: button that adds an answer option -->
+          {{ t('formvox', 'Add option') }}
         </NcButton>
       </div>
 
@@ -321,29 +349,29 @@
           <NumberField
             :model-value="localQuestion.scaleMin ?? null"
             :disabled="readonly"
-            :label="t('Min')"
+            :label="t('formvox', 'Min')"
             @update:model-value="(val) => updateQuestionNumber('scaleMin', val)"
           />
           <NumberField
             :model-value="localQuestion.scaleMax ?? null"
             :disabled="readonly"
-            :label="t('Max')"
+            :label="t('formvox', 'Max')"
             @update:model-value="(val) => updateQuestionNumber('scaleMax', val)"
           />
         </div>
         <div class="scale-row">
-          <NcTextField
+          <!-- TRANSLATORS: Label of the text at the low end of a scale -->
+          <NcTextField :label="t('formvox', 'Min label')"
             v-model="localQuestion.scaleMinLabel"
             :disabled="readonly"
-            :label="t('Min label')"
-            :placeholder="t('e.g. Not at all')"
+            :placeholder="t('formvox', 'e.g. Not at all')"
             @update:model-value="emitUpdate"
           />
-          <NcTextField
+          <!-- TRANSLATORS: Label of the text at the high end of a scale -->
+          <NcTextField :label="t('formvox', 'Max label')"
             v-model="localQuestion.scaleMaxLabel"
             :disabled="readonly"
-            :label="t('Max label')"
-            :placeholder="t('e.g. Very much')"
+            :placeholder="t('formvox', 'e.g. Very much')"
             @update:model-value="emitUpdate"
           />
         </div>
@@ -351,39 +379,40 @@
 
       <!-- Rating settings -->
       <div v-if="localQuestion.type === 'rating'" class="rating-settings">
-        <NumberField
+        <!-- TRANSLATORS: Label of the number of stars in a rating question -->
+        <NumberField :label="t('formvox', 'Maximum stars')"
           :model-value="localQuestion.ratingMax ?? null"
           :disabled="readonly"
-          :label="t('Maximum stars')"
           @update:model-value="(val) => updateQuestionNumber('ratingMax', val)"
         />
       </div>
 
       <!-- Date/Time range settings -->
       <div v-if="['date', 'datetime', 'time'].includes(localQuestion.type)" class="scale-settings">
-        <h4>{{ t('Restrict selectable range (optional)') }}</h4>
+        <h4>{{ t('formvox', 'Restrict selectable range (optional)') }}</h4>
         <div class="scale-row">
           <template v-if="localQuestion.type !== 'time'">
-            <NcDateTimePicker
+            <!-- TRANSLATORS: Placeholder of an empty minimum field -->
+            <NcDateTimePicker :placeholder="t('formvox', 'No minimum')"
               :model-value="localQuestion.dateMin ? new Date(localQuestion.dateMin) : null"
               :type="localQuestion.type === 'datetime' ? 'datetime' : 'date'"
               :clearable="true"
               :disabled="readonly"
-              :placeholder="t('No minimum')"
               @update:model-value="updateDateMin"
             />
-            <NcDateTimePicker
+            <!-- TRANSLATORS: Placeholder of an empty maximum field -->
+            <NcDateTimePicker :placeholder="t('formvox', 'No maximum')"
               :model-value="localQuestion.dateMax ? new Date(localQuestion.dateMax) : null"
               :type="localQuestion.type === 'datetime' ? 'datetime' : 'date'"
               :clearable="true"
               :disabled="readonly"
-              :placeholder="t('No maximum')"
               @update:model-value="updateDateMax"
             />
           </template>
           <template v-else>
             <div class="form-field">
-              <label class="form-label">{{ t('Earliest time') }}</label>
+              <!-- TRANSLATORS: Label of the earliest allowed time -->
+              <label class="form-label">{{ t('formvox', 'Earliest time') }}</label>
               <input
                 type="time"
                 :value="localQuestion.timeMin || ''"
@@ -393,7 +422,8 @@
               />
             </div>
             <div class="form-field">
-              <label class="form-label">{{ t('Latest time') }}</label>
+              <!-- TRANSLATORS: Label of the latest allowed time -->
+              <label class="form-label">{{ t('formvox', 'Latest time') }}</label>
               <input
                 type="time"
                 :value="localQuestion.timeMax || ''"
@@ -409,29 +439,33 @@
       <!-- File upload settings -->
       <div v-if="localQuestion.type === 'file'" class="file-settings">
         <div class="form-field">
-          <label class="form-label">{{ t('Allowed file types') }}</label>
+          <label class="form-label">{{ t('formvox', 'Allowed file types') }}</label>
           <select v-model="localQuestion.allowedTypePreset" :disabled="readonly" class="type-select" @change="onFileTypePresetChange">
-            <option value="images">{{ t('Images only') }}</option>
-            <option value="documents">{{ t('Documents (PDF, Word, Excel)') }}</option>
-            <option value="pdf">{{ t('PDF only') }}</option>
-            <option value="all">{{ t('All files') }}</option>
-            <option value="custom">{{ t('Custom') }}</option>
+            <!-- TRANSLATORS: Choice of which files may be uploaded -->
+            <option value="images">{{ t('formvox', 'Images only') }}</option>
+            <option value="documents">{{ t('formvox', 'Documents (PDF, Word, Excel)') }}</option>
+            <!-- TRANSLATORS: Choice of which files may be uploaded -->
+            <option value="pdf">{{ t('formvox', 'PDF only') }}</option>
+            <!-- TRANSLATORS: Choice of which files may be uploaded -->
+            <option value="all">{{ t('formvox', 'All files') }}</option>
+            <!-- TRANSLATORS: Choice: the user sets which file types are allowed -->
+            <option value="custom">{{ t('formvox', 'Custom') }}</option>
           </select>
         </div>
 
         <div v-if="localQuestion.allowedTypePreset === 'custom'" class="form-field">
-          <label class="form-label">{{ t('Custom MIME types or extensions') }}</label>
+          <label class="form-label">{{ t('formvox', 'Custom MIME types or extensions') }}</label>
           <NcTextField
             v-model="customTypesString"
             :disabled="readonly"
-            :placeholder="t('e.g. .pdf, .docx, image/*')"
+            :placeholder="t('formvox', 'e.g. .pdf, .docx, image/*')"
             @update:model-value="onCustomTypesChange"
           />
-          <small class="hint">{{ t('Comma-separated list of extensions (.pdf) or MIME types (image/*)') }}</small>
+          <small class="hint">{{ t('formvox', 'Comma-separated list of extensions (.pdf) or MIME types (image/*)') }}</small>
         </div>
 
         <div class="form-field">
-          <label class="form-label">{{ t('Maximum file size (MB)') }}</label>
+          <label class="form-label">{{ t('formvox', 'Maximum file size (MB)') }}</label>
           <NumberField
             :model-value="localQuestion.maxFileSize ?? null"
             :disabled="readonly"
@@ -447,12 +481,12 @@
             :disabled="readonly"
             @update:model-value="localQuestion.maxFiles = $event ? 5 : 1; emitUpdate()"
           >
-            {{ t('Allow multiple files') }}
+            {{ t('formvox', 'Allow multiple files') }}
           </NcCheckboxRadioSwitch>
         </div>
 
         <div v-if="localQuestion.maxFiles > 1" class="form-field">
-          <label class="form-label">{{ t('Maximum number of files') }}</label>
+          <label class="form-label">{{ t('formvox', 'Maximum number of files') }}</label>
           <NumberField
             :model-value="localQuestion.maxFiles ?? null"
             :disabled="readonly"
@@ -467,53 +501,57 @@
       <div v-if="localQuestion.type === 'multiple'" class="scale-settings">
         <div class="scale-inline">
           <div class="form-field">
-            <label class="form-label">{{ t('Minimum selections') }}</label>
+            <!-- TRANSLATORS: Label: how many options must be picked at least -->
+            <label class="form-label">{{ t('formvox', 'Minimum selections') }}</label>
             <NumberField
               :model-value="localQuestion.minSelections ?? null"
               :disabled="readonly"
               :min="0"
-              :placeholder="t('No minimum')"
+              :placeholder="t('formvox', 'No minimum')"
               @update:model-value="(val) => updateQuestionNumber('minSelections', val)"
             />
           </div>
           <div class="form-field">
-            <label class="form-label">{{ t('Maximum selections') }}</label>
+            <!-- TRANSLATORS: Label: how many options may be picked at most -->
+            <label class="form-label">{{ t('formvox', 'Maximum selections') }}</label>
             <NumberField
               :model-value="localQuestion.maxSelections ?? null"
               :disabled="readonly"
               :min="0"
-              :placeholder="t('No maximum')"
+              :placeholder="t('formvox', 'No maximum')"
               @update:model-value="(val) => updateQuestionNumber('maxSelections', val)"
             />
           </div>
         </div>
-        <small class="hint">{{ t('Leave empty for no limit. Respondents cannot submit fewer than the minimum or more than the maximum.') }}</small>
+        <small class="hint">{{ t('formvox', 'Leave empty for no limit. Respondents cannot submit fewer than the minimum or more than the maximum.') }}</small>
       </div>
 
       <!-- Long text character limit (#113) -->
       <div v-if="localQuestion.type === 'textarea'" class="scale-settings">
         <div class="form-field">
-          <label class="form-label">{{ t('Maximum characters') }}</label>
-          <NumberField
+          <!-- TRANSLATORS: Label of the length limit of a text answer -->
+          <label class="form-label">{{ t('formvox', 'Maximum characters') }}</label>
+          <!-- TRANSLATORS: Placeholder of an empty limit field -->
+          <NumberField :placeholder="t('formvox', 'No limit')"
             :model-value="localQuestion.maxLength ?? null"
             :disabled="readonly"
             :min="0"
-            :placeholder="t('No limit')"
             @update:model-value="(val) => updateQuestionNumber('maxLength', val)"
           />
-          <small class="hint">{{ t('Leave empty for no limit. A live counter is shown to respondents.') }}</small>
+          <small class="hint">{{ t('formvox', 'Leave empty for no limit. A live counter is shown to respondents.') }}</small>
         </div>
       </div>
 
       <!-- Matrix settings -->
       <div v-if="localQuestion.type === 'matrix'" class="matrix-settings">
         <div class="matrix-section">
-          <h4>{{ t('Rows') }}</h4>
+          <!-- TRANSLATORS: Heading above the rows of a grid question -->
+          <h4>{{ t('formvox', 'Rows') }}</h4>
           <div v-for="(row, rowIndex) in localQuestion.rows" :key="row.id" class="matrix-item">
-            <NcTextField
+            <!-- TRANSLATORS: Placeholder of an empty row; {n} is its number -->
+            <NcTextField :placeholder="t('formvox', 'Row {n}', { n: rowIndex + 1 })"
               v-model="row.label"
               :disabled="readonly"
-              :placeholder="t('Row {n}', { n: rowIndex + 1 })"
               @update:model-value="emitUpdate"
             />
             <NcButton v-if="!readonly" type="tertiary" @click="removeRow(rowIndex)">
@@ -526,17 +564,19 @@
             <template #icon>
               <PlusIcon :size="20" />
             </template>
-            {{ t('Add row') }}
+            <!-- TRANSLATORS: Verb: button -->
+            {{ t('formvox', 'Add row') }}
           </NcButton>
         </div>
 
         <div class="matrix-section">
-          <h4>{{ t('Columns') }}</h4>
+          <!-- TRANSLATORS: Heading above the columns of a grid or table question -->
+          <h4>{{ t('formvox', 'Columns') }}</h4>
           <div v-for="(col, colIndex) in localQuestion.columns" :key="col.id" class="matrix-item">
-            <NcTextField
+            <!-- TRANSLATORS: Placeholder of an empty column; {n} is its number -->
+            <NcTextField :placeholder="t('formvox', 'Column {n}', { n: colIndex + 1 })"
               v-model="col.label"
               :disabled="readonly"
-              :placeholder="t('Column {n}', { n: colIndex + 1 })"
               @update:model-value="emitUpdate"
             />
             <NcButton v-if="!readonly" type="tertiary" @click="removeColumn(colIndex)">
@@ -549,20 +589,21 @@
             <template #icon>
               <PlusIcon :size="20" />
             </template>
-            {{ t('Add column') }}
+            <!-- TRANSLATORS: Verb: button -->
+            {{ t('formvox', 'Add column') }}
           </NcButton>
         </div>
       </div>
 
       <!-- Table column configuration -->
       <div v-if="localQuestion.type === 'table'" class="table-settings">
-        <h4>{{ t('Columns') }}</h4>
+        <h4>{{ t('formvox', 'Columns') }}</h4>
         <div v-for="(col, colIndex) in localQuestion.columns" :key="col.id" class="table-column-item">
           <div class="table-column-row">
             <NcTextField
               v-model="col.label"
               :disabled="readonly"
-              :placeholder="t('Column {n}', { n: colIndex + 1 })"
+              :placeholder="t('formvox', 'Column {n}', { n: colIndex + 1 })"
               class="column-label"
               @update:model-value="emitUpdate"
             />
@@ -572,10 +613,10 @@
               class="column-type-select"
               @change="emitUpdate"
             >
-              <option value="text">{{ t('Text') }}</option>
-              <option value="number">{{ t('Number') }}</option>
-              <option value="date">{{ t('Date') }}</option>
-              <option value="dropdown">{{ t('Dropdown') }}</option>
+              <option value="text">{{ t('formvox', 'Text') }}</option>
+              <option value="number">{{ t('formvox', 'Number') }}</option>
+              <option value="date">{{ t('formvox', 'Date') }}</option>
+              <option value="dropdown">{{ t('formvox', 'Dropdown') }}</option>
             </select>
             <NcButton v-if="!readonly" type="tertiary" @click="removeTableColumn(colIndex)">
               <template #icon>
@@ -587,7 +628,7 @@
             v-if="col.inputType === 'dropdown'"
             v-model="col.optionsText"
             :disabled="readonly"
-            :placeholder="t('Options (comma separated)')"
+            :placeholder="t('formvox', 'Options (comma separated)')"
             class="column-options"
             @update:model-value="updateTableColumnOptions(colIndex); emitUpdate()"
           />
@@ -596,7 +637,7 @@
           <template #icon>
             <PlusIcon :size="20" />
           </template>
-          {{ t('Add column') }}
+          {{ t('formvox', 'Add column') }}
         </NcButton>
       </div>
 
@@ -607,7 +648,8 @@
           :disabled="readonly"
           @update:model-value="localQuestion.required = $event; emitUpdate()"
         >
-          {{ t('Required') }}
+          <!-- TRANSLATORS: Switch that makes a question mandatory, and the tooltip of the * marker -->
+          {{ t('formvox', 'Required') }}
         </NcCheckboxRadioSwitch>
 
         <NcCheckboxRadioSwitch
@@ -616,7 +658,7 @@
           :disabled="readonly"
           @update:model-value="toggleQuizMode"
         >
-          {{ t('Quiz mode (with scores)') }}
+          {{ t('formvox', 'Quiz mode (with scores)') }}
         </NcCheckboxRadioSwitch>
 
       </div>
@@ -628,18 +670,20 @@
           :disabled="readonly"
           @update:model-value="toggleValidation"
         >
-          {{ t('Validation pattern') }}
+          <!-- TRANSLATORS: Switch that turns on an input check for a text answer -->
+          {{ t('formvox', 'Validation pattern') }}
         </NcCheckboxRadioSwitch>
 
         <div v-if="hasValidation" class="validation-fields">
           <!-- Easy mode: preset patterns -->
           <div class="form-field">
-            <label class="form-label">{{ t('Validation type') }}</label>
+            <!-- TRANSLATORS: Label of the kind of input check -->
+            <label class="form-label">{{ t('formvox', 'Validation type') }}</label>
             <NcSelect
               v-model="validationPreset"
               :disabled="readonly"
               :options="validationPresetOptions"
-              :placeholder="t('Select a validation type')"
+              :placeholder="t('formvox', 'Select a validation type')"
               label="label"
               track-by="value"
               @update:model-value="onValidationPresetChange"
@@ -648,23 +692,26 @@
 
           <!-- Custom regex input (only shown for 'custom' preset) -->
           <div v-if="validationPreset?.value === 'custom'" class="form-field">
-            <label class="form-label">{{ t('Regular expression') }}</label>
-            <NcTextField
+            <!-- TRANSLATORS: Technical term: a search pattern; use the common term in your language -->
+            <label class="form-label">{{ t('formvox', 'Regular expression') }}</label>
+            <!-- TRANSLATORS: Placeholder of an input field; {example} is a sample value such as a pattern or a key, kept as is -->
+            <NcTextField :placeholder="t('formvox', 'e.g. {example}', { example: '^[0-9]{4}[A-Z]{2}$' })"
               v-model="localQuestion.validation.pattern"
               :disabled="readonly"
-              :placeholder="t('e.g. ^[0-9]{4}[A-Z]{2}$')"
               @update:model-value="emitUpdate"
             />
-            <small class="hint">{{ t('Examples: ^[A-Z]{2}[0-9]{4}$ (license plate), ^\\d{10}$ (10 digits)') }}</small>
+            <!-- TRANSLATORS: {pattern1} and {pattern2} are regular expressions; they stay as they are -->
+            <small class="hint">{{ t('formvox', 'Examples: {pattern1} (license plate), {pattern2} (10 digits)', { pattern1: '^[A-Z]{2}[0-9]{4}$', pattern2: '^\\d{10}$' }) }}</small>
           </div>
 
           <!-- Custom error message -->
           <div class="form-field">
-            <label class="form-label">{{ t('Error message') }}</label>
+            <!-- TRANSLATORS: Label of the message shown when the check fails -->
+            <label class="form-label">{{ t('formvox', 'Error message') }}</label>
             <NcTextField
               v-model="localQuestion.validation.errorMessage"
               :disabled="readonly"
-              :placeholder="validationPreset?.defaultError || t('e.g. Please enter a valid value')"
+              :placeholder="validationPreset?.defaultError || t('formvox', 'e.g. Please enter a valid value')"
               @update:model-value="emitUpdate"
             />
           </div>
@@ -675,9 +722,9 @@
       <!-- Condition indicator -->
       <div v-if="localQuestion.showIf" class="condition-indicator">
         <BranchIcon :size="16" />
-        {{ t('This question has conditions') }}
+        {{ t('formvox', 'This question has conditions') }}
         <NcButton type="tertiary" @click="showConditions = true">
-          {{ t('Edit') }}
+          {{ t('formvox', 'Edit') }}
         </NcButton>
       </div>
     </div>
@@ -872,14 +919,22 @@ export default {
 
     // Color options for question highlighting
     const colorOptions = [
-      { value: '', label: t('No color') },
-      { value: '#0082c9', label: t('Blue') },
-      { value: '#00a86b', label: t('Green') },
-      { value: '#f4a100', label: t('Orange') },
-      { value: '#e53935', label: t('Red') },
-      { value: '#9c27b0', label: t('Purple') },
-      { value: '#00bcd4', label: t('Cyan') },
-      { value: '#795548', label: t('Brown') },
+      // TRANSLATORS: Choice in the color list of a section
+      { value: '', label: t('formvox', 'No color') },
+      // TRANSLATORS: Color name
+      { value: '#0082c9', label: t('formvox', 'Blue') },
+      // TRANSLATORS: Color name
+      { value: '#00a86b', label: t('formvox', 'Green') },
+      // TRANSLATORS: Color name
+      { value: '#f4a100', label: t('formvox', 'Orange') },
+      // TRANSLATORS: Color name
+      { value: '#e53935', label: t('formvox', 'Red') },
+      // TRANSLATORS: Color name, also the name of a color theme
+      { value: '#9c27b0', label: t('formvox', 'Purple') },
+      // TRANSLATORS: Color name
+      { value: '#00bcd4', label: t('formvox', 'Cyan') },
+      // TRANSLATORS: Color name
+      { value: '#795548', label: t('formvox', 'Brown') },
     ];
 
     // File type presets
@@ -918,29 +973,33 @@ export default {
 
     // Validation presets for easy mode
     const validationPresets = {
-      email: { pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$', defaultError: t('Please enter a valid email address') },
-      phone_nl: { pattern: '^(\\+31|0)[1-9][0-9]{8}$', defaultError: t('Please enter a valid Dutch phone number') },
-      phone_intl: { pattern: '^\\+?[1-9]\\d{6,14}$', defaultError: t('Please enter a valid phone number') },
-      postal_nl: { pattern: '^[1-9][0-9]{3}\\s?[A-Za-z]{2}$', defaultError: t('Please enter a valid Dutch postal code (e.g. 1234 AB)') },
-      postal_be: { pattern: '^[1-9][0-9]{3}$', defaultError: t('Please enter a valid Belgian postal code (e.g. 1000)') },
-      url: { pattern: '^https?:\\/\\/[\\w\\-]+(\\.[\\w\\-]+)+[/#?]?.*$', defaultError: t('Please enter a valid URL') },
-      digits_only: { pattern: '^[0-9]+$', defaultError: t('Please enter only digits') },
-      letters_only: { pattern: '^[a-zA-Z]+$', defaultError: t('Please enter only letters') },
-      alphanumeric: { pattern: '^[a-zA-Z0-9]+$', defaultError: t('Please enter only letters and numbers') },
+      email: { pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$', defaultError: t('formvox', 'Please enter a valid email address') },
+      phone_nl: { pattern: '^(\\+31|0)[1-9][0-9]{8}$', defaultError: t('formvox', 'Please enter a valid Dutch phone number') },
+      phone_intl: { pattern: '^\\+?[1-9]\\d{6,14}$', defaultError: t('formvox', 'Please enter a valid phone number') },
+      postal_nl: { pattern: '^[1-9][0-9]{3}\\s?[A-Za-z]{2}$', defaultError: t('formvox', 'Please enter a valid Dutch postal code (e.g. 1234 AB)') },
+      postal_be: { pattern: '^[1-9][0-9]{3}$', defaultError: t('formvox', 'Please enter a valid Belgian postal code (e.g. 1000)') },
+      url: { pattern: '^https?:\\/\\/[\\w\\-]+(\\.[\\w\\-]+)+[/#?]?.*$', defaultError: t('formvox', 'Please enter a valid URL') },
+      digits_only: { pattern: '^[0-9]+$', defaultError: t('formvox', 'Please enter only digits') },
+      letters_only: { pattern: '^[a-zA-Z]+$', defaultError: t('formvox', 'Please enter only letters') },
+      alphanumeric: { pattern: '^[a-zA-Z0-9]+$', defaultError: t('formvox', 'Please enter only letters and numbers') },
       custom: { pattern: '', defaultError: '' },
     };
 
     const validationPresetOptions = [
-      { value: 'email', label: t('Email address'), defaultError: validationPresets.email.defaultError },
-      { value: 'phone_nl', label: t('Phone number (NL)'), defaultError: validationPresets.phone_nl.defaultError },
-      { value: 'phone_intl', label: t('Phone number (international)'), defaultError: validationPresets.phone_intl.defaultError },
-      { value: 'postal_nl', label: t('Postal code (NL)'), defaultError: validationPresets.postal_nl.defaultError },
-      { value: 'postal_be', label: t('Postal code (BE)'), defaultError: validationPresets.postal_be.defaultError },
-      { value: 'url', label: t('Website URL'), defaultError: validationPresets.url.defaultError },
-      { value: 'digits_only', label: t('Digits only'), defaultError: validationPresets.digits_only.defaultError },
-      { value: 'letters_only', label: t('Letters only'), defaultError: validationPresets.letters_only.defaultError },
-      { value: 'alphanumeric', label: t('Letters and numbers'), defaultError: validationPresets.alphanumeric.defaultError },
-      { value: 'custom', label: t('Custom (advanced)'), defaultError: '' },
+      { value: 'email', label: t('formvox', 'Email address'), defaultError: validationPresets.email.defaultError },
+      { value: 'phone_nl', label: t('formvox', 'Phone number (NL)'), defaultError: validationPresets.phone_nl.defaultError },
+      { value: 'phone_intl', label: t('formvox', 'Phone number (international)'), defaultError: validationPresets.phone_intl.defaultError },
+      { value: 'postal_nl', label: t('formvox', 'Postal code (NL)'), defaultError: validationPresets.postal_nl.defaultError },
+      { value: 'postal_be', label: t('formvox', 'Postal code (BE)'), defaultError: validationPresets.postal_be.defaultError },
+      // TRANSLATORS: Name of an input check that only accepts web addresses
+      { value: 'url', label: t('formvox', 'Website URL'), defaultError: validationPresets.url.defaultError },
+      // TRANSLATORS: Name of an input check
+      { value: 'digits_only', label: t('formvox', 'Digits only'), defaultError: validationPresets.digits_only.defaultError },
+      // TRANSLATORS: Name of an input check
+      { value: 'letters_only', label: t('formvox', 'Letters only'), defaultError: validationPresets.letters_only.defaultError },
+      { value: 'alphanumeric', label: t('formvox', 'Letters and numbers'), defaultError: validationPresets.alphanumeric.defaultError },
+      // TRANSLATORS: Name of an input check where the user writes their own pattern
+      { value: 'custom', label: t('formvox', 'Custom (advanced)'), defaultError: '' },
     ];
 
     // Determine current validation preset based on pattern
@@ -981,6 +1040,13 @@ export default {
       }
       emitUpdate();
     };
+
+    // The names in the "Move to" menus: a nested t() would share the outer
+    // call's translator hint, so these have their own.
+    // TRANSLATORS: Name of a section without a title
+    const sectionName = (section) => section.question || t('formvox', 'Untitled section');
+    // TRANSLATORS: Name of a page without a title; {n} is its number, for example 2
+    const pageName = (page) => page.title || t('formvox', 'Page {n}', { n: page.index + 1 });
 
     // Get other pages (excluding current page) for "Move to page" menu
     // Available sections for "Move to section" menu
@@ -1367,6 +1433,8 @@ export default {
       updateCondition,
       moveToPage,
       t,
+      sectionName,
+      pageName,
     };
   },
 };

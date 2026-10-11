@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCP\IL10N;
 use OCP\Security\ISecureRandom;
 use Psr\Log\LoggerInterface;
 
@@ -17,6 +18,7 @@ class MSFormsImportService {
 		private MicrosoftFormsApiClient $apiClient,
 		private ISecureRandom $secureRandom,
 		private LoggerInterface $logger,
+		private IL10N $l,
 	) {
 	}
 
@@ -222,7 +224,8 @@ class MSFormsImportService {
 				// Prepend as first page
 				array_unshift($formPages, [
 					'id' => 'p' . $this->secureRandom->generate(8, ISecureRandom::CHAR_ALPHANUMERIC),
-					'title' => 'Introduction',
+					// TRANSLATORS: Title of the first page that the Microsoft Forms import creates
+					'title' => $this->l->t('Introduction'),
 					'questions' => $sortedIntroIds,
 				]);
 			}
@@ -250,7 +253,8 @@ class MSFormsImportService {
 
 		// Create the FormVox form
 		$createResult = $this->formRepository->create(
-			$msForm['title'] ?? 'Imported Form',
+			// TRANSLATORS: Default title of a form imported from Microsoft Forms without a title
+			$msForm['title'] ?? $this->l->t('Imported form'),
 			$path,
 			null // No template
 		);
@@ -299,13 +303,14 @@ class MSFormsImportService {
 				$responsesImported = $this->importResponses($fileId, $msResponses, $questionIdMap);
 			} catch (\Exception $e) {
 				$this->logger->warning('Failed to import responses', ['exception' => $e]);
-				$warnings[] = 'Could not import responses: ' . $e->getMessage();
+				// TRANSLATORS: Import warning; %s is the technical reason, usually in English
+				$warnings[] = $this->l->t('Could not import responses: %s', [$e->getMessage()]);
 			}
 		}
 
 		return [
 			'fileId' => $fileId,
-			'title' => $msForm['title'] ?? 'Imported Form',
+			'title' => $msForm['title'] ?? $this->l->t('Imported form'),
 			'questionsImported' => $totalQuestionCount,
 			'pagesImported' => $hasPages ? count($formPages) : 0,
 			'responsesImported' => $responsesImported,
@@ -331,7 +336,8 @@ class MSFormsImportService {
 		$question = [
 			'id' => $this->generateQuestionId(),
 			'type' => 'matrix',
-			'question' => $header['title'] ?? 'Matrix Question',
+			// TRANSLATORS: Default text of a grid question imported without a text
+			'question' => $header['title'] ?? $this->l->t('Matrix question'),
 			'description' => $header['subtitle'] ?? '',
 			'required' => $header['isRequired'] ?? false,
 			'order' => $header['order'] ?? 0,
@@ -348,12 +354,14 @@ class MSFormsImportService {
 		// Columns are not available via the MS Forms API
 		// We'll create placeholder columns that the user can edit
 		$question['columns'] = [
-			['id' => 'c1', 'label' => 'Option 1', 'value' => '1'],
-			['id' => 'c2', 'label' => 'Option 2', 'value' => '2'],
-			['id' => 'c3', 'label' => 'Option 3', 'value' => '3'],
+			// TRANSLATORS: Default label of an answer column; %d is its number, for example 1
+			['id' => 'c1', 'label' => $this->l->t('Option %d', [1]), 'value' => '1'],
+			['id' => 'c2', 'label' => $this->l->t('Option %d', [2]), 'value' => '2'],
+			['id' => 'c3', 'label' => $this->l->t('Option %d', [3]), 'value' => '3'],
 		];
 
-		$warnings[] = "Question '{$question['question']}': Matrix/Likert columns could not be imported from MS Forms API. Please edit the column options manually.";
+		// TRANSLATORS: Import warning; %s is the question text; Likert is a kind of rating scale
+		$warnings[] = $this->l->t("Question '%s': Matrix/Likert columns could not be imported from the Microsoft Forms API. Please edit the column options manually.", [$question['question']]);
 
 		return [
 			'question' => $question,
@@ -460,15 +468,18 @@ class MSFormsImportService {
 					];
 				}
 
-				$warnings[] = "Question '{$question['question']}': Ranking converted to matrix (ranking functionality lost)";
+				// TRANSLATORS: Import warning; %s is the question text; a matrix is a grid question
+				$warnings[] = $this->l->t("Question '%s': Ranking converted to matrix (ranking functionality lost)", [$question['question']]);
 				break;
 
 			case 'Question.Net Promoter Score':
 				$question['type'] = 'scale';
 				$question['scaleMin'] = 0;
 				$question['scaleMax'] = 10;
-				$question['scaleMinLabel'] = $msQuestion['lowLabel'] ?? 'Not at all likely';
-				$question['scaleMaxLabel'] = $msQuestion['highLabel'] ?? 'Extremely likely';
+				// TRANSLATORS: Label at the low end of an imported 0 to 10 recommendation scale
+				$question['scaleMinLabel'] = $msQuestion['lowLabel'] ?? $this->l->t('Not at all likely');
+				// TRANSLATORS: Label at the high end of an imported 0 to 10 recommendation scale
+				$question['scaleMaxLabel'] = $msQuestion['highLabel'] ?? $this->l->t('Extremely likely');
 				break;
 
 			case 'Question.File':
@@ -477,13 +488,15 @@ class MSFormsImportService {
 				if (isset($msQuestion['maxFileSize'])) {
 					$question['maxFileSize'] = $msQuestion['maxFileSize'];
 				}
-				$warnings[] = "Question '{$question['question']}': File upload question imported, but uploaded files cannot be migrated";
+				// TRANSLATORS: Import warning; %s is the question text
+				$warnings[] = $this->l->t("Question '%s': File upload question imported, but uploaded files cannot be migrated", [$question['question']]);
 				break;
 
 			default:
 				// Unknown type, default to text
 				$question['type'] = 'text';
-				$warnings[] = "Question '{$question['question']}': Unknown type '$msType' converted to text";
+				// TRANSLATORS: Import warning; %1$s is the question text, %2$s a technical question type from Microsoft Forms
+				$warnings[] = $this->l->t("Question '%1\$s': Unknown type '%2\$s' converted to text", [$question['question'], $msType]);
 				break;
 		}
 

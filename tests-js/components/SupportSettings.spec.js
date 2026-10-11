@@ -55,7 +55,7 @@ describe('SupportSettings', () => {
 		await flushPromises()
 
 		wrapper.vm.licenseStats = { hasLicense: true, licenseValid: false, licenseReason: 'License not found' }
-		expect(wrapper.vm.licenseProblem).toContain('not known to the licence server')
+		expect(wrapper.vm.licenseProblem).toContain('not known to the license server')
 
 		wrapper.vm.licenseStats = { hasLicense: true, licenseValid: false, licenseReason: 'License already in use elsewhere' }
 		expect(wrapper.vm.licenseProblem).toContain('already registered to another')

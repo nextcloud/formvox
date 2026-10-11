@@ -28,7 +28,8 @@
 					<template #icon>
 						<DeleteIcon :size="20" />
 					</template>
-					{{ t('Delete') }}
+					<!-- TRANSLATORS: Verb: button, and the name of an API key permission -->
+					{{ t('formvox', 'Delete') }}
 				</NcActionButton>
 			</NcActions>
 		</div>
@@ -52,12 +53,17 @@ const TEMPLATE_COLORS = {
 	default: '#0082c9',
 }
 
-const TEMPLATE_LABELS = {
-	survey: 'Survey',
-	poll: 'Poll',
-	registration: 'Registration',
-	demo: 'Demo',
-}
+// One literal t() per label, so the Transifex extractor sees every string.
+const templateLabel = (key) => ({
+	// TRANSLATORS: Noun: a type of form
+	survey: t('formvox', 'Survey'),
+	// TRANSLATORS: Noun: a type of form
+	poll: t('formvox', 'Poll'),
+	// TRANSLATORS: Noun: a type of form, for signing up
+	registration: t('formvox', 'Registration'),
+	// TRANSLATORS: Noun: label of a form created from the demo template; keep it short, it is a badge
+	demo: t('formvox', 'Demo'),
+})[key] || null
 
 export default {
 	name: 'FormCard',
@@ -81,11 +87,7 @@ export default {
 		})
 
 		const formType = computed(() => {
-			const template = props.form.template
-			if (template && TEMPLATE_LABELS[template]) {
-				return t(TEMPLATE_LABELS[template])
-			}
-			return null
+			return templateLabel(props.form.template)
 		})
 
 		const truncate = (text, length) => {
@@ -145,7 +147,6 @@ export default {
 		color: var(--card-color);
 		font-size: 11px;
 		font-weight: 600;
-		text-transform: uppercase;
 		letter-spacing: 0.5px;
 	}
 

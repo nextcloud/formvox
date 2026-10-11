@@ -12,17 +12,16 @@
       </div>
     </div>
     <span class="presence-text">
-      {{ editors.length === 1
-        ? editors[0].displayName
-        : t('{count} others editing', { count: editors.length })
-      }}
+      <template v-if="editors.length === 1">{{ editors[0].displayName }}</template>
+      <!-- TRANSLATORS: Shown next to the avatars of people editing the form at the same time; %n counts them -->
+      <template v-else>{{ n('formvox', '%n other editing', '%n others editing', editors.length) }}</template>
     </span>
   </div>
 </template>
 
 <script>
 import { NcAvatar } from '@nextcloud/vue';
-import { t } from '@/utils/l10n';
+import { t, n } from '@/utils/l10n';
 
 export default {
   name: 'PresenceAvatars',
@@ -36,7 +35,7 @@ export default {
     },
   },
   setup() {
-    return { t };
+    return { t, n };
   },
 };
 </script>

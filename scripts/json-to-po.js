@@ -76,7 +76,20 @@ for (const lang of LANGS) {
         continue;
     }
 
-    const translations = JSON.parse(fs.readFileSync(jsonPath, 'utf8')).translations || {};
+    const bundle = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    const translations = bundle.translations || {};
+    // The language's own plural rule, as l10n/<lang>.js registers it.
+    const pluralForm = bundle.pluralForm || 'nplurals=2; plural=(n != 1);';
+    const nplurals = Number((pluralForm.match(/nplurals\s*=\s*(\d+)/) || [])[1] || 2);
+
+    // Nextcloud looks a plural up under "_<singular>_::_<plural>_" (that is how
+    // the Transifex bot writes it). An array under the bare singular is never
+    // found at runtime, so it is not a translation: say so instead of seeding it.
+    for (const [key, value] of Object.entries(translations)) {
+        if (Array.isArray(value) && !/^_.*_::_.*_$/s.test(key)) {
+            console.warn(`  ${lang}: plural "${key}" is stored under its singular; Nextcloud expects "_<singular>_::_<plural>_" — not seeded`);
+        }
+    }
 
     const header = `# FormVox ${lang} translation.
 # Carried over from the pre-Transifex l10n/${lang}.json bundle.
@@ -92,7 +105,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\\n"
 "Content-Transfer-Encoding: 8bit\\n"
 "Language: ${lang}\\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\\n"
+"Plural-Forms: ${pluralForm}\\n"
 `;
 
     const entries = [];
@@ -106,14 +119,13 @@ msgstr ""
     }
 
     for (const [msgid, msgidPlural] of [...plural.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-        const value = translations[msgid];
-        const forms = Array.isArray(value) ? value : ['', ''];
-        if (forms[0]) translated++;
+        const value = translations[`_${msgid}_::_${msgidPlural}_`];
+        const forms = Array.isArray(value) && value.length === nplurals && value.every(Boolean) ? value : [];
+        if (forms.length) translated++;
         entries.push(
             `msgid "${escapePo(msgid)}"\n` +
             `msgid_plural "${escapePo(msgidPlural)}"\n` +
-            `msgstr[0] "${escapePo(forms[0] || '')}"\n` +
-            `msgstr[1] "${escapePo(forms[1] || forms[0] || '')}"`
+            Array.from({ length: nplurals }, (_, i) => `msgstr[${i}] "${escapePo(forms[i] || '')}"`).join('\n')
         );
     }
 

@@ -12,6 +12,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\Files\IRootFolder;
+use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\TaskProcessing\IManager as ITaskManager;
@@ -23,6 +24,7 @@ class AiController extends Controller {
 	private IRootFolder $rootFolder;
 	private ITaskManager $taskManager;
 	private AiPendingMapper $pendingMapper;
+	private IL10N $l;
 
 	public function __construct(
 		IRequest $request,
@@ -31,6 +33,7 @@ class AiController extends Controller {
 		IRootFolder $rootFolder,
 		ITaskManager $taskManager,
 		AiPendingMapper $pendingMapper,
+		IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->aiService = $aiService;
@@ -38,6 +41,7 @@ class AiController extends Controller {
 		$this->rootFolder = $rootFolder;
 		$this->taskManager = $taskManager;
 		$this->pendingMapper = $pendingMapper;
+		$this->l = $l;
 	}
 
 	/**
@@ -54,21 +58,22 @@ class AiController extends Controller {
 
 		$userId = $this->userSession->getUser()?->getUID();
 		if ($userId === null) {
-			return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
+			// TRANSLATORS: Error when a request has no logged-in account
+			return new DataResponse(['error' => $this->l->t('Not authenticated')], Http::STATUS_UNAUTHORIZED);
 		}
 		if ($title === '') {
-			return new DataResponse(['error' => 'Title is required.'], Http::STATUS_BAD_REQUEST);
+			return new DataResponse(['error' => $this->l->t('A title is required.')], Http::STATUS_BAD_REQUEST);
 		}
 		if ($description === '' && ($sourceFileId === null || $sourceFileId <= 0)) {
 			return new DataResponse(
-				['error' => 'Please describe the form you want to create or pick a source document.'],
+				['error' => $this->l->t('Please describe the form you want to create or pick a source document.')],
 				Http::STATUS_BAD_REQUEST
 			);
 		}
 
 		if (!$this->aiService->isAvailable()) {
 			return new DataResponse(
-				['error' => 'AI form generation is not available on this instance.'],
+				['error' => $this->l->t('AI form generation is not available on this instance.')],
 				Http::STATUS_FORBIDDEN
 			);
 		}

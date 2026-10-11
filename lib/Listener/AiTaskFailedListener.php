@@ -40,7 +40,8 @@ class AiTaskFailedListener implements IEventListener {
 			return;
 		}
 
-		$err = method_exists($task, 'getErrorMessage') ? $task->getErrorMessage() : 'Unknown error';
+		// Without a message the Notifier shows a translated "Unknown error".
+		$err = method_exists($task, 'getErrorMessage') ? $task->getErrorMessage() : null;
 
 		try {
 			$n = $this->notificationManager->createNotification();
@@ -50,7 +51,7 @@ class AiTaskFailedListener implements IEventListener {
 				->setObject('task', (string)$task->getId())
 				->setSubject('ai_form_failed', [
 					'formTitle' => $pending->getTitle(),
-					'reason' => $err ?? 'Unknown error',
+					'reason' => $err ?? '',
 				]);
 			$this->notificationManager->notify($n);
 		} catch (\Exception $e) {

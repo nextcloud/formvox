@@ -5,7 +5,7 @@
         <div class="results-header">
           <h1>{{ form.title }}</h1>
           <p class="response-count">
-            {{ t('{count} responses', { count: summary.responseCount }) }}
+            {{ n('formvox', '%n response', '%n responses', summary.responseCount) }}
           </p>
 
           <div class="header-actions">
@@ -13,24 +13,29 @@
               <template #icon>
                 <EditIcon :size="20" />
               </template>
-              {{ t('Edit form') }}
+              <!-- TRANSLATORS: Verb: button -->
+              {{ t('formvox', 'Edit form') }}
             </NcButton>
 
             <NcActions>
               <NcActionButton @click="exportCsv">
-                {{ t('Export CSV') }}
+                <!-- TRANSLATORS: Verb: button; CSV is a file format -->
+                {{ t('formvox', 'Export CSV') }}
               </NcActionButton>
               <NcActionButton @click="exportExcel">
-                {{ t('Export Excel') }}
+                <!-- TRANSLATORS: Verb: button; Excel is a product name -->
+                {{ t('formvox', 'Export Excel') }}
               </NcActionButton>
               <NcActionButton @click="exportJson">
-                {{ t('Export JSON') }}
+                <!-- TRANSLATORS: Verb: button; JSON is a file format -->
+                {{ t('formvox', 'Export JSON') }}
               </NcActionButton>
               <NcActionButton @click="exportAllOdt">
-                {{ t('Export ODT') }}
+                <!-- TRANSLATORS: Verb: button; ODT is the OpenDocument text format -->
+                {{ t('formvox', 'Export ODT') }}
               </NcActionButton>
               <NcActionButton @click="showTemplateDialog = true">
-                {{ t('ODT template …') }}
+                {{ t('formvox', 'ODT template …') }}
               </NcActionButton>
             </NcActions>
           </div>
@@ -49,13 +54,15 @@
             :type="view === 'summary' ? 'primary' : 'secondary'"
             @click="view = 'summary'"
           >
-            {{ t('Summary') }}
+            <!-- TRANSLATORS: Noun: name of a tab -->
+            {{ t('formvox', 'Summary') }}
           </NcButton>
           <NcButton
             :type="view === 'responses' ? 'primary' : 'secondary'"
             @click="view = 'responses'"
           >
-            {{ t('Individual responses') }}
+            <!-- TRANSLATORS: Name of a tab -->
+            {{ t('formvox', 'Individual responses') }}
           </NcButton>
         </div>
 
@@ -77,19 +84,22 @@
                   :type="getChartType(question.id) === 'bar' ? 'primary' : 'tertiary'"
                   @click="setChartType(question.id, 'bar')"
                 >
-                  {{ t('Bar') }}
+                  <!-- TRANSLATORS: Chart type: bar chart; keep it short -->
+                  {{ t('formvox', 'Bar') }}
                 </NcButton>
                 <NcButton
                   :type="getChartType(question.id) === 'pie' ? 'primary' : 'tertiary'"
                   @click="setChartType(question.id, 'pie')"
                 >
-                  {{ t('Pie') }}
+                  <!-- TRANSLATORS: Chart type: pie chart; keep it short -->
+                  {{ t('formvox', 'Pie') }}
                 </NcButton>
                 <NcButton
                   :type="getChartType(question.id) === 'doughnut' ? 'primary' : 'tertiary'"
                   @click="setChartType(question.id, 'doughnut')"
                 >
-                  {{ t('Doughnut') }}
+                  <!-- TRANSLATORS: Chart type: doughnut chart; keep it short -->
+                  {{ t('formvox', 'Doughnut') }}
                 </NcButton>
               </div>
 
@@ -123,15 +133,18 @@
 
             <div v-else-if="isNumericType(question.type)" class="numeric-stats">
               <div class="stat">
-                <span class="stat-label">{{ t('Average') }}</span>
+                <!-- TRANSLATORS: Noun: the mean of the numeric answers -->
+                <span class="stat-label">{{ t('formvox', 'Average') }}</span>
                 <span class="stat-value">{{ question.average }}</span>
               </div>
               <div class="stat">
-                <span class="stat-label">{{ t('Min') }}</span>
+                <!-- TRANSLATORS: Short for minimum; keep it short -->
+                <span class="stat-label">{{ t('formvox', 'Min') }}</span>
                 <span class="stat-value">{{ question.min }}</span>
               </div>
               <div class="stat">
-                <span class="stat-label">{{ t('Max') }}</span>
+                <!-- TRANSLATORS: Short for maximum; keep it short -->
+                <span class="stat-label">{{ t('formvox', 'Max') }}</span>
                 <span class="stat-value">{{ question.max }}</span>
               </div>
             </div>
@@ -169,13 +182,15 @@
             </div>
 
             <div v-else-if="isTableType(question.type)" class="table-summary">
-              <p>{{ t('{count} rows total across all responses', { count: question.answerCounts['[table]'] || 0 }) }}</p>
+              <!-- TRANSLATORS: %n is the number of table rows in all responses together -->
+              <p>{{ n('formvox', '%n row total across all responses', '%n rows total across all responses', question.answerCounts['[table]'] || 0) }}</p>
             </div>
 
             <div v-else-if="isFileType(question.type)" class="file-responses">
               <div class="file-header">
                 <p class="file-count">
-                  {{ question.answerCounts['[file]'] || 0 }} {{ t('files uploaded') }}
+                  <!-- TRANSLATORS: %n is the number of uploaded files -->
+                  {{ n('formvox', '%n file uploaded', '%n files uploaded', question.answerCounts['[file]'] || 0) }}
                 </p>
                 <NcButton
                   v-if="(question.answerCounts['[file]'] || 0) > 0"
@@ -185,7 +200,8 @@
                   <template #icon>
                     <DownloadIcon :size="20" />
                   </template>
-                  {{ t('Download all') }}
+                  <!-- TRANSLATORS: Verb: button -->
+                  {{ t('formvox', 'Download all') }}
                 </NcButton>
               </div>
               <div class="file-list">
@@ -208,7 +224,8 @@
 
             <div v-else class="text-responses">
               <p class="text-count">
-                {{ Object.keys(question.answerCounts).length }} {{ t('unique answers') }}
+                <!-- TRANSLATORS: %n is the number of different answers -->
+                {{ n('formvox', '%n unique answer', '%n unique answers', Object.keys(question.answerCounts).length) }}
               </p>
             </div>
           </div>
@@ -217,7 +234,8 @@
         <div v-else class="responses-view">
           <div class="pagination-controls">
             <div class="pagination-info">
-              {{ t('Showing {start}-{end} of {total}', {
+              <!-- TRANSLATORS: {start} and {end} are row numbers, {total} the number of responses -->
+              {{ t('formvox', 'Showing {start}-{end} of {total}', {
                 start: (currentPage - 1) * pageSize + 1,
                 end: Math.min(currentPage * pageSize, responses.length),
                 total: responses.length
@@ -255,7 +273,8 @@
               </NcButton>
             </div>
             <div class="page-size-selector">
-              <label>{{ t('Per page:') }}</label>
+              <!-- TRANSLATORS: Label of the number of rows per page -->
+              <label>{{ t('formvox', 'Per page:') }}</label>
               <select v-model="pageSize" @change="currentPage = 1">
                 <option :value="25">25</option>
                 <option :value="50">50</option>
@@ -269,8 +288,9 @@
             <thead>
               <tr>
                 <th class="actions-col"></th>
-                <th>{{ t('Date') }}</th>
-                <th>{{ t('Respondent') }}</th>
+                <th>{{ t('formvox', 'Date') }}</th>
+                <!-- TRANSLATORS: Column header: who answered -->
+                <th>{{ t('formvox', 'Respondent') }}</th>
                 <th v-for="question in answerableQuestions" :key="question.id">
                   {{ truncate(question.question, 30) }}
                 </th>
@@ -281,7 +301,7 @@
                 <td class="response-actions">
                   <NcButton
                     type="tertiary"
-                    :title="t('Export ODT')"
+                    :title="t('formvox', 'Export ODT')"
                     @click="exportResponseOdt(response)"
                   >
                     <template #icon>
@@ -303,7 +323,7 @@
                   <span v-if="response.respondent.type === 'user'">
                     {{ response.respondent.display_name }}
                   </span>
-                  <span v-else class="anonymous">{{ t('Anonymous') }}</span>
+                  <span v-else class="anonymous">{{ t('formvox', 'Anonymous') }}</span>
                 </td>
                 <td v-for="question in answerableQuestions" :key="question.id">
                   <template v-if="isFileAnswer(response.answers[question.id])">
@@ -392,7 +412,7 @@ import {
   NcLoadingIcon,
 } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
-import { t } from '@/utils/l10n';
+import { t, n } from '@/utils/l10n';
 import axios from '@nextcloud/axios';
 import { showError, showSuccess } from '@nextcloud/dialogs';
 import { generateResponseOdt, generateAllResponsesZip, generateFromTemplate, generateAllFromTemplateZip, downloadFile } from '../utils/odt-export';
@@ -487,7 +507,7 @@ export default {
         summary.value = response.data.summary;
         responses.value = response.data.responses;
       } catch (error) {
-        showError(t('Failed to load responses'));
+        showError(t('formvox', 'Failed to load responses'));
         console.error(error);
       } finally {
         loading.value = false;
@@ -609,6 +629,11 @@ export default {
     // internal ids like "opt3e4c1927".
     const labelledAnswerCounts = (question) => {
       const counts = question.answerCounts || {};
+      // The index counts consent answers under the fixed keys Yes/No (#94).
+      if (question.type === 'consent') {
+        const consentLabels = { Yes: t('formvox', 'Yes'), No: t('formvox', 'No') };
+        return Object.fromEntries(Object.entries(counts).map(([key, count]) => [consentLabels[key] || key, count]));
+      }
       if (!question.options) return counts;
       const out = {};
       for (const [key, count] of Object.entries(counts)) {
@@ -621,9 +646,12 @@ export default {
     const formatAnswer = (answer, question = null) => {
       // Consent: show Yes/No instead of raw boolean (#94)
       if (question && question.type === 'consent') {
-        if (answer === true) return t('Yes');
-        if (answer === false) return t('No');
-        return t('Not answered');
+        // TRANSLATORS: Answer to a consent question, in results and exports
+        if (answer === true) return t('formvox', 'Yes');
+        // TRANSLATORS: Answer to a consent question, in results and exports
+        if (answer === false) return t('formvox', 'No');
+        // TRANSLATORS: Shown for a question without an answer
+        return t('formvox', 'Not answered');
       }
       if (Array.isArray(answer)) {
         // For multiple choice, try to show labels instead of values
@@ -652,7 +680,7 @@ export default {
         const label = findOptionLabel(question.options, answer);
         if (label) return label;
       }
-      return answer || t('Not answered');
+      return answer || t('formvox', 'Not answered');
     };
 
     const truncate = (text, length) => {
@@ -683,7 +711,7 @@ export default {
 
     const exportAllOdt = async () => {
       if (responses.value.length === 0) {
-        showError(t('No responses to export'));
+        showError(t('formvox', 'No responses to export'));
         return;
       }
       try {
@@ -697,7 +725,7 @@ export default {
         }
         downloadFile(zipBytes, `${safeName}_responses.zip`, 'application/zip');
       } catch (error) {
-        showError(t('Failed to export ODT'));
+        showError(t('formvox', 'Failed to export ODT'));
         console.error(error);
       }
     };
@@ -715,7 +743,7 @@ export default {
         const safeName = (props.form.title || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');
         downloadFile(bytes, `${safeName}_${date}_${response.id.substring(0, 8)}.odt`);
       } catch (error) {
-        showError(t('Failed to export ODT'));
+        showError(t('formvox', 'Failed to export ODT'));
         console.error(error);
       }
     };
@@ -745,7 +773,7 @@ export default {
 
     const exportAllFromTemplate = async () => {
       if (responses.value.length === 0) {
-        showError(t('No responses to export'));
+        showError(t('formvox', 'No responses to export'));
         return;
       }
       try {
@@ -754,13 +782,13 @@ export default {
         const safeName = (props.form.title || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');
         downloadFile(zipBytes, `${safeName}_template_responses.zip`, 'application/zip');
       } catch (error) {
-        showError(t('Failed to export ODT from template'));
+        showError(t('formvox', 'Failed to export ODT from template'));
         console.error(error);
       }
     };
 
     const deleteResponse = async (responseId) => {
-      if (!confirm(t('Are you sure you want to delete this response?'))) {
+      if (!confirm(t('formvox', 'Are you sure you want to delete this response?'))) {
         return;
       }
 
@@ -773,9 +801,9 @@ export default {
         );
         responses.value = responses.value.filter(r => r.id !== responseId);
         summary.value.responseCount--;
-        showSuccess(t('Response deleted'));
+        showSuccess(t('formvox', 'Response deleted'));
       } catch (error) {
-        showError(t('Failed to delete response'));
+        showError(t('formvox', 'Failed to delete response'));
         console.error(error);
       }
     };
@@ -833,6 +861,7 @@ export default {
       downloadAllUploads,
       deleteResponse,
       t,
+      n,
     };
   },
 };

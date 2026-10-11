@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 /** @var array $_ */
+/** @var \OCP\IL10N $l */
 ?>
 
 <!DOCTYPE html>
@@ -13,7 +14,8 @@ declare(strict_types=1);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Error - FormVox</title>
+    <?php // TRANSLATORS: Title of the browser tab on an error page?>
+    <title><?php p($l->t('Error')); ?> - FormVox</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
@@ -50,8 +52,8 @@ declare(strict_types=1);
 <body>
     <div class="error-container">
         <div class="error-icon">⚠️</div>
-        <h1>Something went wrong</h1>
-        <p><?php echo htmlspecialchars($_['message'] ?? 'An error occurred'); ?></p>
+        <h1><?php p($l->t('Something went wrong')); ?></h1>
+        <p><?php p($_['message'] ?? $l->t('An error occurred')); ?></p>
     </div>
 </body>
 </html>

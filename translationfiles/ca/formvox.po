@@ -3,9 +3,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: FormVox 1.4.3\n"
+"Project-Id-Version: FormVox 1.5.0\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"PO-Revision-Date: 2026-08-25 00:00+0000\n"
+"PO-Revision-Date: 2026-10-09 00:00+0000\n"
 "Last-Translator: FormVox <translations@nextcloud.com>\n"
 "Language-Team: ca\n"
 "MIME-Version: 1.0\n"
@@ -23,18 +23,6 @@ msgstr "(obligatori)"
 msgid "(untitled)"
 msgstr "(sense títol)"
 
-msgid "{count} others editing"
-msgstr "{count} persones més editant"
-
-msgid "{count} responses"
-msgstr "{count} respostes"
-
-msgid "{count} responses collected"
-msgstr "S'han recollit {count} respostes"
-
-msgid "{count} rows total across all responses"
-msgstr "{count} files en total de totes les respostes"
-
 msgid "{n} / {max} characters"
 msgstr "{n} / {max} caràcters"
 
@@ -44,8 +32,11 @@ msgstr "En queden {n}"
 msgid "{n} of max {max} selected"
 msgstr "{n} de {max} màxim seleccionats"
 
-msgid "{n} stars"
-msgstr "{n} estrelles"
+msgid "{name} (you)"
+msgstr ""
+
+msgid "{size} MB"
+msgstr ""
 
 msgid "* (all domains)"
 msgstr "* (tots els dominis)"
@@ -53,11 +44,20 @@ msgstr "* (tots els dominis)"
 msgid "/ (root folder)"
 msgstr "/ (carpeta arrel)"
 
+msgid "%1$s is scheduled to open at:"
+msgstr "%1$s està programat per obrir-se el:"
+
 msgid "+ Add condition"
 msgstr "+ Afegeix una condició"
 
+msgid "A server extension blocked the upload"
+msgstr ""
+
 msgid "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development."
 msgstr "Una subscripció inclou: compatibilitat garantida amb Nextcloud, suport per correu electrònic, correcció d'errors prioritària i desenvolupament actiu."
+
+msgid "A title is required."
+msgstr ""
 
 msgid "A unique hash of your instance URL (privacy-friendly identifier)"
 msgstr "Un resum hash únic de l'URL de la vostra instància (identificador respectuós amb la privadesa)"
@@ -65,10 +65,22 @@ msgstr "Un resum hash únic de l'URL de la vostra instància (identificador resp
 msgid "Access control"
 msgstr "Control d'accés"
 
+msgid "Access denied"
+msgstr ""
+
+msgid "Access restricted"
+msgstr "Accés restringit"
+
 msgid "Access restrictions saved"
 msgstr "S'han desat les restriccions d'accés"
 
-msgid "Active Users (30 days)"
+msgid "Account names or email addresses"
+msgstr "Noms d'usuari o adreces de correu electrònic"
+
+msgid "Accounts"
+msgstr "Usuaris"
+
+msgid "Active accounts (30 days)"
 msgstr "Usuaris actius (30 dies)"
 
 msgid "Add a description or instructions"
@@ -113,9 +125,6 @@ msgstr "Afegeix un document d'origen (opcional)"
 msgid "Add your expenses below. Click \"+ Add row\" to add more items."
 msgstr ""
 
-msgid "Add your expenses below. Click \\\"+ Add row\\\" to add more items."
-msgstr ""
-
 msgid "Added"
 msgstr "Afegit"
 
@@ -131,10 +140,10 @@ msgstr "La IA no ha pogut generar «{formTitle}»"
 msgid "AI could not generate \"%1$s\""
 msgstr "La IA no ha pogut generar «%1$s»"
 
-msgid "AI could not generate \\\"{formTitle}\\\""
+msgid "AI did not generate any questions."
 msgstr ""
 
-msgid "AI could not generate \\\"%1$s\\\""
+msgid "AI did not generate any usable questions."
 msgstr ""
 
 msgid "AI finished generating \"{formTitle}\""
@@ -143,17 +152,14 @@ msgstr "La IA ha acabat de generar «{formTitle}»"
 msgid "AI finished generating \"%1$s\""
 msgstr "La IA ha acabat de generar «%1$s»"
 
-msgid "AI finished generating \\\"{formTitle}\\\""
-msgstr ""
-
-msgid "AI finished generating \\\"%1$s\\\""
-msgstr ""
-
 msgid "AI form created. Check your notifications to open it."
 msgstr "S'ha creat el formulari amb IA. Consulteu les notificacions per obrir-lo."
 
-msgid "AI Form Generation"
+msgid "AI form generation"
 msgstr "Generació de formularis amb IA"
+
+msgid "AI form generation is not available on this instance."
+msgstr ""
 
 msgid "AI generation failed."
 msgstr "No s'ha pogut fer la generació amb IA."
@@ -173,11 +179,17 @@ msgstr "La IA encara està generant. Se us notificarà quan estigui a punt."
 msgid "AI provider available"
 msgstr "Proveïdor d'IA disponible"
 
+msgid "AI returned an invalid response. Try a shorter or simpler description."
+msgstr ""
+
 msgid "AI settings saved"
 msgstr "S'ha desat la configuració de la IA"
 
 msgid "AI will base questions on the document and your description. Generation can take up to 2 minutes."
 msgstr "La IA basarà les preguntes en el document i la vostra descripció. La generació pot trigar fins a 2 minuts."
+
+msgid "AI-generated form"
+msgstr ""
 
 msgid "Align center"
 msgstr "Alinea al centre"
@@ -221,8 +233,11 @@ msgstr "Permet diversos fitxers"
 msgid "Allow multiple submissions"
 msgstr "Permet diverses trameses"
 
-msgid "Allow users to upload a source document (PDF/DOCX/ODT)"
+msgid "Allow people to upload a source document (PDF/DOCX/ODT)"
 msgstr "Permet als usuaris penjar un document d'origen (PDF/DOCX/ODT)"
+
+msgid "Allowed accounts"
+msgstr "Usuaris permesos"
 
 msgid "Allowed domains for embedding"
 msgstr "Dominis permesos per a la incrustació"
@@ -233,9 +248,6 @@ msgstr "Tipus de fitxer permesos"
 msgid "Allowed groups"
 msgstr "Grups permesos"
 
-msgid "Allowed users"
-msgstr "Usuaris permesos"
-
 msgid "Alt text"
 msgstr "Text alternatiu"
 
@@ -244,6 +256,12 @@ msgstr "Import"
 
 msgid "An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there."
 msgstr "S'afegeix automàticament una pregunta de correu electrònic al formulari. La persona enquestada rep una confirmació a l'adreça que hi introdueix."
+
+msgid "An error occurred"
+msgstr ""
+
+msgid "AND"
+msgstr ""
 
 msgid "Anonymous"
 msgstr "Anònim"
@@ -254,6 +272,12 @@ msgstr "Estadístiques d'ús anònimes"
 msgid "Another quiz question - correct answer: In Nextcloud files"
 msgstr "Una altra pregunta del qüestionari - resposta correcta: als fitxers del Nextcloud"
 
+msgid "Answer does not match the required format for question '%s'"
+msgstr ""
+
+msgid "Answer for question '%1$s' exceeds the %2$d-character limit"
+msgstr ""
+
 msgid "Any final thoughts or feedback?"
 msgstr "Voleu fer cap comentari o reflexió final?"
 
@@ -263,13 +287,13 @@ msgstr "QUALSEVOL de les condicions següents"
 msgid "Any personal or sensitive data"
 msgstr "Qualsevol dada personal o sensible"
 
-msgid "API & Webhooks"
-msgstr "API i webhooks"
-
-msgid "API Access"
+msgid "API access"
 msgstr "Accés a l'API"
 
-msgid "API Documentation"
+msgid "API and webhooks"
+msgstr "API i webhooks"
+
+msgid "API documentation"
 msgstr "Documentació de l'API"
 
 msgid "API key created"
@@ -380,6 +404,9 @@ msgstr "Categoria"
 msgid "Center"
 msgstr "Centre"
 
+msgid "Challenge verification failed. Please refresh the page."
+msgstr ""
+
 msgid "Change source document"
 msgstr "Canvia el document d'origen"
 
@@ -399,6 +426,9 @@ msgid "Choose source document"
 msgstr "Trieu el document d'origen"
 
 msgid "Click \"Grant admin consent\" for your organization"
+msgstr ""
+
+msgid "Click here"
 msgstr ""
 
 msgid "Client ID (Application ID)"
@@ -434,7 +464,7 @@ msgstr "Llista d'extensions (.pdf) o tipus MIME (image/*) separats per comes"
 msgid "Condition active"
 msgstr "Condició activa"
 
-msgid "Conditional logic / Branching"
+msgid "Conditional logic / branching"
 msgstr "Lògica condicional / Ramificació"
 
 msgid "Conditions"
@@ -470,6 +500,12 @@ msgstr "S'està connectant …"
 msgid "Consent (single checkbox)"
 msgstr "Consentiment (casella única)"
 
+msgid "Consent question requires boolean answer"
+msgstr ""
+
+msgid "Contact the form owner if you believe this is an error."
+msgstr "Contacteu amb el propietari del formulari si creieu que es tracta d'un error."
+
 msgid "contains"
 msgstr "conté"
 
@@ -497,10 +533,25 @@ msgstr "Copieu aquest codi per a incrustar el formulari al vostre lloc web, al S
 msgid "Cost"
 msgstr "Cost"
 
-msgid "Could not reach the licence server, so the FormVox subscription status could not be confirmed."
+msgid "Could not create FormVox form: {error}"
+msgstr ""
+
+msgid "Could not fetch your forms: %s"
+msgstr ""
+
+msgid "Could not import responses: %s"
+msgstr ""
+
+msgid "Could not import the form: %s"
+msgstr ""
+
+msgid "Could not load the form: %s"
+msgstr ""
+
+msgid "Could not reach the license server, so the FormVox subscription status could not be confirmed."
 msgstr "No s'ha pogut connectar amb el servidor de llicències, així que no s'ha pogut confirmar l'estat de la subscripció de FormVox."
 
-msgid "Could not reach the licence server, so the subscription status could not be confirmed."
+msgid "Could not reach the license server, so the subscription status could not be confirmed."
 msgstr "No s'ha pogut connectar amb el servidor de llicències, així que no s'ha pogut confirmar l'estat de la subscripció."
 
 msgid "Could not reach the telemetry server. Please try again later."
@@ -508,6 +559,9 @@ msgstr "No s'ha pogut contactar amb el servidor de telemetria. Torneu-ho a prova
 
 msgid "Could not resolve the selected file."
 msgstr "No s'ha pogut resoldre el fitxer seleccionat."
+
+msgid "Could not schedule the AI task."
+msgstr ""
 
 msgid "Create"
 msgstr "Crea"
@@ -566,11 +620,14 @@ msgstr "Tipus MIME o extensions personalitzats"
 msgid "Customize the appearance of your public forms."
 msgstr "Personalitzeu l'aparença dels vostres formularis públics."
 
-msgid "Customize the look and feel of this form. Leave disabled to use the admin defaults."
+msgid "Customize the look and feel of this form. Leave disabled to use the administration defaults."
 msgstr "Personalitzeu l'aspecte d'aquest formulari. Deixeu-ho desactivat per a usar els valors per defecte de l'administrador."
 
 msgid "Cyan"
 msgstr "Cian"
+
+msgid "Dark"
+msgstr ""
 
 msgid "Dashed"
 msgstr "Discontinu"
@@ -583,6 +640,12 @@ msgstr "Data i hora"
 
 msgid "Date and time picker"
 msgstr "Selector de data i hora"
+
+msgid "Date is after the allowed maximum for question '%s'"
+msgstr ""
+
+msgid "Date is before the allowed minimum for question '%s'"
+msgstr ""
 
 msgid "Date must be on or after {min}"
 msgstr "La data ha de ser igual o posterior a {min}"
@@ -598,6 +661,9 @@ msgstr "Per defecte"
 
 msgid "Define rules to skip to a specific page based on answers. If no rule matches, the next page is shown."
 msgstr "Definiu regles per a saltar a una pàgina concreta segons les respostes. Si cap regla no hi coincideix, es mostra la pàgina següent."
+
+msgid "Delegated"
+msgstr ""
 
 msgid "Delete"
 msgstr "Suprimeix"
@@ -622,6 +688,9 @@ msgstr "Suprimeix la plantilla"
 
 msgid "Deleted"
 msgstr "Suprimit"
+
+msgid "Demo"
+msgstr ""
 
 msgid "Demo form"
 msgstr "Formulari de demostració"
@@ -710,14 +779,11 @@ msgstr "Duplica"
 msgid "e.g. .pdf, .docx, image/*"
 msgstr "p. ex. .pdf, .docx, image/*"
 
-msgid "e.g. ^[0-9]{4}[A-Z]{2}$"
-msgstr "p. ex. ^[0-9]{4}[A-Z]{2}$"
+msgid "e.g. {example}"
+msgstr "p. ex. {example}"
 
 msgid "e.g. A customer satisfaction survey with 8 questions about service quality, food, and value for money."
 msgstr "p. ex. Una enquesta de satisfacció del client amb 8 preguntes sobre la qualitat del servei, el menjar i la relació qualitat-preu."
-
-msgid "e.g. FVOX-XXXX-XXXX-XXXX-XXXX"
-msgstr "p. ex. FVOX-XXXX-XXXX-XXXX-XXXX"
 
 msgid "e.g. Not at all"
 msgstr "p. ex. Gens"
@@ -727,9 +793,6 @@ msgstr "p. ex. Introduïu un valor vàlid"
 
 msgid "e.g. Very much"
 msgstr "p. ex. Molt"
-
-msgid "e.g., 12345678-1234-1234-1234-123456789012"
-msgstr "p. ex., 12345678-1234-1234-1234-123456789012"
 
 msgid "e.g., Notify on submission"
 msgstr "p. ex., Notifica en trametre"
@@ -752,6 +815,9 @@ msgstr "Edita"
 msgid "Edit form"
 msgstr "Edita el formulari"
 
+msgid "Edit with FormVox"
+msgstr ""
+
 msgid "Email"
 msgstr "Correu electrònic"
 
@@ -773,7 +839,7 @@ msgstr "Configuració d'incrustació"
 msgid "Embed settings saved"
 msgstr "S'ha desat la configuració d'incrustació"
 
-msgid "Enable AI form generation for all users"
+msgid "Enable AI form generation for everyone"
 msgstr "Activa la generació de formularis amb IA per a tots els usuaris"
 
 msgid "Enable pages"
@@ -812,6 +878,9 @@ msgstr "Introduïu la contrasenya nova"
 msgid "Enter page title:"
 msgstr "Introduïu el títol de la pàgina:"
 
+msgid "Enter password"
+msgstr "Introduïu la contrasenya"
+
 msgid "Enter text …"
 msgstr "Introduïu text …"
 
@@ -827,14 +896,17 @@ msgstr "Introduïu la pregunta"
 msgid "equals"
 msgstr "és igual a"
 
+msgid "Error"
+msgstr ""
+
 msgid "Error message"
 msgstr "Missatge d'error"
 
 msgid "Events"
 msgstr "Esdeveniments"
 
-msgid "Examples: ^[A-Z]{2}[0-9]{4}$ (license plate), ^\\d{10}$ (10 digits)"
-msgstr "Exemples: ^[A-Z]{2}[0-9]{4}$ (matrícula), ^\\d{10}$ (10 dígits)"
+msgid "Examples: {pattern1} (license plate), {pattern2} (10 digits)"
+msgstr "Exemples: {pattern1} (matrícula), {pattern2} (10 dígits)"
 
 msgid "Excel file"
 msgstr "Fitxer Excel"
@@ -862,6 +934,9 @@ msgstr "Exporta a ODT"
 
 msgid "Export options"
 msgstr "Opcions d'exportació"
+
+msgid "Extremely likely"
+msgstr ""
 
 msgid "Failed to connect to Microsoft"
 msgstr "No s'ha pogut connectar amb Microsoft"
@@ -929,6 +1004,9 @@ msgstr "No s'ha pogut eliminar la clau de subscripció"
 msgid "Failed to remove template"
 msgstr "No s'ha pogut suprimir la plantilla"
 
+msgid "Failed to replace response link"
+msgstr ""
+
 msgid "Failed to save access restrictions"
 msgstr "No s'han pogut desar les restriccions d'accés"
 
@@ -965,6 +1043,9 @@ msgstr "No s'ha pogut desar la plantilla"
 msgid "Failed to send report"
 msgstr "No s'ha pogut enviar l'informe"
 
+msgid "Failed to send report: {error}"
+msgstr "No s'ha pogut enviar l'informe: {error}"
+
 msgid "Failed to submit response"
 msgstr "No s'ha pogut enviar la resposta"
 
@@ -995,20 +1076,23 @@ msgstr "El fitxer «{name}» no és un tipus de fitxer permès"
 msgid "File \"{name}\" is too large. Maximum size is {size} MB"
 msgstr "El fitxer «{name}» és massa gran. La mida màxima és de {size} MB"
 
+msgid "File is too large. The maximum size is %s MB."
+msgstr ""
+
 msgid "File upload"
 msgstr "Pujada de fitxers"
 
 msgid "File-based storage"
 msgstr "Emmagatzematge basat en fitxers"
 
-msgid "files uploaded"
-msgstr "fitxers penjats"
-
 msgid "Flexibility"
 msgstr "Flexibilitat"
 
 msgid "Footer"
 msgstr "Peu de pàgina"
+
+msgid "Forest"
+msgstr ""
 
 msgid "Form"
 msgstr ""
@@ -1021,6 +1105,9 @@ msgstr "S'ha suprimit el formulari"
 
 msgid "Form imported successfully!"
 msgstr "S'ha importat el formulari correctament!"
+
+msgid "Form not found"
+msgstr ""
 
 msgid "Form statistics"
 msgstr "Estadístiques del formulari"
@@ -1036,9 +1123,6 @@ msgstr "Títol del formulari"
 
 msgid "Formatting"
 msgstr "Format"
-
-msgid "FormVox"
-msgstr "FormVox"
 
 msgid "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support."
 msgstr "FormVox és gratuït i de codi obert (AGPL-3.0). Totes les funcions funcionen sense subscripció. Si FormVox és valuós per a la vostra organització, una subscripció dona suport al desenvolupament actiu i us ofereix compatibilitat garantida amb Nextcloud i suport per correu electrònic."
@@ -1124,8 +1208,8 @@ msgstr "Capçalera"
 msgid "Heading"
 msgstr "Encapçalament"
 
-msgid "Height"
-msgstr "Alçada"
+msgid "Height:"
+msgstr "Alçada:"
 
 msgid "Help improve FormVox by sharing anonymous usage statistics."
 msgstr "Ajudeu a millorar FormVox compartint estadístiques d'ús anònimes."
@@ -1148,10 +1232,7 @@ msgstr "Com preferiu que us contactin?"
 msgid "How would you rate your overall experience?"
 msgstr "Com valoraríeu la vostra experiència global?"
 
-msgid "HTML"
-msgstr "HTML"
-
-msgid "HTML Content"
+msgid "HTML content"
 msgstr "Contingut HTML"
 
 msgid "I agree"
@@ -1196,6 +1277,9 @@ msgstr "Opcions d'importació"
 msgid "Import responses only (coming soon)"
 msgstr "Importa només les respostes (properament)"
 
+msgid "Imported form"
+msgstr ""
+
 msgid "Importing …"
 msgstr "S'està important …"
 
@@ -1210,6 +1294,9 @@ msgstr "Al núvol"
 
 msgid "Include your API key in the X-FormVox-API-Key header."
 msgstr "Incloeu la vostra clau d'API a la capçalera X-FormVox-API-Key."
+
+msgid "Incorrect password"
+msgstr ""
 
 msgid "Individual responses"
 msgstr "Respostes individuals"
@@ -1228,6 +1315,27 @@ msgstr "Integracions"
 
 msgid "Intermediate - Some experience"
 msgstr "Intermedi - Una mica d'experiència"
+
+msgid "Introduction"
+msgstr ""
+
+msgid "Invalid answer for question '%s'"
+msgstr ""
+
+msgid "Invalid date format for question '%s'"
+msgstr ""
+
+msgid "Invalid datetime format for question '%s'"
+msgstr ""
+
+msgid "Invalid file type. Allowed: %s"
+msgstr ""
+
+msgid "Invalid question"
+msgstr ""
+
+msgid "Invalid time format for question '%s'"
+msgstr ""
 
 msgid "is currently editing this form"
 msgstr "està editant aquest formulari ara mateix"
@@ -1259,8 +1367,8 @@ msgstr "Nom de la clau"
 msgid "Large (64px)"
 msgstr "Gran (64px)"
 
-msgid "Last report sent"
-msgstr "Darrer informe enviat"
+msgid "Last report sent: {date}"
+msgstr "Darrer informe enviat: {date}"
 
 msgid "Latest time"
 msgstr "Hora més tardana"
@@ -1331,6 +1439,9 @@ msgstr "Contingut Markdown que es mostra a les persones enquestades (no cal cap 
 msgid "Matrix"
 msgstr "Matriu"
 
+msgid "Matrix question"
+msgstr ""
+
 msgid "Matrix/grid question with multiple rows and columns"
 msgstr "Pregunta de matriu/graella amb múltiples files i columnes"
 
@@ -1342,9 +1453,6 @@ msgstr "Màx. {size} MB"
 
 msgid "Max label"
 msgstr "Etiqueta màxima"
-
-msgid "Maximum {n} files allowed"
-msgstr "Es permeten un màxim de {n} fitxers"
 
 msgid "Maximum characters"
 msgstr "Nombre màxim de caràcters"
@@ -1358,8 +1466,8 @@ msgstr "Nombre màxim de fitxers"
 msgid "Maximum questions per generated form"
 msgstr "Nombre màxim de preguntes per formulari generat"
 
-msgid "Maximum responses"
-msgstr "Nombre màxim de respostes"
+msgid "Maximum responses:"
+msgstr "Nombre màxim de respostes:"
 
 msgid "Maximum selections"
 msgstr "Nombre màxim de seleccions"
@@ -1370,23 +1478,23 @@ msgstr "Mida màxima del document d'origen"
 msgid "Maximum stars"
 msgstr "Nombre màxim d'estrelles"
 
-msgid "Maximum times this option can be selected — leave empty for unlimited (#104)"
-msgstr "Nombre màxim de vegades que es pot seleccionar aquesta opció — deixeu-ho buit per il·limitat (#104)"
+msgid "Maximum times this option can be selected — leave empty for unlimited"
+msgstr "Nombre màxim de vegades que es pot seleccionar aquesta opció — deixeu-ho buit per il·limitat"
 
 msgid "Medium (32px)"
 msgstr "Mitjà (32px)"
 
-msgid "Message when full"
-msgstr "Missatge quan estigui ple"
-
-msgid "Microsoft Forms"
-msgstr "Microsoft Forms"
+msgid "Message when full:"
+msgstr "Missatge quan estigui ple:"
 
 msgid "Microsoft Forms import"
 msgstr "Importació de Microsoft Forms"
 
-msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Settings > FormVox > Integrations."
+msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Administration settings > FormVox > Integrations."
 msgstr "La importació de Microsoft Forms no està configurada. Demaneu a l'administrador que la configuri a Configuració > FormVox > Integracions."
+
+msgid "Microsoft Forms is not configured. Ask your administrator to configure it."
+msgstr ""
 
 msgid "Microsoft Forms settings saved"
 msgstr "S'ha desat la configuració de Microsoft Forms"
@@ -1396,6 +1504,9 @@ msgstr "Mín."
 
 msgid "Min label"
 msgstr "Etiqueta mínima"
+
+msgid "Minimal"
+msgstr ""
 
 msgid "Minimum selections"
 msgstr "Nombre mínim de seleccions"
@@ -1415,6 +1526,9 @@ msgstr "Opció múltiple"
 msgid "Multiple choice (checkboxes) - select all that apply"
 msgstr "Opció múltiple (caselles de selecció) - seleccioneu totes les que corresponguin"
 
+msgid "Multiple choice question requires array answer"
+msgstr ""
+
 msgid "My forms"
 msgstr "Els meus formularis"
 
@@ -1424,26 +1538,44 @@ msgstr "Mai"
 msgid "New form"
 msgstr "Nou formulari"
 
+msgid "New poll"
+msgstr ""
+
+msgid "New registration"
+msgstr ""
+
+msgid "New response link created — the previous link no longer works"
+msgstr ""
+
 msgid "New response to \"{formTitle}\" from {respondentName}"
 msgstr ""
 
 msgid "New response to \"%1$s\" from %2$s"
 msgstr ""
 
-msgid "New response to \\\"{formTitle}\\\" from {respondentName}"
-msgstr ""
-
-msgid "New response to \\\"%1$s\\\" from %2$s"
+msgid "New survey"
 msgstr ""
 
 msgid "Next"
 msgstr "Següent"
+
+msgid "Nextcloud dark"
+msgstr ""
+
+msgid "Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or {email}."
+msgstr ""
 
 msgid "No"
 msgstr "No"
 
 msgid "No AI provider configured"
 msgstr "No hi ha cap proveïdor d'IA configurat"
+
+msgid "No AI text-to-text provider is available on this Nextcloud instance."
+msgstr ""
+
+msgid "No AI text-to-text provider is configured on this instance. Install an AI provider (for example %s) first."
+msgstr ""
 
 msgid "No blocks yet. Add one below."
 msgstr "Encara no hi ha cap bloc. Afegiu-ne un a sota."
@@ -1453,6 +1585,9 @@ msgstr "Sense color"
 
 msgid "No custom templates yet."
 msgstr "Encara no hi ha cap plantilla personalitzada."
+
+msgid "No file was uploaded"
+msgstr ""
 
 msgid "No forms found in your Microsoft Forms account."
 msgstr "No s'ha trobat cap formulari al vostre compte de Microsoft Forms."
@@ -1496,6 +1631,15 @@ msgstr "No, gràcies"
 msgid "Not answered"
 msgstr "Sense resposta"
 
+msgid "Not at all likely"
+msgstr ""
+
+msgid "Not authenticated"
+msgstr ""
+
+msgid "Not connected to Microsoft. Please connect first."
+msgstr ""
+
 msgid "not equals"
 msgstr "no és igual a"
 
@@ -1520,7 +1664,10 @@ msgstr "Llista numerada"
 msgid "Numeric input"
 msgstr "Entrada numèrica"
 
-msgid "ODT Template"
+msgid "Ocean"
+msgstr ""
+
+msgid "ODT template"
 msgstr "Plantilla ODT"
 
 msgid "ODT template …"
@@ -1529,7 +1676,7 @@ msgstr "Plantilla ODT …"
 msgid "On external servers"
 msgstr "En servidors externs"
 
-msgid "Only selected users and group members can access this form. They will need to log in."
+msgid "Only selected accounts and group members can access this form. They will need to log in."
 msgstr "Només els usuaris seleccionats i els membres dels grups poden accedir a aquest formulari. Hauran d'iniciar la sessió."
 
 msgid "Open form"
@@ -1547,6 +1694,9 @@ msgstr "Operador"
 msgid "Option {n}"
 msgstr "Opció {n}"
 
+msgid "Option %d"
+msgstr ""
+
 msgid "Option A"
 msgstr "Opció A"
 
@@ -1561,6 +1711,9 @@ msgstr "Opcions"
 
 msgid "Options (comma separated)"
 msgstr "Opcions (separades per comes)"
+
+msgid "OR"
+msgstr ""
 
 msgid "Orange"
 msgstr "Taronja"
@@ -1589,8 +1742,8 @@ msgstr "Contrasenya"
 msgid "Password protect"
 msgstr "Protegeix amb contrasenya"
 
-msgid "PDF"
-msgstr "PDF"
+msgid "Password required"
+msgstr ""
 
 msgid "PDF only"
 msgstr "Només PDF"
@@ -1600,6 +1753,9 @@ msgstr "Per pàgina:"
 
 msgid "Performance"
 msgstr "Rendiment"
+
+msgid "Permission denied"
+msgstr ""
 
 msgid "Permissions"
 msgstr "Permisos"
@@ -1627,6 +1783,9 @@ msgstr "Responeu totes les preguntes obligatòries"
 
 msgid "Please answer all rows in this question"
 msgstr "Responeu totes les files d'aquesta pregunta"
+
+msgid "Please describe the form you want to create or pick a source document."
+msgstr ""
 
 msgid "Please enter a subscription key"
 msgstr "Introduïu una clau de subscripció"
@@ -1685,14 +1844,23 @@ msgstr "Previsualitza"
 msgid "Previous"
 msgstr "Anterior"
 
+msgid "Pricing details"
+msgstr ""
+
 msgid "Primary color"
 msgstr "Color primari"
 
-msgid "Privacy / Self-hosted"
+msgid "Privacy / self-hosted"
 msgstr "Privadesa / Allotjament propi"
 
 msgid "Progress bar"
 msgstr "Barra de progrés"
+
+msgid "Protected form"
+msgstr ""
+
+msgid "Provide a description, an uploaded document, or both."
+msgstr ""
 
 msgid "Purple"
 msgstr "Lila"
@@ -1700,11 +1868,29 @@ msgstr "Lila"
 msgid "Question"
 msgstr "Pregunta"
 
+msgid "Question '%1$s': Unknown type '%2$s' converted to text"
+msgstr ""
+
+msgid "Question '%s' is required"
+msgstr ""
+
+msgid "Question '%s': File upload question imported, but uploaded files cannot be migrated"
+msgstr ""
+
+msgid "Question '%s': Matrix/Likert columns could not be imported from the Microsoft Forms API. Please edit the column options manually."
+msgstr ""
+
+msgid "Question '%s': Ranking converted to matrix (ranking functionality lost)"
+msgstr ""
+
+msgid "Question {n}"
+msgstr ""
+
+msgid "Question ID is required"
+msgstr ""
+
 msgid "Questions"
 msgstr "Preguntes"
-
-msgid "questions imported"
-msgstr "preguntes importades"
 
 msgid "Questions?"
 msgstr "Teniu preguntes?"
@@ -1781,6 +1967,12 @@ msgstr "Canvia el nom"
 msgid "Replace template"
 msgstr "Substitueix la plantilla"
 
+msgid "Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form."
+msgstr ""
+
+msgid "Replace with a new link"
+msgstr ""
+
 msgid "Report sent successfully"
 msgstr "S'ha enviat l'informe correctament"
 
@@ -1793,8 +1985,17 @@ msgstr "Obligatori"
 msgid "Respondent"
 msgstr "Enquestat"
 
+msgid "Respondent ID"
+msgstr ""
+
 msgid "Respondent name"
 msgstr "Nom de l'enquestat"
+
+msgid "Respondent type"
+msgstr ""
+
+msgid "Respondent:"
+msgstr ""
 
 msgid "Response created"
 msgstr "S'ha creat la resposta"
@@ -1804,6 +2005,9 @@ msgstr "Dades de la resposta o respostes"
 
 msgid "Response deleted"
 msgstr "S'ha suprimit la resposta"
+
+msgid "Response ID"
+msgstr ""
 
 msgid "Response link"
 msgstr "Enllaç de resposta"
@@ -1820,14 +2024,8 @@ msgstr "Configuració de les respostes"
 msgid "Response updated"
 msgstr "S'ha actualitzat la resposta"
 
-msgid "responses"
-msgstr "respostes"
-
-msgid "Responses"
-msgstr "Respostes"
-
-msgid "responses imported"
-msgstr "respostes importades"
+msgid "Responses ({count})"
+msgstr "Respostes ({count})"
 
 msgid "Responsive width"
 msgstr "Amplada adaptativa"
@@ -1835,7 +2033,7 @@ msgstr "Amplada adaptativa"
 msgid "Restrict selectable range (optional)"
 msgstr "Restringeix l'interval seleccionable (opcional)"
 
-msgid "Restrict to specific users/groups"
+msgid "Restrict to specific accounts or groups"
 msgstr "Restringeix a usuaris/grups específics"
 
 msgid "Results"
@@ -1849,6 +2047,9 @@ msgstr "Encaminament"
 
 msgid "Row {n}"
 msgstr "Fila {n}"
+
+msgid "Row {n}: {cells}"
+msgstr ""
 
 msgid "Rows"
 msgstr "Files"
@@ -1886,7 +2087,7 @@ msgstr "Programa l'obertura"
 msgid "Score"
 msgstr "Puntuació"
 
-msgid "Search users and groups"
+msgid "Search accounts and groups"
 msgstr "Cerca usuaris i grups"
 
 msgid "Section"
@@ -1933,6 +2134,12 @@ msgstr "Envia l'informe ara"
 
 msgid "Sending …"
 msgstr "S'està enviant …"
+
+msgid "Server configuration error: missing temporary folder"
+msgstr ""
+
+msgid "Server error: could not write the file"
+msgstr ""
 
 msgid "Set expiration"
 msgstr "Estableix la caducitat"
@@ -2003,8 +2210,20 @@ msgstr "Sòlid"
 msgid "Someone"
 msgstr "Algú"
 
+msgid "Something went wrong"
+msgstr ""
+
 msgid "Source"
 msgstr "Origen"
+
+msgid "Source document is too large. The maximum is %s MB."
+msgstr ""
+
+msgid "Source document not found."
+msgstr ""
+
+msgid "Source document uploads are disabled by the administrator."
+msgstr ""
 
 msgid "Spacer"
 msgstr "Espaiador"
@@ -2020,6 +2239,9 @@ msgstr "Estrelles"
 
 msgid "Start from scratch"
 msgstr "Comença de zero"
+
+msgid "Start import"
+msgstr ""
 
 msgid "Start over"
 msgstr "Torna a començar"
@@ -2041,6 +2263,12 @@ msgstr "Data de la tramesa"
 
 msgid "Submit"
 msgstr "Envia"
+
+msgid "Submitted at"
+msgstr ""
+
+msgid "Submitted:"
+msgstr ""
 
 msgid "Submitting …"
 msgstr "S'està enviant …"
@@ -2072,6 +2300,9 @@ msgstr "S'ha rebutjat la clau de subscripció: {reason}"
 msgid "Summary"
 msgstr "Resum"
 
+msgid "Sunset"
+msgstr ""
+
 msgid "Support"
 msgstr "Suport"
 
@@ -2089,9 +2320,6 @@ msgstr "Tipus de tasca:"
 
 msgid "Tell us about yourself"
 msgstr "Expliqueu-nos coses sobre vós"
-
-msgid "Template"
-msgstr "Plantilla"
 
 msgid "Template active — exports will use this template."
 msgstr "Plantilla activa: les exportacions utilitzaran aquesta plantilla."
@@ -2111,10 +2339,13 @@ msgstr "Títol de la plantilla (opcional)"
 msgid "Template uploaded"
 msgstr "S'ha penjat la plantilla"
 
+msgid "Template:"
+msgstr "Plantilla:"
+
 msgid "Templates"
 msgstr ""
 
-msgid "Templates appear in the \"New form\" dialog for every user. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
+msgid "Templates appear in the \"New form\" dialog for everyone. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
 msgstr "Les plantilles apareixen al diàleg «Formulari nou» per a tots els usuaris. Captureu aquí qualsevol formulari existent com a plantilla o suprimiu les plantilles que ja no vulgueu oferir."
 
 msgid "Tenant ID"
@@ -2129,6 +2360,9 @@ msgstr "Color del text"
 msgid "Text field with email validation"
 msgstr "Camp de text amb validació de correu electrònic"
 
+msgid "Thank you for filling in \"%s\".\n\nWe have received your response."
+msgstr ""
+
 msgid "Thank you for helping improve FormVox!"
 msgstr "Gràcies per ajudar a millorar FormVox!"
 
@@ -2141,11 +2375,35 @@ msgstr "Pàgina d'agraïment"
 msgid "Thank you!"
 msgstr "Gràcies!"
 
+msgid "The AI task failed: %s"
+msgstr ""
+
 msgid "The AI will draft questions based on your description. Generation can take up to 2 minutes."
 msgstr "La IA redactarà preguntes a partir de la vostra descripció. La generació pot trigar fins a 2 minuts."
 
-msgid "The telemetry server returned an error:"
-msgstr "El servidor de telemetria ha retornat un error:"
+msgid "The file exceeds the maximum size allowed"
+msgstr ""
+
+msgid "The file exceeds the maximum upload size"
+msgstr ""
+
+msgid "The file was only partially uploaded"
+msgstr ""
+
+msgid "The import is not available."
+msgstr ""
+
+msgid "The Microsoft Forms connection is not available."
+msgstr ""
+
+msgid "The option '%s' is no longer available — capacity reached"
+msgstr ""
+
+msgid "The source must be a file."
+msgstr ""
+
+msgid "The telemetry server returned an error: {error}"
+msgstr "El servidor de telemetria ha retornat un error: {error}"
 
 msgid "Theme presets"
 msgstr "Predefinits de tema"
@@ -2162,11 +2420,26 @@ msgstr "Aquesta entrada no és vàlida"
 msgid "This field does not match the required format"
 msgstr "Aquest camp no coincideix amb el format requerit"
 
+msgid "This file type is not allowed"
+msgstr ""
+
+msgid "This form has expired"
+msgstr ""
+
 msgid "This form has reached its response limit"
 msgstr "Aquest formulari ha arribat al límit de respostes"
 
 msgid "This form is no longer accepting responses."
 msgstr "Aquest formulari ja no accepta respostes."
+
+msgid "This form is not yet open"
+msgstr "Aquest formulari encara no està obert"
+
+msgid "This form is password protected"
+msgstr "Aquest formulari està protegit amb contrasenya"
+
+msgid "This form requires you to be logged in"
+msgstr ""
 
 msgid "This form uses the default theme. Enable custom theme above to customize."
 msgstr "Aquest formulari utilitza el tema per defecte. Activeu el tema personalitzat a dalt per personalitzar-lo."
@@ -2177,7 +2450,7 @@ msgstr "Aquesta clau de subscripció de FormVox s'ha desactivat. Contacteu amb n
 msgid "This FormVox subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
 msgstr "Aquesta clau de subscripció de FormVox ja està registrada en una altra instància de Nextcloud. Contacteu amb nosaltres si aquest servidor la substitueix."
 
-msgid "This FormVox subscription key is not known to the licence server. Check it for typos."
+msgid "This FormVox subscription key is not known to the license server. Check it for typos."
 msgstr "Aquesta clau de subscripció de FormVox no és coneguda pel servidor de llicències. Comproveu si conté errors tipogràfics."
 
 msgid "This FormVox subscription key is not valid yet."
@@ -2204,9 +2477,6 @@ msgstr "Aquesta pregunta només apareix si heu seleccionat \"Expert\" a dalt (l�
 msgid "This question only appears if you selected \"Yes\" above"
 msgstr "Aquesta pregunta només apareix si heu seleccionat \"Sí\" a dalt"
 
-msgid "This question only appears if you selected \\\"Yes\\\" above"
-msgstr ""
-
 msgid "This question will always be shown."
 msgstr "Aquesta pregunta es mostrarà sempre."
 
@@ -2216,7 +2486,7 @@ msgstr "Aquesta clau de subscripció s'ha desactivat. Contacteu amb nosaltres pe
 msgid "This subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
 msgstr "Aquesta clau de subscripció ja està registrada en una altra instància de Nextcloud. Contacteu amb nosaltres si aquest servidor la substitueix."
 
-msgid "This subscription key is not known to the licence server. Check it for typos."
+msgid "This subscription key is not known to the license server. Check it for typos."
 msgstr "Aquesta clau de subscripció no és coneguda pel servidor de llicències. Comproveu si conté errors tipogràfics."
 
 msgid "This subscription key is not valid yet."
@@ -2224,6 +2494,12 @@ msgstr "Aquesta clau de subscripció encara no és vàlida."
 
 msgid "Time"
 msgstr "Hora"
+
+msgid "Time is after the allowed maximum for question '%s'"
+msgstr ""
+
+msgid "Time is before the allowed minimum for question '%s'"
+msgstr ""
 
 msgid "Time must be at or after {min}"
 msgstr "L'hora ha de ser igual o posterior a {min}"
@@ -2243,6 +2519,12 @@ msgstr "Per activar la importació de Microsoft Forms, cal que registreu una apl
 msgid "Toggle preview"
 msgstr "Mostra/amaga la previsualització"
 
+msgid "Total account count and active accounts"
+msgstr "Nombre total d'usuaris i usuaris actius"
+
+msgid "Total accounts"
+msgstr "Total d'usuaris"
+
 msgid "Total form and response counts"
 msgstr "Nombre total de formularis i respostes"
 
@@ -2252,20 +2534,29 @@ msgstr "Total de formularis"
 msgid "Total responses"
 msgstr "Total de respostes"
 
-msgid "Total user count and active users"
-msgstr "Nombre total d'usuaris i usuaris actius"
-
-msgid "Total users"
-msgstr "Total d'usuaris"
-
 msgid "Type to search …"
 msgstr "Escriviu per cercar …"
 
-msgid "unique answers"
-msgstr "respostes úniques"
+msgid "Unknown error"
+msgstr ""
+
+msgid "Unknown form"
+msgstr ""
+
+msgid "Unknown upload error"
+msgstr ""
+
+msgid "Unsupported file type. Use PDF, DOCX, ODT, or a plain text file."
+msgstr ""
+
+msgid "Untitled form"
+msgstr ""
 
 msgid "Untitled section"
 msgstr "Secció sense títol"
+
+msgid "Untitled template"
+msgstr ""
 
 msgid "Update response"
 msgstr "Actualitza la resposta"
@@ -2312,12 +2603,6 @@ msgstr "Utilitzeu aquests punts d'accés per interactuar amb aquest formulari de
 msgid "Use this secret to verify webhook signatures. It will not be shown again."
 msgstr "Utilitzeu aquest secret per verificar les signatures del webhook. No es tornarà a mostrar."
 
-msgid "User names or email addresses"
-msgstr "Noms d'usuari o adreces de correu electrònic"
-
-msgid "Users"
-msgstr "Usuaris"
-
 msgid "Validation pattern"
 msgstr "Patró de validació"
 
@@ -2336,9 +2621,6 @@ msgstr "Molt deficient"
 msgid "Video call"
 msgstr "Videotrucada"
 
-msgid "View pricing & plans"
-msgstr "Mostra els preus i els plans"
-
 msgid "View subscription options"
 msgstr "Mostra les opcions de subscripció"
 
@@ -2348,7 +2630,7 @@ msgstr "Espereu fins que finalitzi la generació actual"
 msgid "Warnings"
 msgstr "Advertiments"
 
-msgid "We collect: form counts, response counts, user counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared."
+msgid "We collect: form counts, response counts, account counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared."
 msgstr "Recopilem: nombre de formularis, de respostes i d'usuaris, informació de versió (FormVox, Nextcloud, PHP) i configuració bàsica del servidor. No es comparteix cap dada personal ni cap contingut dels formularis."
 
 msgid "We saved your progress. You can continue where you left off."
@@ -2356,6 +2638,9 @@ msgstr "S'ha desat el vostre progrés. Podeu continuar on ho heu deixat."
 
 msgid "We will send you a confirmation when you submit this form."
 msgstr "Us enviarem una confirmació quan envieu aquest formulari."
+
+msgid "Webhook"
+msgstr ""
 
 msgid "Webhook created"
 msgstr "S'ha creat el webhook"
@@ -2396,11 +2681,11 @@ msgstr "Quina és la vostra prioritat principal?"
 msgid "What time works best for you?"
 msgstr "Quina hora us va millor?"
 
-msgid "What we collect"
-msgstr "Què recollim"
+msgid "What we collect:"
+msgstr "Què recollim:"
 
-msgid "What we never collect"
-msgstr "Què no recollim mai"
+msgid "What we never collect:"
+msgstr "Què no recollim mai:"
 
 msgid "When did you start using Nextcloud?"
 msgstr "Quan vau començar a utilitzar el Nextcloud?"
@@ -2417,8 +2702,8 @@ msgstr "Quines funcionalitats són més importants per a vós?"
 msgid "Which form tools have you used before?"
 msgstr "Quines eines de formularis heu utilitzat abans?"
 
-msgid "Width"
-msgstr "Amplada"
+msgid "Width:"
+msgstr "Amplada:"
 
 msgid "Work together"
 msgstr "Treballeu conjuntament"
@@ -2441,14 +2726,14 @@ msgstr "Sí"
 msgid "Yes, please contact me"
 msgstr "Sí, poseu-vos en contacte amb mi"
 
-msgid "you"
-msgstr "vós"
-
 msgid "You are connected to Microsoft. Click Next to select a form to import."
 msgstr "Esteu connectat amb Microsoft. Feu clic a Següent per a seleccionar un formulari per importar."
 
 msgid "You can view the form but not make changes right now."
 msgstr "Podeu visualitzar el formulari però no fer-hi canvis ara mateix."
+
+msgid "You do not have permission to access this form."
+msgstr "No teniu permís per accedir a aquest formulari."
 
 msgid "You do not have permission to create a response link."
 msgstr "No teniu permís per crear un enllaç de resposta."
@@ -2458,6 +2743,15 @@ msgstr "No teniu permís per suprimir aquest formulari"
 
 msgid "You do not have permission to edit this form"
 msgstr "No teniu permís per editar aquest formulari"
+
+msgid "You do not have permission to submit this form"
+msgstr ""
+
+msgid "You do not have permission to upload files to this form"
+msgstr ""
+
+msgid "You have already submitted a response to this form"
+msgstr ""
 
 msgid "You have no forms yet. Create one first."
 msgstr "Encara no teniu cap formulari. Creeu-ne un primer."
@@ -2471,9 +2765,6 @@ msgstr "L'URL real del vostre servidor"
 msgid "Your email address"
 msgstr "La vostra adreça de correu electrònic"
 
-msgid "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development."
-msgstr "La vostra instal·lació de FormVox ha superat els límits del nivell gratuït (25 formularis o 50 usuaris). Considereu subscriure-us-hi per donar suport al desenvolupament continu."
-
 msgid "Your FormVox subscription expired on {date}. Renew it to keep receiving support."
 msgstr "La vostra subscripció a FormVox va caducar el {date}. Renoveu-la per continuar rebent suport."
 
@@ -2483,11 +2774,17 @@ msgstr "La vostra subscripció a FormVox ha caducat. Renoveu-la per continuar re
 msgid "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support."
 msgstr "La vostra clau de subscripció de FormVox no és vàlida o ha caducat. Renoveu-la per continuar rebent suport."
 
+msgid "Your HTML here …"
+msgstr ""
+
 msgid "Your installation"
 msgstr "La vostra instal·lació"
 
 msgid "Your response has been recorded."
 msgstr "S'ha registrat la vostra resposta."
+
+msgid "Your response has been submitted successfully."
+msgstr ""
 
 msgid "Your score"
 msgstr "La vostra puntuació"
@@ -2497,3 +2794,73 @@ msgstr "La vostra subscripció va caducar el {date}. Renoveu-la per continuar re
 
 msgid "Your subscription has expired. Renew it to keep receiving support."
 msgstr "La vostra subscripció ha caducat. Renoveu-la per continuar rebent suport."
+
+msgid "%n file uploaded"
+msgid_plural "%n files uploaded"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n other editing"
+msgid_plural "%n others editing"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n question imported"
+msgid_plural "%n questions imported"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n response"
+msgid_plural "%n responses"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n response collected"
+msgid_plural "%n responses collected"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n response imported"
+msgid_plural "%n responses imported"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n row total across all responses"
+msgid_plural "%n rows total across all responses"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n star"
+msgid_plural "%n stars"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n unique answer"
+msgid_plural "%n unique answers"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "FormVox is running for %n account here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
+msgid_plural "FormVox is running for %n accounts here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Maximum %n file allowed"
+msgid_plural "Maximum %n files allowed"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Select at least %n option for question '%s'"
+msgid_plural "Select at least %n options for question '%s'"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Select at most %n option for question '%s'"
+msgid_plural "Select at most %n options for question '%s'"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "The AI task timed out after %n second"
+msgid_plural "The AI task timed out after %n seconds"
+msgstr[0] ""
+msgstr[1] ""

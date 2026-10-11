@@ -18,42 +18,49 @@
         :class="['tab-button', { active: activeTab === 'branding' }]"
         @click="activeTab = 'branding'">
         <Palette :size="16" />
+        <!-- TRANSLATORS: Noun: name of a settings tab for colors and logo -->
         {{ t('formvox', 'Branding') }}
       </button>
       <button
         :class="['tab-button', { active: activeTab === 'statistics' }]"
         @click="activeTab = 'statistics'">
         <ChartBox :size="16" />
+        <!-- TRANSLATORS: Name of a settings tab -->
         {{ t('formvox', 'Statistics') }}
       </button>
       <button
         :class="['tab-button', { active: activeTab === 'settings' }]"
         @click="activeTab = 'settings'">
         <Cog :size="16" />
+        <!-- TRANSLATORS: Name of a settings tab -->
         {{ t('formvox', 'Settings') }}
       </button>
       <button
         :class="['tab-button', { active: activeTab === 'integrations' }]"
         @click="activeTab = 'integrations'">
         <MicrosoftIcon :size="16" />
+        <!-- TRANSLATORS: Name of a settings tab -->
         {{ t('formvox', 'Integrations') }}
       </button>
       <button
         :class="['tab-button', { active: activeTab === 'ai' }]"
         @click="activeTab = 'ai'">
         <CreationIcon :size="16" />
+        <!-- TRANSLATORS: Artificial intelligence; name of a settings tab -->
         {{ t('formvox', 'AI') }}
       </button>
       <button
         :class="['tab-button', { active: activeTab === 'templates' }]"
         @click="activeTab = 'templates'">
         <FileDocumentIcon :size="16" />
+        <!-- TRANSLATORS: Name of a settings tab -->
         {{ t('formvox', 'Templates') }}
       </button>
       <button
         :class="['tab-button', { active: activeTab === 'support' }]"
         @click="activeTab = 'support'">
         <HeartIcon :size="16" />
+        <!-- TRANSLATORS: Noun: name of a settings tab about the support subscription -->
         {{ t('formvox', 'Support') }}
       </button>
     </div>
@@ -76,6 +83,7 @@
     <div v-if="activeTab === 'statistics'" class="tab-content">
       <!-- Form Statistics Section -->
       <div class="settings-section">
+        <!-- TRANSLATORS: Heading -->
         <h2>{{ t('formvox', 'Form statistics') }}</h2>
         <p class="settings-section-desc">
           {{ t('formvox', 'Overview of forms and responses in your FormVox installation.') }}
@@ -103,7 +111,7 @@
           <div class="stat-row">
             <div class="stat-info">
               <span class="stat-icon">👥</span>
-              <span class="stat-label">{{ t('formvox', 'Active Users (30 days)') }}</span>
+              <span class="stat-label">{{ t('formvox', 'Active accounts (30 days)') }}</span>
             </div>
             <span class="stat-value">{{ stats.activeUsers30d }}</span>
           </div>
@@ -115,6 +123,7 @@
     <!-- Settings Tab -->
     <div v-if="activeTab === 'settings'" class="tab-content">
       <div class="settings-section">
+        <!-- TRANSLATORS: Heading: settings for showing forms on other websites -->
         <h2>{{ t('formvox', 'Embed settings') }}</h2>
         <p class="settings-section-desc">
           {{ t('formvox', 'Configure which external websites can embed FormVox forms.') }}
@@ -165,7 +174,11 @@
             <li>{{ t('formvox', 'Set the Redirect URI (Web) to:') }} <code>{{ msFormsSettings.redirectUri }}</code></li>
             <li>{{ t('formvox', 'Go to "API permissions" and add the following:') }}
               <ul class="api-permissions-list">
-                <li><strong>Microsoft Forms</strong> (forms.office.com) → <code>Forms.Read</code> (Delegated)</li>
+                <li>
+                  <strong>Microsoft Forms</strong> (forms.office.com) → <code>Forms.Read</code>
+                  <!-- TRANSLATORS: Permission type as the Microsoft Azure portal names it, shown in parentheses -->
+                  ({{ t('formvox', 'Delegated') }})
+                </li>
               </ul>
               <em>{{ t('formvox', 'Note: Search for "Microsoft Forms" under "APIs my organization uses"') }}</em>
             </li>
@@ -176,6 +189,7 @@
         </NcNoteCard>
 
         <div class="setting-row">
+          <!-- TRANSLATORS: Technical term of Microsoft Azure: the ID of an organization -->
           <label class="setting-label">{{ t('formvox', 'Tenant ID') }}</label>
           <p class="setting-help">
             {{ t('formvox', 'Use "common" for multi-tenant, or your specific tenant ID for single-tenant.') }}
@@ -194,11 +208,12 @@
             type="text"
             v-model="msFormsSettings.clientId"
             class="setting-input"
-            :placeholder="t('formvox', 'e.g., 12345678-1234-1234-1234-123456789012')"
+            :placeholder="t('formvox', 'e.g. {example}', { example: '12345678-1234-1234-1234-123456789012' })"
           />
         </div>
 
         <div class="setting-row">
+          <!-- TRANSLATORS: Technical term of Microsoft Azure: a password for an app registration -->
           <label class="setting-label">{{ t('formvox', 'Client secret') }}</label>
           <p class="setting-help">
             {{ t('formvox', 'Leave empty to keep existing secret. Enter a new value to update.') }}
@@ -216,6 +231,7 @@
             {{ savingMsFormsSettings ? t('formvox', 'Saving …') : t('formvox', 'Save') }}
           </NcButton>
           <span v-if="msFormsSettings.isConfigured" class="configured-badge">
+            <!-- TRANSLATORS: Status: a secret has been saved -->
             {{ t('formvox', 'Configured') }}
           </span>
         </div>
@@ -433,10 +449,11 @@ export default {
         if (reason === 'License has expired') {
           const until = formatIsoDate(s.licenseValidUntil);
           message = until
+            // TRANSLATORS: {date} is a date
             ? t('formvox', 'Your FormVox subscription expired on {date}. Renew it to keep receiving support.', { date: until })
             : t('formvox', 'Your FormVox subscription has expired. Renew it to keep receiving support.');
         } else if (reason === 'License not found') {
-          message = t('formvox', 'This FormVox subscription key is not known to the licence server. Check it for typos.');
+          message = t('formvox', 'This FormVox subscription key is not known to the license server. Check it for typos.');
         } else if (reason.startsWith('License already in use')) {
           message = t('formvox', 'This FormVox subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one.');
         } else if (reason === 'License is inactive') {
@@ -444,8 +461,9 @@ export default {
         } else if (reason === 'License not yet valid') {
           message = t('formvox', 'This FormVox subscription key is not valid yet.');
         } else if (reason === 'Could not connect to license server') {
-          message = t('formvox', 'Could not reach the licence server, so the FormVox subscription status could not be confirmed.');
+          message = t('formvox', 'Could not reach the license server, so the FormVox subscription status could not be confirmed.');
         } else if (reason) {
+          // TRANSLATORS: {reason} comes from the license server, in English
           message = t('formvox', 'FormVox subscription key was refused: {reason}', { reason });
         } else {
           message = t('formvox', 'Your FormVox subscription key is invalid or expired. Please renew to continue receiving support.');

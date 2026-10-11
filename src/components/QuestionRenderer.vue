@@ -18,15 +18,16 @@
     <div class="question-label-row">
       <label :id="`question-label-${question.id}`" class="question-label" :for="inputId">
         {{ renderedQuestion }}
-        <span v-if="question.required" class="required-indicator" :title="t('Required')" aria-hidden="true">*</span>
-        <span v-if="question.required" class="required-text">{{ t('(required)') }}</span>
+        <span v-if="question.required" class="required-indicator" :title="t('formvox', 'Required')" aria-hidden="true">*</span>
+        <!-- TRANSLATORS: Shown after a mandatory question -->
+        <span v-if="question.required" class="required-text">{{ t('formvox', '(required)') }}</span>
       </label>
       <button
         v-if="ttsSupported"
         type="button"
         class="tts-button"
         :class="{ speaking: isSpeaking }"
-        :aria-label="isSpeaking ? t('Stop reading question aloud') : t('Read question aloud')"
+        :aria-label="ttsButtonLabel"
         :aria-pressed="isSpeaking"
         @click="toggleTts"
       >
@@ -76,7 +77,8 @@
         @blur="validatePattern"
       />
       <p v-if="question.maxLength > 0" class="char-counter" :class="{ 'over-limit': textareaCharCount > question.maxLength }" aria-live="polite">
-        {{ t('{n} / {max} characters', { n: textareaCharCount, max: question.maxLength }) }}
+        <!-- TRANSLATORS: Character counter under a text answer; {n} is the number typed, {max} the limit -->
+        {{ t('formvox', '{n} / {max} characters', { n: textareaCharCount, max: question.maxLength }) }}
       </p>
       <p
         v-if="effectiveError"
@@ -107,8 +109,10 @@
         @update:model-value="$emit('update:value', $event)"
       >
         {{ renderPiping(option.label) }}
-        <span v-if="isOptionFull(option) && value !== option.value" class="option-badge option-badge--full">{{ t('Full') }}</span>
-        <span v-else-if="optionRemaining(option) !== null" class="option-badge">{{ t('{n} left', { n: optionRemaining(option) }) }}</span>
+        <!-- TRANSLATORS: Badge on an answer option that has no places left; keep it short -->
+        <span v-if="isOptionFull(option) && value !== option.value" class="option-badge option-badge--full">{{ t('formvox', 'Full') }}</span>
+        <!-- TRANSLATORS: Badge on an answer option; {n} is the number of places left; keep it short -->
+        <span v-else-if="optionRemaining(option) !== null" class="option-badge">{{ t('formvox', '{n} left', { n: optionRemaining(option) }) }}</span>
       </NcCheckboxRadioSwitch>
     </div>
 
@@ -124,7 +128,8 @@
         :name="`question-${question.id}`"
         @update:model-value="$emit('update:value', $event)"
       >
-        {{ renderPiping(question.consentLabel || question.question || t('I agree')) }}
+        <!-- TRANSLATORS: Default text of a consent checkbox -->
+        {{ renderPiping(question.consentLabel || question.question || t('formvox', 'I agree')) }}
       </NcCheckboxRadioSwitch>
     </div>
 
@@ -147,11 +152,12 @@
         @update:model-value="onMultipleUpdate($event)"
       >
         {{ renderPiping(option.label) }}
-        <span v-if="isOptionFull(option) && !(value || []).includes(option.value)" class="option-badge option-badge--full">{{ t('Full') }}</span>
-        <span v-else-if="optionRemaining(option) !== null" class="option-badge">{{ t('{n} left', { n: optionRemaining(option) }) }}</span>
+        <span v-if="isOptionFull(option) && !(value || []).includes(option.value)" class="option-badge option-badge--full">{{ t('formvox', 'Full') }}</span>
+        <span v-else-if="optionRemaining(option) !== null" class="option-badge">{{ t('formvox', '{n} left', { n: optionRemaining(option) }) }}</span>
       </NcCheckboxRadioSwitch>
       <p v-if="question.maxSelections > 0" class="selection-counter" aria-live="polite">
-        {{ t('{n} of max {max} selected', { n: (value || []).length, max: question.maxSelections }) }}
+        <!-- TRANSLATORS: Counter under a multiple choice question; {n} is the number picked, {max} the limit -->
+        {{ t('formvox', '{n} of max {max} selected', { n: (value || []).length, max: question.maxSelections }) }}
       </p>
     </div>
 
@@ -166,14 +172,18 @@
       :aria-label="renderedQuestion"
       @change="$emit('update:value', $event.target.value)"
     >
-      <option value="">{{ t('Select …') }}</option>
+      <option value="">{{ t('formvox', 'Select …') }}</option>
       <option
         v-for="option in normalizedOptions"
         :key="option.id"
         :value="option.value"
         :disabled="isOptionFull(option) && value !== option.value"
       >
-        {{ renderPiping(option.label) }}<template v-if="isOptionFull(option) && value !== option.value"> — {{ t('Full') }}</template><template v-else-if="optionRemaining(option) !== null"> — {{ t('{n} left', { n: optionRemaining(option) }) }}</template>
+        {{ renderPiping(option.label) }}<template v-if="isOptionFull(option) && value !== option.value">
+          — {{ t('formvox', 'Full') }}
+        </template><template v-else-if="optionRemaining(option) !== null">
+          — {{ t('formvox', '{n} left', { n: optionRemaining(option) }) }}
+        </template>
       </option>
     </select>
 
@@ -194,7 +204,7 @@
       <NcDateTimePickerNative
         :model-value="value ? new Date(value) : null"
         type="date"
-        :label="t('Date')"
+        :label="t('formvox', 'Date')"
         :min="parseDateLocal(question.dateMin)"
         :max="parseDateLocal(question.dateMax)"
         @update:model-value="onDateTimeDateChange"
@@ -202,7 +212,7 @@
       <NcDateTimePickerNative
         :model-value="value ? new Date(value) : null"
         type="time"
-        :label="t('Time')"
+        :label="t('formvox', 'Time')"
         @update:model-value="onDateTimeTimeChange"
       />
     </div>
@@ -281,17 +291,17 @@
       :aria-required="question.required || undefined"
       @keydown="handleRatingKeydown($event)"
     >
-      <button
-        v-for="n in ratingRange"
-        :key="n"
+      <!-- TRANSLATORS: Invisible label of a star button in a rating question; %n is the rating it gives -->
+      <button :aria-label="n('formvox', '%n star', '%n stars', star)"
+        v-for="star in ratingRange"
+        :key="star"
         type="button"
         class="star-button"
-        :class="{ filled: n <= value }"
+        :class="{ filled: star <= value }"
         role="radio"
-        :aria-checked="value === n"
-        :aria-label="t('{n} stars', { n })"
-        :tabindex="getRadioTabindex(n, ratingRange, value)"
-        @click="$emit('update:value', n)"
+        :aria-checked="value === star"
+        :tabindex="getRadioTabindex(star, ratingRange, value)"
+        @click="$emit('update:value', star)"
       >
         <StarIcon :size="24" />
       </button>
@@ -304,7 +314,7 @@
         :class="{ 'drag-over': isDragging, 'has-files': selectedFiles.length > 0 }"
         role="button"
         tabindex="0"
-        :aria-label="t('Drop files here or click to upload')"
+        :aria-label="t('formvox', 'Drop files here or click to upload')"
         @dragover.prevent="isDragging = true"
         @dragleave="isDragging = false"
         @drop.prevent="handleDrop"
@@ -327,8 +337,10 @@
             <polyline points="17 8 12 3 7 8"/>
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          <p>{{ t('Drop files here or click to upload') }}</p>
-          <small>{{ allowedTypesText }} &bull; {{ t('Max {size} MB', { size: question.maxFileSize || 10 }) }}</small>
+          <!-- TRANSLATORS: Text of the area for uploading files -->
+          <p>{{ t('formvox', 'Drop files here or click to upload') }}</p>
+          <!-- TRANSLATORS: {size} is the maximum file size in megabytes -->
+          <small>{{ allowedTypesText }} &bull; {{ t('formvox', 'Max {size} MB', { size: question.maxFileSize || 10 }) }}</small>
         </div>
 
         <div v-else class="uploaded-files">
@@ -339,17 +351,18 @@
             </svg>
             <span class="file-name">{{ file.name }}</span>
             <span class="file-size">{{ formatFileSize(file.size) }}</span>
-            <button
+            <!-- TRANSLATORS: Invisible label of the button that removes a chosen file; {name} is the file name -->
+            <button :aria-label="t('formvox', 'Remove file {name}', { name: file.name })"
               type="button"
               class="remove-file"
-              :aria-label="t('Remove file {name}', { name: file.name })"
               @click.stop="removeFile(index)"
             >
               &times;
             </button>
           </div>
           <button v-if="canAddMore" type="button" class="add-more-btn" @click.stop="triggerFileInput">
-            + {{ t('Add more') }}
+            <!-- TRANSLATORS: Verb: button that adds more files -->
+            + {{ t('formvox', 'Add more') }}
           </button>
         </div>
       </div>
@@ -441,11 +454,11 @@
               </select>
             </td>
             <td class="row-actions-col">
-              <button
+              <!-- TRANSLATORS: Invisible label of the button that removes a table row -->
+              <button :aria-label="t('formvox', 'Remove row')"
                 v-if="tableRows.length > (question.minRows || 1)"
                 type="button"
                 class="remove-row-btn"
-                :aria-label="t('Remove row')"
                 @click="removeTableRow(rowIndex)"
               >✕</button>
             </td>
@@ -458,7 +471,7 @@
         class="add-row-btn"
         @click="addTableRow"
       >
-        + {{ t('Add row') }}
+        + {{ t('formvox', 'Add row') }}
       </button>
     </div>
 
@@ -478,7 +491,7 @@
 </template>
 
 <script>
-import { t } from '@/utils/l10n';
+import { t, n } from '@/utils/l10n';
 import { computed, ref } from 'vue';
 import {
   NcTextField,
@@ -619,6 +632,11 @@ export default {
     const isSpeaking = computed(() =>
       props.speakingQuestionId === props.question.id
     );
+    const ttsButtonLabel = computed(() => (isSpeaking.value
+      // TRANSLATORS: Invisible label of the speaker button while the question is being read aloud
+      ? t('formvox', 'Stop reading question aloud')
+      // TRANSLATORS: Invisible label of the speaker button that reads the question aloud
+      : t('formvox', 'Read question aloud')));
 
     const toggleTts = () => {
       emit('speak', props.question.id);
@@ -688,7 +706,7 @@ export default {
         const regex = new RegExp(props.question.validation.pattern);
         if (!regex.test(String(props.value))) {
           validationError.value = props.question.validation.errorMessage
-            || t('This field does not match the required format');
+            || t('formvox', 'This field does not match the required format');
           return false;
         }
       } catch (e) {
@@ -957,12 +975,14 @@ export default {
     const allowedTypesText = computed(() => {
       const preset = props.question.allowedTypePreset;
       const presetLabels = {
-        images: t('Images'),
-        documents: t('Documents'),
-        pdf: t('PDF'),
-        all: t('All files'),
+        // TRANSLATORS: Kind of file that may be uploaded
+        images: t('formvox', 'Images'),
+        // TRANSLATORS: Kind of file that may be uploaded
+        documents: t('formvox', 'Documents'),
+        pdf: 'PDF',
+        all: t('formvox', 'All files'),
       };
-      return presetLabels[preset] || t('All files');
+      return presetLabels[preset] || t('formvox', 'All files');
     });
 
     const canAddMore = computed(() => {
@@ -1002,13 +1022,15 @@ export default {
       for (const file of files) {
         // Check if we can add more
         if (selectedFiles.value.length >= maxFiles) {
-          fileError.value = t('Maximum {n} files allowed', { n: maxFiles });
+          // TRANSLATORS: Error when too many files are chosen; %n is the maximum number of files
+          fileError.value = n('formvox', 'Maximum %n file allowed', 'Maximum %n files allowed', maxFiles);
           break;
         }
 
         // Validate size
         if (file.size > maxSizeBytes) {
-          fileError.value = t('File "{name}" is too large. Maximum size is {size} MB', {
+          // TRANSLATORS: {name} is a file name, {size} a number of megabytes
+          fileError.value = t('formvox', 'File "{name}" is too large. Maximum size is {size} MB', {
             name: file.name,
             size: maxSizeMB
           });
@@ -1017,7 +1039,8 @@ export default {
 
         // Validate type
         if (!isFileTypeAllowed(file, allowedTypes)) {
-          fileError.value = t('File "{name}" is not an allowed file type', { name: file.name });
+          // TRANSLATORS: {name} is a file name
+          fileError.value = t('formvox', 'File "{name}" is not an allowed file type', { name: file.name });
           continue;
         }
 
@@ -1137,11 +1160,13 @@ export default {
       inputId,
       ariaDescribedBy,
       isSpeaking,
+      ttsButtonLabel,
       toggleTts,
       getRadioTabindex,
       handleScaleKeydown,
       handleRatingKeydown,
       t,
+      n,
     };
   },
 };

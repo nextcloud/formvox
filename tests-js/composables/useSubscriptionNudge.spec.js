@@ -63,7 +63,7 @@ describe('subscriptionNudge', () => {
 		const msg = subscriptionNudge({ hasLicense: false, supportNudgeUserThreshold: 100, totalUsers: 101 })
 		expect(msg).not.toBeNull()
 		// {count} is interpolated (proves translate(app, text, vars) is used).
-		expect(msg).toContain('101 users')
+		expect(msg).toContain('101 accounts')
 	})
 
 	it('treats a non-numeric threshold as missing', () => {

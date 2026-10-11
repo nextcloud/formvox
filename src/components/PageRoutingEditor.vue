@@ -1,66 +1,76 @@
 <template>
   <NcModal @close="$emit('close')">
     <div class="routing-editor">
-      <h2>{{ t('Page routing') }}</h2>
+      <!-- TRANSLATORS: Heading of the dialog with rules that choose the next page -->
+      <h2>{{ t('formvox', 'Page routing') }}</h2>
       <p class="routing-description">
-        {{ t('Define rules to skip to a specific page based on answers. If no rule matches, the next page is shown.') }}
+        {{ t('formvox', 'Define rules to skip to a specific page based on answers. If no rule matches, the next page is shown.') }}
       </p>
 
       <div v-if="localRules.length === 0" class="no-rules">
-        <p>{{ t('No routing rules yet. Add one to get started.') }}</p>
+        <p>{{ t('formvox', 'No routing rules yet. Add one to get started.') }}</p>
       </div>
 
       <div v-for="(rule, index) in localRules" :key="rule.id" class="routing-rule">
         <div class="rule-header">
           <span class="rule-number">{{ index + 1 }}</span>
-          <button type="button" class="remove-rule" @click="removeRule(index)" :title="t('Remove rule')">
+          <!-- TRANSLATORS: Tooltip of the button that removes a routing rule -->
+          <button type="button" class="remove-rule" @click="removeRule(index)" :title="t('formvox', 'Remove rule')">
             &times;
           </button>
         </div>
 
         <div class="rule-fields">
           <div class="rule-field">
-            <label>{{ t('If question') }}</label>
+            <!-- TRANSLATORS: Label at the start of a routing rule: if question … equals …, go to page … -->
+            <label>{{ t('formvox', 'If question') }}</label>
             <select v-model="rule.questionId" @change="onRuleChange">
-              <option value="">{{ t('Select question …') }}</option>
+              <option value="">{{ t('formvox', 'Select question …') }}</option>
               <option v-for="q in availableQuestions" :key="q.id" :value="q.id">
-                {{ q.question || t('(untitled)') }}
+                <!-- TRANSLATORS: Shown for a question without text -->
+                {{ q.question || t('formvox', '(untitled)') }}
               </option>
             </select>
           </div>
 
           <div class="rule-field">
-            <label>{{ t('Operator') }}</label>
+            <!-- TRANSLATORS: Label of the comparison in a routing rule (equals, contains …) -->
+            <label>{{ t('formvox', 'Operator') }}</label>
             <select v-model="rule.operator" @change="onRuleChange">
-              <option value="equals">{{ t('equals') }}</option>
-              <option value="notEquals">{{ t('not equals') }}</option>
-              <option value="contains">{{ t('contains') }}</option>
-              <option value="isEmpty">{{ t('is empty') }}</option>
-              <option value="isNotEmpty">{{ t('is not empty') }}</option>
-              <option value="greaterThan">{{ t('greater than') }}</option>
-              <option value="lessThan">{{ t('less than') }}</option>
+              <option value="equals">{{ t('formvox', 'equals') }}</option>
+              <!-- TRANSLATORS: Comparison operator in a routing rule -->
+              <option value="notEquals">{{ t('formvox', 'not equals') }}</option>
+              <option value="contains">{{ t('formvox', 'contains') }}</option>
+              <option value="isEmpty">{{ t('formvox', 'is empty') }}</option>
+              <option value="isNotEmpty">{{ t('formvox', 'is not empty') }}</option>
+              <!-- TRANSLATORS: Comparison operator in a routing rule -->
+              <option value="greaterThan">{{ t('formvox', 'greater than') }}</option>
+              <!-- TRANSLATORS: Comparison operator in a routing rule -->
+              <option value="lessThan">{{ t('formvox', 'less than') }}</option>
             </select>
           </div>
 
           <div v-if="!['isEmpty', 'isNotEmpty'].includes(rule.operator)" class="rule-field">
-            <label>{{ t('Value') }}</label>
+            <!-- TRANSLATORS: Placeholder of the input for the value a condition compares with -->
+            <label>{{ t('formvox', 'Value') }}</label>
             <template v-if="getQuestionOptions(rule.questionId).length > 0">
               <select v-model="rule.value" @change="onRuleChange">
-                <option value="">{{ t('Select value …') }}</option>
+                <option value="">{{ t('formvox', 'Select value …') }}</option>
                 <option v-for="opt in getQuestionOptions(rule.questionId)" :key="opt" :value="opt">
                   {{ opt }}
                 </option>
               </select>
             </template>
-            <input v-else type="text" v-model="rule.value" :placeholder="t('Enter value …')" @input="onRuleChange">
+            <input v-else type="text" v-model="rule.value" :placeholder="t('formvox', 'Enter value …')" @input="onRuleChange">
           </div>
 
           <div class="rule-field">
-            <label>{{ t('Go to page') }}</label>
+            <label>{{ t('formvox', 'Go to page') }}</label>
             <select v-model="rule.targetPageId" @change="onRuleChange">
-              <option value="">{{ t('Select page …') }}</option>
+              <option value="">{{ t('formvox', 'Select page …') }}</option>
               <option v-for="(page, pIndex) in otherPages" :key="page.id" :value="page.id">
-                {{ page.title || t('Page {n}', { n: getPageDisplayIndex(page.id) }) }}
+                <!-- TRANSLATORS: Name of a page without a title; {n} is its number, for example 2 -->
+                {{ page.title || t('formvox', 'Page {n}', { n: getPageDisplayIndex(page.id) }) }}
               </option>
             </select>
           </div>
@@ -71,12 +81,14 @@
         <template #icon>
           <PlusIcon :size="20" />
         </template>
-        {{ t('Add rule') }}
+        <!-- TRANSLATORS: Verb: button -->
+        {{ t('formvox', 'Add rule') }}
       </NcButton>
 
       <div class="routing-actions">
         <NcButton @click="$emit('close')">
-          {{ t('Done') }}
+          <!-- TRANSLATORS: Button that closes the dialog -->
+          {{ t('formvox', 'Done') }}
         </NcButton>
       </div>
     </div>

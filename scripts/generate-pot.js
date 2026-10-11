@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Generate translationfiles/templates/formvox.pot from l10n/en.json + PHP scan.
+ * Generate translationfiles/templates/formvox.pot from l10n/en.json + PHP scan
+ * (lib/ and templates/, as the Nextcloud bot does).
  *
  * Why this exists: `xgettext` chokes on Vue templates (HTML/directive syntax
  * looks like broken JS to it), so we can't run it against `src/`. Instead,
@@ -43,17 +44,28 @@ function escapePo(s) {
 // Plural entries (en.json array value [singular, plural]) emit a msgid_plural
 // block with msgstr[0]/msgstr[1] — required so the `%n` placeholder is a real
 // gettext plural and not an "undefined plural" (see NC translation dos-and-don'ts).
+// TRANSLATORS hints from the source (the same ones the Nextcloud bot reads), as
+// extracted comments. Without them the hints never reach translators through
+// this POT, which is exactly what happened to IntraVox.
+const { computeSourceStrings } = require('./extract-en-json.js');
+const HINTS = computeSourceStrings().hints;
+function poHints(msgid) {
+    return (HINTS.get(msgid) || [])
+        .map(h => `#. TRANSLATORS: ${h.replace(/\s+/g, ' ')}\n`)
+        .join('');
+}
+
 function poEntry(msgid) {
-    return `msgid "${escapePo(msgid)}"\nmsgstr ""\n`;
+    return poHints(msgid) + `msgid "${escapePo(msgid)}"\nmsgstr ""\n`;
 }
 
 function poPluralEntry(singular, plural) {
-    return `msgid "${escapePo(singular)}"\n` +
+    return poHints(singular) + `msgid "${escapePo(singular)}"\n` +
         `msgid_plural "${escapePo(plural)}"\n` +
         `msgstr[0] ""\nmsgstr[1] ""\n`;
 }
 
-console.log('Generating POT from l10n/en.json + lib/**.php …');
+console.log('Generating POT from l10n/en.json + lib/**.php + templates/**.php …');
 
 // 1. Frontend strings from en.json (the canonical webpack-extracted set).
 // Array values are plurals: { "%n result found": ["%n result found", "%n results found"] }.
@@ -75,17 +87,20 @@ console.log(`  Frontend strings (from en.json): ${frontendStrings.length} singul
 let phpStrings = [];
 try {
     const phpFilesList = '/tmp/formvox-pot-php-files.txt';
-    execSync(`find lib/ -name "*.php" -type f > ${phpFilesList}`, { cwd: ROOT });
+    execSync(`find lib/ templates/ -name "*.php" -type f | sort > ${phpFilesList}`, { cwd: ROOT });
     const phpPotPath = '/tmp/formvox-pot-php.pot';
     execSync(
-        `xgettext --language=PHP --from-code=UTF-8 --keyword=t:1 --keyword=n:1,2 -o ${phpPotPath} --files-from=${phpFilesList}`,
+        `xgettext --language=PHP --from-code=UTF-8 --no-wrap --keyword=t:1 --keyword=n:1,2 -o ${phpPotPath} --files-from=${phpFilesList}`,
         { cwd: ROOT }
     );
     const phpPot = fs.readFileSync(phpPotPath, 'utf8');
     // Match every `msgid "..."` after the header, skipping the empty leading msgid.
+    // --no-wrap keeps each msgid on one line; un-escape it, since poEntry()
+    // escapes again (a \" in a PHP string would otherwise end up as \\\").
+    const unescapePo = (str) => str.replace(/\\(["\\nt])/g, (_, ch) => (ch === 'n' ? '\n' : ch === 't' ? '\t' : ch));
     const matches = [...phpPot.matchAll(/^msgid "(.*)"$/gm)];
-    phpStrings = matches.map(m => m[1]).filter(s => s.length > 0);
-    console.log(`  PHP strings (from xgettext on lib/): ${phpStrings.length}`);
+    phpStrings = matches.map(m => unescapePo(m[1])).filter(s => s.length > 0);
+    console.log(`  PHP strings (from xgettext on lib/ + templates/): ${phpStrings.length}`);
 } catch (e) {
     console.warn('  xgettext failed — PHP strings will be missing from POT:', e.message);
 }

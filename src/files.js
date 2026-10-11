@@ -6,6 +6,7 @@
 import { registerFileAction, addNewFileMenuEntry, NewMenuEntryCategory, DefaultType } from '@nextcloud/files';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
+import { t } from '@/utils/l10n';
 
 // FormVox icon as inline SVG
 const formvoxIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -31,7 +32,7 @@ function registerFvformFileAction() {
         // success, false to show an error toast, null for silent no-op.
         registerFileAction({
             id: 'formvox-open',
-            displayName: () => 'Edit with FormVox',
+            displayName: () => t('formvox', 'Edit with FormVox'),
             iconSvgInline: () => formvoxIconSvg,
             enabled: (nodes) => {
                 if (nodes.length !== 1) return false;
@@ -64,7 +65,7 @@ function registerNewFormVoxMenu() {
     try {
         addNewFileMenuEntry({
             id: 'formvox-new',
-            displayName: 'New form',
+            displayName: t('formvox', 'New form'),
             iconSvgInline: formvoxIconSvg,
             category: NewMenuEntryCategory.CreateNew,
             order: 30,
@@ -86,8 +87,8 @@ function tryLegacyNewFileMenu() {
         if (window.OCA?.Files?.NewFileMenu) {
             window.OCA.Files.NewFileMenu.addMenuEntry({
                 id: 'formvox-new',
-                displayName: 'New form',
-                templateName: 'New form.fvform',
+                displayName: t('formvox', 'New form'),
+                templateName: t('formvox', 'New form') + '.fvform',
                 iconClass: 'icon-formvox',
                 iconSvgInline: formvoxIconSvg,
                 fileType: 'file',
@@ -114,7 +115,7 @@ async function createNewFvformFile(directory) {
         const response = await axios.post(
             generateUrl('/apps/formvox/api/forms'),
             {
-                title: 'New form',
+                title: t('formvox', 'New form'),
                 path: directory.replace(/^\//, ''), // Remove leading slash
             }
         );
@@ -132,10 +133,15 @@ async function createNewFvformFile(directory) {
         }
     } catch (error) {
         console.error('FormVox: Error creating form:', error);
+        // Shown as text, so the message is not HTML-escaped.
+        // TRANSLATORS: {error} is a technical message, often in English
+        const message = t('formvox', 'Could not create FormVox form: {error}',
+            { error: error.message || t('formvox', 'Unknown error') },
+            undefined, { escape: false, sanitize: false });
         if (window.OC?.Notification) {
-            window.OC.Notification.showTemporary('Could not create FormVox form: ' + (error.message || 'Unknown error'));
+            window.OC.Notification.showTemporary(message);
         } else {
-            alert('Could not create FormVox form: ' + (error.message || 'Unknown error'));
+            alert(message);
         }
     }
 }

@@ -8,6 +8,7 @@ use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\MicrosoftFormsApiClient;
 use OCA\FormVox\Service\MSFormsImportService;
 use OCA\FormVox\Service\ResponsePersistenceService;
+use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\Security\ISecureRandom;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -43,7 +44,8 @@ class MSFormsImportServiceTest extends TestCase {
 			$this->responsePersistence,
 			$this->apiClient,
 			$this->secureRandom,
-			$this->logger
+			$this->logger,
+			new EnglishL10N(),
 		);
 	}
 
@@ -715,12 +717,12 @@ class MSFormsImportServiceTest extends TestCase {
 		);
 		// create() must be called with the fallback title
 		$this->formRepository->expects($this->once())->method('create')
-			->with('Imported Form', '/', null)
+			->with('Imported form', '/', null)
 			->willReturn(['fileId' => 7]);
 
 		$result = $this->service()->importForm('alice', 'token', 'msform', '/', false);
 
-		$this->assertSame('Imported Form', $result['title']);
+		$this->assertSame('Imported form', $result['title']);
 		$this->assertSame('', $captured['description']);
 		$this->assertTrue($captured['settings']['anonymous']); // default true
 		$this->assertFalse($captured['settings']['allow_multiple']); // default false
@@ -842,7 +844,7 @@ class MSFormsImportServiceTest extends TestCase {
 
 		$result = $this->service()->importForm('alice', 'token', 'msform', '/', false);
 		$this->assertSame(1, $result['questionsImported']);
-		$this->assertSame('Matrix Question', $captured['questions'][0]['question']);
+		$this->assertSame('Matrix question', $captured['questions'][0]['question']);
 	}
 
 	public function testImportFormResponsesImportedAndMapped(): void {

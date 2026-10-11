@@ -63,6 +63,10 @@ class ResponseServiceTest extends TestCase {
 		$this->l->method('t')->willReturnCallback(function (string $text, array $params = []): string {
 			return $params === [] ? $text : vsprintf(str_replace('%s', '%s', $text), $params);
 		});
+		// IL10N::n as Nextcloud does: the count goes into %n, the parameters into sprintf.
+		$this->l->method('n')->willReturnCallback(function (string $singular, string $plural, int $count, array $params = []): string {
+			return vsprintf(str_replace('%n', (string)$count, $count === 1 ? $singular : $plural), $params);
+		});
 	}
 
 	private function service(): ResponseService {
@@ -365,7 +369,7 @@ class ResponseServiceTest extends TestCase {
 
 	public function testValidateAnswerTypeMultipleMinSelections(): void {
 		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Select at least 2 option(s)');
+		$this->expectExceptionMessage('Select at least 2 options');
 		$this->call('validateAnswerType', [
 			['type' => 'multiple', 'question' => 'M', 'minSelections' => 2], ['a'],
 		]);
@@ -373,7 +377,7 @@ class ResponseServiceTest extends TestCase {
 
 	public function testValidateAnswerTypeMultipleMaxSelections(): void {
 		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Select at most 1 option(s)');
+		$this->expectExceptionMessage('Select at most 1 option for');
 		$this->call('validateAnswerType', [
 			['type' => 'multiple', 'question' => 'M', 'maxSelections' => 1], ['a', 'b'],
 		]);
@@ -834,7 +838,7 @@ class ResponseServiceTest extends TestCase {
 		]);
 		$data = $this->call('buildExportData', [1]);
 		// Section excluded from headers.
-		$this->assertSame(['Response ID', 'Submitted At', 'Respondent Type', 'Respondent ID', 'Name'], $data['headers']);
+		$this->assertSame(['Response ID', 'Submitted at', 'Respondent type', 'Respondent ID', 'Name'], $data['headers']);
 		$this->assertSame(['r1', '2020-01-01T00:00:00', 'user', 'bob', 'Alice'], $data['rows'][0]);
 	}
 
@@ -970,7 +974,7 @@ class ResponseServiceTest extends TestCase {
 		$csv = $this->service()->exportCsv(1);
 		$this->assertStringStartsWith("\xEF\xBB\xBF", $csv);
 		// Semicolon delimiter present between quoted header cells.
-		$this->assertStringContainsString('"Response ID";"Submitted At"', $csv);
+		$this->assertStringContainsString('"Response ID";"Submitted at"', $csv);
 		// Data row terminated with CRLF; Alice value present.
 		$this->assertStringContainsString('Alice', $csv);
 		$this->assertStringContainsString("\r\n", $csv);

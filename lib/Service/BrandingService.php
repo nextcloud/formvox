@@ -9,6 +9,7 @@ use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\IConfig;
+use OCP\IL10N;
 use OCP\IURLGenerator;
 
 class BrandingService {
@@ -16,30 +17,7 @@ class BrandingService {
 	private IAppData $appData;
 	private UploadService $uploadService;
 	private IURLGenerator $urlGenerator;
-
-	private const DEFAULT_LAYOUT = [
-		'header' => [],
-		'footer' => [],
-		'thankYou' => [
-			[
-				'id' => 'default-thankyou-heading',
-				'type' => 'heading',
-				'alignment' => 'center',
-				'settings' => [
-					'level' => 'h1',
-					'text' => 'Thank you!',
-				],
-			],
-			[
-				'id' => 'default-thankyou-text',
-				'type' => 'text',
-				'alignment' => 'center',
-				'settings' => [
-					'content' => 'Your response has been submitted successfully.',
-				],
-			],
-		],
-	];
+	private IL10N $l;
 
 	private const DEFAULT_GLOBAL_STYLES = [
 		'primaryColor' => '#0082c9',
@@ -47,11 +25,43 @@ class BrandingService {
 		'fontFamily' => 'default',
 	];
 
-	public function __construct(IConfig $config, IAppData $appData, UploadService $uploadService, IURLGenerator $urlGenerator) {
+	public function __construct(IConfig $config, IAppData $appData, UploadService $uploadService, IURLGenerator $urlGenerator, IL10N $l) {
 		$this->config = $config;
 		$this->appData = $appData;
 		$this->uploadService = $uploadService;
 		$this->urlGenerator = $urlGenerator;
+		$this->l = $l;
+	}
+
+	/**
+	 * The thank-you page a form shows until an administrator designs one,
+	 * in the language of whoever is looking at it.
+	 */
+	private function defaultLayout(): array {
+		return [
+			'header' => [],
+			'footer' => [],
+			'thankYou' => [
+				[
+					'id' => 'default-thankyou-heading',
+					'type' => 'heading',
+					'alignment' => 'center',
+					'settings' => [
+						'level' => 'h1',
+						// TRANSLATORS: Heading of the page a respondent sees after submitting a form
+						'text' => $this->l->t('Thank you!'),
+					],
+				],
+				[
+					'id' => 'default-thankyou-text',
+					'type' => 'text',
+					'alignment' => 'center',
+					'settings' => [
+						'content' => $this->l->t('Your response has been submitted successfully.'),
+					],
+				],
+			],
+		];
 	}
 
 	/**
@@ -60,7 +70,7 @@ class BrandingService {
 	public function getBranding(): array {
 		// Get layout
 		$layoutJson = $this->config->getAppValue(Application::APP_ID, 'branding_layout', '');
-		$layout = $layoutJson ? json_decode($layoutJson, true) : self::DEFAULT_LAYOUT;
+		$layout = $layoutJson ? json_decode($layoutJson, true) : $this->defaultLayout();
 
 		// Get global styles
 		$stylesJson = $this->config->getAppValue(Application::APP_ID, 'branding_globalStyles', '');

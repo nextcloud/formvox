@@ -9,6 +9,7 @@ use OCP\App\IAppManager;
 use OCP\Files\File;
 use OCP\Files\IRootFolder;
 use OCP\IConfig;
+use OCP\IL10N;
 use OCP\TaskProcessing\IManager as ITaskManager;
 use OCP\TaskProcessing\Task;
 use Psr\Log\LoggerInterface;
@@ -30,6 +31,7 @@ class AiFormGeneratorService {
 	private IConfig $config;
 	private IAppManager $appManager;
 	private LoggerInterface $logger;
+	private IL10N $l;
 
 	public function __construct(
 		ITaskManager $taskManager,
@@ -37,12 +39,14 @@ class AiFormGeneratorService {
 		IConfig $config,
 		IAppManager $appManager,
 		LoggerInterface $logger,
+		IL10N $l,
 	) {
 		$this->taskManager = $taskManager;
 		$this->rootFolder = $rootFolder;
 		$this->config = $config;
 		$this->appManager = $appManager;
 		$this->logger = $logger;
+		$this->l = $l;
 	}
 
 	/**
@@ -130,13 +134,13 @@ class AiFormGeneratorService {
 		$sourceText = '';
 		if ($sourceFileId !== null && $sourceFileId > 0) {
 			if (!$this->isSourceUploadAllowed()) {
-				throw new \RuntimeException('Source document uploads are disabled by the administrator.');
+				throw new \RuntimeException($this->l->t('Source document uploads are disabled by the administrator.'));
 			}
 			$sourceText = $this->extractTextFromFileId($sourceFileId, $userId);
 		}
 
 		if (trim($description) === '' && trim($sourceText) === '') {
-			throw new \RuntimeException('Provide a description, an uploaded document, or both.');
+			throw new \RuntimeException($this->l->t('Provide a description, an uploaded document, or both.'));
 		}
 
 		$prompt = $this->buildPrompt($description, $sourceText);
@@ -150,7 +154,7 @@ class AiFormGeneratorService {
 		$this->taskManager->scheduleTask($task);
 		$taskId = $task->getId();
 		if ($taskId === null) {
-			throw new \RuntimeException('Failed to schedule AI task.');
+			throw new \RuntimeException($this->l->t('Could not schedule the AI task.'));
 		}
 		return $taskId;
 	}
@@ -167,13 +171,13 @@ class AiFormGeneratorService {
 		$sourceText = '';
 		if ($sourceFileId !== null && $sourceFileId > 0) {
 			if (!$this->isSourceUploadAllowed()) {
-				throw new \RuntimeException('Source document uploads are disabled by the administrator.');
+				throw new \RuntimeException($this->l->t('Source document uploads are disabled by the administrator.'));
 			}
 			$sourceText = $this->extractTextFromFileId($sourceFileId, $userId);
 		}
 
 		if (trim($description) === '' && trim($sourceText) === '') {
-			throw new \RuntimeException('Provide a description, an uploaded document, or both.');
+			throw new \RuntimeException($this->l->t('Provide a description, an uploaded document, or both.'));
 		}
 
 		$prompt = $this->buildPrompt($description, $sourceText);
@@ -202,7 +206,10 @@ class AiFormGeneratorService {
 			}
 			if ($status === Task::STATUS_FAILED || $status === Task::STATUS_CANCELLED) {
 				$err = method_exists($task, 'getErrorMessage') ? $task->getErrorMessage() : null;
-				throw new \RuntimeException('AI task failed: ' . ($err ?? 'Unknown error'));
+				// TRANSLATORS: Shown when an error has no description
+				$reason = $err ?? $this->l->t('Unknown error');
+				// TRANSLATORS: Error; %s is the reason given by the AI provider, often in English
+				throw new \RuntimeException($this->l->t('The AI task failed: %s', [$reason]));
 			}
 			if ($waited > 5) {
 				$pollInterval = 2;
@@ -210,7 +217,8 @@ class AiFormGeneratorService {
 		}
 
 		if ($task->getStatus() !== Task::STATUS_SUCCESSFUL) {
-			throw new \RuntimeException('AI task timed out after ' . self::MAX_WAIT_SECONDS . ' seconds');
+			// TRANSLATORS: Error; %n is the number of seconds the app waited for the AI
+			throw new \RuntimeException($this->l->n('The AI task timed out after %n second', 'The AI task timed out after %n seconds', self::MAX_WAIT_SECONDS));
 		}
 
 		$output = $task->getOutput();
@@ -226,7 +234,7 @@ class AiFormGeneratorService {
 				return $type;
 			}
 		}
-		throw new \RuntimeException('No AI text-to-text provider is available on this Nextcloud instance.');
+		throw new \RuntimeException($this->l->t('No AI text-to-text provider is available on this Nextcloud instance.'));
 	}
 
 	private function buildPrompt(string $description, string $sourceText = ''): string {
@@ -364,7 +372,7 @@ PROMPT;
 				'raw' => mb_substr($raw, 0, 2000),
 				'cleaned' => mb_substr($cleaned, 0, 2000),
 			]);
-			throw new \RuntimeException('AI returned an invalid response. Try a shorter or simpler description.');
+			throw new \RuntimeException($this->l->t('AI returned an invalid response. Try a shorter or simpler description.'));
 		}
 
 		$title = is_string($data['title'] ?? null) ? trim($data['title']) : '';
@@ -372,7 +380,7 @@ PROMPT;
 		$questions = is_array($data['questions'] ?? null) ? $data['questions'] : [];
 
 		if ($questions === []) {
-			throw new \RuntimeException('AI did not generate any questions.');
+			throw new \RuntimeException($this->l->t('AI did not generate any questions.'));
 		}
 
 		$allowedTypes = ['text', 'textarea', 'choice', 'multiple', 'dropdown', 'number', 'date', 'datetime', 'time', 'scale', 'rating'];
@@ -430,13 +438,13 @@ PROMPT;
 		}
 
 		if ($sanitized === []) {
-			throw new \RuntimeException('AI did not generate any usable questions.');
+			throw new \RuntimeException($this->l->t('AI did not generate any usable questions.'));
 		}
 
 		$sanitized = $this->validateAndApplyShowIf($sanitized);
 
 		return [
-			'title' => $title !== '' ? $title : 'Untitled form',
+			'title' => $title !== '' ? $title : $this->l->t('Untitled form'),
 			'description' => $description,
 			'questions' => $sanitized,
 		];
@@ -604,17 +612,18 @@ PROMPT;
 			$userFolder = $this->rootFolder->getUserFolder($userId);
 			$nodes = $userFolder->getById($fileId);
 			if ($nodes === []) {
-				throw new \RuntimeException('Source document not found.');
+				throw new \RuntimeException($this->l->t('Source document not found.'));
 			}
 			$node = $nodes[0];
 			if (!$node instanceof File) {
-				throw new \RuntimeException('Source must be a file.');
+				throw new \RuntimeException($this->l->t('The source must be a file.'));
 			}
 
 			$maxBytes = $this->getMaxDocBytes();
 			if ($node->getSize() > $maxBytes) {
 				$maxMb = (int)round($maxBytes / 1024 / 1024);
-				throw new \RuntimeException("Source document is too large. Maximum {$maxMb} MB.");
+				// TRANSLATORS: Error; %s is a number of megabytes, for example 8
+				throw new \RuntimeException($this->l->t('Source document is too large. The maximum is %s MB.', [$maxMb]));
 			}
 
 			$mime = $node->getMimeType();
@@ -628,7 +637,7 @@ PROMPT;
 				return $this->extractViaAssistant($node);
 			}
 
-			throw new \RuntimeException('Unsupported file type. Use PDF, DOCX, ODT, or a plain text file.');
+			throw new \RuntimeException($this->l->t('Unsupported file type. Use PDF, DOCX, ODT, or a plain text file.'));
 		} catch (\RuntimeException $e) {
 			throw $e;
 		} catch (\Exception $e) {

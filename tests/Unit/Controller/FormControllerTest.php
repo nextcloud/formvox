@@ -11,6 +11,7 @@ use OCA\FormVox\Service\IndexService;
 use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\ShareTokenService;
 use OCA\FormVox\Service\TemplateService;
+use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\AppFramework\Http;
 use OCP\Files\File;
 use OCP\Files\NotFoundException;
@@ -71,7 +72,8 @@ class FormControllerTest extends TestCase {
 			$this->userSession,
 			$this->userManager,
 			$this->groupManager,
-			$this->notificationManager
+			$this->notificationManager,
+			new EnglishL10N(),
 		);
 	}
 

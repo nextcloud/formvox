@@ -4,10 +4,11 @@
     <div class="section">
       <h3>
         <ApiIcon :size="18" />
-        {{ t('API Access') }}
+        <!-- TRANSLATORS: Heading of the section with API keys for other software -->
+        {{ t('formvox', 'API access') }}
       </h3>
       <p class="section-description">
-        {{ t('Create API keys to integrate this form with external systems like Power Automate, Zapier, or custom applications.') }}
+        {{ t('formvox', 'Create API keys to integrate this form with external systems like Power Automate, Zapier, or custom applications.') }}
       </p>
 
       <div v-if="apiKeys.length" class="api-keys-list">
@@ -27,57 +28,66 @@
 
       <div v-if="newApiKey" class="new-key-display">
         <NcNoteCard type="warning">
-          <p><strong>{{ t('Save this API key now!') }}</strong></p>
-          <p>{{ t('This is the only time you will see the full key. Copy it and store it securely.') }}</p>
+          <p><strong>{{ t('formvox', 'Save this API key now!') }}</strong></p>
+          <p>{{ t('formvox', 'This is the only time you will see the full key. Copy it and store it securely.') }}</p>
           <div class="key-value">
             <code>{{ newApiKey.key }}</code>
             <NcButton type="tertiary" @click="copyApiKey">
               <template #icon>
                 <CopyIcon :size="18" />
               </template>
-              {{ apiKeyCopied ? t('Copied!') : t('Copy') }}
+              <!-- TRANSLATORS: Button text right after copying to the clipboard; keep it short -->
+              <template v-if="apiKeyCopied">{{ t('formvox', 'Copied!') }}</template>
+              <!-- TRANSLATORS: Verb: button that copies to the clipboard -->
+              <template v-else>{{ t('formvox', 'Copy') }}</template>
             </NcButton>
           </div>
         </NcNoteCard>
       </div>
 
       <div class="create-api-key">
-        <NcTextField
+        <!-- TRANSLATORS: Label of the name field of a new API key -->
+        <NcTextField :label="t('formvox', 'Key name')"
           v-model="newKeyName"
-          :label="t('Key name')"
-          :placeholder="t('e.g., Power Automate')"
+          :placeholder="t('formvox', 'e.g., Power Automate')"
         />
         <div class="permissions-select">
-          <label class="permissions-label">{{ t('Permissions') }}</label>
+          <!-- TRANSLATORS: Label above what an API key may do -->
+          <label class="permissions-label">{{ t('formvox', 'Permissions') }}</label>
           <div class="permission-checkboxes">
             <NcCheckboxRadioSwitch
               :model-value="newKeyPermissions.read_form"
               @update:model-value="newKeyPermissions.read_form = $event"
             >
-              {{ t('Read form') }}
+              <!-- TRANSLATORS: API key permission: read the form's questions -->
+              {{ t('formvox', 'Read form') }}
             </NcCheckboxRadioSwitch>
             <NcCheckboxRadioSwitch
               :model-value="newKeyPermissions.read_responses"
               @update:model-value="newKeyPermissions.read_responses = $event"
             >
-              {{ t('Read responses') }}
+              <!-- TRANSLATORS: API key permission: read the responses -->
+              {{ t('formvox', 'Read responses') }}
             </NcCheckboxRadioSwitch>
             <NcCheckboxRadioSwitch
               :model-value="newKeyPermissions.write_responses"
               @update:model-value="newKeyPermissions.write_responses = $event"
             >
-              {{ t('Write responses') }}
+              <!-- TRANSLATORS: API key permission: add and change responses -->
+              {{ t('formvox', 'Write responses') }}
             </NcCheckboxRadioSwitch>
             <NcCheckboxRadioSwitch
               :model-value="newKeyPermissions.delete_responses"
               @update:model-value="newKeyPermissions.delete_responses = $event"
             >
-              {{ t('Delete responses') }}
+              <!-- TRANSLATORS: API key permission: delete responses -->
+              {{ t('formvox', 'Delete responses') }}
             </NcCheckboxRadioSwitch>
           </div>
         </div>
         <NcButton type="primary" @click="createApiKey" :disabled="!newKeyName || creatingKey">
-          {{ creatingKey ? t('Creating …') : t('Create API key') }}
+          <!-- TRANSLATORS: Button text while something is being created; keep it short -->
+          {{ creatingKey ? t('formvox', 'Creating …') : t('formvox', 'Create API key') }}
         </NcButton>
       </div>
     </div>
@@ -86,10 +96,11 @@
     <div class="section">
       <h3>
         <WebhookIcon :size="18" />
-        {{ t('Webhooks') }}
+        <!-- TRANSLATORS: Technical term: messages sent to another system when something happens; keep the common term -->
+        {{ t('formvox', 'Webhooks') }}
       </h3>
       <p class="section-description">
-        {{ t('Get notified when responses are submitted. Webhooks send data to your URL in real-time.') }}
+        {{ t('formvox', 'Get notified when responses are submitted. Webhooks send data to your URL in real-time.') }}
       </p>
 
       <div v-if="webhooks.length" class="webhooks-list">
@@ -115,103 +126,113 @@
 
       <div v-if="newWebhookSecret" class="new-webhook-display">
         <NcNoteCard type="warning">
-          <p><strong>{{ t('Save this webhook secret now!') }}</strong></p>
-          <p>{{ t('Use this secret to verify webhook signatures. It will not be shown again.') }}</p>
+          <p><strong>{{ t('formvox', 'Save this webhook secret now!') }}</strong></p>
+          <p>{{ t('formvox', 'Use this secret to verify webhook signatures. It will not be shown again.') }}</p>
           <div class="key-value">
             <code>{{ newWebhookSecret }}</code>
             <NcButton type="tertiary" @click="copyWebhookSecret">
               <template #icon>
                 <CopyIcon :size="18" />
               </template>
-              {{ webhookSecretCopied ? t('Copied!') : t('Copy') }}
+              {{ webhookSecretCopied ? t('formvox', 'Copied!') : t('formvox', 'Copy') }}
             </NcButton>
           </div>
         </NcNoteCard>
       </div>
 
       <div class="create-webhook">
-        <NcTextField
+        <!-- TRANSLATORS: Label of the name field of a new webhook -->
+        <NcTextField :label="t('formvox', 'Webhook name')"
           v-model="newWebhookName"
-          :label="t('Webhook name')"
-          :placeholder="t('e.g., Notify on submission')"
+          :placeholder="t('formvox', 'e.g., Notify on submission')"
         />
-        <NcTextField
+        <!-- TRANSLATORS: Label of the address a webhook sends to -->
+        <NcTextField :label="t('formvox', 'Webhook URL')"
           v-model="newWebhookUrl"
-          :label="t('Webhook URL')"
           placeholder="https://your-server.com/webhook"
         />
         <div class="events-select">
-          <label class="events-label">{{ t('Events') }}</label>
+          <!-- TRANSLATORS: Label above the events that trigger a webhook -->
+          <label class="events-label">{{ t('formvox', 'Events') }}</label>
           <div class="event-checkboxes">
             <NcCheckboxRadioSwitch
               :model-value="newWebhookEvents.created"
               @update:model-value="newWebhookEvents.created = $event"
             >
-              {{ t('Response created') }}
+              <!-- TRANSLATORS: Webhook event: a response was submitted -->
+              {{ t('formvox', 'Response created') }}
             </NcCheckboxRadioSwitch>
             <NcCheckboxRadioSwitch
               :model-value="newWebhookEvents.updated"
               @update:model-value="newWebhookEvents.updated = $event"
             >
-              {{ t('Response updated') }}
+              <!-- TRANSLATORS: Webhook event: a response was changed -->
+              {{ t('formvox', 'Response updated') }}
             </NcCheckboxRadioSwitch>
             <NcCheckboxRadioSwitch
               :model-value="newWebhookEvents.deleted"
               @update:model-value="newWebhookEvents.deleted = $event"
             >
-              {{ t('Response deleted') }}
+              <!-- TRANSLATORS: Webhook event, and a confirmation message -->
+              {{ t('formvox', 'Response deleted') }}
             </NcCheckboxRadioSwitch>
           </div>
         </div>
         <NcButton type="primary" @click="createWebhook" :disabled="!newWebhookUrl || creatingWebhook">
-          {{ creatingWebhook ? t('Creating …') : t('Create webhook') }}
+          <template v-if="creatingWebhook">{{ t('formvox', 'Creating …') }}</template>
+          <!-- TRANSLATORS: Verb: button -->
+          <template v-else>{{ t('formvox', 'Create webhook') }}</template>
         </NcButton>
       </div>
     </div>
 
     <!-- API Documentation -->
     <div class="section api-docs">
-      <h3>{{ t('API Documentation') }}</h3>
-      <p class="section-description">{{ t('Use these endpoints to interact with this form programmatically.') }}</p>
+      <!-- TRANSLATORS: Heading above the list of API endpoints -->
+      <h3>{{ t('formvox', 'API documentation') }}</h3>
+      <p class="section-description">{{ t('formvox', 'Use these endpoints to interact with this form programmatically.') }}</p>
 
       <div class="endpoint">
         <code class="method get">GET</code>
         <code class="path">/api/v1/external/forms/{{ fileId }}</code>
-        <span class="desc">{{ t('Get form definition') }}</span>
+        <span class="desc">{{ t('formvox', 'Get form definition') }}</span>
       </div>
       <div class="endpoint">
         <code class="method get">GET</code>
         <code class="path">/api/v1/external/forms/{{ fileId }}/schema</code>
-        <span class="desc">{{ t('Get JSON schema') }}</span>
+        <span class="desc">{{ t('formvox', 'Get JSON schema') }}</span>
       </div>
       <div class="endpoint">
         <code class="method get">GET</code>
         <code class="path">/api/v1/external/forms/{{ fileId }}/responses</code>
-        <span class="desc">{{ t('Get all responses') }}</span>
+        <span class="desc">{{ t('formvox', 'Get all responses') }}</span>
       </div>
       <div class="endpoint">
         <code class="method get">GET</code>
         <code class="path">/api/v1/external/forms/{{ fileId }}/responses/{id}</code>
-        <span class="desc">{{ t('Get single response') }}</span>
+        <span class="desc">{{ t('formvox', 'Get single response') }}</span>
       </div>
       <div class="endpoint">
         <code class="method post">POST</code>
         <code class="path">/api/v1/external/forms/{{ fileId }}/responses</code>
-        <span class="desc">{{ t('Create response') }}</span>
+        <!-- TRANSLATORS: Description of an API endpoint -->
+        <span class="desc">{{ t('formvox', 'Create response') }}</span>
       </div>
       <div class="endpoint">
         <code class="method put">PUT</code>
         <code class="path">/api/v1/external/forms/{{ fileId }}/responses/{id}</code>
-        <span class="desc">{{ t('Update response') }}</span>
+        <!-- TRANSLATORS: Description of an API endpoint -->
+        <span class="desc">{{ t('formvox', 'Update response') }}</span>
       </div>
       <div class="endpoint">
         <code class="method delete">DELETE</code>
         <code class="path">/api/v1/external/forms/{{ fileId }}/responses/{id}</code>
-        <span class="desc">{{ t('Delete response') }}</span>
+        <!-- TRANSLATORS: Description of an API endpoint -->
+        <span class="desc">{{ t('formvox', 'Delete response') }}</span>
       </div>
 
       <p class="auth-note">
-        {{ t('Include your API key in the X-FormVox-API-Key header.') }}
+        {{ t('formvox', 'Include your API key in the X-FormVox-API-Key header.') }}
       </p>
     </div>
   </div>
@@ -340,9 +361,9 @@ export default {
         newKeyPermissions.write_responses = false;
         newKeyPermissions.delete_responses = false;
 
-        showSuccess(t('API key created'));
+        showSuccess(t('formvox', 'API key created'));
       } catch (error) {
-        showError(t('Failed to create API key'));
+        showError(t('formvox', 'Failed to create API key'));
         console.error(error);
       } finally {
         creatingKey.value = false;
@@ -350,7 +371,7 @@ export default {
     };
 
     const deleteApiKey = async (keyId) => {
-      if (!confirm(t('Are you sure you want to delete this API key? Any integrations using it will stop working.'))) {
+      if (!confirm(t('formvox', 'Are you sure you want to delete this API key? Any integrations using it will stop working.'))) {
         return;
       }
 
@@ -362,9 +383,9 @@ export default {
         // Remove from local form object
         props.form.settings.api_keys = props.form.settings.api_keys.filter(k => k.id !== keyId);
 
-        showSuccess(t('API key deleted'));
+        showSuccess(t('formvox', 'API key deleted'));
       } catch (error) {
-        showError(t('Failed to delete API key'));
+        showError(t('formvox', 'Failed to delete API key'));
         console.error(error);
       }
     };
@@ -376,7 +397,7 @@ export default {
         apiKeyCopied.value = true;
         setTimeout(() => { apiKeyCopied.value = false; }, 2000);
       } catch (error) {
-        showError(t('Failed to copy'));
+        showError(t('formvox', 'Failed to copy'));
       }
     };
 
@@ -394,7 +415,8 @@ export default {
         const response = await axios.post(
           generateUrl('/apps/formvox/api/form/{fileId}/webhooks', { fileId: props.fileId }),
           {
-            name: newWebhookName.value || 'Webhook',
+            // TRANSLATORS: Default name of a webhook when none was given
+            name: newWebhookName.value || t('formvox', 'Webhook'),
             url: newWebhookUrl.value,
             events,
           }
@@ -423,9 +445,10 @@ export default {
         newWebhookEvents.updated = false;
         newWebhookEvents.deleted = false;
 
-        showSuccess(t('Webhook created'));
+        // TRANSLATORS: Confirmation message
+        showSuccess(t('formvox', 'Webhook created'));
       } catch (error) {
-        showError(t('Failed to create webhook'));
+        showError(t('formvox', 'Failed to create webhook'));
         console.error(error);
       } finally {
         creatingWebhook.value = false;
@@ -445,13 +468,13 @@ export default {
           webhook.enabled = enabled;
         }
       } catch (error) {
-        showError(t('Failed to update webhook'));
+        showError(t('formvox', 'Failed to update webhook'));
         console.error(error);
       }
     };
 
     const deleteWebhook = async (webhookId) => {
-      if (!confirm(t('Are you sure you want to delete this webhook?'))) {
+      if (!confirm(t('formvox', 'Are you sure you want to delete this webhook?'))) {
         return;
       }
 
@@ -463,9 +486,10 @@ export default {
         // Remove from local form object
         props.form.settings.webhooks = props.form.settings.webhooks.filter(w => w.id !== webhookId);
 
-        showSuccess(t('Webhook deleted'));
+        // TRANSLATORS: Confirmation message
+        showSuccess(t('formvox', 'Webhook deleted'));
       } catch (error) {
-        showError(t('Failed to delete webhook'));
+        showError(t('formvox', 'Failed to delete webhook'));
         console.error(error);
       }
     };
@@ -477,27 +501,33 @@ export default {
         webhookSecretCopied.value = true;
         setTimeout(() => { webhookSecretCopied.value = false; }, 2000);
       } catch (error) {
-        showError(t('Failed to copy'));
+        showError(t('formvox', 'Failed to copy'));
       }
     };
 
     // Formatters
     const formatPermissions = (permissions) => {
       const labels = {
-        read_form: t('Read'),
-        read_responses: t('Read responses'),
-        write_responses: t('Write'),
-        delete_responses: t('Delete'),
+        // TRANSLATORS: Short name of an API key permission; keep it short, it is a badge
+        read_form: t('formvox', 'Read'),
+        read_responses: t('formvox', 'Read responses'),
+        // TRANSLATORS: Short name of an API key permission; keep it short, it is a badge
+        write_responses: t('formvox', 'Write'),
+        delete_responses: t('formvox', 'Delete'),
       };
       return permissions.map(p => labels[p] || p).join(', ');
     };
 
     const formatEvents = (events) => {
-      if (!events || events.length === 0) return t('All events');
+      // TRANSLATORS: Shown for a webhook that reacts to every event
+      if (!events || events.length === 0) return t('formvox', 'All events');
       const labels = {
-        'response.created': t('Created'),
-        'response.updated': t('Updated'),
-        'response.deleted': t('Deleted'),
+        // TRANSLATORS: Short name of a webhook event: a response was created
+        'response.created': t('formvox', 'Created'),
+        // TRANSLATORS: Short name of a webhook event: a response was changed
+        'response.updated': t('formvox', 'Updated'),
+        // TRANSLATORS: Short name of a webhook event: a response was deleted
+        'response.deleted': t('formvox', 'Deleted'),
       };
       return events.map(e => labels[e] || e).join(', ');
     };

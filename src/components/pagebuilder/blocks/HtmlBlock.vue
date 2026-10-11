@@ -1,7 +1,7 @@
 <template>
   <div class="block-html" :class="alignmentClass">
     <div v-if="block.settings.content" v-html="sanitizedHtml"></div>
-    <p v-else-if="editMode" class="placeholder">{{ t('Enter HTML in settings') }}</p>
+    <p v-else-if="editMode" class="placeholder">{{ t('formvox', 'Enter HTML in settings') }}</p>
   </div>
 </template>
 

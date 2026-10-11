@@ -1,29 +1,30 @@
 <template>
   <NcModal :can-close="!creating" @close="onCloseAttempt">
     <div class="new-form-modal">
-      <h2>{{ t('Create new form') }}</h2>
+      <h2>{{ t('formvox', 'Create new form') }}</h2>
 
       <p class="template-info">
-        {{ t('Template') }}: <strong>{{ templateLabel }}</strong>
+        <!-- TRANSLATORS: Label before the name of the chosen template -->
+        {{ t('formvox', 'Template:') }} <strong>{{ templateLabel }}</strong>
       </p>
 
       <NcTextField
         v-model="title"
-        :label="t('Form title')"
-        :placeholder="t('Enter a title for your form')"
+        :label="t('formvox', 'Form title')"
+        :placeholder="t('formvox', 'Enter a title for your form')"
         class="title-input"
         autofocus
       />
 
       <div v-if="isAi" class="ai-prompt-section">
         <label class="ai-prompt-label" for="ai-prompt-input">
-          {{ t('Describe the form you want to create') }}
+          {{ t('formvox', 'Describe the form you want to create') }}
         </label>
         <textarea
           id="ai-prompt-input"
           v-model="aiDescription"
           class="ai-prompt-input"
-          :placeholder="t('e.g. A customer satisfaction survey with 8 questions about service quality, food, and value for money.')"
+          :placeholder="t('formvox', 'e.g. A customer satisfaction survey with 8 questions about service quality, food, and value for money.')"
           rows="4"
           :disabled="creating"
         />
@@ -33,41 +34,44 @@
             <template #icon>
               <PaperclipIcon :size="18" />
             </template>
-            {{ aiSourceName ? t('Change source document') : t('Add source document (optional)') }}
+            {{ aiSourceName ? t('formvox', 'Change source document') : t('formvox', 'Add source document (optional)') }}
           </NcButton>
           <span v-if="aiSourceName" class="ai-source-name">
             {{ aiSourceName }}
-            <button type="button" class="ai-source-clear" :disabled="creating" @click="clearSourceFile" :aria-label="t('Remove source')">×</button>
+            <!-- TRANSLATORS: Invisible label of the button that removes the chosen source document -->
+            <button type="button" class="ai-source-clear" :disabled="creating" @click="clearSourceFile" :aria-label="t('formvox', 'Remove source')">×</button>
           </span>
         </div>
 
         <div v-if="aiError" class="ai-error">
-          <strong>{{ t('Generation failed') }}</strong>
+          <!-- TRANSLATORS: Heading of the error when the AI could not create a form -->
+          <strong>{{ t('formvox', 'Generation failed') }}</strong>
           <span>{{ aiError }}</span>
         </div>
         <p v-else class="ai-hint">
           {{ aiSourceName
-            ? t('AI will base questions on the document and your description. Generation can take up to 2 minutes.')
-            : t('The AI will draft questions based on your description. Generation can take up to 2 minutes.') }}
+            ? t('formvox', 'AI will base questions on the document and your description. Generation can take up to 2 minutes.')
+            : t('formvox', 'The AI will draft questions based on your description. Generation can take up to 2 minutes.') }}
         </p>
       </div>
 
       <div class="location-section">
-        <label class="location-label">{{ t('Save location') }}</label>
+        <label class="location-label">{{ t('formvox', 'Save location') }}</label>
         <div class="location-picker">
           <div class="location-display">
             <FolderIcon :size="20" />
             <span class="location-path">{{ selectedPath || '/' }}</span>
           </div>
           <NcButton type="secondary" @click="pickFolder">
-            {{ t('Choose folder') }}
+            <!-- TRANSLATORS: Verb: button that opens the folder picker -->
+            {{ t('formvox', 'Choose folder') }}
           </NcButton>
         </div>
       </div>
 
       <div class="actions">
         <NcButton :disabled="creating" @click="$emit('close')">
-          {{ t('Cancel') }}
+          {{ t('formvox', 'Cancel') }}
         </NcButton>
         <NcButton type="primary" :disabled="!canSubmit" @click="create">
           <template v-if="creating" #icon>
@@ -90,23 +94,31 @@ import { t } from '@/utils/l10n';
 import FolderIcon from './icons/FolderIcon.vue';
 import PaperclipIcon from 'vue-material-design-icons/Paperclip.vue';
 
-const TEMPLATE_NAMES = {
-	blank: 'Blank form',
-	survey: 'Survey',
-	poll: 'Poll',
-	registration: 'Registration',
-	demo: 'Demo form',
-	ai: 'Generate with AI',
-};
+// One literal t() per label, so the Transifex extractor sees every string.
+const templateName = (key) => ({
+	// TRANSLATORS: Name of the template for an empty form
+	blank: t('formvox', 'Blank form'),
+	survey: t('formvox', 'Survey'),
+	poll: t('formvox', 'Poll'),
+	registration: t('formvox', 'Registration'),
+	// TRANSLATORS: Name of the template with example questions, and its default title
+	demo: t('formvox', 'Demo form'),
+	ai: t('formvox', 'Generate with AI'),
+})[key] || t('formvox', 'Blank form');
 
-const TEMPLATE_TITLES = {
-	blank: 'Untitled Form',
-	survey: 'New Survey',
-	poll: 'New Poll',
-	registration: 'New Registration',
-	demo: 'Demo form',
-	ai: 'AI-generated form',
-};
+// The default title of a new form, per built-in template.
+const templateTitle = (key) => ({
+	blank: t('formvox', 'Untitled form'),
+	// TRANSLATORS: Default title of a new form made from the survey template
+	survey: t('formvox', 'New survey'),
+	// TRANSLATORS: Default title of a new form made from the poll template
+	poll: t('formvox', 'New poll'),
+	// TRANSLATORS: Default title of a new form made from the registration template
+	registration: t('formvox', 'New registration'),
+	demo: t('formvox', 'Demo form'),
+	// TRANSLATORS: Default title of a form that the AI will create
+	ai: t('formvox', 'AI-generated form'),
+})[key] || t('formvox', 'Untitled form');
 
 export default {
 	name: 'NewFormModal',
@@ -138,7 +150,7 @@ export default {
 		const isAi = computed(() => props.initialTemplate === 'ai')
 
 		const templateLabel = computed(() => {
-			return t(TEMPLATE_NAMES[props.initialTemplate] || TEMPLATE_NAMES.blank)
+			return templateName(props.initialTemplate)
 		})
 
 		const canSubmit = computed(() => {
@@ -149,8 +161,15 @@ export default {
 		})
 
 		const submitLabel = computed(() => {
-			if (!creating.value) return isAi.value ? t('Generate') : t('Create')
-			return isAi.value ? t('Generating …') : t('Creating …')
+			if (!creating.value) {
+				return isAi.value
+					// TRANSLATORS: Verb: button that asks the AI to create the form
+					? t('formvox', 'Generate')
+					// TRANSLATORS: Verb: button that creates the form
+					: t('formvox', 'Create')
+			}
+			// TRANSLATORS: Button text while the AI creates the form
+			return isAi.value ? t('formvox', 'Generating …') : t('formvox', 'Creating …')
 		})
 
 		onMounted(async () => {
@@ -161,12 +180,13 @@ export default {
 					const resp = await axios.get(generateUrl('/apps/formvox/api/templates'))
 					const id = props.initialTemplate.substring('admin:'.length)
 					const tpl = (resp.data?.templates || []).find(t => t.id === id)
-					title.value = tpl?.title || t('New form')
+					// TRANSLATORS: Default title and file name of a new form, and the name of the menu entry
+					title.value = tpl?.title || t('formvox', 'New form')
 				} catch (e) {
-					title.value = t('New form')
+					title.value = t('formvox', 'New form')
 				}
 			} else {
-				title.value = t(TEMPLATE_TITLES[props.initialTemplate] || TEMPLATE_TITLES.blank)
+				title.value = templateTitle(props.initialTemplate)
 			}
 			// Respect the admin toggle for source-document uploads
 			if (isAi.value) {
@@ -181,7 +201,7 @@ export default {
 
     const pickSourceFile = async () => {
       try {
-        const picker = getFilePickerBuilder(t('Choose source document'))
+        const picker = getFilePickerBuilder(t('formvox', 'Choose source document'))
           .setMultiSelect(false)
           .setType(FilePickerType.Choose)
           .setMimeTypeFilter([
@@ -204,7 +224,7 @@ export default {
         );
         const fid = resp.data?.fileId;
         if (!fid) {
-          showError(t('Could not resolve the selected file.'));
+          showError(t('formvox', 'Could not resolve the selected file.'));
           return;
         }
         aiSourceFileId.value = fid;
@@ -212,7 +232,7 @@ export default {
       } catch (error) {
         if (error?.message?.includes('cancelled')) return;
         console.error('Source picker error:', error);
-        showError(t('Could not resolve the selected file.'));
+        showError(t('formvox', 'Could not resolve the selected file.'));
       }
     };
 
@@ -223,7 +243,7 @@ export default {
 
     const pickFolder = async () => {
       try {
-        const picker = getFilePickerBuilder(t('Choose save location'))
+        const picker = getFilePickerBuilder(t('formvox', 'Choose save location'))
           .setMultiSelect(false)
           .setType(FilePickerType.Choose)
           .allowDirectories(true)
@@ -275,7 +295,7 @@ export default {
         });
         emit('created', response.data);
       } catch (error) {
-        showError(t('Failed to create form'));
+        showError(t('formvox', 'Failed to create form'));
         console.error(error);
       } finally {
         creating.value = false;
@@ -297,14 +317,14 @@ export default {
         );
         taskId = resp.data?.taskId;
       } catch (err) {
-        aiError.value = err.response?.data?.error || t('AI generation failed. Try a different description.');
+        aiError.value = err.response?.data?.error || t('formvox', 'AI generation failed. Try a different description.');
         creating.value = false;
         try { sessionStorage.removeItem('formvox_ai_generating'); } catch (e) { /* ignore */ }
         window.dispatchEvent(new CustomEvent('formvox-ai-state-change'));
         return;
       }
       if (!taskId) {
-        aiError.value = t('AI generation failed. No task returned.');
+        aiError.value = t('formvox', 'AI generation failed. No task returned.');
         creating.value = false;
         try { sessionStorage.removeItem('formvox_ai_generating'); } catch (e) { /* ignore */ }
         window.dispatchEvent(new CustomEvent('formvox-ai-state-change'));
@@ -329,7 +349,7 @@ export default {
               creating.value = false;
               try { sessionStorage.removeItem('formvox_ai_generating'); } catch (e) { /* ignore */ }
               window.dispatchEvent(new CustomEvent('formvox-ai-state-change'));
-              showSuccess(t('AI form created. Check your notifications to open it.'));
+              showSuccess(t('formvox', 'AI form created. Check your notifications to open it.'));
               // Tell the parent to refresh the form list so the new form
               // shows up on the homepage. We don't emit 'created' with a
               // null fileId, that would trigger openForm() which navigates
@@ -339,7 +359,7 @@ export default {
             }
           } else if (status === 4 || status === 5) {
             clearInterval(interval);
-            aiError.value = tr.data?.error || t('AI generation failed.');
+            aiError.value = tr.data?.error || t('formvox', 'AI generation failed.');
             creating.value = false;
             try { sessionStorage.removeItem('formvox_ai_generating'); } catch (e) { /* ignore */ }
             window.dispatchEvent(new CustomEvent('formvox-ai-state-change'));
@@ -348,7 +368,7 @@ export default {
             // Don't error — the task is still running server-side and the
             // listener will deliver a notification when done.
             creating.value = false;
-            showSuccess(t('AI is still generating. You will be notified when ready.'));
+            showSuccess(t('formvox', 'AI is still generating. You will be notified when ready.'));
             emit('close');
           }
         } catch (err) {

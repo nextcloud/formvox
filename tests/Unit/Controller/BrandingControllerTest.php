@@ -8,6 +8,7 @@ use OCA\FormVox\Controller\BrandingController;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\PermissionService;
+use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\Files\File;
@@ -49,7 +50,8 @@ class BrandingControllerTest extends TestCase {
 			$this->brandingService,
 			$this->fileLocator,
 			$this->permissionService,
-			$this->userSession
+			$this->userSession,
+			new EnglishL10N(),
 		);
 	}
 
@@ -102,7 +104,7 @@ class BrandingControllerTest extends TestCase {
 		$this->brandingService->expects($this->never())->method('saveBlockImage');
 		$resp = $this->controller()->uploadBlockImage('b1');
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertSame(['error' => 'No file uploaded'], $resp->getData());
+		$this->assertSame(['error' => 'No file was uploaded'], $resp->getData());
 	}
 
 	public function testUploadBlockImageBadRequestWhenUploadError(): void {
@@ -112,7 +114,7 @@ class BrandingControllerTest extends TestCase {
 		$this->brandingService->expects($this->never())->method('saveBlockImage');
 		$resp = $this->controller()->uploadBlockImage('b1');
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertSame(['error' => 'No file uploaded'], $resp->getData());
+		$this->assertSame(['error' => 'No file was uploaded'], $resp->getData());
 	}
 
 	public function testUploadBlockImageRejectsInvalidType(): void {
@@ -184,7 +186,7 @@ class BrandingControllerTest extends TestCase {
 		$session->method('getUser')->willReturn(null);
 		$controller = new BrandingController(
 			$this->request, $this->brandingService, $this->fileLocator,
-			$this->permissionService, $session
+			$this->permissionService, $session, new EnglishL10N()
 		);
 		$resp = $controller->uploadFormBlockImage(7, 'b1');
 		$this->assertSame(Http::STATUS_UNAUTHORIZED, $resp->getStatus());
@@ -222,7 +224,7 @@ class BrandingControllerTest extends TestCase {
 		$this->request->method('getUploadedFile')->willReturn(null);
 		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertSame(['error' => 'No file uploaded'], $resp->getData());
+		$this->assertSame(['error' => 'No file was uploaded'], $resp->getData());
 	}
 
 	public function testUploadFormBlockImageRejectsInvalidType(): void {

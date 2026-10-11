@@ -16,16 +16,16 @@ describe('NewFormModal', () => {
 		vi.spyOn(axios, 'get').mockResolvedValue({ data: {} })
 	})
 
-	it('defaults the title from the built-in template (blank → Untitled Form)', async () => {
+	it('defaults the title from the built-in template (blank → Untitled form)', async () => {
 		const wrapper = mountModal({ initialTemplate: 'blank' })
 		await flushPromises()
-		expect(wrapper.get('[data-stub="NcTextField"]').attributes('value')).toBe('Untitled Form')
+		expect(wrapper.get('[data-stub="NcTextField"]').attributes('value')).toBe('Untitled form')
 	})
 
-	it('uses the template-specific default title (survey → New Survey)', async () => {
+	it('uses the template-specific default title (survey → New survey)', async () => {
 		const wrapper = mountModal({ initialTemplate: 'survey' })
 		await flushPromises()
-		expect(wrapper.get('[data-stub="NcTextField"]').attributes('value')).toBe('New Survey')
+		expect(wrapper.get('[data-stub="NcTextField"]').attributes('value')).toBe('New survey')
 	})
 
 	it('shows the template label for the chosen template', async () => {
@@ -89,7 +89,7 @@ describe('NewFormModal', () => {
 	})
 
 	it('posts the title/path and emits created with the server payload (blank template)', async () => {
-		const post = vi.spyOn(axios, 'post').mockResolvedValue({ data: { fileId: 42, title: 'Untitled Form' } })
+		const post = vi.spyOn(axios, 'post').mockResolvedValue({ data: { fileId: 42, title: 'Untitled form' } })
 		const wrapper = mountModal({ initialTemplate: 'blank' })
 		await flushPromises()
 
@@ -97,12 +97,12 @@ describe('NewFormModal', () => {
 		await flushPromises()
 
 		expect(post).toHaveBeenCalledWith('/apps/formvox/api/forms', {
-			title: 'Untitled Form',
+			title: 'Untitled form',
 			path: '',
 			template: null,
 			adminTemplateId: null,
 		})
-		expect(wrapper.emitted('created')).toEqual([[{ fileId: 42, title: 'Untitled Form' }]])
+		expect(wrapper.emitted('created')).toEqual([[{ fileId: 42, title: 'Untitled form' }]])
 	})
 
 	it('passes the built-in template id in the create payload (survey)', async () => {

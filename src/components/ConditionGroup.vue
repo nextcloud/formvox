@@ -4,21 +4,25 @@
     <div v-if="isSimpleCondition" class="simple-condition">
       <select v-model="localCondition.questionId" @change="onQuestionChange">
         <option v-for="q in questions" :key="q.id" :value="q.id">
-          {{ q.question || `Question ${questions.indexOf(q) + 1}` }}
+          <!-- TRANSLATORS: Placeholder name of a question without text; {n} is its number, for example 3 -->
+          {{ q.question || t('formvox', 'Question {n}', { n: questions.indexOf(q) + 1 }) }}
         </option>
       </select>
 
       <select v-model="localCondition.operator" @change="emitUpdate">
-        <option value="equals">{{ t('equals') }}</option>
-        <option value="notEquals">{{ t('does not equal') }}</option>
-        <option value="contains">{{ t('contains') }}</option>
-        <option value="notContains">{{ t('does not contain') }}</option>
-        <option value="isEmpty">{{ t('is empty') }}</option>
-        <option value="isNotEmpty">{{ t('is not empty') }}</option>
-        <option value="greaterThan">{{ t('is greater than') }}</option>
-        <option value="lessThan">{{ t('is less than') }}</option>
-        <option value="in">{{ t('is one of') }}</option>
-        <option value="notIn">{{ t('is not one of') }}</option>
+        <!-- TRANSLATORS: Comparison operator in a condition: the answer equals the value -->
+        <option value="equals">{{ t('formvox', 'equals') }}</option>
+        <option value="notEquals">{{ t('formvox', 'does not equal') }}</option>
+        <!-- TRANSLATORS: Comparison operator in a condition: the answer contains the value -->
+        <option value="contains">{{ t('formvox', 'contains') }}</option>
+        <option value="notContains">{{ t('formvox', 'does not contain') }}</option>
+        <!-- TRANSLATORS: Comparison operator in a condition: the question has no answer -->
+        <option value="isEmpty">{{ t('formvox', 'is empty') }}</option>
+        <option value="isNotEmpty">{{ t('formvox', 'is not empty') }}</option>
+        <option value="greaterThan">{{ t('formvox', 'is greater than') }}</option>
+        <option value="lessThan">{{ t('formvox', 'is less than') }}</option>
+        <option value="in">{{ t('formvox', 'is one of') }}</option>
+        <option value="notIn">{{ t('formvox', 'is not one of') }}</option>
       </select>
 
       <template v-if="needsValue">
@@ -27,7 +31,8 @@
           v-model="localCondition.value"
           @change="emitUpdate"
         >
-          <option value="">{{ t('Select …') }}</option>
+          <!-- TRANSLATORS: First entry of a dropdown list, before a choice is made -->
+          <option value="">{{ t('formvox', 'Select …') }}</option>
           <option v-for="opt in selectedQuestionOptions" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>
@@ -37,7 +42,7 @@
           :model-value="localCondition.value ? new Date(localCondition.value) : null"
           type="date"
           :clearable="true"
-          :placeholder="t('Value')"
+          :placeholder="t('formvox', 'Value')"
           @update:model-value="onDateValue($event, 'date')"
         />
         <NcDateTimePicker
@@ -45,7 +50,7 @@
           :model-value="localCondition.value ? new Date(localCondition.value) : null"
           type="datetime"
           :clearable="true"
-          :placeholder="t('Value')"
+          :placeholder="t('formvox', 'Value')"
           @update:model-value="onDateValue($event, 'datetime')"
         />
         <input
@@ -59,7 +64,7 @@
           v-else
           v-model="localCondition.value"
           type="text"
-          :placeholder="t('Value')"
+          :placeholder="t('formvox', 'Value')"
           @input="emitUpdate"
         >
       </template>
@@ -69,13 +74,15 @@
           <template #icon>
             <PlusIcon :size="16" />
           </template>
-          AND
+          <!-- TRANSLATORS: Button that adds a second condition; both must match (logical AND) -->
+          {{ t('formvox', 'AND') }}
         </NcButton>
         <NcButton type="tertiary" @click="convertToGroup('or')">
           <template #icon>
             <PlusIcon :size="16" />
           </template>
-          OR
+          <!-- TRANSLATORS: Button that adds a second condition; either may match (logical OR) -->
+          {{ t('formvox', 'OR') }}
         </NcButton>
         <NcButton type="tertiary" @click="$emit('remove')">
           <template #icon>
@@ -89,8 +96,8 @@
     <div v-else class="combined-condition">
       <div class="group-header">
         <select v-model="localCondition.operator" @change="emitUpdate">
-          <option value="and">{{ t('ALL of the following') }}</option>
-          <option value="or">{{ t('ANY of the following') }}</option>
+          <option value="and">{{ t('formvox', 'ALL of the following') }}</option>
+          <option value="or">{{ t('formvox', 'ANY of the following') }}</option>
         </select>
         <NcButton type="tertiary" @click="$emit('remove')">
           <template #icon>
@@ -115,7 +122,7 @@
         <template #icon>
           <PlusIcon :size="16" />
         </template>
-        {{ t('Add condition') }}
+        {{ t('formvox', 'Add condition') }}
       </NcButton>
     </div>
   </div>

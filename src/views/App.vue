@@ -9,10 +9,11 @@
 				<TemplateGallery :ms-forms-configured="msFormsConfigured" @select-template="openNewFormWithTemplate" />
 				<div class="empty-state__content">
 					<FormIcon :size="64" />
-					<h2>{{ t('No forms yet') }}</h2>
-					<p>{{ t('Create your first form to get started.') }}</p>
+					<h2>{{ t('formvox', 'No forms yet') }}</h2>
+					<p>{{ t('formvox', 'Create your first form to get started.') }}</p>
 					<NcButton type="primary" @click="showNewFormModal = true">
-						{{ t('Create form') }}
+						<!-- TRANSLATORS: Verb: button -->
+						{{ t('formvox', 'Create form') }}
 					</NcButton>
 				</div>
 			</div>
@@ -41,7 +42,7 @@
 						<template #icon>
 							<PlusIcon :size="20" />
 						</template>
-						{{ t('New form') }}
+						{{ t('formvox', 'New form') }}
 					</NcButton>
 				</div>
 
@@ -69,18 +70,18 @@
 			@ai-completed="loadForms"
 		/>
 
-		<NcDialog
+		<!-- TRANSLATORS: Verb: menu entry -->
+		<NcDialog :name="t('formvox', 'Delete form')"
 			v-if="showDeleteDialog"
-			:name="t('Delete form')"
 			@closing="cancelDelete"
 		>
-			<p>{{ t('Are you sure you want to delete this form? This action cannot be undone.') }}</p>
+			<p>{{ t('formvox', 'Are you sure you want to delete this form? This action cannot be undone.') }}</p>
 			<template #actions>
 				<NcButton @click="cancelDelete">
-					{{ t('Cancel') }}
+					{{ t('formvox', 'Cancel') }}
 				</NcButton>
 				<NcButton type="error" @click="confirmDelete">
-					{{ t('Delete') }}
+					{{ t('formvox', 'Delete') }}
 				</NcButton>
 			</template>
 		</NcDialog>
@@ -141,13 +142,15 @@ export default {
 		const tabs = computed(() => [
 			{
 				id: 'recent',
-				label: t('Recent'),
+				// TRANSLATORS: Name of a tab with recently used forms
+				label: t('formvox', 'Recent'),
 				icon: FormIcon,
 				count: recentForms.value.length,
 			},
 			{
 				id: 'myforms',
-				label: t('My forms'),
+				// TRANSLATORS: Name of a tab
+				label: t('formvox', 'My forms'),
 				icon: FormIcon,
 				count: forms.value.length,
 			},
@@ -172,7 +175,7 @@ export default {
 		})
 
 		const emptyTabMessage = computed(() => {
-			return t('No forms found.')
+			return t('formvox', 'No forms found.')
 		})
 
 		const loadForms = async () => {
@@ -181,7 +184,7 @@ export default {
 				const response = await axios.get(generateUrl('/apps/formvox/api/forms'))
 				forms.value = response.data
 			} catch (error) {
-				showError(t('Failed to load forms'))
+				showError(t('formvox', 'Failed to load forms'))
 				console.error(error)
 			} finally {
 				loading.value = false
@@ -212,12 +215,13 @@ export default {
 			try {
 				await axios.delete(generateUrl('/apps/formvox/api/form/{fileId}', { fileId: formToDelete.value.fileId }))
 				forms.value = forms.value.filter(f => f.fileId !== formToDelete.value.fileId)
-				showSuccess(t('Form deleted'))
+				// TRANSLATORS: Confirmation message
+				showSuccess(t('formvox', 'Form deleted'))
 			} catch (error) {
 				if (error.response?.status === 403) {
-					showError(t('You do not have permission to delete this form'))
+					showError(t('formvox', 'You do not have permission to delete this form'))
 				} else {
-					showError(t('Failed to delete form'))
+					showError(t('formvox', 'Failed to delete form'))
 				}
 				console.error(error)
 			} finally {

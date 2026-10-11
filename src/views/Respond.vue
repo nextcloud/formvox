@@ -2,7 +2,7 @@
   <div class="respond-container">
     <!-- Skip link -->
     <a v-if="!submitted && !isLimitReached" href="#formvox-form-content" class="sr-only sr-only-focusable">
-      {{ t('Skip to form questions') }}
+      {{ t('formvox', 'Skip to form questions') }}
     </a>
 
     <!-- Header Zone -->
@@ -18,7 +18,7 @@
     <!-- Response Limit Reached -->
     <div v-if="isLimitReached" class="limit-reached-zone" role="alert">
       <div class="limit-message">
-        {{ form.settings?.limit_message || t('This form is no longer accepting responses.') }}
+        {{ form.settings?.limit_message || t('formvox', 'This form is no longer accepting responses.') }}
       </div>
     </div>
 
@@ -41,12 +41,13 @@
       </template>
       <template v-else>
         <CheckIcon :size="64" fill-color="var(--formvox-accent)" />
-        <h2>{{ t('Thank you!') }}</h2>
-        <p>{{ t('Your response has been recorded.') }}</p>
+        <h2>{{ t('formvox', 'Thank you!') }}</h2>
+        <p>{{ t('formvox', 'Your response has been recorded.') }}</p>
       </template>
 
       <div v-if="score" class="score-display">
-        <h3>{{ t('Your score') }}</h3>
+        <!-- TRANSLATORS: Heading of the quiz score after submitting -->
+        <h3>{{ t('formvox', 'Your score') }}</h3>
         <div class="score-value">{{ score.total }} / {{ score.max }}</div>
         <div class="score-percentage" :style="{ color: globalStyles.primaryColor }">{{ score.percentage }}%</div>
       </div>
@@ -57,12 +58,15 @@
       <!-- Draft restored banner -->
       <div v-if="draftRestored" class="draft-banner">
         <div class="draft-banner-content">
-          <span class="draft-banner-title">{{ t('Welcome back!') }}</span>
-          <span class="draft-banner-text">{{ t('We saved your progress. You can continue where you left off.') }}</span>
+          <!-- TRANSLATORS: Heading when a respondent returns to a form they started -->
+          <span class="draft-banner-title">{{ t('formvox', 'Welcome back!') }}</span>
+          <span class="draft-banner-text">{{ t('formvox', 'We saved your progress. You can continue where you left off.') }}</span>
         </div>
         <div class="draft-banner-actions">
-          <button type="button" class="draft-continue" @click="draftRestored = false">{{ t('Continue') }}</button>
-          <button type="button" class="draft-dismiss" @click="clearDraft">{{ t('Start over') }}</button>
+          <!-- TRANSLATORS: Verb: button to continue with the saved answers -->
+          <button type="button" class="draft-continue" @click="draftRestored = false">{{ t('formvox', 'Continue') }}</button>
+          <!-- TRANSLATORS: Verb: button to throw away the saved answers -->
+          <button type="button" class="draft-dismiss" @click="clearDraft">{{ t('formvox', 'Start over') }}</button>
         </div>
       </div>
 
@@ -77,7 +81,8 @@
         role="status"
         aria-live="polite"
       >
-        {{ t('Page {current} of {total}', { current: currentPageIndex + 1, total: pages.length }) }}
+        <!-- TRANSLATORS: {current} is the page number, {total} the number of pages -->
+        {{ t('formvox', 'Page {current} of {total}', { current: currentPageIndex + 1, total: pages.length }) }}
       </div>
 
       <div id="formvox-form-content" class="questions">
@@ -139,7 +144,8 @@
           type="button"
           @click="previousPage"
         >
-          {{ t('Previous') }}
+          <!-- TRANSLATORS: Button to the previous page -->
+          {{ t('formvox', 'Previous') }}
         </NcButton>
 
         <NcButton
@@ -148,7 +154,7 @@
           variant="primary"
           @click="nextPage"
         >
-          {{ t('Next') }}
+          {{ t('formvox', 'Next') }}
         </NcButton>
 
         <NcButton
@@ -157,13 +163,14 @@
           variant="primary"
           :disabled="submitting || isPreview"
         >
-          {{ uploadProgress || (submitting ? t('Submitting …') : t('Submit')) }}
+          <!-- TRANSLATORS: Button text while the answers are sent -->
+          {{ uploadProgress || (submitting ? t('formvox', 'Submitting …') : t('formvox', 'Submit')) }}
         </NcButton>
       </div>
 
       <!-- Submission status for screen readers -->
       <div class="sr-only" aria-live="polite" role="status">
-        <span v-if="submitting">{{ t('Submitting your response …') }}</span>
+        <span v-if="submitting">{{ t('formvox', 'Submitting your response …') }}</span>
         <span v-if="uploadProgress">{{ uploadProgress }}</span>
       </div>
 
@@ -214,6 +221,7 @@ import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { solveChallengeWorkers } from 'altcha-lib';
 import { t } from '@/utils/l10n';
+import { getCanonicalLocale } from '@nextcloud/l10n';
 import { useTts } from '../composables/useTts';
 import { readableForeground, pageBackground } from '@/utils/contrast';
 import QuestionRenderer from '../components/QuestionRenderer.vue';
@@ -277,14 +285,21 @@ export default {
 
     // Named per type so the message says what the field expects.
     const invalidEntryMessage = (type) => {
-      if (type === 'number') return t('Enter a number');
-      if (type === 'time') return t('Enter a valid time');
-      if (type === 'date' || type === 'datetime') return t('Enter a valid date');
-      return t('This entry is not valid');
+      if (type === 'number') return t('formvox', 'Enter a number');
+      if (type === 'time') return t('formvox', 'Enter a valid time');
+      if (type === 'date' || type === 'datetime') return t('formvox', 'Enter a valid date');
+      return t('formvox', 'This entry is not valid');
     };
     const thankYouRef = ref(null);
 
     // Draft autosave
+    // A date bound ("2026-10-09" or an ISO date-time) in the visitor's locale,
+    // built from its parts so the day does not shift with the time zone.
+    const formatDateBound = (value) => {
+      const [y, m, d] = String(value).split('T')[0].split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString(getCanonicalLocale(), { dateStyle: 'medium' });
+    };
+
     const draftKey = `formvox-draft-${props.fileId}-${props.token}`;
     const draftRestored = ref(false);
     let draftSaveTimeout = null;
@@ -856,7 +871,7 @@ export default {
             // nothing was entered — say so rather than "required".
             validationErrors[question.id] = badInputIds[question.id]
               ? invalidEntryMessage(question.type)
-              : t('This question is required');
+              : t('formvox', 'This question is required');
           }
 
           // Matrix: require ALL rows to be answered
@@ -865,7 +880,7 @@ export default {
             const unansweredRows = question.rows.filter(row => !matrixAnswer[row.id]);
             if (unansweredRows.length > 0) {
               if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
-              validationErrors[question.id] = t('Please answer all rows in this question');
+              validationErrors[question.id] = t('formvox', 'Please answer all rows in this question');
             }
           }
 
@@ -876,7 +891,7 @@ export default {
             );
             if (!hasContent) {
               if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
-              validationErrors[question.id] = t('Please fill in at least one row');
+              validationErrors[question.id] = t('formvox', 'Please fill in at least one row');
             }
           }
         }
@@ -888,7 +903,8 @@ export default {
             if (!regex.test(String(answer))) {
               if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
               validationErrors[question.id] = question.validation.errorMessage
-                || t('"{question}" does not match the required format', { question: question.question });
+                // TRANSLATORS: {question} is the question text
+                || t('formvox', '"{question}" does not match the required format', { question: question.question });
             }
           } catch (e) {
             // Invalid regex - skip validation
@@ -899,25 +915,29 @@ export default {
         if (['date', 'datetime'].includes(question.type) && answer && answer !== '') {
           if (question.dateMin && answer < question.dateMin) {
             if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
-            validationErrors[question.id] = t('Date must be on or after {min}', { min: question.dateMin.split('T')[0] });
+            // TRANSLATORS: {min} is a date
+            validationErrors[question.id] = t('formvox', 'Date must be on or after {min}', { min: formatDateBound(question.dateMin) });
           } else if (question.dateMax && answer > question.dateMax) {
             if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
-            validationErrors[question.id] = t('Date must be on or before {max}', { max: question.dateMax.split('T')[0] });
+            // TRANSLATORS: {max} is a date
+            validationErrors[question.id] = t('formvox', 'Date must be on or before {max}', { max: formatDateBound(question.dateMax) });
           }
         }
         if (question.type === 'time' && answer && answer !== '') {
           if (question.timeMin && answer < question.timeMin) {
             if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
-            validationErrors[question.id] = t('Time must be at or after {min}', { min: question.timeMin });
+            // TRANSLATORS: {min} is a time such as 09:00
+            validationErrors[question.id] = t('formvox', 'Time must be at or after {min}', { min: question.timeMin });
           } else if (question.timeMax && answer > question.timeMax) {
             if (!firstErrorQuestionId) firstErrorQuestionId = question.id;
-            validationErrors[question.id] = t('Time must be at or before {max}', { max: question.timeMax });
+            // TRANSLATORS: {max} is a time such as 17:00
+            validationErrors[question.id] = t('formvox', 'Time must be at or before {max}', { max: question.timeMax });
           }
         }
       }
 
       if (firstErrorQuestionId) {
-        error.value = t('Please answer all required questions');
+        error.value = t('formvox', 'Please answer all required questions');
         // Focus the first question with an error
         nextTick(() => {
           const el = document.getElementById(`question-${firstErrorQuestionId}`);
@@ -1029,7 +1049,8 @@ export default {
 
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          uploadProgress.value = t('Uploading {name} …', { name: file.name });
+          // TRANSLATORS: {name} is a file name
+          uploadProgress.value = t('formvox', 'Uploading {name} …', { name: file.name });
 
           const formData = new FormData();
           formData.append('file', file);
@@ -1163,7 +1184,7 @@ export default {
           }
         });
       } catch (err) {
-        error.value = err.response?.data?.error || t('Failed to submit response');
+        error.value = err.response?.data?.error || t('formvox', 'Failed to submit response');
       } finally {
         submitting.value = false;
         uploadProgress.value = '';

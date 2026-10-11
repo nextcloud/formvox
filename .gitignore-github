@@ -43,3 +43,6 @@ ROADMAP.md
 create-release.sh
 push-to-github.sh
 internal-docs/
+
+# Forgejo Actions: interne hostnamen en namen van secrets. GitHub draait .github/workflows/.
+.forgejo/

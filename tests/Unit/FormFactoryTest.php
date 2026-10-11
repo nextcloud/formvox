@@ -111,7 +111,7 @@ class FormFactoryTest extends TestCase {
 				'options' => [
 					['id' => 'opt1', 'label' => 'Excellent', 'value' => '5'],
 					['id' => 'opt2', 'label' => 'Good', 'value' => '4'],
-					['id' => 'opt3', 'label' => 'Average', 'value' => '3'],
+					['id' => 'opt3', 'label' => 'Fair', 'value' => '3'],
 					['id' => 'opt4', 'label' => 'Poor', 'value' => '2'],
 					['id' => 'opt5', 'label' => 'Very poor', 'value' => '1'],
 				],

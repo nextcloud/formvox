@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 $appId = $_['appId'];
-$title = $_['title'] ?? 'Form';
+$title = $_['title'] ?? $l->t('Form');
 $opensAt = $_['opensAt'] ?? '';
 ?>
 
@@ -79,6 +79,7 @@ html, body, #body-public, #content, #content-wrapper, .content {
 
     <h2><?php p($l->t('This form is not yet open')); ?></h2>
     <p class="subtitle">
+        <?php // TRANSLATORS: %1$s is the form title; a date and time follow below?>
         <?php p($l->t('%1$s is scheduled to open at:', [$title])); ?>
     </p>
     <div class="opens-at"><?php p($opensAt); ?></div>

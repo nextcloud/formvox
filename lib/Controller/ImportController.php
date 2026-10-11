@@ -14,6 +14,7 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\RedirectResponse;
+use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use Psr\Log\LoggerInterface;
@@ -25,6 +26,7 @@ class ImportController extends Controller {
 	private IURLGenerator $urlGenerator;
 	private LoggerInterface $logger;
 	private ?string $userId;
+	private IL10N $l;
 
 	public function __construct(
 		IRequest $request,
@@ -34,6 +36,7 @@ class ImportController extends Controller {
 		IURLGenerator $urlGenerator,
 		LoggerInterface $logger,
 		?string $userId,
+		IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->authService = $authService;
@@ -42,6 +45,7 @@ class ImportController extends Controller {
 		$this->urlGenerator = $urlGenerator;
 		$this->logger = $logger;
 		$this->userId = $userId;
+		$this->l = $l;
 	}
 
 	/**
@@ -51,7 +55,7 @@ class ImportController extends Controller {
 	public function getMsAuthUrl(): DataResponse {
 		if (!$this->authService->isConfigured()) {
 			return new DataResponse([
-				'error' => 'Microsoft Forms is not configured. Ask your administrator to configure it.',
+				'error' => $this->l->t('Microsoft Forms is not configured. Ask your administrator to configure it.'),
 			], Http::STATUS_SERVICE_UNAVAILABLE);
 		}
 
@@ -132,14 +136,14 @@ class ImportController extends Controller {
 	public function listMsForms(): DataResponse {
 		if ($this->apiClient === null) {
 			return new DataResponse([
-				'error' => 'API client not available',
+				'error' => $this->l->t('The Microsoft Forms connection is not available.'),
 			], Http::STATUS_SERVICE_UNAVAILABLE);
 		}
 
 		$accessToken = $this->authService->getValidAccessToken($this->userId);
 		if ($accessToken === null) {
 			return new DataResponse([
-				'error' => 'Not connected to Microsoft. Please connect first.',
+				'error' => $this->l->t('Not connected to Microsoft. Please connect first.'),
 				'needsAuth' => true,
 			], Http::STATUS_UNAUTHORIZED);
 		}
@@ -152,7 +156,8 @@ class ImportController extends Controller {
 		} catch (\Exception $e) {
 			$this->logger->error('Failed to list MS Forms', ['exception' => $e]);
 			return new DataResponse([
-				'error' => 'Failed to fetch forms: ' . $e->getMessage(),
+				// TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
+				'error' => $this->l->t('Could not fetch your forms: %s', [$e->getMessage()]),
 			], Http::STATUS_INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -165,14 +170,14 @@ class ImportController extends Controller {
 	public function previewMsForm(string $msFormId): DataResponse {
 		if ($this->apiClient === null) {
 			return new DataResponse([
-				'error' => 'API client not available',
+				'error' => $this->l->t('The Microsoft Forms connection is not available.'),
 			], Http::STATUS_SERVICE_UNAVAILABLE);
 		}
 
 		$accessToken = $this->authService->getValidAccessToken($this->userId);
 		if ($accessToken === null) {
 			return new DataResponse([
-				'error' => 'Not connected to Microsoft',
+				'error' => $this->l->t('Not connected to Microsoft. Please connect first.'),
 				'needsAuth' => true,
 			], Http::STATUS_UNAUTHORIZED);
 		}
@@ -194,7 +199,8 @@ class ImportController extends Controller {
 		} catch (\Exception $e) {
 			$this->logger->error('Failed to preview MS Form', ['exception' => $e]);
 			return new DataResponse([
-				'error' => 'Failed to load form: ' . $e->getMessage(),
+				// TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
+				'error' => $this->l->t('Could not load the form: %s', [$e->getMessage()]),
 			], Http::STATUS_INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -211,14 +217,14 @@ class ImportController extends Controller {
 	): DataResponse {
 		if ($this->importService === null) {
 			return new DataResponse([
-				'error' => 'Import service not available',
+				'error' => $this->l->t('The import is not available.'),
 			], Http::STATUS_SERVICE_UNAVAILABLE);
 		}
 
 		$accessToken = $this->authService->getValidAccessToken($this->userId);
 		if ($accessToken === null) {
 			return new DataResponse([
-				'error' => 'Not connected to Microsoft',
+				'error' => $this->l->t('Not connected to Microsoft. Please connect first.'),
 				'needsAuth' => true,
 			], Http::STATUS_UNAUTHORIZED);
 		}
@@ -243,7 +249,8 @@ class ImportController extends Controller {
 		} catch (\Exception $e) {
 			$this->logger->error('Failed to import MS Form', ['exception' => $e]);
 			return new DataResponse([
-				'error' => 'Failed to import form: ' . $e->getMessage(),
+				// TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
+				'error' => $this->l->t('Could not import the form: %s', [$e->getMessage()]),
 			], Http::STATUS_INTERNAL_SERVER_ERROR);
 		}
 	}

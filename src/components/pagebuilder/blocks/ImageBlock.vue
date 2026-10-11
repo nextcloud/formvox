@@ -4,7 +4,7 @@
       <div v-if="block.settings.imageUrl" class="image-preview">
         <img :src="block.settings.imageUrl" :alt="block.settings.alt || ''" />
         <NcButton type="error" @click="removeImage">
-          {{ t('Remove') }}
+          {{ t('formvox', 'Remove') }}
         </NcButton>
       </div>
       <div v-else class="image-upload">
@@ -16,7 +16,8 @@
           @change="onFileSelect"
         >
         <NcButton @click="$refs.fileInput.click()">
-          {{ t('Upload image') }}
+          <!-- TRANSLATORS: Verb: button -->
+          {{ t('formvox', 'Upload image') }}
         </NcButton>
       </div>
     </template>

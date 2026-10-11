@@ -3,9 +3,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: FormVox 1.4.3\n"
+"Project-Id-Version: FormVox 1.5.0\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"PO-Revision-Date: 2026-08-25 00:00+0000\n"
+"PO-Revision-Date: 2026-10-09 00:00+0000\n"
 "Last-Translator: FormVox <translations@nextcloud.com>\n"
 "Language-Team: fr\n"
 "MIME-Version: 1.0\n"
@@ -23,18 +23,6 @@ msgstr "(obligatoire)"
 msgid "(untitled)"
 msgstr "(sans titre)"
 
-msgid "{count} others editing"
-msgstr "{count} autres en édition"
-
-msgid "{count} responses"
-msgstr "réponses {count}"
-
-msgid "{count} responses collected"
-msgstr "{count} réponses collectées"
-
-msgid "{count} rows total across all responses"
-msgstr "{count} lignes au total sur toutes les réponses"
-
 msgid "{n} / {max} characters"
 msgstr "{n} / {max} caractères"
 
@@ -44,8 +32,11 @@ msgstr "{n} restant(s)"
 msgid "{n} of max {max} selected"
 msgstr "{n} sur {max} maximum sélectionné(s)"
 
-msgid "{n} stars"
-msgstr "{n} étoiles"
+msgid "{name} (you)"
+msgstr ""
+
+msgid "{size} MB"
+msgstr ""
 
 msgid "* (all domains)"
 msgstr "* (tous les domaines)"
@@ -53,11 +44,20 @@ msgstr "* (tous les domaines)"
 msgid "/ (root folder)"
 msgstr "/ (dossier racine)"
 
+msgid "%1$s is scheduled to open at:"
+msgstr "%1$s est programmé pour s'ouvrir le :"
+
 msgid "+ Add condition"
 msgstr "+ Ajouter une condition"
 
+msgid "A server extension blocked the upload"
+msgstr ""
+
 msgid "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development."
 msgstr "Un abonnement comprend : une compatibilité Nextcloud garantie, une assistance par e-mail, des corrections de bugs prioritaires et un développement actif."
+
+msgid "A title is required."
+msgstr ""
 
 msgid "A unique hash of your instance URL (privacy-friendly identifier)"
 msgstr "Un hash unique de l'URL de votre instance (identifiant respectueux de la vie privée)"
@@ -65,10 +65,22 @@ msgstr "Un hash unique de l'URL de votre instance (identifiant respectueux de la
 msgid "Access control"
 msgstr "Contrôle d'accès"
 
+msgid "Access denied"
+msgstr ""
+
+msgid "Access restricted"
+msgstr "Accès restreint"
+
 msgid "Access restrictions saved"
 msgstr "Restrictions d'accès enregistrées"
 
-msgid "Active Users (30 days)"
+msgid "Account names or email addresses"
+msgstr "Noms d'utilisateurs ou adresses e-mail"
+
+msgid "Accounts"
+msgstr "Utilisateurs"
+
+msgid "Active accounts (30 days)"
 msgstr "Utilisateurs actifs (30 jours)"
 
 msgid "Add a description or instructions"
@@ -113,9 +125,6 @@ msgstr "Ajouter un document source (facultatif)"
 msgid "Add your expenses below. Click \"+ Add row\" to add more items."
 msgstr ""
 
-msgid "Add your expenses below. Click \\\"+ Add row\\\" to add more items."
-msgstr ""
-
 msgid "Added"
 msgstr "Ajouté"
 
@@ -131,10 +140,10 @@ msgstr "L'IA n'a pas pu générer \"{formTitle}\""
 msgid "AI could not generate \"%1$s\""
 msgstr "L'IA n'a pas pu générer \"%1$s\""
 
-msgid "AI could not generate \\\"{formTitle}\\\""
+msgid "AI did not generate any questions."
 msgstr ""
 
-msgid "AI could not generate \\\"%1$s\\\""
+msgid "AI did not generate any usable questions."
 msgstr ""
 
 msgid "AI finished generating \"{formTitle}\""
@@ -143,17 +152,14 @@ msgstr "L'IA a fini de générer \"{formTitle}\""
 msgid "AI finished generating \"%1$s\""
 msgstr "L'IA a fini de générer \"%1$s\""
 
-msgid "AI finished generating \\\"{formTitle}\\\""
-msgstr ""
-
-msgid "AI finished generating \\\"%1$s\\\""
-msgstr ""
-
 msgid "AI form created. Check your notifications to open it."
 msgstr "Formulaire IA créé. Consultez vos notifications pour l'ouvrir."
 
-msgid "AI Form Generation"
+msgid "AI form generation"
 msgstr "Génération de formulaires par IA"
+
+msgid "AI form generation is not available on this instance."
+msgstr ""
 
 msgid "AI generation failed."
 msgstr "Échec de la génération par IA."
@@ -173,11 +179,17 @@ msgstr "L'IA est encore en train de générer. Vous serez notifié lorsque ce se
 msgid "AI provider available"
 msgstr "Fournisseur d'IA disponible"
 
+msgid "AI returned an invalid response. Try a shorter or simpler description."
+msgstr ""
+
 msgid "AI settings saved"
 msgstr "Paramètres d'IA enregistrés"
 
 msgid "AI will base questions on the document and your description. Generation can take up to 2 minutes."
 msgstr "L'IA basera les questions sur le document et votre description. La génération peut prendre jusqu'à 2 minutes."
+
+msgid "AI-generated form"
+msgstr ""
 
 msgid "Align center"
 msgstr "Aligner au centre"
@@ -221,8 +233,11 @@ msgstr "Autoriser les fichiers multiples"
 msgid "Allow multiple submissions"
 msgstr "Autoriser les soumissions multiples"
 
-msgid "Allow users to upload a source document (PDF/DOCX/ODT)"
+msgid "Allow people to upload a source document (PDF/DOCX/ODT)"
 msgstr "Autoriser les utilisateurs à téléverser un document source (PDF/DOCX/ODT)"
+
+msgid "Allowed accounts"
+msgstr "Utilisateurs autorisés"
 
 msgid "Allowed domains for embedding"
 msgstr "Domaines autorisés pour l'intégration"
@@ -233,9 +248,6 @@ msgstr "Types de fichiers autorisés"
 msgid "Allowed groups"
 msgstr "Groupes autorisés"
 
-msgid "Allowed users"
-msgstr "Utilisateurs autorisés"
-
 msgid "Alt text"
 msgstr "Texte alternatif"
 
@@ -244,6 +256,12 @@ msgstr "Montant"
 
 msgid "An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there."
 msgstr "Une question e-mail est ajoutée automatiquement à votre formulaire. Le répondant reçoit une confirmation à l'adresse qu'il y saisit."
+
+msgid "An error occurred"
+msgstr ""
+
+msgid "AND"
+msgstr ""
 
 msgid "Anonymous"
 msgstr "Anonyme"
@@ -254,6 +272,12 @@ msgstr "Statistiques d'utilisation anonymes"
 msgid "Another quiz question - correct answer: In Nextcloud files"
 msgstr "Une autre question de quiz - bonne réponse : Dans les fichiers Nextcloud"
 
+msgid "Answer does not match the required format for question '%s'"
+msgstr ""
+
+msgid "Answer for question '%1$s' exceeds the %2$d-character limit"
+msgstr ""
+
 msgid "Any final thoughts or feedback?"
 msgstr "Des dernières réflexions ou commentaires ?"
 
@@ -263,13 +287,13 @@ msgstr "UNE des conditions suivantes"
 msgid "Any personal or sensitive data"
 msgstr "Toute donnée personnelle ou sensible"
 
-msgid "API & Webhooks"
-msgstr "API & Webhooks"
-
-msgid "API Access"
+msgid "API access"
 msgstr "Accès à l'API"
 
-msgid "API Documentation"
+msgid "API and webhooks"
+msgstr "API and webhooks"
+
+msgid "API documentation"
 msgstr "Documentation de l'API"
 
 msgid "API key created"
@@ -380,6 +404,9 @@ msgstr "Catégorie"
 msgid "Center"
 msgstr "Centre"
 
+msgid "Challenge verification failed. Please refresh the page."
+msgstr ""
+
 msgid "Change source document"
 msgstr "Changer le document source"
 
@@ -399,6 +426,9 @@ msgid "Choose source document"
 msgstr "Choisir un document source"
 
 msgid "Click \"Grant admin consent\" for your organization"
+msgstr ""
+
+msgid "Click here"
 msgstr ""
 
 msgid "Client ID (Application ID)"
@@ -434,7 +464,7 @@ msgstr "Liste d'extensions (.pdf) ou de types MIME (image/*) séparée par des v
 msgid "Condition active"
 msgstr "Condition active"
 
-msgid "Conditional logic / Branching"
+msgid "Conditional logic / branching"
 msgstr "Logique conditionnelle / Branchement"
 
 msgid "Conditions"
@@ -470,6 +500,12 @@ msgstr "Connexion …"
 msgid "Consent (single checkbox)"
 msgstr "Consentement (case à cocher unique)"
 
+msgid "Consent question requires boolean answer"
+msgstr ""
+
+msgid "Contact the form owner if you believe this is an error."
+msgstr "Contactez le propriétaire du formulaire si vous pensez qu'il s'agit d'une erreur."
+
 msgid "contains"
 msgstr "contient"
 
@@ -497,10 +533,25 @@ msgstr "Copiez ce code pour intégrer le formulaire dans votre site web, SharePo
 msgid "Cost"
 msgstr "Coût"
 
-msgid "Could not reach the licence server, so the FormVox subscription status could not be confirmed."
+msgid "Could not create FormVox form: {error}"
+msgstr ""
+
+msgid "Could not fetch your forms: %s"
+msgstr ""
+
+msgid "Could not import responses: %s"
+msgstr ""
+
+msgid "Could not import the form: %s"
+msgstr ""
+
+msgid "Could not load the form: %s"
+msgstr ""
+
+msgid "Could not reach the license server, so the FormVox subscription status could not be confirmed."
 msgstr "Impossible de joindre le serveur de licences ; le statut de l'abonnement FormVox n'a pas pu être confirmé."
 
-msgid "Could not reach the licence server, so the subscription status could not be confirmed."
+msgid "Could not reach the license server, so the subscription status could not be confirmed."
 msgstr "Impossible de joindre le serveur de licences ; le statut de l'abonnement n'a pas pu être confirmé."
 
 msgid "Could not reach the telemetry server. Please try again later."
@@ -508,6 +559,9 @@ msgstr "Impossible de joindre le serveur de télémétrie. Veuillez réessayer p
 
 msgid "Could not resolve the selected file."
 msgstr "Impossible de résoudre le fichier sélectionné."
+
+msgid "Could not schedule the AI task."
+msgstr ""
 
 msgid "Create"
 msgstr "Créer"
@@ -566,11 +620,14 @@ msgstr "Types MIME ou extensions personnalisés"
 msgid "Customize the appearance of your public forms."
 msgstr "Personnalisez l'apparence de vos formulaires publics."
 
-msgid "Customize the look and feel of this form. Leave disabled to use the admin defaults."
+msgid "Customize the look and feel of this form. Leave disabled to use the administration defaults."
 msgstr "Personnalisez l'apparence de ce formulaire. Laissez désactivé pour utiliser les paramètres par défaut."
 
 msgid "Cyan"
 msgstr "Cyan"
+
+msgid "Dark"
+msgstr ""
 
 msgid "Dashed"
 msgstr "Tirets"
@@ -583,6 +640,12 @@ msgstr "Date et heure"
 
 msgid "Date and time picker"
 msgstr "Sélecteur de date et d'heure"
+
+msgid "Date is after the allowed maximum for question '%s'"
+msgstr ""
+
+msgid "Date is before the allowed minimum for question '%s'"
+msgstr ""
 
 msgid "Date must be on or after {min}"
 msgstr "La date doit être le ou après le {min}"
@@ -598,6 +661,9 @@ msgstr "Par défaut"
 
 msgid "Define rules to skip to a specific page based on answers. If no rule matches, the next page is shown."
 msgstr "Définissez des règles pour passer à une page spécifique en fonction des réponses. Si aucune règle ne correspond, la page suivante est affichée."
+
+msgid "Delegated"
+msgstr ""
 
 msgid "Delete"
 msgstr "Supprimer"
@@ -622,6 +688,9 @@ msgstr "Supprimer le modèle"
 
 msgid "Deleted"
 msgstr "Supprimé"
+
+msgid "Demo"
+msgstr ""
 
 msgid "Demo form"
 msgstr "Formulaire de démo"
@@ -710,14 +779,11 @@ msgstr "Dupliquer"
 msgid "e.g. .pdf, .docx, image/*"
 msgstr "par exemple .pdf, .docx, image/*"
 
-msgid "e.g. ^[0-9]{4}[A-Z]{2}$"
-msgstr "par exemple, ^[0-9]{4}[A-Z]{2}$"
+msgid "e.g. {example}"
+msgstr "par exemple, {example}"
 
 msgid "e.g. A customer satisfaction survey with 8 questions about service quality, food, and value for money."
 msgstr "par ex. Une enquête de satisfaction client avec 8 questions sur la qualité du service, la nourriture et le rapport qualité-prix."
-
-msgid "e.g. FVOX-XXXX-XXXX-XXXX-XXXX"
-msgstr "ex. FVOX-XXXX-XXXX-XXXX-XXXX"
 
 msgid "e.g. Not at all"
 msgstr "p.ex. Pas du tout"
@@ -727,9 +793,6 @@ msgstr "par exemple, veuillez saisir une valeur valide"
 
 msgid "e.g. Very much"
 msgstr "p.ex. Beaucoup"
-
-msgid "e.g., 12345678-1234-1234-1234-123456789012"
-msgstr "e.g., 12345678-1234-1234-1234-123456789012"
 
 msgid "e.g., Notify on submission"
 msgstr "par exemple, Notifier la soumission"
@@ -752,6 +815,9 @@ msgstr "Modifier"
 msgid "Edit form"
 msgstr "Modifier le formulaire"
 
+msgid "Edit with FormVox"
+msgstr ""
+
 msgid "Email"
 msgstr "E-mail"
 
@@ -773,7 +839,7 @@ msgstr "Paramètres d'intégration"
 msgid "Embed settings saved"
 msgstr "Sauvegarde des paramètres d'intégration"
 
-msgid "Enable AI form generation for all users"
+msgid "Enable AI form generation for everyone"
 msgstr "Activer la génération de formulaires par IA pour tous les utilisateurs"
 
 msgid "Enable pages"
@@ -812,6 +878,9 @@ msgstr "Entrez un nouveau mot de passe"
 msgid "Enter page title:"
 msgstr "Entrez le titre de la page :"
 
+msgid "Enter password"
+msgstr "Entrez le mot de passe"
+
 msgid "Enter text …"
 msgstr "Entrez du texte …"
 
@@ -827,14 +896,17 @@ msgstr "Saisissez votre question"
 msgid "equals"
 msgstr "est égal à"
 
+msgid "Error"
+msgstr ""
+
 msgid "Error message"
 msgstr "Message d'erreur"
 
 msgid "Events"
 msgstr "Evénements"
 
-msgid "Examples: ^[A-Z]{2}[0-9]{4}$ (license plate), ^\\d{10}$ (10 digits)"
-msgstr "Exemples : ^[A-Z]{2}[0-9]{4}$ (plaque d'immatriculation), ^\\d{10}$ (10 chiffres)"
+msgid "Examples: {pattern1} (license plate), {pattern2} (10 digits)"
+msgstr "Exemples : {pattern1} (plaque d'immatriculation), {pattern2} (10 chiffres)"
 
 msgid "Excel file"
 msgstr "Fichier Excel"
@@ -862,6 +934,9 @@ msgstr "Exporter en ODT"
 
 msgid "Export options"
 msgstr "Options d'exportation"
+
+msgid "Extremely likely"
+msgstr ""
 
 msgid "Failed to connect to Microsoft"
 msgstr "Échec de la connexion à Microsoft"
@@ -929,6 +1004,9 @@ msgstr "Impossible de supprimer la clé d'abonnement"
 msgid "Failed to remove template"
 msgstr "Échec de la suppression du modèle"
 
+msgid "Failed to replace response link"
+msgstr ""
+
 msgid "Failed to save access restrictions"
 msgstr "Échec de l'enregistrement des restrictions d'accès"
 
@@ -965,6 +1043,9 @@ msgstr "Échec de l'enregistrement du modèle"
 msgid "Failed to send report"
 msgstr "Échec de l'envoi du rapport"
 
+msgid "Failed to send report: {error}"
+msgstr "Échec de l'envoi du rapport : {error}"
+
 msgid "Failed to submit response"
 msgstr "Échec de la soumission de la réponse"
 
@@ -995,20 +1076,23 @@ msgstr "Le fichier « {name} » n'est pas un type de fichier autorisé"
 msgid "File \"{name}\" is too large. Maximum size is {size} MB"
 msgstr "Le fichier « {name} » est trop volumineux. La taille maximale est de {size} Mo"
 
+msgid "File is too large. The maximum size is %s MB."
+msgstr ""
+
 msgid "File upload"
 msgstr "Téléchargement de fichier"
 
 msgid "File-based storage"
 msgstr "Stockage basé sur des fichiers"
 
-msgid "files uploaded"
-msgstr "fichiers téléchargés"
-
 msgid "Flexibility"
 msgstr "Flexibilité"
 
 msgid "Footer"
 msgstr "Pied de page"
+
+msgid "Forest"
+msgstr ""
 
 msgid "Form"
 msgstr ""
@@ -1021,6 +1105,9 @@ msgstr "Formulaire supprimé"
 
 msgid "Form imported successfully!"
 msgstr "Formulaire importé avec succès !"
+
+msgid "Form not found"
+msgstr ""
 
 msgid "Form statistics"
 msgstr "Statistiques des formulaires"
@@ -1036,9 +1123,6 @@ msgstr "Titre du formulaire"
 
 msgid "Formatting"
 msgstr "Mise en forme"
-
-msgid "FormVox"
-msgstr "FormVox"
 
 msgid "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support."
 msgstr "FormVox est gratuit et open source (AGPL-3.0). Toutes les fonctionnalités fonctionnent sans abonnement. Si FormVox est utile à votre organisation, un abonnement soutient le développement actif et vous garantit la compatibilité Nextcloud ainsi qu'une assistance par e-mail."
@@ -1124,8 +1208,8 @@ msgstr "En-tête"
 msgid "Heading"
 msgstr "Titre"
 
-msgid "Height"
-msgstr "Hauteur"
+msgid "Height:"
+msgstr "Hauteur :"
 
 msgid "Help improve FormVox by sharing anonymous usage statistics."
 msgstr "Aidez à améliorer FormVox en partageant des statistiques d'utilisation anonymes."
@@ -1148,10 +1232,7 @@ msgstr "Comment préféreriez-vous être contacté ?"
 msgid "How would you rate your overall experience?"
 msgstr "Comment évalueriez-vous votre expérience globale ?"
 
-msgid "HTML"
-msgstr "HTML"
-
-msgid "HTML Content"
+msgid "HTML content"
 msgstr "Contenu HTML"
 
 msgid "I agree"
@@ -1196,6 +1277,9 @@ msgstr "Options d'importation"
 msgid "Import responses only (coming soon)"
 msgstr "Importer les réponses uniquement (bientôt)"
 
+msgid "Imported form"
+msgstr ""
+
 msgid "Importing …"
 msgstr "Importation …"
 
@@ -1210,6 +1294,9 @@ msgstr "Dans le cloud"
 
 msgid "Include your API key in the X-FormVox-API-Key header."
 msgstr "Incluez votre clé API dans l'en-tête X-FormVox-API-Key."
+
+msgid "Incorrect password"
+msgstr ""
 
 msgid "Individual responses"
 msgstr "Réponses individuelles"
@@ -1228,6 +1315,27 @@ msgstr "Intégrations"
 
 msgid "Intermediate - Some experience"
 msgstr "Intermédiaire - Un peu d'expérience"
+
+msgid "Introduction"
+msgstr ""
+
+msgid "Invalid answer for question '%s'"
+msgstr ""
+
+msgid "Invalid date format for question '%s'"
+msgstr ""
+
+msgid "Invalid datetime format for question '%s'"
+msgstr ""
+
+msgid "Invalid file type. Allowed: %s"
+msgstr ""
+
+msgid "Invalid question"
+msgstr ""
+
+msgid "Invalid time format for question '%s'"
+msgstr ""
 
 msgid "is currently editing this form"
 msgstr "modifie actuellement ce formulaire"
@@ -1259,8 +1367,8 @@ msgstr "Nom de la clé"
 msgid "Large (64px)"
 msgstr "Grand (64px)"
 
-msgid "Last report sent"
-msgstr "Dernier rapport envoyé"
+msgid "Last report sent: {date}"
+msgstr "Dernier rapport envoyé : {date}"
 
 msgid "Latest time"
 msgstr "Heure la plus tard"
@@ -1331,6 +1439,9 @@ msgstr "Contenu Markdown affiché aux répondants (aucune réponse requise)"
 msgid "Matrix"
 msgstr "Matrice"
 
+msgid "Matrix question"
+msgstr ""
+
 msgid "Matrix/grid question with multiple rows and columns"
 msgstr "Question matrice/grille avec plusieurs lignes et colonnes"
 
@@ -1342,9 +1453,6 @@ msgstr "Max {size} MB"
 
 msgid "Max label"
 msgstr "Libellé max"
-
-msgid "Maximum {n} files allowed"
-msgstr "Maximum de {n} fichiers autorisés"
 
 msgid "Maximum characters"
 msgstr "Nombre maximal de caractères"
@@ -1358,8 +1466,8 @@ msgstr "Nombre maximum de fichiers"
 msgid "Maximum questions per generated form"
 msgstr "Nombre maximal de questions par formulaire généré"
 
-msgid "Maximum responses"
-msgstr "Nombre maximal de réponses"
+msgid "Maximum responses:"
+msgstr "Nombre maximal de réponses :"
 
 msgid "Maximum selections"
 msgstr "Nombre maximal de sélections"
@@ -1370,23 +1478,23 @@ msgstr "Taille maximale du document source"
 msgid "Maximum stars"
 msgstr "Nombre maximum d'étoiles"
 
-msgid "Maximum times this option can be selected — leave empty for unlimited (#104)"
-msgstr "Nombre maximal de fois où cette option peut être sélectionnée — laissez vide pour illimité (#104)"
+msgid "Maximum times this option can be selected — leave empty for unlimited"
+msgstr "Nombre maximal de fois où cette option peut être sélectionnée — laissez vide pour illimité"
 
 msgid "Medium (32px)"
 msgstr "Moyen (32px)"
 
-msgid "Message when full"
-msgstr "Message en cas de saturation"
-
-msgid "Microsoft Forms"
-msgstr "Microsoft Forms"
+msgid "Message when full:"
+msgstr "Message en cas de saturation :"
 
 msgid "Microsoft Forms import"
 msgstr "Importation de formulaires Microsoft"
 
-msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Settings > FormVox > Integrations."
+msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Administration settings > FormVox > Integrations."
 msgstr "L'importation de Microsoft Forms n'est pas configurée. Veuillez demander à votre administrateur de le configurer dans Paramètres > FormVox > Intégrations."
+
+msgid "Microsoft Forms is not configured. Ask your administrator to configure it."
+msgstr ""
 
 msgid "Microsoft Forms settings saved"
 msgstr "Sauvegarde des paramètres de Microsoft Forms"
@@ -1396,6 +1504,9 @@ msgstr "Min"
 
 msgid "Min label"
 msgstr "Libellé min"
+
+msgid "Minimal"
+msgstr ""
 
 msgid "Minimum selections"
 msgstr "Nombre minimal de sélections"
@@ -1415,6 +1526,9 @@ msgstr "Choix multiple"
 msgid "Multiple choice (checkboxes) - select all that apply"
 msgstr "Choix multiple (cases à cocher) - sélectionnez toutes les options applicables"
 
+msgid "Multiple choice question requires array answer"
+msgstr ""
+
 msgid "My forms"
 msgstr "Mes formulaires"
 
@@ -1424,26 +1538,44 @@ msgstr "Jamais"
 msgid "New form"
 msgstr "Nouveau formulaire"
 
+msgid "New poll"
+msgstr ""
+
+msgid "New registration"
+msgstr ""
+
+msgid "New response link created — the previous link no longer works"
+msgstr ""
+
 msgid "New response to \"{formTitle}\" from {respondentName}"
 msgstr ""
 
 msgid "New response to \"%1$s\" from %2$s"
 msgstr ""
 
-msgid "New response to \\\"{formTitle}\\\" from {respondentName}"
-msgstr ""
-
-msgid "New response to \\\"%1$s\\\" from %2$s"
+msgid "New survey"
 msgstr ""
 
 msgid "Next"
 msgstr "Suivant"
+
+msgid "Nextcloud dark"
+msgstr ""
+
+msgid "Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or {email}."
+msgstr ""
 
 msgid "No"
 msgstr "Non"
 
 msgid "No AI provider configured"
 msgstr "Aucun fournisseur d'IA configuré"
+
+msgid "No AI text-to-text provider is available on this Nextcloud instance."
+msgstr ""
+
+msgid "No AI text-to-text provider is configured on this instance. Install an AI provider (for example %s) first."
+msgstr ""
 
 msgid "No blocks yet. Add one below."
 msgstr "Pas encore de blocs. Ajoutez-en un ci-dessous."
@@ -1453,6 +1585,9 @@ msgstr "Sans couleur"
 
 msgid "No custom templates yet."
 msgstr "Aucun modèle personnalisé pour le moment."
+
+msgid "No file was uploaded"
+msgstr ""
 
 msgid "No forms found in your Microsoft Forms account."
 msgstr "Aucun formulaire n'a été trouvé dans votre compte Microsoft Forms."
@@ -1496,6 +1631,15 @@ msgstr "Non, merci"
 msgid "Not answered"
 msgstr "Non répondu"
 
+msgid "Not at all likely"
+msgstr ""
+
+msgid "Not authenticated"
+msgstr ""
+
+msgid "Not connected to Microsoft. Please connect first."
+msgstr ""
+
 msgid "not equals"
 msgstr "n'est pas égal à"
 
@@ -1520,7 +1664,10 @@ msgstr "Liste numérotée"
 msgid "Numeric input"
 msgstr "Entrée numérique"
 
-msgid "ODT Template"
+msgid "Ocean"
+msgstr ""
+
+msgid "ODT template"
 msgstr "Modèle ODT"
 
 msgid "ODT template …"
@@ -1529,7 +1676,7 @@ msgstr "Modèle ODT …"
 msgid "On external servers"
 msgstr "Sur des serveurs externes"
 
-msgid "Only selected users and group members can access this form. They will need to log in."
+msgid "Only selected accounts and group members can access this form. They will need to log in."
 msgstr "Seuls les utilisateurs sélectionnés et les membres du groupe peuvent accéder à ce formulaire. Ils devront se connecter."
 
 msgid "Open form"
@@ -1547,6 +1694,9 @@ msgstr "Opérateur"
 msgid "Option {n}"
 msgstr "Option {n}"
 
+msgid "Option %d"
+msgstr ""
+
 msgid "Option A"
 msgstr "Option A"
 
@@ -1561,6 +1711,9 @@ msgstr "Options"
 
 msgid "Options (comma separated)"
 msgstr "Options (séparées par des virgules)"
+
+msgid "OR"
+msgstr ""
 
 msgid "Orange"
 msgstr "Orange"
@@ -1589,8 +1742,8 @@ msgstr "Mot de passe"
 msgid "Password protect"
 msgstr "Protection par mot de passe"
 
-msgid "PDF"
-msgstr "PDF (EN ANGLAIS)"
+msgid "Password required"
+msgstr ""
 
 msgid "PDF only"
 msgstr "PDF seulement"
@@ -1600,6 +1753,9 @@ msgstr "Par page :"
 
 msgid "Performance"
 msgstr "Performance"
+
+msgid "Permission denied"
+msgstr ""
 
 msgid "Permissions"
 msgstr "Autorisations"
@@ -1627,6 +1783,9 @@ msgstr "Veuillez répondre à toutes les questions obligatoires"
 
 msgid "Please answer all rows in this question"
 msgstr "Veuillez répondre à toutes les lignes de cette question"
+
+msgid "Please describe the form you want to create or pick a source document."
+msgstr ""
 
 msgid "Please enter a subscription key"
 msgstr "Veuillez saisir une clé d'abonnement"
@@ -1685,14 +1844,23 @@ msgstr "Aperçu"
 msgid "Previous"
 msgstr "Précédent"
 
+msgid "Pricing details"
+msgstr ""
+
 msgid "Primary color"
 msgstr "Couleur primaire"
 
-msgid "Privacy / Self-hosted"
+msgid "Privacy / self-hosted"
 msgstr "Confidentialité / Auto-hébergé"
 
 msgid "Progress bar"
 msgstr "Barre de progression"
+
+msgid "Protected form"
+msgstr ""
+
+msgid "Provide a description, an uploaded document, or both."
+msgstr ""
 
 msgid "Purple"
 msgstr "Pourpre"
@@ -1700,11 +1868,29 @@ msgstr "Pourpre"
 msgid "Question"
 msgstr "Question"
 
+msgid "Question '%1$s': Unknown type '%2$s' converted to text"
+msgstr ""
+
+msgid "Question '%s' is required"
+msgstr ""
+
+msgid "Question '%s': File upload question imported, but uploaded files cannot be migrated"
+msgstr ""
+
+msgid "Question '%s': Matrix/Likert columns could not be imported from the Microsoft Forms API. Please edit the column options manually."
+msgstr ""
+
+msgid "Question '%s': Ranking converted to matrix (ranking functionality lost)"
+msgstr ""
+
+msgid "Question {n}"
+msgstr ""
+
+msgid "Question ID is required"
+msgstr ""
+
 msgid "Questions"
 msgstr "Questions"
-
-msgid "questions imported"
-msgstr "questions importées"
 
 msgid "Questions?"
 msgstr "Des questions ?"
@@ -1781,6 +1967,12 @@ msgstr "Renommer"
 msgid "Replace template"
 msgstr "Remplacer le modèle"
 
+msgid "Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form."
+msgstr ""
+
+msgid "Replace with a new link"
+msgstr ""
+
 msgid "Report sent successfully"
 msgstr "Rapport envoyé avec succès"
 
@@ -1793,8 +1985,17 @@ msgstr "Obligatoire"
 msgid "Respondent"
 msgstr "Répondant"
 
+msgid "Respondent ID"
+msgstr ""
+
 msgid "Respondent name"
 msgstr "Nom du répondant"
+
+msgid "Respondent type"
+msgstr ""
+
+msgid "Respondent:"
+msgstr ""
 
 msgid "Response created"
 msgstr "Réponse créée"
@@ -1804,6 +2005,9 @@ msgstr "Données de réponse ou réponses"
 
 msgid "Response deleted"
 msgstr "Réponse supprimée"
+
+msgid "Response ID"
+msgstr ""
 
 msgid "Response link"
 msgstr "Lien de réponse"
@@ -1820,14 +2024,8 @@ msgstr "Paramètres de réponse"
 msgid "Response updated"
 msgstr "Réponse mise à jour"
 
-msgid "responses"
-msgstr "réponses"
-
-msgid "Responses"
-msgstr "Réponses"
-
-msgid "responses imported"
-msgstr "réponses importées"
+msgid "Responses ({count})"
+msgstr "Réponses ({count})"
 
 msgid "Responsive width"
 msgstr "Largeur adaptée"
@@ -1835,7 +2033,7 @@ msgstr "Largeur adaptée"
 msgid "Restrict selectable range (optional)"
 msgstr "Restreindre la plage sélectionnable (facultatif)"
 
-msgid "Restrict to specific users/groups"
+msgid "Restrict to specific accounts or groups"
 msgstr "Restreindre à des utilisateurs/groupes spécifiques"
 
 msgid "Results"
@@ -1849,6 +2047,9 @@ msgstr "Routage"
 
 msgid "Row {n}"
 msgstr "Ligne {n}"
+
+msgid "Row {n}: {cells}"
+msgstr ""
 
 msgid "Rows"
 msgstr "Lignes"
@@ -1886,7 +2087,7 @@ msgstr "Planifier l'ouverture"
 msgid "Score"
 msgstr "Score"
 
-msgid "Search users and groups"
+msgid "Search accounts and groups"
 msgstr "Recherche d'utilisateurs et de groupes"
 
 msgid "Section"
@@ -1933,6 +2134,12 @@ msgstr "Envoyer le rapport maintenant"
 
 msgid "Sending …"
 msgstr "Envoi en cours …"
+
+msgid "Server configuration error: missing temporary folder"
+msgstr ""
+
+msgid "Server error: could not write the file"
+msgstr ""
 
 msgid "Set expiration"
 msgstr "Définir l'expiration"
@@ -2003,8 +2210,20 @@ msgstr "Continu"
 msgid "Someone"
 msgstr "Quelqu'un"
 
+msgid "Something went wrong"
+msgstr ""
+
 msgid "Source"
 msgstr "Source"
+
+msgid "Source document is too large. The maximum is %s MB."
+msgstr ""
+
+msgid "Source document not found."
+msgstr ""
+
+msgid "Source document uploads are disabled by the administrator."
+msgstr ""
 
 msgid "Spacer"
 msgstr "Espacement"
@@ -2020,6 +2239,9 @@ msgstr "Étoiles"
 
 msgid "Start from scratch"
 msgstr "Commencer à zéro"
+
+msgid "Start import"
+msgstr ""
 
 msgid "Start over"
 msgstr "Recommencer"
@@ -2041,6 +2263,12 @@ msgstr "Date de soumission"
 
 msgid "Submit"
 msgstr "Soumettre"
+
+msgid "Submitted at"
+msgstr ""
+
+msgid "Submitted:"
+msgstr ""
 
 msgid "Submitting …"
 msgstr "Soumission …"
@@ -2072,6 +2300,9 @@ msgstr "Clé d'abonnement refusée : {reason}"
 msgid "Summary"
 msgstr "Résumé"
 
+msgid "Sunset"
+msgstr ""
+
 msgid "Support"
 msgstr "Support"
 
@@ -2089,9 +2320,6 @@ msgstr "Type de tâche :"
 
 msgid "Tell us about yourself"
 msgstr "Parlez-nous de vous"
-
-msgid "Template"
-msgstr "Modèle"
 
 msgid "Template active — exports will use this template."
 msgstr "Modèle actif — les exports utiliseront ce modèle."
@@ -2111,10 +2339,13 @@ msgstr "Titre du modèle (facultatif)"
 msgid "Template uploaded"
 msgstr "Modèle téléversé"
 
+msgid "Template:"
+msgstr "Modèle :"
+
 msgid "Templates"
 msgstr ""
 
-msgid "Templates appear in the \"New form\" dialog for every user. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
+msgid "Templates appear in the \"New form\" dialog for everyone. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
 msgstr "Les modèles apparaissent dans la boîte de dialogue « Nouveau formulaire » pour chaque utilisateur. Capturez ici un formulaire existant comme modèle ou supprimez les modèles que vous ne souhaitez plus proposer."
 
 msgid "Tenant ID"
@@ -2129,6 +2360,9 @@ msgstr "Couleur du texte"
 msgid "Text field with email validation"
 msgstr "Champ de texte avec validation d'e-mail"
 
+msgid "Thank you for filling in \"%s\".\n\nWe have received your response."
+msgstr ""
+
 msgid "Thank you for helping improve FormVox!"
 msgstr "Merci de contribuer à l'amélioration de FormVox !"
 
@@ -2141,11 +2375,35 @@ msgstr "Page de remerciement"
 msgid "Thank you!"
 msgstr "Merci !"
 
+msgid "The AI task failed: %s"
+msgstr ""
+
 msgid "The AI will draft questions based on your description. Generation can take up to 2 minutes."
 msgstr "L'IA rédigera les questions à partir de votre description. La génération peut prendre jusqu'à 2 minutes."
 
-msgid "The telemetry server returned an error:"
-msgstr "Le serveur de télémétrie a renvoyé une erreur :"
+msgid "The file exceeds the maximum size allowed"
+msgstr ""
+
+msgid "The file exceeds the maximum upload size"
+msgstr ""
+
+msgid "The file was only partially uploaded"
+msgstr ""
+
+msgid "The import is not available."
+msgstr ""
+
+msgid "The Microsoft Forms connection is not available."
+msgstr ""
+
+msgid "The option '%s' is no longer available — capacity reached"
+msgstr ""
+
+msgid "The source must be a file."
+msgstr ""
+
+msgid "The telemetry server returned an error: {error}"
+msgstr "Le serveur de télémétrie a renvoyé une erreur : {error}"
 
 msgid "Theme presets"
 msgstr "Préréglages de thème"
@@ -2162,11 +2420,26 @@ msgstr "Cette saisie n'est pas valide"
 msgid "This field does not match the required format"
 msgstr "Ce champ ne correspond pas au format requis"
 
+msgid "This file type is not allowed"
+msgstr ""
+
+msgid "This form has expired"
+msgstr ""
+
 msgid "This form has reached its response limit"
 msgstr "Ce formulaire a atteint sa limite de réponse"
 
 msgid "This form is no longer accepting responses."
 msgstr "Ce formulaire n'accepte plus de réponses."
+
+msgid "This form is not yet open"
+msgstr "Ce formulaire n'est pas encore ouvert"
+
+msgid "This form is password protected"
+msgstr "Ce formulaire est protégé par mot de passe"
+
+msgid "This form requires you to be logged in"
+msgstr ""
 
 msgid "This form uses the default theme. Enable custom theme above to customize."
 msgstr "Ce formulaire utilise le thème par défaut. Activez le thème personnalisé ci-dessus pour personnaliser."
@@ -2177,7 +2450,7 @@ msgstr "Cette clé d'abonnement FormVox a été désactivée. Contactez-nous pou
 msgid "This FormVox subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
 msgstr "Cette clé d'abonnement FormVox est déjà enregistrée pour une autre instance Nextcloud. Contactez-nous si ce serveur remplace celle-ci."
 
-msgid "This FormVox subscription key is not known to the licence server. Check it for typos."
+msgid "This FormVox subscription key is not known to the license server. Check it for typos."
 msgstr "Cette clé d'abonnement FormVox est inconnue du serveur de licences. Vérifiez qu'elle ne contient pas de fautes de frappe."
 
 msgid "This FormVox subscription key is not valid yet."
@@ -2204,9 +2477,6 @@ msgstr "Cette question n'apparaît que si vous avez sélectionné \"Expert\" ci-
 msgid "This question only appears if you selected \"Yes\" above"
 msgstr "Cette question n'apparaît que si vous avez sélectionné \"Oui\" ci-dessus"
 
-msgid "This question only appears if you selected \\\"Yes\\\" above"
-msgstr ""
-
 msgid "This question will always be shown."
 msgstr "Cette question sera toujours affichée."
 
@@ -2216,7 +2486,7 @@ msgstr "Cette clé d'abonnement a été désactivée. Contactez-nous pour la ré
 msgid "This subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
 msgstr "Cette clé d'abonnement est déjà enregistrée pour une autre instance Nextcloud. Contactez-nous si ce serveur remplace celle-ci."
 
-msgid "This subscription key is not known to the licence server. Check it for typos."
+msgid "This subscription key is not known to the license server. Check it for typos."
 msgstr "Cette clé d'abonnement est inconnue du serveur de licences. Vérifiez qu'elle ne contient pas de fautes de frappe."
 
 msgid "This subscription key is not valid yet."
@@ -2224,6 +2494,12 @@ msgstr "Cette clé d'abonnement n'est pas encore valide."
 
 msgid "Time"
 msgstr "Heure"
+
+msgid "Time is after the allowed maximum for question '%s'"
+msgstr ""
+
+msgid "Time is before the allowed minimum for question '%s'"
+msgstr ""
 
 msgid "Time must be at or after {min}"
 msgstr "L'heure doit être à ou après {min}"
@@ -2243,6 +2519,12 @@ msgstr "Pour activer l'importation de Microsoft Forms, vous devez enregistrer un
 msgid "Toggle preview"
 msgstr "Activer/désactiver l'aperçu"
 
+msgid "Total account count and active accounts"
+msgstr "Nombre total d'utilisateurs et utilisateurs actifs"
+
+msgid "Total accounts"
+msgstr "Total d'utilisateurs"
+
 msgid "Total form and response counts"
 msgstr "Nombre total de formulaires et de réponses"
 
@@ -2252,20 +2534,29 @@ msgstr "Total des formulaires"
 msgid "Total responses"
 msgstr "Total des réponses"
 
-msgid "Total user count and active users"
-msgstr "Nombre total d'utilisateurs et utilisateurs actifs"
-
-msgid "Total users"
-msgstr "Total d'utilisateurs"
-
 msgid "Type to search …"
 msgstr "Tapez pour rechercher …"
 
-msgid "unique answers"
-msgstr "réponses uniques"
+msgid "Unknown error"
+msgstr ""
+
+msgid "Unknown form"
+msgstr ""
+
+msgid "Unknown upload error"
+msgstr ""
+
+msgid "Unsupported file type. Use PDF, DOCX, ODT, or a plain text file."
+msgstr ""
+
+msgid "Untitled form"
+msgstr ""
 
 msgid "Untitled section"
 msgstr "Section sans titre"
+
+msgid "Untitled template"
+msgstr ""
 
 msgid "Update response"
 msgstr "Mise à jour de la réponse"
@@ -2312,12 +2603,6 @@ msgstr "Utilisez ces points de terminaison pour interagir avec ce formulaire de 
 msgid "Use this secret to verify webhook signatures. It will not be shown again."
 msgstr "Utilisez ce secret pour vérifier les signatures des webhooks. Il ne sera plus affiché."
 
-msgid "User names or email addresses"
-msgstr "Noms d'utilisateurs ou adresses e-mail"
-
-msgid "Users"
-msgstr "Utilisateurs"
-
 msgid "Validation pattern"
 msgstr "Modèle de validation"
 
@@ -2336,9 +2621,6 @@ msgstr "Très mauvais"
 msgid "Video call"
 msgstr "Appel vidéo"
 
-msgid "View pricing & plans"
-msgstr "Voir les tarifs et formules"
-
 msgid "View subscription options"
 msgstr "Voir les options d'abonnement"
 
@@ -2348,7 +2630,7 @@ msgstr "Attendez la fin de la génération en cours"
 msgid "Warnings"
 msgstr "Avertissements"
 
-msgid "We collect: form counts, response counts, user counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared."
+msgid "We collect: form counts, response counts, account counts, version info (FormVox, Nextcloud, PHP), and basic server configuration. No personal data or form content is shared."
 msgstr "Nous collectons : le nombre de formulaires, de réponses et d'utilisateurs, les informations de version (FormVox, Nextcloud, PHP) et la configuration de base du serveur. Aucune donnée personnelle ni aucun contenu de formulaire n'est partagé."
 
 msgid "We saved your progress. You can continue where you left off."
@@ -2356,6 +2638,9 @@ msgstr "Nous avons sauvegardé votre progression. Vous pouvez reprendre là où 
 
 msgid "We will send you a confirmation when you submit this form."
 msgstr "Nous vous enverrons une confirmation lorsque vous soumettrez ce formulaire."
+
+msgid "Webhook"
+msgstr ""
 
 msgid "Webhook created"
 msgstr "Webhook créé"
@@ -2396,11 +2681,11 @@ msgstr "Quelle est votre priorité principale ?"
 msgid "What time works best for you?"
 msgstr "Quelle heure vous convient le mieux ?"
 
-msgid "What we collect"
-msgstr "Ce que nous collectons"
+msgid "What we collect:"
+msgstr "Ce que nous collectons :"
 
-msgid "What we never collect"
-msgstr "Ce que nous ne collectons jamais"
+msgid "What we never collect:"
+msgstr "Ce que nous ne collectons jamais :"
 
 msgid "When did you start using Nextcloud?"
 msgstr "Quand avez-vous commencé à utiliser Nextcloud ?"
@@ -2417,8 +2702,8 @@ msgstr "Quelles fonctionnalités sont les plus importantes pour vous ?"
 msgid "Which form tools have you used before?"
 msgstr "Quels outils de formulaire avez-vous utilisés auparavant ?"
 
-msgid "Width"
-msgstr "Largeur"
+msgid "Width:"
+msgstr "Largeur :"
 
 msgid "Work together"
 msgstr "Travailler ensemble"
@@ -2441,14 +2726,14 @@ msgstr "Oui"
 msgid "Yes, please contact me"
 msgstr "Oui, veuillez me contacter"
 
-msgid "you"
-msgstr "vous"
-
 msgid "You are connected to Microsoft. Click Next to select a form to import."
 msgstr "Vous êtes connecté à Microsoft. Cliquez sur Suivant pour sélectionner un formulaire à importer."
 
 msgid "You can view the form but not make changes right now."
 msgstr "Vous pouvez consulter le formulaire mais pas le modifier pour le moment."
+
+msgid "You do not have permission to access this form."
+msgstr "Vous n'avez pas la permission d'accéder à ce formulaire."
 
 msgid "You do not have permission to create a response link."
 msgstr "Vous n'êtes pas autorisé à créer un lien de réponse."
@@ -2458,6 +2743,15 @@ msgstr "Vous n'êtes pas autorisé à supprimer ce formulaire"
 
 msgid "You do not have permission to edit this form"
 msgstr "Vous n'avez pas le droit de modifier ce formulaire"
+
+msgid "You do not have permission to submit this form"
+msgstr ""
+
+msgid "You do not have permission to upload files to this form"
+msgstr ""
+
+msgid "You have already submitted a response to this form"
+msgstr ""
 
 msgid "You have no forms yet. Create one first."
 msgstr "Vous n'avez pas encore de formulaire. Créez-en un d'abord."
@@ -2471,9 +2765,6 @@ msgstr "L'URL réelle de votre serveur"
 msgid "Your email address"
 msgstr "Votre adresse e-mail"
 
-msgid "Your FormVox installation has exceeded the free tier limits (25 forms or 50 users). Consider subscribing to support ongoing development."
-msgstr "Votre installation FormVox a dépassé les limites gratuites (25 formulaires ou 50 utilisateurs). Envisagez de vous abonner pour soutenir le développement continu."
-
 msgid "Your FormVox subscription expired on {date}. Renew it to keep receiving support."
 msgstr "Votre abonnement FormVox a expiré le {date}. Renouvelez-le pour continuer à bénéficier du support."
 
@@ -2483,11 +2774,17 @@ msgstr "Votre abonnement FormVox a expiré. Renouvelez-le pour continuer à bén
 msgid "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support."
 msgstr "Votre clé d'abonnement FormVox est invalide ou expirée. Renouvelez-la pour continuer à bénéficier du support."
 
+msgid "Your HTML here …"
+msgstr ""
+
 msgid "Your installation"
 msgstr "Votre installation"
 
 msgid "Your response has been recorded."
 msgstr "Votre réponse a été enregistrée."
+
+msgid "Your response has been submitted successfully."
+msgstr ""
 
 msgid "Your score"
 msgstr "Votre score"
@@ -2497,3 +2794,73 @@ msgstr "Votre abonnement a expiré le {date}. Renouvelez-le pour continuer à b�
 
 msgid "Your subscription has expired. Renew it to keep receiving support."
 msgstr "Votre abonnement a expiré. Renouvelez-le pour continuer à bénéficier du support."
+
+msgid "%n file uploaded"
+msgid_plural "%n files uploaded"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n other editing"
+msgid_plural "%n others editing"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n question imported"
+msgid_plural "%n questions imported"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n response"
+msgid_plural "%n responses"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n response collected"
+msgid_plural "%n responses collected"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n response imported"
+msgid_plural "%n responses imported"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n row total across all responses"
+msgid_plural "%n rows total across all responses"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n star"
+msgid_plural "%n stars"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%n unique answer"
+msgid_plural "%n unique answers"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "FormVox is running for %n account here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
+msgid_plural "FormVox is running for %n accounts here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Maximum %n file allowed"
+msgid_plural "Maximum %n files allowed"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Select at least %n option for question '%s'"
+msgid_plural "Select at least %n options for question '%s'"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Select at most %n option for question '%s'"
+msgid_plural "Select at most %n options for question '%s'"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "The AI task timed out after %n second"
+msgid_plural "The AI task timed out after %n seconds"
+msgstr[0] ""
+msgstr[1] ""
