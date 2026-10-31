@@ -54,7 +54,7 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/test-utils": "^2.5.0",
     "css-loader": "^6.8.1",
-    "happy-dom": "^20.14.0",
+    "happy-dom": "^21.0.4",
     "sass": "^1.69.0",
     "sass-loader": "^16.0.8",
     "string-replace-loader": "^3.2.0",
