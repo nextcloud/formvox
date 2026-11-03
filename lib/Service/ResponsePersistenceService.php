@@ -64,6 +64,8 @@ class ResponsePersistenceService {
 			// the fresh, locked form state before appending, so concurrent
 			// submissions can't each pass a pre-lock snapshot check and blow
 			// past the limit (#4 TOCTOU). The guard throws to abort the write.
+			// A guard taking the form by reference may also update it, e.g. to
+			// use up a unique response link in the same write.
 			if ($guard !== null) {
 				$guard($form);
 			}

@@ -69,6 +69,12 @@ return [
 		// needs its own deliberate endpoint rather than riding along on a save (#135)
 		['name' => 'form#rotateShareToken', 'url' => '/api/form/{fileId}/share-token', 'verb' => 'POST'],
 
+		// Unique response links (e.g. a batch of single-use links)
+		['name' => 'response_link#list', 'url' => '/api/form/{fileId}/response-links', 'verb' => 'GET'],
+		['name' => 'response_link#create', 'url' => '/api/form/{fileId}/response-links', 'verb' => 'POST'],
+		['name' => 'response_link#deleteAll', 'url' => '/api/form/{fileId}/response-links', 'verb' => 'DELETE'],
+		['name' => 'response_link#delete', 'url' => '/api/form/{fileId}/response-links/{linkId}', 'verb' => 'DELETE'],
+
 		// API routes - File uploads
 		['name' => 'form_upload#downloadUpload', 'url' => '/api/form/{fileId}/uploads/{responseId}/{filename}', 'verb' => 'GET'],
 		['name' => 'form_upload#downloadAllUploads', 'url' => '/api/form/{fileId}/uploads', 'verb' => 'GET'],

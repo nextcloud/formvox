@@ -186,6 +186,10 @@ class FormController extends Controller {
 				unset($form['_index']);
 			}
 
+			// Unique response links are managed through their own endpoint,
+			// which is limited to users who may edit the settings
+			unset($form['response_links']);
+
 			return new DataResponse([
 				'form' => $form,
 				'role' => $role,

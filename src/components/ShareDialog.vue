@@ -48,8 +48,22 @@
         </div>
       </div>
 
+      <!-- Unique response links (e.g. one single-use link per respondent) -->
+      <div v-if="canShare" class="settings-section">
+        <h3>
+          <LinkIcon :size="18" />
+          <!-- TRANSLATORS: Heading: a batch of separate links that each accept a limited number of responses -->
+          {{ t('formvox', 'Unique response links') }}
+        </h3>
+        <ResponseLinks
+          :file-id="fileId"
+          :form-title="form.title"
+          @update:count="responseLinkCount = $event"
+        />
+      </div>
+
       <!-- Response Settings Section (always visible) -->
-      <div v-if="shareLink" class="settings-section">
+      <div v-if="shareLink || responseLinkCount > 0" class="settings-section">
         <h3>
           <CogIcon :size="18" />
           <!-- TRANSLATORS: Heading -->
@@ -456,6 +470,7 @@ import LinkIcon from 'vue-material-design-icons/Link.vue';
 import AccountIcon from 'vue-material-design-icons/Account.vue';
 import AccountGroupIcon from 'vue-material-design-icons/AccountGroup.vue';
 import IntegrationSettings from './IntegrationSettings.vue';
+import ResponseLinks from './ResponseLinks.vue';
 import DownloadIcon from 'vue-material-design-icons/Download.vue';
 
 export default {
@@ -477,6 +492,7 @@ export default {
     AccountIcon,
     AccountGroupIcon,
     IntegrationSettings,
+    ResponseLinks,
     DownloadIcon,
   },
   props: {
@@ -501,6 +517,7 @@ export default {
     const creatingLink = ref(false);
     const linkInput = ref(null);
     const responseCount = ref(props.form._index?.response_count || 0);
+    const responseLinkCount = ref(0);
 
     const qrCanvas = ref(null);
 
@@ -1302,6 +1319,7 @@ export default {
       startTime,
       responseSettings,
       responseCount,
+      responseLinkCount,
       accessRestrictions,
       searchTerm,
       showAdvanced,

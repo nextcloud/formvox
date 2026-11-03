@@ -81,6 +81,10 @@ class FormCopiedListener implements IEventListener {
 			// Remove form-specific branding (use admin defaults for new form)
 			unset($form['branding']);
 
+			// Unique response links belong to the original form; a copy must
+			// not accept the same tokens (with their uses reset to zero)
+			unset($form['response_links']);
+
 			// Update created_at to now, keep original as template reference
 			$form['copied_from'] = $form['created_at'] ?? null;
 			$form['created_at'] = date('c');

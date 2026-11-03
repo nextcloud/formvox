@@ -132,6 +132,7 @@ class TemplateService {
 			$form['responses'],
 			$form['_index'],
 			$form['permissions'],
+			$form['response_links'],
 			$form['created_at'],
 			$form['modified_at'],
 			$form['id'],

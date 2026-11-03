@@ -125,6 +125,9 @@ class StripFormDataPlugin extends ServerPlugin {
 		// Remove form-specific branding (use admin defaults)
 		unset($form['branding']);
 
+		// Remove unique response links (their tokens grant access to respond)
+		unset($form['response_links']);
+
 		// Remove permissions (will use file permissions)
 		unset($form['permissions']);
 
