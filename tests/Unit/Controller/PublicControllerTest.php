@@ -7,8 +7,12 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 use OCA\FormVox\Controller\PublicController;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
+use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Service\FormLockManager;
 use OCA\FormVox\Service\FormRepository;
+use OCA\FormVox\Service\ResponseLinkService;
 use OCA\FormVox\Service\ResponseService;
+use OCA\FormVox\Service\ShareTokenService;
 use OCA\FormVox\Service\UploadService;
 use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\AppFramework\Http;
@@ -22,6 +26,7 @@ use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUser;
 use OCP\IUserSession;
+use OCP\Security\ISecureRandom;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -82,6 +87,14 @@ class PublicControllerTest extends TestCase {
 			$this->challengeService,
 			$this->initialState,
 			new EnglishL10N(),
+			// Real service: token matching and usage counting are what's under test.
+			new ResponseLinkService(
+				$this->createMock(FormFileLocator::class),
+				$this->createMock(FormLockManager::class),
+				$this->createMock(ShareTokenService::class),
+				$this->createMock(ISecureRandom::class),
+				new EnglishL10N(),
+			),
 		);
 	}
 
@@ -870,5 +883,93 @@ class PublicControllerTest extends TestCase {
 		$resp = $this->controller()->uploadFile(1, 'TOKEN');
 		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
 		$this->assertSame('disk full', $resp->getData()['error']);
+	}
+
+	// ======================================================================
+	// Unique response links
+	// ======================================================================
+
+	/** A form without a main link, carrying one unique link LINKTOKEN (id l1). */
+	private function formWithResponseLink(int $maxUses = 1, int $uses = 0): array {
+		return $this->formWith(['public_token' => null], [
+			'response_links' => [
+				['id' => 'l1', 'token' => 'LINKTOKEN', 'label' => '', 'max_uses' => $maxUses, 'uses' => $uses],
+			],
+		]);
+	}
+
+	public function testShowFormAcceptsUnusedResponseLinkAndHidesAllLinks(): void {
+		$this->formRepository->method('loadPublic')->willReturn($this->formWithResponseLink());
+		$this->userSession->method('getUser')->willReturn(null);
+		$captured = [];
+		$this->initialState->method('provideInitialState')
+			->willReturnCallback(function (string $key, $value) use (&$captured): void {
+				$captured[$key] = $value;
+			});
+
+		$resp = $this->controller()->showForm(1, 'LINKTOKEN');
+		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
+		$this->assertArrayNotHasKey('response_links', $captured['form']);
+	}
+
+	public function testShowFormRejectsUsedUpResponseLink(): void {
+		$this->formRepository->method('loadPublic')->willReturn(
+			$this->formWithResponseLink(1, 1)
+		);
+		$resp = $this->controller()->showForm(1, 'LINKTOKEN');
+		$this->assertInstanceOf(TemplateResponse::class, $resp);
+		$this->assertSame(Http::STATUS_GONE, $resp->getStatus());
+		$this->assertSame('public/linkused', $resp->getTemplateName());
+		$this->assertSame('My Form', $resp->getParams()['title']);
+	}
+
+	public function testShowFormAllowsResponseLinkBelowItsLimit(): void {
+		$this->formRepository->method('loadPublic')->willReturn(
+			$this->formWithResponseLink(2, 1)
+		);
+		$this->userSession->method('getUser')->willReturn(null);
+		$resp = $this->controller()->showForm(1, 'LINKTOKEN');
+		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
+	}
+
+	public function testShowFormNotFoundForUnknownTokenWhenFormHasLinks(): void {
+		$this->formRepository->method('loadPublic')->willReturn($this->formWithResponseLink());
+		$resp = $this->controller()->showForm(1, 'NOPE');
+		$this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
+	}
+
+	public function testSubmitThroughResponseLinkPassesTheLink(): void {
+		$this->userSession->method('getUser')->willReturn(null);
+		$this->challengeService->method('verify')->willReturn(true);
+		$this->formRepository->method('loadPublic')->willReturn($this->formWithResponseLink());
+		$this->responseService->expects($this->once())->method('submitAnonymousWithForm')
+			->with(1, $this->anything(), ['q1' => 'a'], $this->anything(), 'LINKTOKEN', $this->callback(
+				fn ($link) => is_array($link) && $link['id'] === 'l1'
+			))
+			->willReturn(['id' => 'r', 'submitted_at' => 'now']);
+
+		$resp = $this->controller()->submit(1, 'LINKTOKEN', ['q1' => 'a'], ['p' => 'x']);
+		$this->assertSame(Http::STATUS_CREATED, $resp->getStatus());
+	}
+
+	public function testSubmitThroughMainLinkPassesNoResponseLink(): void {
+		$this->userSession->method('getUser')->willReturn(null);
+		$this->challengeService->method('verify')->willReturn(true);
+		$this->formRepository->method('loadPublic')->willReturn($this->formWith());
+		$this->responseService->expects($this->once())->method('submitAnonymousWithForm')
+			->with(1, $this->anything(), ['q1' => 'a'], $this->anything(), 'TOKEN', null)
+			->willReturn(['id' => 'r', 'submitted_at' => 'now']);
+
+		$resp = $this->controller()->submit(1, 'TOKEN', ['q1' => 'a'], ['p' => 'x']);
+		$this->assertSame(Http::STATUS_CREATED, $resp->getStatus());
+	}
+
+	public function testUploadRejectedForUsedUpResponseLink(): void {
+		$this->formRepository->method('loadPublic')->willReturn(
+			$this->formWithResponseLink(1, 1)
+		);
+		$resp = $this->controller()->uploadFile(1, 'LINKTOKEN');
+		$this->assertSame(Http::STATUS_GONE, $resp->getStatus());
+		$this->assertSame('This link has already been used', $resp->getData()['error']);
 	}
 }

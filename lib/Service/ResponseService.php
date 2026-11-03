@@ -25,6 +25,7 @@ class ResponseService {
 	private IURLGenerator $urlGenerator;
 	private IL10N $l;
 	private LoggerInterface $logger;
+	private ResponseLinkService $responseLinkService;
 
 	public function __construct(
 		FormRepository $formRepository,
@@ -38,6 +39,7 @@ class ResponseService {
 		IURLGenerator $urlGenerator,
 		IL10N $l,
 		LoggerInterface $logger,
+		ResponseLinkService $responseLinkService,
 	) {
 		$this->formRepository = $formRepository;
 		$this->fileLocator = $fileLocator;
@@ -50,28 +52,39 @@ class ResponseService {
 		$this->urlGenerator = $urlGenerator;
 		$this->l = $l;
 		$this->logger = $logger;
+		$this->responseLinkService = $responseLinkService;
 	}
 
 	/**
 	 * Submit a response as an anonymous user
 	 */
-	public function submitAnonymous(int $fileId, array $answers, IRequest $request, string $shareToken): array {
+	public function submitAnonymous(int $fileId, array $answers, IRequest $request, string $shareToken, ?array $responseLink = null): array {
 		$form = $this->formRepository->load($fileId);
-		return $this->submitAnonymousWithForm($fileId, $form, $answers, $request, $shareToken);
+		return $this->submitAnonymousWithForm($fileId, $form, $answers, $request, $shareToken, $responseLink);
 	}
 
 	/**
 	 * Submit a response as an anonymous user (with form already loaded)
+	 *
+	 * $responseLink is the unique response link the respondent came in
+	 * through, if any. It is used up in the same locked write, and the
+	 * response keeps no trace of it (see ResponseLinkService).
 	 */
-	public function submitAnonymousWithForm(int $fileId, array $form, array $answers, IRequest $request, string $shareToken): array {
+	public function submitAnonymousWithForm(int $fileId, array $form, array $answers, IRequest $request, string $shareToken, ?array $responseLink = null): array {
 		// Check if form accepts responses
 		$this->validateFormAcceptsResponses($form);
+		if ($responseLink !== null) {
+			$this->responseLinkService->assertAvailable($form, $responseLink);
+		}
 
-		// Calculate fingerprint
-		$fingerprint = $this->calculateFingerprint($request, $shareToken);
+		// Calculate fingerprint. Not for a unique response link: the
+		// fingerprint hashes the link's token, so anyone holding the access
+		// logs could match the response to the link. The link's own limit
+		// already allows only one response per invitation.
+		$fingerprint = $responseLink === null ? $this->calculateFingerprint($request, $shareToken) : null;
 
 		// Check for duplicate submission
-		if (!($form['settings']['allow_multiple'] ?? false)) {
+		if ($fingerprint !== null && !($form['settings']['allow_multiple'] ?? false)) {
 			if ($this->indexService->hasFingerprint($form, $fingerprint)) {
 				throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
 			}
@@ -86,10 +99,12 @@ class ResponseService {
 			'submitted_at' => date('c'),
 			'respondent' => [
 				'type' => 'anonymous',
-				'fingerprint' => $fingerprint,
 			],
 			'answers' => $answers,
 		];
+		if ($fingerprint !== null) {
+			$response['respondent']['fingerprint'] = $fingerprint;
+		}
 
 		// Calculate score if quiz mode
 		if ($this->isQuizMode($form)) {
@@ -99,14 +114,18 @@ class ResponseService {
 		// Re-check limits under the write lock against the fresh form state, so
 		// parallel submissions can't each pass the pre-lock snapshot check and
 		// oversell capacity / exceed max_responses / bypass no-duplicate (#4).
-		$guard = function (array $freshForm) use ($fingerprint, $answers) {
+		$guard = function (array &$freshForm) use ($fingerprint, $answers, $responseLink) {
 			$this->validateFormAcceptsResponses($freshForm);
-			if (!($freshForm['settings']['allow_multiple'] ?? false)) {
+			if ($fingerprint !== null && !($freshForm['settings']['allow_multiple'] ?? false)) {
 				if ($this->indexService->hasFingerprint($freshForm, $fingerprint)) {
 					throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
 				}
 			}
 			$this->validateCapacity($freshForm, $answers);
+			if ($responseLink !== null) {
+				// Last, once nothing else can reject the submission
+				$this->responseLinkService->consume($freshForm, $responseLink);
+			}
 		};
 
 		// Append response (use public method since no user is logged in)
@@ -127,7 +146,7 @@ class ResponseService {
 	/**
 	 * Submit a response as an authenticated user
 	 */
-	public function submitAuthenticated(int $fileId, array $answers, string $userId, string $displayName): array {
+	public function submitAuthenticated(int $fileId, array $answers, string $userId, string $displayName, ?array $responseLink = null): array {
 		// Use the admin-bypass loader: respondents are authenticated for
 		// identity (the response is attributed to $userId) but they don't
 		// need file/folder permissions on the form file itself. The share
@@ -136,6 +155,9 @@ class ResponseService {
 
 		// Check if form accepts responses
 		$this->validateFormAcceptsResponses($form);
+		if ($responseLink !== null) {
+			$this->responseLinkService->assertAvailable($form, $responseLink);
+		}
 
 		// Check for duplicate submission
 		if (!($form['settings']['allow_multiple'] ?? false)) {
@@ -165,7 +187,7 @@ class ResponseService {
 		}
 
 		// Re-check limits under the write lock against the fresh form state (#4).
-		$guard = function (array $freshForm) use ($userId, $answers) {
+		$guard = function (array &$freshForm) use ($userId, $answers, $responseLink) {
 			$this->validateFormAcceptsResponses($freshForm);
 			if (!($freshForm['settings']['allow_multiple'] ?? false)) {
 				if ($this->indexService->hasUserResponse($freshForm, $userId)) {
@@ -173,6 +195,10 @@ class ResponseService {
 				}
 			}
 			$this->validateCapacity($freshForm, $answers);
+			if ($responseLink !== null) {
+				// Last, once nothing else can reject the submission
+				$this->responseLinkService->consume($freshForm, $responseLink);
+			}
 		};
 
 		// Append response (use public method so respondent doesn't need file permissions)

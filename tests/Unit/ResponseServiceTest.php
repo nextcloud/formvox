@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit;
 
 use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Service\FormLockManager;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\IndexService;
+use OCA\FormVox\Service\ResponseLinkService;
 use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\ResponseService;
+use OCA\FormVox\Service\ShareTokenService;
+use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCA\FormVox\Service\WebhookService;
 use OCP\Files\File;
 use OCP\IGroupManager;
@@ -20,6 +24,7 @@ use OCP\Mail\IMailer;
 use OCP\Mail\IMessage;
 use OCP\Notification\IManager as INotificationManager;
 use OCP\Notification\INotification;
+use OCP\Security\ISecureRandom;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
@@ -69,7 +74,7 @@ class ResponseServiceTest extends TestCase {
 		});
 	}
 
-	private function service(): ResponseService {
+	private function service(?ResponseLinkService $responseLinkService = null): ResponseService {
 		return new ResponseService(
 			$this->formRepository,
 			$this->fileLocator,
@@ -81,7 +86,8 @@ class ResponseServiceTest extends TestCase {
 			$this->mailer,
 			$this->urlGenerator,
 			$this->l,
-			$this->logger
+			$this->logger,
+			$responseLinkService ?? $this->createMock(ResponseLinkService::class),
 		);
 	}
 
@@ -1414,5 +1420,98 @@ class ResponseServiceTest extends TestCase {
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessage("Question 'Q' is required");
 		$this->service()->submitAuthenticated(1, [], 'bob', 'Bob');
+	}
+
+	// =====================================================================
+	// Unique response links: used up in the locked write, never traceable
+	// =====================================================================
+
+	/**
+	 * Submit through unique link l1 with the persistence guard actually run
+	 * against $stored, as the real lock does. Returns the stored response.
+	 */
+	private function submitThroughLink(array &$stored, bool $authenticated = false): array {
+		$this->formRepository->method('load')->willReturn($stored);
+		$this->formRepository->method('loadPublic')->willReturn($stored);
+		$captured = null;
+		$this->responsePersistence->method('appendResponsePublic')
+			->willReturnCallback(function ($id, $response, $guard) use (&$stored, &$captured) {
+				$guard($stored);
+				$stored['responses'][] = $response;
+				$captured = $response;
+				return $response;
+			});
+		$owner = $this->createMock(IUser::class);
+		$owner->method('getUID')->willReturn('owner');
+		$file = $this->createMock(File::class);
+		$file->method('getOwner')->willReturn($owner);
+		$this->fileLocator->method('getFileByIdPublic')->willReturn($file);
+		$this->notificationManager->method('createNotification')->willReturn($this->makeNotificationMock());
+
+		$links = new ResponseLinkService(
+			$this->createMock(FormFileLocator::class),
+			$this->createMock(FormLockManager::class),
+			$this->createMock(ShareTokenService::class),
+			$this->createMock(ISecureRandom::class),
+			new EnglishL10N(),
+		);
+		$link = $stored['response_links'][0];
+
+		if ($authenticated) {
+			$this->service($links)->submitAuthenticated(1, ['q1' => 'x'], 'bob', 'Bob', $link);
+		} else {
+			$req = $this->createMock(IRequest::class);
+			$req->method('getRemoteAddress')->willReturn('ip');
+			$req->method('getHeader')->willReturn('ua');
+			$this->service($links)->submitAnonymous(1, ['q1' => 'x'], $req, 'LINKTOKEN', $link);
+		}
+		return $captured;
+	}
+
+	private function formWithLink(int $uses = 0): array {
+		return [
+			'title' => 'F',
+			'settings' => [],
+			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
+			'responses' => [],
+			'response_links' => [['id' => 'l1', 'token' => 'LINKTOKEN', 'max_uses' => 1, 'uses' => $uses]],
+		];
+	}
+
+	public function testLinkSubmissionUsesUpTheLinkAndLeavesNoTrace(): void {
+		$stored = $this->formWithLink();
+		$response = $this->submitThroughLink($stored);
+
+		$this->assertSame(1, $stored['response_links'][0]['uses']);
+		// Nothing in the response points back to the link: no link id, and no
+		// fingerprint (it would hash the link token).
+		$this->assertSame(['type' => 'anonymous'], $response['respondent']);
+		$this->assertStringNotContainsString('l1', json_encode($response));
+		$this->assertStringNotContainsString('LINKTOKEN', json_encode($response));
+	}
+
+	public function testAuthenticatedLinkSubmissionUsesUpTheLink(): void {
+		$stored = $this->formWithLink();
+		$response = $this->submitThroughLink($stored, true);
+
+		$this->assertSame(1, $stored['response_links'][0]['uses']);
+		$this->assertStringNotContainsString('l1', json_encode($response));
+	}
+
+	public function testUsedUpLinkIsRejectedEvenAfterResponsesAreDeleted(): void {
+		// uses=1 and no responses left: deleting results must not free the link.
+		$stored = $this->formWithLink(1);
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('This link has already been used');
+		$this->submitThroughLink($stored);
+	}
+
+	public function testLinkSubmissionSkipsFingerprintDuplicateCheck(): void {
+		// Same browser/IP as an earlier response (e.g. a shared computer): the
+		// invitation decides, not the fingerprint.
+		$this->indexService->method('hasFingerprint')->willReturn(true);
+		$stored = $this->formWithLink();
+		$this->submitThroughLink($stored);
+		$this->assertCount(1, $stored['responses']);
 	}
 }

@@ -8,6 +8,7 @@ use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
 use OCA\FormVox\Service\FormRepository;
+use OCA\FormVox\Service\ResponseLinkService;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\UploadService;
 use OCP\AppFramework\Controller;
@@ -41,6 +42,7 @@ class PublicController extends Controller {
 	private ChallengeService $challengeService;
 	private IInitialState $initialState;
 	private IL10N $l;
+	private ResponseLinkService $responseLinkService;
 
 	public function __construct(
 		IRequest $request,
@@ -55,6 +57,7 @@ class PublicController extends Controller {
 		ChallengeService $challengeService,
 		IInitialState $initialState,
 		IL10N $l,
+		ResponseLinkService $responseLinkService,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->config = $config;
@@ -68,6 +71,7 @@ class PublicController extends Controller {
 		$this->challengeService = $challengeService;
 		$this->initialState = $initialState;
 		$this->l = $l;
+		$this->responseLinkService = $responseLinkService;
 	}
 
 	/**
@@ -122,6 +126,24 @@ class PublicController extends Controller {
 		return $response;
 	}
 
+	/**
+	 * Show the page for a unique response link that has no responses left
+	 */
+	private function showLinkUsed(string $title): TemplateResponse {
+		Util::addStyle(Application::APP_ID, 'public');
+		$response = new TemplateResponse(
+			Application::APP_ID,
+			'public/linkused',
+			[
+				'appId' => Application::APP_ID,
+				'title' => $title,
+			],
+			'public'
+		);
+		$response->setStatus(Http::STATUS_GONE);
+		return $response;
+	}
+
 	private function showNotYetOpenForm(string $title, \DateTime $opensAt): TemplateResponse {
 		Util::addStyle(Application::APP_ID, 'public');
 		$response = new TemplateResponse(
@@ -142,14 +164,25 @@ class PublicController extends Controller {
 	/**
 	 * Load form by fileId and validate the public token
 	 * Returns form data if valid, null otherwise
+	 *
+	 * The token is either the form's response link or one of its unique
+	 * response links; in the latter case $responseLink is set to that link.
+	 * A unique link is returned even when it has been used up, so callers can
+	 * tell the visitor so instead of answering "not found".
 	 */
-	private function loadAndValidateForm(int $fileId, string $token): ?array {
+	private function loadAndValidateForm(int $fileId, string $token, ?array &$responseLink = null): ?array {
+		$responseLink = null;
 		try {
 			$form = $this->formRepository->loadPublic($fileId);
 
 			// Validate token matches (timing-safe)
 			$storedToken = $form['settings']['public_token'] ?? null;
-			if ($storedToken === null || !is_string($storedToken) || !hash_equals($storedToken, $token)) {
+			if (is_string($storedToken) && $storedToken !== '' && hash_equals($storedToken, $token)) {
+				return $form;
+			}
+
+			$responseLink = $this->responseLinkService->findByToken($form, $token);
+			if ($responseLink === null) {
 				return null;
 			}
 
@@ -241,6 +274,12 @@ class PublicController extends Controller {
 		] as $key) {
 			unset($form['settings'][$key]);
 		}
+		// Not a setting, but just as secret: every unique response link token
+		unset($form[ResponseLinkService::FORM_KEY]);
+	}
+
+	private function isUsedUp(array $form, ?array $responseLink): bool {
+		return $responseLink !== null && !$this->responseLinkService->isAvailable($form, $responseLink);
 	}
 
 	/**
@@ -251,10 +290,14 @@ class PublicController extends Controller {
 	#[NoCSRFRequired]
 	public function showForm(int $fileId, string $token) {
 		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
+			$form = $this->loadAndValidateForm($fileId, $token, $responseLink);
 
 			if ($form === null) {
 				return $this->errorResponse($this->l->t('Form not found'), Http::STATUS_NOT_FOUND);
+			}
+
+			if ($this->isUsedUp($form, $responseLink)) {
+				return $this->showLinkUsed($form['title'] ?? $this->l->t('Form'));
 			}
 
 			// Check if form hasn't started yet
@@ -492,7 +535,7 @@ class PublicController extends Controller {
 		}
 
 		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
+			$form = $this->loadAndValidateForm($fileId, $token, $responseLink);
 
 			if ($form === null) {
 				$response = new DataResponse(
@@ -543,7 +586,8 @@ class PublicController extends Controller {
 					$form,
 					$answers,
 					$this->request,
-					$token
+					$token,
+					$responseLink
 				);
 			} elseif ($hasRestrictions || ($form['settings']['require_login'] ?? false)) {
 				// User/group restrictions or require_login with non-anonymous = authenticated submission
@@ -552,7 +596,8 @@ class PublicController extends Controller {
 					$fileId,
 					$answers,
 					$user->getUID(),
-					$user->getDisplayName()
+					$user->getDisplayName(),
+					$responseLink
 				);
 			} else {
 				// No login required and anonymous enabled (default)
@@ -561,7 +606,8 @@ class PublicController extends Controller {
 					$form,
 					$answers,
 					$this->request,
-					$token
+					$token,
+					$responseLink
 				);
 			}
 
@@ -689,10 +735,14 @@ class PublicController extends Controller {
 	#[BruteForceProtection(action: 'formvox_password')]
 	public function authenticate(int $fileId, string $token) {
 		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
+			$form = $this->loadAndValidateForm($fileId, $token, $responseLink);
 
 			if ($form === null) {
 				return $this->errorResponse($this->l->t('Form not found'), Http::STATUS_NOT_FOUND);
+			}
+
+			if ($this->isUsedUp($form, $responseLink)) {
+				return $this->showLinkUsed($form['title'] ?? $this->l->t('Form'));
 			}
 
 			// Check if form hasn't started yet
@@ -834,12 +884,19 @@ class PublicController extends Controller {
 	#[AnonRateLimit(limit: 50, period: 3600)]
 	public function uploadFile(int $fileId, string $token): DataResponse {
 		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
+			$form = $this->loadAndValidateForm($fileId, $token, $responseLink);
 
 			if ($form === null) {
 				return new DataResponse(
 					['error' => $this->l->t('Form not found')],
 					Http::STATUS_NOT_FOUND
+				);
+			}
+
+			if ($this->isUsedUp($form, $responseLink)) {
+				return new DataResponse(
+					['error' => $this->responseLinkService->unavailableMessage()],
+					Http::STATUS_GONE
 				);
 			}
 

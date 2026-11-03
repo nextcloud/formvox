@@ -143,6 +143,7 @@ class FormRepository {
 		unset($form['responses']);
 		unset($form['_index']);
 		unset($form['permissions']);
+		unset($form['response_links']);
 
 		return $form;
 	}
