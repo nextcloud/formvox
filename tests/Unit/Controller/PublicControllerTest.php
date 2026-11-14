@@ -7,6 +7,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 use OCA\FormVox\Controller\PublicController;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
+use OCA\FormVox\Service\ExternalImagesPolicy;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\UploadService;
@@ -82,6 +83,7 @@ class PublicControllerTest extends TestCase {
 			$this->challengeService,
 			$this->initialState,
 			new EnglishL10N(),
+			$this->createMock(ExternalImagesPolicy::class),
 		);
 	}
 

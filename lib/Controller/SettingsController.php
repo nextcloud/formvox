@@ -6,6 +6,7 @@ namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\AiFormGeneratorService;
+use OCA\FormVox\Service\ExternalImagesPolicy;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\TemplateService;
 use OCP\AppFramework\Controller;
@@ -30,6 +31,7 @@ class SettingsController extends Controller {
 		AiFormGeneratorService $aiService,
 		TemplateService $templateService,
 		IL10N $l,
+		private ExternalImagesPolicy $externalImagesPolicy,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->config = $config;
@@ -83,6 +85,18 @@ class SettingsController extends Controller {
 		return new DataResponse([
 			'success' => true,
 			'allowedDomains' => $allowedDomains,
+		]);
+	}
+
+	/**
+	 * Allow images from external websites in descriptions (admin only)
+	 */
+	public function saveExternalImages(bool $enabled): DataResponse {
+		$this->externalImagesPolicy->setEnabled($enabled);
+
+		return new DataResponse([
+			'success' => true,
+			'enabled' => $enabled,
 		]);
 	}
 

@@ -61,6 +61,12 @@ Restrict which external domains can embed FormVox forms:
 
 **Security note:** Restricting embed domains prevents your forms from being embedded on unauthorized websites, reducing the risk of phishing attacks.
 
+#### External Images
+
+Images in form descriptions that are hosted on other websites are blocked by default. To show them, turn on **Allow loading external images (loosens Content Security Policy)** in the **Settings** tab.
+
+**Security note:** This switch adds `https:` to the `img-src` directive of the Content Security Policy of the form editor and the public form page, so these pages can then load images from any HTTPS host, tracking pixels included. Other Nextcloud pages are not affected. Images uploaded to FormVox (logo and image blocks) work without it.
+
 ### Telemetry Tab
 
 Configure anonymous telemetry reporting.
@@ -109,6 +115,9 @@ Set configuration via config.php or occ:
 ```bash
 # Disable telemetry
 sudo -u www-data php occ config:app:set formvox telemetry_enabled --value=0
+
+# Allow images from external websites (default: false)
+sudo -u www-data php occ config:app:set formvox allow_external_images --value=true
 
 # Set default branding color
 sudo -u www-data php occ config:app:set formvox default_accent_color --value=#0082c9

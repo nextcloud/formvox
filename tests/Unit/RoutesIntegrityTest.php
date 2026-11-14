@@ -100,6 +100,7 @@ class RoutesIntegrityTest extends TestCase {
 		'POST /api/license/validate',
 		'POST /api/settings/ai',
 		'POST /api/settings/embed',
+		'POST /api/settings/external-images',
 		'POST /api/settings/license',
 		'POST /api/settings/ms-forms',
 		'POST /api/statistics/telemetry',

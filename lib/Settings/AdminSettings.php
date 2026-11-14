@@ -6,6 +6,7 @@ namespace OCA\FormVox\Settings;
 
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\BrandingService;
+use OCA\FormVox\Service\ExternalImagesPolicy;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\StatisticsService;
 use OCA\FormVox\Service\TelemetryService;
@@ -30,6 +31,7 @@ class AdminSettings implements ISettings {
 		StatisticsService $statisticsService,
 		TelemetryService $telemetryService,
 		MicrosoftFormsAuthService $msFormsAuthService,
+		private ExternalImagesPolicy $externalImagesPolicy,
 	) {
 		$this->config = $config;
 		$this->initialState = $initialState;
@@ -50,6 +52,8 @@ class AdminSettings implements ISettings {
 		$this->initialState->provideInitialState('embedSettings', [
 			'allowedDomains' => $this->config->getAppValue(Application::APP_ID, 'embed_allowed_domains', '*'),
 		]);
+
+		$this->initialState->provideInitialState('externalImages', $this->externalImagesPolicy->isEnabled());
 
 		// Provide Microsoft Forms import settings
 		$this->initialState->provideInitialState('msFormsSettings', [

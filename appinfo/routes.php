@@ -95,6 +95,7 @@ return [
 		// Settings routes (admin only)
 		['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
 		['name' => 'settings#saveMsForms', 'url' => '/api/settings/ms-forms', 'verb' => 'POST'],
+		['name' => 'settings#saveExternalImages', 'url' => '/api/settings/external-images', 'verb' => 'POST'],
 
 		// Admin-managed templates (#100)
 		['name' => 'settings#listAdminTemplates', 'url' => '/api/admin/templates', 'verb' => 'GET'],

@@ -5,6 +5,7 @@ All notable changes to FormVox will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- **Images from other websites in form descriptions are now off by default.** FormVox used to allow images from any HTTPS address on every Nextcloud page, not just in forms. A new switch under Settings in the FormVox admin settings, "Allow loading external images (loosens Content Security Policy)", allows them again, and only on the form editor and the public form page. Turn it on after updating if your forms show images hosted elsewhere; uploaded images are not affected.
 - **The English interface text now uses American spelling throughout** ("license", "organization"), as Nextcloud itself does. Until now the source strings mixed British and American forms. The existing Dutch, German, French, Catalan and Ukrainian translations carry over to the new spelling.
 
 ## [1.5.0] - 2026-09-21
