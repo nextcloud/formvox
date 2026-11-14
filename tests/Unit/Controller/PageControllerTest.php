@@ -6,6 +6,7 @@ namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\PageController;
 use OCA\FormVox\Service\BrandingService;
+use OCA\FormVox\Service\ExternalImagesPolicy;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
@@ -73,7 +74,8 @@ class PageControllerTest extends TestCase {
 			$this->msFormsAuthService,
 			$this->initialState,
 			$this->urlGenerator,
-			$userId
+			$userId,
+			$this->createMock(ExternalImagesPolicy::class),
 		);
 	}
 

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FormVox 1.5.0\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"POT-Creation-Date: 2026-10-09 17:03+0000\n"
+"POT-Creation-Date: 2026-11-14 17:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -263,6 +263,10 @@ msgid "All responses deleted"
 msgstr ""
 
 msgid "Allow AI to add conditional logic (showIf) to generated questions"
+msgstr ""
+
+#. TRANSLATORS: Switch label. "Content Security Policy" is a browser security mechanism; keep the term or use its usual name in your language
+msgid "Allow loading external images (loosens Content Security Policy)"
 msgstr ""
 
 msgid "Allow multiple files"
@@ -1623,6 +1627,9 @@ msgid "less than"
 msgstr ""
 
 msgid "Let FormVox use the built-in Nextcloud AI (TaskProcessing) to generate forms from a description or uploaded document."
+msgstr ""
+
+msgid "Lets form descriptions show images hosted on other websites. The form editor and the public form page may then load images from any HTTPS address. Images uploaded to FormVox work either way."
 msgstr ""
 
 msgid "Letters and numbers"

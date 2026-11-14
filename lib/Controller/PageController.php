@@ -6,6 +6,7 @@ namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\BrandingService;
+use OCA\FormVox\Service\ExternalImagesPolicy;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
@@ -39,6 +40,7 @@ class PageController extends Controller {
 		IInitialState $initialState,
 		IURLGenerator $urlGenerator,
 		?string $userId,
+		private ExternalImagesPolicy $externalImagesPolicy,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->formRepository = $formRepository;
@@ -99,9 +101,11 @@ class PageController extends Controller {
 		Util::addScript(Application::APP_ID, 'formvox-editor');
 		Util::addStyle(Application::APP_ID, 'editor');
 
-		return new TemplateResponse(Application::APP_ID, 'editor', [
+		$response = new TemplateResponse(Application::APP_ID, 'editor', [
 			'appId' => Application::APP_ID,
 		]);
+		$this->externalImagesPolicy->applyTo($response);
+		return $response;
 	}
 
 	/**

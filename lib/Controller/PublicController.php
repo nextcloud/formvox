@@ -7,6 +7,7 @@ namespace OCA\FormVox\Controller;
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
+use OCA\FormVox\Service\ExternalImagesPolicy;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Service\UploadService;
@@ -55,6 +56,7 @@ class PublicController extends Controller {
 		ChallengeService $challengeService,
 		IInitialState $initialState,
 		IL10N $l,
+		private ExternalImagesPolicy $externalImagesPolicy,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 		$this->config = $config;
@@ -384,6 +386,7 @@ class PublicController extends Controller {
 				'public'
 			);
 			$this->allowBlobWorker($response);
+			$this->externalImagesPolicy->applyTo($response);
 			if ($passwordVerified) {
 				$this->setPasswordCookie($response, $fileId);
 			}
@@ -769,6 +772,7 @@ class PublicController extends Controller {
 				'public'
 			);
 			$this->allowBlobWorker($response);
+			$this->externalImagesPolicy->applyTo($response);
 
 			// Issue a signed password-verification cookie so subsequent API
 			// calls (submit, upload) can prove the bearer entered the correct

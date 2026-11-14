@@ -38,6 +38,7 @@ const app = createApp(AdminSettings, {
   initialBranding: branding,
   initialTelemetry: telemetry,
   initialEmbedSettings: embedSettings,
+  initialExternalImages: loadState('formvox', 'externalImages', false),
   initialMsFormsSettings: msFormsSettings,
 });
 

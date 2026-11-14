@@ -1,6 +1,6 @@
 {
-    "count": 941,
-    "sha256": "9f84bd07abf4ef05d95544b0bd203a8c960705aa863972ad5ae21eb09433a6b9",
+    "count": 943,
+    "sha256": "7f5def8086657af2a05e1f67b0824015861ab96ab5ec49aba58cb33ae9214e93",
     "strings": [
         "\"{question}\" does not match the required format",
         "(required)",
@@ -82,6 +82,7 @@
         "ALL of the following",
         "All responses deleted",
         "Allow AI to add conditional logic (showIf) to generated questions",
+        "Allow loading external images (loosens Content Security Policy)",
         "Allow multiple files",
         "Allow multiple submissions",
         "Allow people to upload a source document (PDF/DOCX/ODT)",
@@ -471,6 +472,7 @@
         "Left",
         "less than",
         "Let FormVox use the built-in Nextcloud AI (TaskProcessing) to generate forms from a description or uploaded document.",
+        "Lets form descriptions show images hosted on other websites. The form editor and the public form page may then load images from any HTTPS address. Images uploaded to FormVox work either way.",
         "Letters and numbers",
         "Letters only",
         "Level",

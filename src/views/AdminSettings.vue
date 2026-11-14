@@ -147,6 +147,20 @@
           </div>
         </div>
 
+        <div class="setting-row">
+          <NcCheckboxRadioSwitch
+            type="switch"
+            :model-value="externalImages"
+            :disabled="savingExternalImages"
+            @update:model-value="toggleExternalImages">
+            <!-- TRANSLATORS: Switch label. "Content Security Policy" is a browser security mechanism; keep the term or use its usual name in your language -->
+            {{ t('formvox', 'Allow loading external images (loosens Content Security Policy)') }}
+          </NcCheckboxRadioSwitch>
+          <p class="setting-help">
+            {{ t('formvox', 'Lets form descriptions show images hosted on other websites. The form editor and the public form page may then load images from any HTTPS address. Images uploaded to FormVox work either way.') }}
+          </p>
+        </div>
+
       </div>
     </div>
 
@@ -291,6 +305,10 @@ export default {
       type: Object,
       default: () => ({ allowedDomains: '*' }),
     },
+    initialExternalImages: {
+      type: Boolean,
+      default: false,
+    },
     initialMsFormsSettings: {
       type: Object,
       default: () => ({ clientId: '', tenantId: 'common', isConfigured: false, redirectUri: '' }),
@@ -351,6 +369,22 @@ export default {
         console.error('Failed to toggle telemetry:', error);
         // Revert on error
         telemetryEnabled.value = !enabled;
+      }
+    };
+
+    const externalImages = ref(props.initialExternalImages);
+    const savingExternalImages = ref(false);
+    const toggleExternalImages = async (enabled) => {
+      savingExternalImages.value = true;
+      try {
+        await axios.post(generateUrl('/apps/formvox/api/settings/external-images'), { enabled });
+        externalImages.value = enabled;
+        showSuccess(t('formvox', 'Settings saved'));
+      } catch (error) {
+        console.error('Failed to save external images setting:', error);
+        showError(t('formvox', 'Failed to save settings'));
+      } finally {
+        savingExternalImages.value = false;
       }
     };
 
@@ -496,6 +530,9 @@ export default {
       telemetryStatus,
       embedSettings,
       savingEmbedSettings,
+      externalImages,
+      savingExternalImages,
+      toggleExternalImages,
       msFormsSettings,
       savingMsFormsSettings,
       toggleTelemetry,
