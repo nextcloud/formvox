@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Unit;
 
+use OCA\FormVox\Security\FormSanitizer;
+use OCA\FormVox\Service\AnswerValidator;
 use OCA\FormVox\Service\FormFileLocator;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\IndexService;
+use OCA\FormVox\Service\InvalidAnswerException;
+use OCA\FormVox\Service\ResponseOutbox;
 use OCA\FormVox\Service\ResponsePersistenceService;
+use OCA\FormVox\Service\ResponseRefusedException;
+use OCA\FormVox\Service\ResponseRules;
 use OCA\FormVox\Service\ResponseService;
-use OCA\FormVox\Service\WebhookService;
+use OCA\FormVox\Service\SubmissionIds;
+use OCA\FormVox\Service\UploadService;
+use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
+use OCA\FormVox\Tests\Unit\Support\ReversibleCrypto;
 use OCP\Files\File;
-use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
-use OCP\IUser;
-use OCP\Mail\IMailer;
-use OCP\Mail\IMessage;
-use OCP\Notification\IManager as INotificationManager;
-use OCP\Notification\INotification;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
@@ -37,10 +40,6 @@ class ResponseServiceTest extends TestCase {
 	private FormFileLocator $fileLocator;
 	private ResponsePersistenceService $responsePersistence;
 	private IndexService $indexService;
-	private WebhookService $webhookService;
-	private INotificationManager $notificationManager;
-	private IGroupManager $groupManager;
-	private IMailer $mailer;
 	private IURLGenerator $urlGenerator;
 	private IL10N $l;
 	private LoggerInterface $logger;
@@ -51,14 +50,17 @@ class ResponseServiceTest extends TestCase {
 		$this->fileLocator = $this->createMock(FormFileLocator::class);
 		$this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
 		$this->indexService = $this->createMock(IndexService::class);
-		$this->webhookService = $this->createMock(WebhookService::class);
-		$this->notificationManager = $this->createMock(INotificationManager::class);
-		$this->groupManager = $this->createMock(IGroupManager::class);
-		$this->mailer = $this->createMock(IMailer::class);
 		$this->urlGenerator = $this->createMock(IURLGenerator::class);
 		$this->l = $this->createMock(IL10N::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
+		// As for a form file: its responses, and what was submitted, are in the form as read.
+		$this->formRepository->method('eachResponse')->willReturnCallback(fn (int $fileId, array $form) => array_values(array_filter($form['responses'] ?? [], 'is_array')));
+		$this->formRepository->method('page')->willReturnCallback(fn (int $fileId, array $form) => ['responses' => array_values(array_filter($form['responses'] ?? [], 'is_array')), 'next' => null]);
+		$this->responsePersistence->method('submitted')->willReturnCallback(fn (int $fileId, array $form, ?string $submission) => SubmissionIds::stored($form, $submission));
+
+		// The respondent filled the form in Dutch.
+		$this->l->method('getLanguageCode')->willReturn('nl');
 		// IL10N::t echoes back a formatted string; mirror sprintf semantics.
 		$this->l->method('t')->willReturnCallback(function (string $text, array $params = []): string {
 			return $params === [] ? $text : vsprintf(str_replace('%s', '%s', $text), $params);
@@ -75,14 +77,20 @@ class ResponseServiceTest extends TestCase {
 			$this->fileLocator,
 			$this->responsePersistence,
 			$this->indexService,
-			$this->webhookService,
-			$this->notificationManager,
-			$this->groupManager,
-			$this->mailer,
 			$this->urlGenerator,
 			$this->l,
-			$this->logger
+			$this->logger,
+			new AnswerValidator($this->createMock(UploadService::class), new EnglishL10N()),
+			new ReversibleCrypto(),
+			new FormSanitizer(),
+			new ResponseRules(new AnswerValidator($this->createMock(UploadService::class), new EnglishL10N()), $this->indexService)
 		);
+	}
+
+	/** The export table as the CSV and XLSX exports get it; null when there are no responses. */
+	private function exportData(int $fileId): ?array {
+		$rows = iterator_to_array($this->call('exportRows', [$fileId]), false);
+		return $rows === [] ? null : ['headers' => $rows[0], 'rows' => array_slice($rows, 1)];
 	}
 
 	/** Invoke a private/protected method via reflection. */
@@ -190,15 +198,36 @@ class ResponseServiceTest extends TestCase {
 	}
 
 	// =====================================================================
-	// calculateFingerprint
+	// fingerprint — keyed, per form, without the share token (M13, L5, M34, T40)
 	// =====================================================================
 
-	public function testCalculateFingerprintDeterministic(): void {
+	private function request(string $ip = '1.2.3.4', string $ua = 'UA'): IRequest {
 		$req = $this->createMock(IRequest::class);
-		$req->method('getRemoteAddress')->willReturn('1.2.3.4');
-		$req->method('getHeader')->with('User-Agent')->willReturn('UA');
-		$expected = 'sha256:' . hash('sha256', implode('|', ['1.2.3.4', 'UA', 'tok']));
-		$this->assertSame($expected, $this->call('calculateFingerprint', [$req, 'tok']));
+		$req->method('getRemoteAddress')->willReturn($ip);
+		$req->method('getHeader')->willReturn($ua);
+		return $req;
+	}
+
+	public function testTheFingerprintIsKeyedAndCannotBeReadBackToTheNetwork(): void {
+		$fp = $this->call('fingerprint', [7, $this->request(), null]);
+
+		$this->assertStringStartsWith('v2:', $fp);
+		$this->assertSame($fp, $this->call('fingerprint', [7, $this->request(), null]), 'the same visitor is recognised');
+		$this->assertStringNotContainsString('1.2.3.4', $fp);
+		$this->assertNotSame(hash('sha256', '1.2.3.4|UA'), substr($fp, 3));
+	}
+
+	public function testTheFingerprintBelongsToOneForm(): void {
+		$this->assertNotSame($this->call('fingerprint', [7, $this->request(), null]), $this->call('fingerprint', [8, $this->request(), null]));
+	}
+
+	public function testASignedInRespondentIsCountedPerAccountWhereverTheyAre(): void {
+		$here = $this->call('fingerprint', [7, $this->request('192.0.2.1', 'Firefox'), 'anna']);
+		$elsewhere = $this->call('fingerprint', [7, $this->request('198.51.100.9', 'Safari'), 'anna']);
+
+		$this->assertSame($here, $elsewhere);
+		$this->assertNotSame($here, $this->call('fingerprint', [7, $this->request('192.0.2.1', 'Firefox'), 'bob']));
+		$this->assertStringNotContainsString('anna', $here, 'the account is not stored');
 	}
 
 	// =====================================================================
@@ -324,495 +353,41 @@ class ResponseServiceTest extends TestCase {
 	// calculateNumericStats
 	// =====================================================================
 
-	public function testCalculateNumericStatsAggregates(): void {
-		$form = ['responses' => [
-			['answers' => ['q1' => '2']],
-			['answers' => ['q1' => '4']],
-			['answers' => ['q1' => 'notnum']],
-			['answers' => []],
-		]];
-		$stats = $this->call('calculateNumericStats', [$form, 'q1']);
-		$this->assertSame(3.0, $stats['average']);
-		$this->assertSame(2.0, $stats['min']);
-		$this->assertSame(4.0, $stats['max']);
-	}
-
-	public function testCalculateNumericStatsEmpty(): void {
-		$stats = $this->call('calculateNumericStats', [['responses' => []], 'q1']);
-		$this->assertSame(['average' => null, 'min' => null, 'max' => null], $stats);
-	}
-
-	// =====================================================================
-	// validateAnswerType — #113 limits + type checks
-	// =====================================================================
-
-	public function testValidateAnswerTypeNumberRejectsNonNumeric(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->call('validateAnswerType', [['type' => 'number', 'question' => 'N'], 'abc']);
-	}
-
-	public function testValidateAnswerTypeNumberAcceptsNumeric(): void {
-		$this->call('validateAnswerType', [['type' => 'number', 'question' => 'N'], '12']);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeNumberAcceptsEmpty(): void {
-		$this->call('validateAnswerType', [['type' => 'number', 'question' => 'N'], '']);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeMultipleRequiresArray(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Multiple choice question requires array answer');
-		$this->call('validateAnswerType', [['type' => 'multiple', 'question' => 'M'], 'x']);
-	}
-
-	public function testValidateAnswerTypeMultipleMinSelections(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Select at least 2 options');
-		$this->call('validateAnswerType', [
-			['type' => 'multiple', 'question' => 'M', 'minSelections' => 2], ['a'],
-		]);
-	}
-
-	public function testValidateAnswerTypeMultipleMaxSelections(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Select at most 1 option for');
-		$this->call('validateAnswerType', [
-			['type' => 'multiple', 'question' => 'M', 'maxSelections' => 1], ['a', 'b'],
-		]);
-	}
-
-	public function testValidateAnswerTypeMultipleEmptyBypassesMin(): void {
-		// Empty answer is left to the required-check; min not enforced on empty.
-		$this->call('validateAnswerType', [
-			['type' => 'multiple', 'question' => 'M', 'minSelections' => 2], [],
-		]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeMultipleWithinBounds(): void {
-		$this->call('validateAnswerType', [
-			['type' => 'multiple', 'question' => 'M', 'minSelections' => 1, 'maxSelections' => 3],
-			['a', 'b'],
-		]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeTextMaxLength(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('exceeds the 3-character limit');
-		$this->call('validateAnswerType', [
-			['type' => 'text', 'question' => 'T', 'maxLength' => 3], 'abcd',
-		]);
-	}
-
-	public function testValidateAnswerTypeTextMaxLengthMultibyte(): void {
-		// mb_strlen: 3 umlauts = 3 chars, within limit 3.
-		$this->call('validateAnswerType', [
-			['type' => 'text', 'question' => 'T', 'maxLength' => 3], 'ööö',
-		]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeTextareaMaxLength(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->call('validateAnswerType', [
-			['type' => 'textarea', 'question' => 'T', 'maxLength' => 2], 'abc',
-		]);
-	}
-
-	public function testValidateAnswerTypeConsentRejectsNonBool(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Consent question requires boolean answer');
-		$this->call('validateAnswerType', [['type' => 'consent', 'question' => 'C'], 'yes']);
-	}
-
-	public function testValidateAnswerTypeConsentAcceptsBool(): void {
-		$this->call('validateAnswerType', [['type' => 'consent', 'question' => 'C'], true]);
-		$this->call('validateAnswerType', [['type' => 'consent', 'question' => 'C'], false]);
-		$this->call('validateAnswerType', [['type' => 'consent', 'question' => 'C'], '']);
-		$this->call('validateAnswerType', [['type' => 'consent', 'question' => 'C'], null]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeDateRejectsBadFormat(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->call('validateAnswerType', [['type' => 'date', 'question' => 'D'], '2020/01/01']);
-	}
-
-	public function testValidateAnswerTypeDateAcceptsIso(): void {
-		$this->call('validateAnswerType', [['type' => 'date', 'question' => 'D'], '2020-01-01']);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeDatetimeRejectsBadFormat(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->call('validateAnswerType', [['type' => 'datetime', 'question' => 'D'], '2020-01-01']);
-	}
-
-	public function testValidateAnswerTypeDatetimeAccepts(): void {
-		$this->call('validateAnswerType', [['type' => 'datetime', 'question' => 'D'], '2020-01-01T10:30']);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeTimeRejectsBadFormat(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->call('validateAnswerType', [['type' => 'time', 'question' => 'D'], '25:99:99']);
-	}
-
-	public function testValidateAnswerTypeTimeAccepts(): void {
-		$this->call('validateAnswerType', [['type' => 'time', 'question' => 'D'], '10:30']);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeCustomPatternRejects(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('custom-error');
-		$this->call('validateAnswerType', [[
-			'type' => 'text', 'question' => 'T',
-			'validation' => ['pattern' => '^\d+$', 'errorMessage' => 'custom-error'],
-		], 'abc']);
-	}
-
-	public function testValidateAnswerTypeCustomPatternAccepts(): void {
-		$this->call('validateAnswerType', [[
-			'type' => 'text', 'question' => 'T',
-			'validation' => ['pattern' => '^\d+$'],
-		], '123']);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeInvalidPatternIsSkipped(): void {
-		// A syntactically invalid regex is logged-and-skipped (no throw).
-		$this->call('validateAnswerType', [[
-			'type' => 'text', 'question' => 'T',
-			'validation' => ['pattern' => '('],
-		], 'anything']);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswerTypeDateMinRejects(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('before the allowed minimum');
-		$this->call('validateAnswerType', [
-			['type' => 'date', 'question' => 'D', 'dateMin' => '2020-06-01'], '2020-01-01',
-		]);
-	}
-
-	public function testValidateAnswerTypeDateMaxRejects(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('after the allowed maximum');
-		$this->call('validateAnswerType', [
-			['type' => 'date', 'question' => 'D', 'dateMax' => '2020-06-01'], '2020-12-01',
-		]);
-	}
-
-	public function testValidateAnswerTypeTimeMinRejects(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Time is before the allowed minimum');
-		$this->call('validateAnswerType', [
-			['type' => 'time', 'question' => 'D', 'timeMin' => '09:00'], '08:00',
-		]);
-	}
-
-	public function testValidateAnswerTypeTimeMaxRejects(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Time is after the allowed maximum');
-		$this->call('validateAnswerType', [
-			['type' => 'time', 'question' => 'D', 'timeMax' => '17:00'], '18:00',
-		]);
-	}
-
-	// =====================================================================
-	// validateCapacity — #104
-	// =====================================================================
-
-	public function testValidateCapacityThrowsWhenReached(): void {
-		$form = [
-			'questions' => [[
-				'id' => 'q1', 'type' => 'choice',
-				'options' => [['value' => 'a', 'label' => 'Slot A', 'capacity' => 2]],
-			]],
-			'_index' => ['answer_counts' => ['q1' => ['a' => 2]]],
-		];
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage("The option 'Slot A' is no longer available");
-		$this->call('validateCapacity', [$form, ['q1' => 'a']]);
-	}
-
-	public function testValidateCapacityPassesUnderLimit(): void {
-		$form = [
-			'questions' => [[
-				'id' => 'q1', 'type' => 'choice',
-				'options' => [['value' => 'a', 'capacity' => 5]],
-			]],
-			'_index' => ['answer_counts' => ['q1' => ['a' => 1]]],
-		];
-		$this->call('validateCapacity', [$form, ['q1' => 'a']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateCapacityUnlimitedWhenNoCapacity(): void {
-		$form = [
-			'questions' => [[
-				'id' => 'q1', 'type' => 'choice',
-				'options' => [['value' => 'a']],
-			]],
-			'_index' => ['answer_counts' => ['q1' => ['a' => 999]]],
-		];
-		$this->call('validateCapacity', [$form, ['q1' => 'a']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateCapacityIgnoresUnselectedOptions(): void {
-		$form = [
-			'questions' => [[
-				'id' => 'q1', 'type' => 'choice',
-				'options' => [
-					['value' => 'a', 'capacity' => 1],
-					['value' => 'b', 'capacity' => 1],
-				],
-			]],
-			'_index' => ['answer_counts' => ['q1' => ['a' => 5]]],
-		];
-		// Selecting 'b' (still open) even though 'a' is full.
-		$this->call('validateCapacity', [$form, ['q1' => 'b']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateCapacitySkipsNonChoiceTypes(): void {
-		$form = [
-			'questions' => [['id' => 'q1', 'type' => 'text']],
-			'_index' => ['answer_counts' => []],
-		];
-		$this->call('validateCapacity', [$form, ['q1' => 'whatever']]);
-		$this->addToAssertionCount(1);
-	}
-
-	// =====================================================================
-	// validateFormAcceptsResponses
-	// =====================================================================
-
-	public function testValidateFormAcceptsResponsesExpired(): void {
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('This form has expired');
-		$this->call('validateFormAcceptsResponses', [[
-			'settings' => ['expires_at' => '2000-01-01T00:00:00'],
-		]]);
-	}
-
-	public function testValidateFormAcceptsResponsesNotExpired(): void {
-		$this->indexService->method('getResponseCount')->willReturn(0);
-		$this->call('validateFormAcceptsResponses', [[
-			'settings' => ['expires_at' => '2999-01-01T00:00:00'],
-		]]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateFormAcceptsResponsesLimitReachedDefaultMessage(): void {
-		$this->indexService->method('getResponseCount')->willReturn(10);
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('This form has reached its response limit');
-		$this->call('validateFormAcceptsResponses', [[
-			'settings' => ['max_responses' => 10],
-		]]);
-	}
-
-	public function testValidateFormAcceptsResponsesLimitCustomMessage(): void {
-		$this->indexService->method('getResponseCount')->willReturn(10);
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage('Sold out!');
-		$this->call('validateFormAcceptsResponses', [[
-			'settings' => ['max_responses' => 10, 'limit_message' => 'Sold out!'],
-		]]);
-	}
-
-	public function testValidateFormAcceptsResponsesUnderLimit(): void {
-		$this->indexService->method('getResponseCount')->willReturn(3);
-		$this->call('validateFormAcceptsResponses', [[
-			'settings' => ['max_responses' => 10],
-		]]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateFormAcceptsResponsesNoSettings(): void {
-		$this->call('validateFormAcceptsResponses', [[]]);
-		$this->addToAssertionCount(1);
-	}
-
-	// =====================================================================
-	// validateAnswers — required + hidden + unknown
-	// =====================================================================
-
-	public function testValidateAnswersRequiredMissingThrows(): void {
-		$form = ['questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Name', 'required' => true]]];
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage("Question 'Name' is required");
-		$this->call('validateAnswers', [$form, []]);
-	}
-
-	public function testValidateAnswersRequiredConsentNeedsTrue(): void {
-		$form = ['questions' => [['id' => 'q1', 'type' => 'consent', 'question' => 'Agree', 'required' => true]]];
-		$this->expectException(\RuntimeException::class);
-		$this->expectExceptionMessage("Question 'Agree' is required");
-		$this->call('validateAnswers', [$form, ['q1' => false]]);
-	}
-
-	public function testValidateAnswersRequiredConsentTruePasses(): void {
-		$form = ['questions' => [['id' => 'q1', 'type' => 'consent', 'question' => 'Agree', 'required' => true]]];
-		$this->call('validateAnswers', [$form, ['q1' => true]]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswersSkipsSectionAndDescriptor(): void {
-		$form = ['questions' => [
-			['id' => 's1', 'type' => 'section', 'question' => 'Sec', 'required' => true],
-			['id' => 'd1', 'type' => 'descriptor', 'question' => 'Desc', 'required' => true],
-		]];
-		$this->call('validateAnswers', [$form, []]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswersSkipsHiddenRequired(): void {
-		// q2 required but hidden because its showIf references q1='yes' (not met).
-		$form = ['questions' => [
-			['id' => 'q1', 'type' => 'text', 'question' => 'Q1'],
-			['id' => 'q2', 'type' => 'text', 'question' => 'Q2', 'required' => true,
-				'showIf' => ['questionId' => 'q1', 'operator' => 'equals', 'value' => 'yes']],
-		]];
-		$this->call('validateAnswers', [$form, ['q1' => 'no']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswersSkipsUnknownQuestion(): void {
-		$form = ['questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q1']]];
-		// 'unknown' isn't a question → skipped, no type validation error.
-		$this->call('validateAnswers', [$form, ['unknown' => 'x', 'q1' => 'ok']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testValidateAnswersBubblesTypeError(): void {
-		$form = ['questions' => [['id' => 'q1', 'type' => 'number', 'question' => 'Num']]];
-		$this->expectException(\RuntimeException::class);
-		$this->call('validateAnswers', [$form, ['q1' => 'abc']]);
-	}
-
-	// =====================================================================
-	// isQuestionHidden / evaluateCondition
-	// =====================================================================
-
-	public function testEvaluateConditionEquals(): void {
-		$cond = ['questionId' => 'q1', 'operator' => 'equals', 'value' => 'a'];
-		$this->assertTrue($this->call('evaluateCondition', [$cond, ['q1' => 'a'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$cond, ['q1' => 'b'], []]));
-	}
-
-	public function testEvaluateConditionNotEquals(): void {
-		$cond = ['questionId' => 'q1', 'operator' => 'notEquals', 'value' => 'a'];
-		$this->assertFalse($this->call('evaluateCondition', [$cond, ['q1' => 'a'], []]));
-		$this->assertTrue($this->call('evaluateCondition', [$cond, ['q1' => 'b'], []]));
-	}
-
-	public function testEvaluateConditionContains(): void {
-		$cond = ['questionId' => 'q1', 'operator' => 'contains', 'value' => 'ell'];
-		$this->assertTrue($this->call('evaluateCondition', [$cond, ['q1' => 'hello'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$cond, ['q1' => 'world'], []]));
-	}
-
-	public function testEvaluateConditionIsEmptyAndNotEmpty(): void {
-		$empty = ['questionId' => 'q1', 'operator' => 'isEmpty'];
-		$notEmpty = ['questionId' => 'q1', 'operator' => 'isNotEmpty'];
-		$this->assertTrue($this->call('evaluateCondition', [$empty, ['q1' => ''], []]));
-		$this->assertTrue($this->call('evaluateCondition', [$empty, [], []]));
-		$this->assertTrue($this->call('evaluateCondition', [$notEmpty, ['q1' => 'x'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$notEmpty, ['q1' => ''], []]));
-	}
-
-	public function testEvaluateConditionGreaterAndLessThan(): void {
-		$gt = ['questionId' => 'q1', 'operator' => 'greaterThan', 'value' => 5];
-		$lt = ['questionId' => 'q1', 'operator' => 'lessThan', 'value' => 5];
-		$this->assertTrue($this->call('evaluateCondition', [$gt, ['q1' => '7'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$gt, ['q1' => '3'], []]));
-		$this->assertTrue($this->call('evaluateCondition', [$lt, ['q1' => '3'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$lt, ['q1' => 'notnum'], []]));
-	}
-
-	public function testEvaluateConditionInAndNotIn(): void {
-		$in = ['questionId' => 'q1', 'operator' => 'in', 'value' => ['a', 'b']];
-		$notIn = ['questionId' => 'q1', 'operator' => 'notIn', 'value' => ['a', 'b']];
-		$this->assertTrue($this->call('evaluateCondition', [$in, ['q1' => 'a'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$in, ['q1' => 'z'], []]));
-		$this->assertTrue($this->call('evaluateCondition', [$notIn, ['q1' => 'z'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$notIn, ['q1' => 'a'], []]));
-	}
-
-	public function testEvaluateConditionInNonArrayValueFalse(): void {
-		$in = ['questionId' => 'q1', 'operator' => 'in', 'value' => 'notarray'];
-		$this->assertFalse($this->call('evaluateCondition', [$in, ['q1' => 'a'], []]));
-	}
-
-	public function testEvaluateConditionAndOr(): void {
-		$and = [
-			'operator' => 'and',
-			'conditions' => [
-				['questionId' => 'q1', 'operator' => 'equals', 'value' => 'a'],
-				['questionId' => 'q2', 'operator' => 'equals', 'value' => 'b'],
+	public function testTheSummaryAveragesTheNumbersGiven(): void {
+		$this->formRepository->method('loadForm')->willReturn([
+			'questions' => [['id' => 'q1', 'type' => 'number', 'question' => 'N']],
+			'responses' => [
+				['answers' => ['q1' => '2']],
+				['answers' => ['q1' => '4']],
+				['answers' => ['q1' => 'notnum']],
+				['answers' => []],
 			],
-		];
-		$or = ['operator' => 'or', 'conditions' => $and['conditions']];
-		$this->assertTrue($this->call('evaluateCondition', [$and, ['q1' => 'a', 'q2' => 'b'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$and, ['q1' => 'a', 'q2' => 'x'], []]));
-		$this->assertTrue($this->call('evaluateCondition', [$or, ['q1' => 'a', 'q2' => 'x'], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$or, ['q1' => 'x', 'q2' => 'x'], []]));
+		]);
+		$question = $this->service()->getSummary(1)['questions'][0];
+		$this->assertSame([3.0, 2.0, 4.0], [$question['average'], $question['min'], $question['max']]);
+		$this->assertSame(3, $question['uniqueAnswers'], 'what is no number is a different answer too');
 	}
 
-	public function testEvaluateConditionUnknownOperatorFalse(): void {
-		// #99: half-configured / unknown operator must NOT match.
-		$cond = ['questionId' => 'q1', 'operator' => 'bogus', 'value' => 'a'];
-		$this->assertFalse($this->call('evaluateCondition', [$cond, ['q1' => 'a'], []]));
+	/** A '1e400' stored before numbers were checked for it must not take the whole results page down. */
+	public function testTheSummaryLeavesOutANumberTooLargeToHold(): void {
+		$this->formRepository->method('loadForm')->willReturn([
+			'questions' => [['id' => 'q1', 'type' => 'number', 'question' => 'N']],
+			'responses' => [
+				['answers' => ['q1' => '2']],
+				['answers' => ['q1' => '1e400']],
+				['answers' => ['q1' => '4']],
+			],
+		]);
+		$summary = $this->service()->getSummary(1);
+		$question = $summary['questions'][0];
+		$this->assertSame([3.0, 2.0, 4.0], [$question['average'], $question['min'], $question['max']]);
+		$this->assertIsString(json_encode($summary, JSON_THROW_ON_ERROR));
 	}
 
-	public function testEvaluateConditionEmptyConditionFalse(): void {
-		$this->assertFalse($this->call('evaluateCondition', [[], [], []]));
-	}
-
-	public function testEvaluateConditionArrayAnswerEquals(): void {
-		$cond = ['questionId' => 'q1', 'operator' => 'equals', 'value' => 'a'];
-		$this->assertTrue($this->call('evaluateCondition', [$cond, ['q1' => ['a', 'c']], []]));
-		$this->assertFalse($this->call('evaluateCondition', [$cond, ['q1' => ['x', 'c']], []]));
-	}
-
-	public function testChoiceCompareCandidatesMapsLabelToValue(): void {
-		$questionsById = ['q1' => [
-			'id' => 'q1', 'type' => 'choice',
-			'options' => [['value' => 'opt1', 'label' => 'Ja']],
-		]];
-		// #99: a label-based rule 'Ja' resolves to both value and label.
-		$out = $this->call('choiceCompareCandidates', ['q1', 'Ja', $questionsById]);
-		$this->assertSame(['opt1', 'Ja'], $out);
-	}
-
-	public function testChoiceCompareCandidatesNonChoicePassthrough(): void {
-		$questionsById = ['q1' => ['id' => 'q1', 'type' => 'text']];
-		$this->assertSame(['x'], $this->call('choiceCompareCandidates', ['q1', 'x', $questionsById]));
-	}
-
-	public function testIsQuestionHiddenBySection(): void {
-		$questionsById = [
-			's1' => ['id' => 's1', 'type' => 'section',
-				'showIf' => ['questionId' => 'q1', 'operator' => 'equals', 'value' => 'yes']],
-		];
-		$q = ['id' => 'q2', 'type' => 'text', 'sectionId' => 's1'];
-		// section showIf not met → hidden
-		$this->assertTrue($this->call('isQuestionHidden', [$q, ['q1' => 'no'], $questionsById]));
-		// section showIf met → not hidden
-		$this->assertFalse($this->call('isQuestionHidden', [$q, ['q1' => 'yes'], $questionsById]));
-	}
-
-	public function testIsQuestionHiddenNoShowIfIsVisible(): void {
-		$q = ['id' => 'q1', 'type' => 'text'];
-		$this->assertFalse($this->call('isQuestionHidden', [$q, [], []]));
+	public function testTheSummaryOfNoNumbersHasNoAverage(): void {
+		$this->formRepository->method('loadForm')->willReturn(['questions' => [['id' => 'q1', 'type' => 'rating', 'question' => 'R']], 'responses' => []]);
+		$question = $this->service()->getSummary(1)['questions'][0];
+		$this->assertSame([null, null, null], [$question['average'], $question['min'], $question['max']]);
 	}
 
 	// =====================================================================
@@ -820,12 +395,12 @@ class ResponseServiceTest extends TestCase {
 	// =====================================================================
 
 	public function testBuildExportDataNullWhenNoResponses(): void {
-		$this->formRepository->method('load')->willReturn(['questions' => [], 'responses' => []]);
-		$this->assertNull($this->call('buildExportData', [1]));
+		$this->formRepository->method('loadForm')->willReturn(['questions' => [], 'responses' => []]);
+		$this->assertNull($this->exportData(1));
 	}
 
 	public function testBuildExportDataHeadersAndRows(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [
 				['id' => 'q1', 'type' => 'text', 'question' => 'Name'],
 				['id' => 'sec', 'type' => 'section', 'question' => 'Section'],
@@ -836,14 +411,16 @@ class ResponseServiceTest extends TestCase {
 				'answers' => ['q1' => 'Alice'],
 			]],
 		]);
-		$data = $this->call('buildExportData', [1]);
+		$data = $this->exportData(1);
 		// Section excluded from headers.
 		$this->assertSame(['Response ID', 'Submitted at', 'Respondent type', 'Respondent ID', 'Name'], $data['headers']);
 		$this->assertSame(['r1', '2020-01-01T00:00:00', 'user', 'bob', 'Alice'], $data['rows'][0]);
 	}
 
-	public function testBuildExportDataAnonymousUsesFingerprint(): void {
-		$this->formRepository->method('load')->willReturn([
+	/** The fingerprint only tells the server about repeats; an export does not carry it (M13, T40). */
+	public function testAnExportDoesNotCarryTheFingerprint(): void {
+		$this->formRepository->method('loadForm')->willReturn([
+			'title' => 'T',
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
 			'responses' => [[
 				'id' => 'r1', 'submitted_at' => 't',
@@ -851,12 +428,27 @@ class ResponseServiceTest extends TestCase {
 				'answers' => ['q1' => 'x'],
 			]],
 		]);
-		$data = $this->call('buildExportData', [1]);
-		$this->assertSame('fp123', $data['rows'][0][3]);
+
+		$data = $this->exportData(1);
+
+		$this->assertSame('', $data['rows'][0][3]);
+		$this->assertStringNotContainsString('fp123', json_encode($data));
+		$this->assertStringNotContainsString('fp123', $this->service()->exportJson(1));
+		$this->assertStringNotContainsString('fp123', json_encode($this->service()->getResponses(1)));
+	}
+
+	/** An API response from before respondents were recorded has none; the export says so instead of failing (M30). */
+	public function testAnExportNamesAnOldApiResponse(): void {
+		$this->formRepository->method('loadForm')->willReturn([
+			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
+			'responses' => [['id' => 'r1', 'submitted_at' => 't', 'source' => 'api', 'answers' => ['q1' => 'x']]],
+		]);
+
+		$this->assertSame('api', $this->exportData(1)['rows'][0][2]);
 	}
 
 	public function testBuildExportDataConsentYesNo(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [['id' => 'q1', 'type' => 'consent', 'question' => 'Agree']],
 			'responses' => [
 				['id' => 'r1', 'submitted_at' => 't', 'respondent' => ['type' => 'anonymous', 'fingerprint' => 'f'], 'answers' => ['q1' => true]],
@@ -864,14 +456,14 @@ class ResponseServiceTest extends TestCase {
 				['id' => 'r3', 'submitted_at' => 't', 'respondent' => ['type' => 'anonymous', 'fingerprint' => 'f'], 'answers' => []],
 			],
 		]);
-		$data = $this->call('buildExportData', [1]);
+		$data = $this->exportData(1);
 		$this->assertSame('Yes', $data['rows'][0][4]);
 		$this->assertSame('No', $data['rows'][1][4]);
 		$this->assertSame('', $data['rows'][2][4]);
 	}
 
 	public function testBuildExportDataMatrix(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [[
 				'id' => 'q1', 'type' => 'matrix', 'question' => 'M',
 				'rows' => [['id' => 'r1', 'label' => 'Row1']],
@@ -883,12 +475,12 @@ class ResponseServiceTest extends TestCase {
 				'answers' => ['q1' => ['r1' => 'c1']],
 			]],
 		]);
-		$data = $this->call('buildExportData', [1]);
+		$data = $this->exportData(1);
 		$this->assertSame('Row1: Col1', $data['rows'][0][4]);
 	}
 
 	public function testBuildExportDataTableJson(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [[
 				'id' => 'q1', 'type' => 'table', 'question' => 'T',
 				'columns' => [['id' => 'c1', 'label' => 'Price']],
@@ -899,13 +491,13 @@ class ResponseServiceTest extends TestCase {
 				'answers' => ['q1' => [['c1' => '10']]],
 			]],
 		]);
-		$data = $this->call('buildExportData', [1]);
+		$data = $this->exportData(1);
 		// Column id relabelled to 'Price' and JSON-encoded.
 		$this->assertSame(json_encode([['Price' => '10']], JSON_UNESCAPED_UNICODE), $data['rows'][0][4]);
 	}
 
 	public function testBuildExportDataChoiceOptionMapping(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [[
 				'id' => 'q1', 'type' => 'choice', 'question' => 'C',
 				'options' => [['value' => 'opt1', 'label' => 'Yes']],
@@ -916,12 +508,12 @@ class ResponseServiceTest extends TestCase {
 				'answers' => ['q1' => 'opt1'],
 			]],
 		]);
-		$data = $this->call('buildExportData', [1]);
+		$data = $this->exportData(1);
 		$this->assertSame('Yes', $data['rows'][0][4]);
 	}
 
 	public function testBuildExportDataMultipleOptionMappingJoined(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [[
 				'id' => 'q1', 'type' => 'multiple', 'question' => 'M',
 				'options' => [
@@ -935,12 +527,12 @@ class ResponseServiceTest extends TestCase {
 				'answers' => ['q1' => ['o1', 'o2']],
 			]],
 		]);
-		$data = $this->call('buildExportData', [1]);
+		$data = $this->exportData(1);
 		$this->assertSame('A, B', $data['rows'][0][4]);
 	}
 
 	public function testBuildExportDataSanitizesInjectionInAnswerAndHeader(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => '=DANGER']],
 			'responses' => [[
 				'id' => 'x', 'submitted_at' => 't',
@@ -948,7 +540,7 @@ class ResponseServiceTest extends TestCase {
 				'answers' => ['q1' => '=HYPERLINK("evil")'],
 			]],
 		]);
-		$data = $this->call('buildExportData', [1]);
+		$data = $this->exportData(1);
 		$this->assertSame("'=DANGER", $data['headers'][4]);
 		$this->assertSame('\'=HYPERLINK("evil")', $data['rows'][0][4]);
 	}
@@ -958,12 +550,12 @@ class ResponseServiceTest extends TestCase {
 	// =====================================================================
 
 	public function testExportCsvEmptyWhenNoResponses(): void {
-		$this->formRepository->method('load')->willReturn(['questions' => [], 'responses' => []]);
+		$this->formRepository->method('loadForm')->willReturn(['questions' => [], 'responses' => []]);
 		$this->assertSame('', $this->service()->exportCsv(1));
 	}
 
 	public function testExportCsvHasBomAndSemicolons(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Name']],
 			'responses' => [[
 				'id' => 'r1', 'submitted_at' => 't',
@@ -981,7 +573,7 @@ class ResponseServiceTest extends TestCase {
 	}
 
 	public function testExportXlsxEmptyWhenNoResponses(): void {
-		$this->formRepository->method('load')->willReturn(['questions' => [], 'responses' => []]);
+		$this->formRepository->method('loadForm')->willReturn(['questions' => [], 'responses' => []]);
 		$this->assertSame('', $this->service()->exportXlsx(1));
 	}
 
@@ -989,7 +581,7 @@ class ResponseServiceTest extends TestCase {
 		if (!class_exists(\ZipArchive::class)) {
 			$this->markTestSkipped('ZipArchive extension not available');
 		}
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Name']],
 			'responses' => [[
 				'id' => 'r1', 'submitted_at' => 't',
@@ -1021,7 +613,7 @@ class ResponseServiceTest extends TestCase {
 		// number question keeps numeric answer as number in xlsx? Answer is stored
 		// as string typically, but buildExportData leaves plain strings. Force an
 		// int by using consent? No — use a response answer that is int.
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [['id' => 'q1', 'type' => 'number', 'question' => 'N']],
 			'responses' => [[
 				'id' => 'r1', 'submitted_at' => 't',
@@ -1042,7 +634,7 @@ class ResponseServiceTest extends TestCase {
 	}
 
 	public function testExportJson(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'title' => 'My Form',
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
 			'responses' => [['id' => 'r1']],
@@ -1054,8 +646,31 @@ class ResponseServiceTest extends TestCase {
 		$this->assertSame([['id' => 'r1']], $decoded['responses']);
 	}
 
+	/** Written a response at a time, it is laid out byte for byte as json_encode lays out the whole. */
+	public function testTheJsonExportIsLaidOutAsTheWholeWouldBe(): void {
+		$form = [
+			'title' => 'Formulier ü',
+			'questions' => [['id' => 'q1', 'type' => 'matrix', 'question' => 'Q', 'rows' => [['id' => 'r']], 'columns' => []]],
+			'responses' => [
+				['id' => 'r1', 'answers' => ['q1' => ['r' => 'c'], 'q2' => []], 'respondent' => ['type' => 'user', 'user_id' => 'bob']],
+				['id' => 'r2', 'answers' => ['q1' => "two\nlines"], 'score' => ['total' => 1.5]],
+			],
+		];
+		$this->formRepository->method('loadForm')->willReturn($form);
+
+		$json = $this->service()->exportJson(1);
+
+		$whole = json_encode([
+			'title' => $form['title'],
+			'exportedAt' => json_decode($json, true)['exportedAt'],
+			'questions' => $form['questions'],
+			'responses' => (new FormSanitizer())->responses($form['responses']),
+		], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+		$this->assertSame($whole, $json);
+	}
+
 	public function testExportJsonNoResponsesKey(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'title' => 'T', 'questions' => [],
 		]);
 		$decoded = json_decode($this->service()->exportJson(1), true);
@@ -1067,37 +682,40 @@ class ResponseServiceTest extends TestCase {
 	// =====================================================================
 
 	public function testGetResponsesReturnsAll(): void {
-		$this->formRepository->method('load')->willReturn(['responses' => [['id' => 'r1']]]);
+		$this->formRepository->method('loadForm')->willReturn(['responses' => [['id' => 'r1']]]);
 		$this->assertSame([['id' => 'r1']], $this->service()->getResponses(1));
 	}
 
 	public function testGetResponsesEmptyWhenNoKey(): void {
-		$this->formRepository->method('load')->willReturn([]);
+		$this->formRepository->method('loadForm')->willReturn([]);
 		$this->assertSame([], $this->service()->getResponses(1));
 	}
 
-	public function testGetResponsesWithDateFilterDelegates(): void {
-		$this->formRepository->method('load')->willReturn(['responses' => []]);
-		$this->indexService->expects($this->once())
-			->method('getResponsesByDate')
-			->with($this->anything(), '2020-01-01')
-			->willReturn([['id' => 'd1']]);
-		$this->assertSame([['id' => 'd1']], $this->service()->getResponses(1, '2020-01-01'));
+	public function testGetResponsesWithDateFilterKeepsThatDay(): void {
+		$this->formRepository->method('loadForm')->willReturn(['responses' => [
+			['id' => 'd1', 'submitted_at' => '2020-01-01T09:00:00+00:00'],
+			['id' => 'd2', 'submitted_at' => '2020-01-02T09:00:00+00:00'],
+		]]);
+		$this->assertSame(['d1'], array_column($this->service()->getResponses(1, '2020-01-01'), 'id'));
 	}
 
 	public function testGetSummaryBuildsQuestions(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [
 				['id' => 'q1', 'type' => 'choice', 'question' => 'C', 'options' => [['value' => 'a']]],
 				['id' => 'sec', 'type' => 'section', 'question' => 'S'],
 				['id' => 'q2', 'type' => 'number', 'question' => 'N'],
 			],
-			'responses' => [],
+			'responses' => [
+				['submitted_at' => '2026-01-01T09:00:00+00:00', 'answers' => ['q1' => 'a']],
+				['submitted_at' => '2026-01-02T09:00:00+00:00', 'answers' => ['q1' => 'a', 'q2' => 5]],
+			],
 		]);
-		$this->indexService->method('getResponseCount')->willReturn(2);
-		$this->indexService->method('getAnswerStats')->willReturn(['a' => 1]);
+		$this->indexService = new IndexService();
 		$summary = $this->service()->getSummary(1);
 		$this->assertSame(2, $summary['responseCount']);
+		$this->assertSame('2026-01-02T09:00:00+00:00', $summary['lastResponseAt']);
+		$this->assertSame(['a' => 2], $summary['questions'][0]['answerCounts']);
 		// section excluded
 		$this->assertCount(2, $summary['questions']);
 		$this->assertSame('q1', $summary['questions'][0]['id']);
@@ -1108,181 +726,20 @@ class ResponseServiceTest extends TestCase {
 	}
 
 	public function testGetSummaryMatrixKeepsRowsColumns(): void {
-		$this->formRepository->method('load')->willReturn([
+		$this->formRepository->method('loadForm')->willReturn([
 			'questions' => [[
 				'id' => 'q1', 'type' => 'matrix', 'question' => 'M',
 				'rows' => [['id' => 'r']], 'columns' => [['value' => 'c']],
 			]],
 			'responses' => [],
 		]);
-		$this->indexService->method('getResponseCount')->willReturn(0);
-		$this->indexService->method('getAnswerStats')->willReturn([]);
 		$summary = $this->service()->getSummary(1);
 		$this->assertArrayHasKey('rows', $summary['questions'][0]);
 		$this->assertArrayHasKey('columns', $summary['questions'][0]);
 	}
 
-	public function testGetSummaryPublicUsesLoadPublic(): void {
-		$this->formRepository->expects($this->once())->method('loadPublic')->with(7)
-			->willReturn(['questions' => [], 'responses' => []]);
-		$this->indexService->method('getResponseCount')->willReturn(0);
-		$summary = $this->service()->getSummaryPublic(7);
-		$this->assertSame(0, $summary['responseCount']);
-		$this->assertSame([], $summary['questions']);
-	}
-
 	// =====================================================================
-	// sendConfirmationEmail (private, best-effort #103)
-	// =====================================================================
-
-	public function testSendConfirmationEmailDisabledDoesNothing(): void {
-		$this->mailer->expects($this->never())->method('createMessage');
-		$this->call('sendConfirmationEmail', [['settings' => []], []]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testSendConfirmationEmailNoEmailFieldDoesNothing(): void {
-		$this->mailer->expects($this->never())->method('createMessage');
-		$form = [
-			'settings' => ['sendConfirmationEmail' => true],
-			'questions' => [['id' => 'q1', 'type' => 'text']], // no useAsRespondentEmail
-		];
-		$this->call('sendConfirmationEmail', [$form, ['q1' => 'a@b.com']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testSendConfirmationEmailInvalidAddressDoesNothing(): void {
-		$this->mailer->method('validateMailAddress')->willReturn(false);
-		$this->mailer->expects($this->never())->method('createMessage');
-		$form = [
-			'settings' => ['sendConfirmationEmail' => true],
-			'questions' => [['id' => 'q1', 'type' => 'text', 'useAsRespondentEmail' => true]],
-		];
-		$this->call('sendConfirmationEmail', [$form, ['q1' => 'not-an-email']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testSendConfirmationEmailSends(): void {
-		$this->mailer->method('validateMailAddress')->willReturn(true);
-		$message = $this->createMock(IMessage::class);
-		$message->expects($this->once())->method('setTo')->with(['a@b.com'])->willReturnSelf();
-		$message->expects($this->once())->method('setSubject')->willReturnSelf();
-		$message->expects($this->once())->method('setPlainBody')->willReturnSelf();
-		$this->mailer->method('createMessage')->willReturn($message);
-		$this->mailer->expects($this->once())->method('send')->with($message)->willReturn([]);
-
-		$form = [
-			'title' => 'My Form',
-			'settings' => ['sendConfirmationEmail' => true],
-			'questions' => [['id' => 'q1', 'type' => 'text', 'useAsRespondentEmail' => true]],
-		];
-		$this->call('sendConfirmationEmail', [$form, ['q1' => 'a@b.com']]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testSendConfirmationEmailSwallowsExceptions(): void {
-		// createMessage throws → caught, logged, no rethrow.
-		$this->mailer->method('validateMailAddress')->willReturn(true);
-		$this->mailer->method('createMessage')->willThrowException(new \RuntimeException('boom'));
-		$this->logger->expects($this->atLeastOnce())->method('warning');
-		$form = [
-			'settings' => ['sendConfirmationEmail' => true],
-			'questions' => [['id' => 'q1', 'type' => 'text', 'useAsRespondentEmail' => true]],
-		];
-		$this->call('sendConfirmationEmail', [$form, ['q1' => 'a@b.com']]);
-		$this->addToAssertionCount(1);
-	}
-
-	// =====================================================================
-	// notifyFormOwner (private)
-	// =====================================================================
-
-	public function testNotifyFormOwnerNotifiesOwner(): void {
-		$owner = $this->createMock(IUser::class);
-		$owner->method('getUID')->willReturn('owner1');
-		$file = $this->createMock(File::class);
-		$file->method('getOwner')->willReturn($owner);
-		$this->fileLocator->method('getFileByIdPublic')->willReturn($file);
-
-		$notification = $this->makeNotificationMock();
-		$this->notificationManager->method('createNotification')->willReturn($notification);
-		$this->notificationManager->expects($this->once())->method('notify')->with($notification);
-
-		$form = ['title' => 'F', 'settings' => []];
-		$response = ['id' => 'r1', 'respondent' => ['type' => 'anonymous']];
-		$this->call('notifyFormOwner', [1, $form, $response]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testNotifyFormOwnerExcludesRespondentSelf(): void {
-		$owner = $this->createMock(IUser::class);
-		$owner->method('getUID')->willReturn('bob');
-		$file = $this->createMock(File::class);
-		$file->method('getOwner')->willReturn($owner);
-		$this->fileLocator->method('getFileByIdPublic')->willReturn($file);
-
-		// Owner == respondent → no notification sent.
-		$this->notificationManager->expects($this->never())->method('notify');
-
-		$form = ['title' => 'F', 'settings' => []];
-		$response = ['id' => 'r1', 'respondent' => ['type' => 'user', 'user_id' => 'bob', 'display_name' => 'Bob']];
-		$this->call('notifyFormOwner', [1, $form, $response]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testNotifyFormOwnerNotifyOwnerDisabledSkipsOwner(): void {
-		// notify_owner=false and no recipients → nothing sent, file never fetched.
-		$this->fileLocator->expects($this->never())->method('getFileByIdPublic');
-		$this->notificationManager->expects($this->never())->method('notify');
-		$form = ['title' => 'F', 'settings' => ['notify_owner' => false]];
-		$response = ['id' => 'r1', 'respondent' => ['type' => 'anonymous']];
-		$this->call('notifyFormOwner', [1, $form, $response]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testNotifyFormOwnerGroupRecipients(): void {
-		$u1 = $this->createMock(IUser::class);
-		$u1->method('getUID')->willReturn('g-user');
-		$group = $this->createMock(\OCP\IGroup::class);
-		$group->method('getUsers')->willReturn([$u1]);
-		$this->groupManager->method('get')->with('grp')->willReturn($group);
-
-		$notification = $this->makeNotificationMock();
-		$this->notificationManager->method('createNotification')->willReturn($notification);
-		$this->notificationManager->expects($this->once())->method('notify');
-
-		$form = [
-			'title' => 'F',
-			'settings' => [
-				'notify_owner' => false,
-				'notify_recipients' => [['type' => 'group', 'id' => 'grp']],
-			],
-		];
-		$response = ['id' => 'r1', 'respondent' => ['type' => 'anonymous']];
-		$this->call('notifyFormOwner', [1, $form, $response]);
-		$this->addToAssertionCount(1);
-	}
-
-	public function testNotifyFormOwnerSwallowsExceptions(): void {
-		$this->fileLocator->method('getFileByIdPublic')->willThrowException(new \RuntimeException('x'));
-		// Must not propagate.
-		$this->call('notifyFormOwner', [1, ['title' => 'F', 'settings' => []], ['id' => 'r', 'respondent' => ['type' => 'anonymous']]]);
-		$this->addToAssertionCount(1);
-	}
-
-	/** Build an INotification whose fluent setters return self. */
-	private function makeNotificationMock(): INotification {
-		$n = $this->createMock(INotification::class);
-		$n->method('setApp')->willReturnSelf();
-		$n->method('setUser')->willReturnSelf();
-		$n->method('setDateTime')->willReturnSelf();
-		$n->method('setObject')->willReturnSelf();
-		$n->method('setSubject')->willReturnSelf();
-		return $n;
-	}
-
-	// =====================================================================
-	// submitAnonymous / submitAuthenticated (public flows)
+	// submitAnonymousWithForm / submitAuthenticated: one shared way in for the form page
 	// =====================================================================
 
 	public function testSubmitAnonymousHappyPath(): void {
@@ -1291,49 +748,54 @@ class ResponseServiceTest extends TestCase {
 			'settings' => ['allow_multiple' => true],
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
 		];
-		$this->formRepository->method('load')->willReturn($form);
-		$this->responsePersistence->method('appendResponsePublic')->willReturn(['ok' => true]);
-		// notifyFormOwner: getFileByIdPublic
-		$owner = $this->createMock(IUser::class);
-		$owner->method('getUID')->willReturn('owner');
-		$file = $this->createMock(File::class);
-		$file->method('getOwner')->willReturn($owner);
-		$this->fileLocator->method('getFileByIdPublic')->willReturn($file);
-		$this->notificationManager->method('createNotification')->willReturn($this->makeNotificationMock());
-
-		$this->webhookService->expects($this->once())->method('trigger')
-			->with($form, 'response.created', $this->anything());
+		// Stored with what it sets off, in the respondent's language; sent by a background job, not while they wait.
+		$this->responsePersistence->expects($this->once())->method('appendResponsePublic')
+			->with(1, $this->anything(), [ResponseOutbox::WEBHOOKS, ResponseOutbox::NOTIFY, ResponseOutbox::MAIL], 'nl')
+			->willReturn(['ok' => true]);
 
 		$req = $this->createMock(IRequest::class);
 		$req->method('getRemoteAddress')->willReturn('ip');
 		$req->method('getHeader')->willReturn('ua');
 
-		$result = $this->service()->submitAnonymous(1, ['q1' => 'answer'], $req, 'tok');
+		$result = $this->service()->submitAnonymousWithForm(1, $form, ['q1' => 'answer'], $req);
 		$this->assertSame(['ok' => true], $result);
+	}
+
+	/** A retry of a stored submission is answered as stored, also where only one answer is allowed (7a, 3a-5). */
+	public function testARetryOfAStoredSubmissionIsAnsweredAsStored(): void {
+		$stored = ['id' => 'r1', 'submitted_at' => 'then', 'score' => ['total' => 3]];
+		$form = ['settings' => [], 'questions' => [], 'responses' => [$stored]];
+		$form[SubmissionIds::KEY] = [SubmissionIds::of('sub-0000000000000001', []) => 'r1'];
+		// The fingerprint is there: as a new submission it would be "already answered".
+		$this->indexService->method('hasFingerprint')->willReturn(true);
+		$this->responsePersistence->expects($this->never())->method('appendResponsePublic');
+		$req = $this->createMock(IRequest::class);
+
+		$this->assertSame($stored, $this->service()->submitAnonymousWithForm(1, $form, [], $req, null, 'sub-0000000000000001'));
 	}
 
 	public function testSubmitAnonymousDuplicateThrows(): void {
 		$form = ['settings' => [], 'questions' => []];
-		$this->formRepository->method('load')->willReturn($form);
 		$this->indexService->method('hasFingerprint')->willReturn(true);
+		$this->responsePersistence->expects($this->never())->method('appendResponsePublic');
 		$req = $this->createMock(IRequest::class);
 		$req->method('getRemoteAddress')->willReturn('ip');
 		$req->method('getHeader')->willReturn('ua');
 
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessage('You have already submitted');
-		$this->service()->submitAnonymous(1, [], $req, 'tok');
+		$this->service()->submitAnonymousWithForm(1, $form, [], $req);
 	}
 
 	public function testSubmitAnonymousExpiredThrows(): void {
-		$form = ['settings' => ['expires_at' => '2000-01-01T00:00:00'], 'questions' => []];
-		$this->formRepository->method('load')->willReturn($form);
+		$form = ['settings' => ['share_expires_at' => '2000-01-01T00:00:00Z'], 'questions' => []];
+		$this->responsePersistence->expects($this->never())->method('appendResponsePublic');
 		$req = $this->createMock(IRequest::class);
 		$req->method('getRemoteAddress')->willReturn('ip');
 		$req->method('getHeader')->willReturn('ua');
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessage('This form has expired');
-		$this->service()->submitAnonymous(1, [], $req, 'tok');
+		$this->service()->submitAnonymousWithForm(1, $form, [], $req);
 	}
 
 	public function testSubmitAnonymousComputesScoreInQuizMode(): void {
@@ -1345,25 +807,18 @@ class ResponseServiceTest extends TestCase {
 				'options' => [['value' => 'a', 'score' => 5]],
 			]],
 		];
-		$this->formRepository->method('load')->willReturn($form);
 		$captured = null;
 		$this->responsePersistence->method('appendResponsePublic')
 			->willReturnCallback(function ($id, $response) use (&$captured) {
 				$captured = $response;
 				return ['ok' => true];
 			});
-		$owner = $this->createMock(IUser::class);
-		$owner->method('getUID')->willReturn('owner');
-		$file = $this->createMock(File::class);
-		$file->method('getOwner')->willReturn($owner);
-		$this->fileLocator->method('getFileByIdPublic')->willReturn($file);
-		$this->notificationManager->method('createNotification')->willReturn($this->makeNotificationMock());
 
 		$req = $this->createMock(IRequest::class);
 		$req->method('getRemoteAddress')->willReturn('ip');
 		$req->method('getHeader')->willReturn('ua');
 
-		$this->service()->submitAnonymous(1, ['q1' => 'a'], $req, 'tok');
+		$this->service()->submitAnonymousWithForm(1, $form, ['q1' => 'a'], $req);
 		$this->assertArrayHasKey('score', $captured);
 		$this->assertSame(5, $captured['score']['total']);
 		$this->assertSame('anonymous', $captured['respondent']['type']);
@@ -1375,34 +830,60 @@ class ResponseServiceTest extends TestCase {
 			'settings' => ['allow_multiple' => true],
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']],
 		];
-		$this->formRepository->method('loadPublic')->willReturn($form);
 		$captured = null;
 		$this->responsePersistence->method('appendResponsePublic')
 			->willReturnCallback(function ($id, $response) use (&$captured) {
 				$captured = $response;
 				return ['ok' => true];
 			});
-		$owner = $this->createMock(IUser::class);
-		$owner->method('getUID')->willReturn('owner');
-		$file = $this->createMock(File::class);
-		$file->method('getOwner')->willReturn($owner);
-		$this->fileLocator->method('getFileByIdPublic')->willReturn($file);
-		$this->notificationManager->method('createNotification')->willReturn($this->makeNotificationMock());
 
-		$result = $this->service()->submitAuthenticated(1, ['q1' => 'x'], 'bob', 'Bob');
+		$result = $this->service()->submitAuthenticated(1, $form, ['q1' => 'x'], 'bob', 'Bob');
 		$this->assertSame(['ok' => true], $result);
 		$this->assertSame('user', $captured['respondent']['type']);
 		$this->assertSame('bob', $captured['respondent']['user_id']);
 		$this->assertSame('Bob', $captured['respondent']['display_name']);
 	}
 
+	/** Signed in, named or not: the confirmation may carry the PDF. */
+	public function testWhetherTheRespondentWasSignedInGoesAlong(): void {
+		$form = ['title' => 'F', 'settings' => ['allow_multiple' => true, 'anonymous' => true], 'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']]];
+		$signedIn = [];
+		$this->responsePersistence->method('appendResponsePublic')->willReturnCallback(function ($id, $response, $effects, $language, $submission, $flag) use (&$signedIn) {
+			$signedIn[] = $flag;
+			return $response;
+		});
+		$request = $this->createMock(\OCP\IRequest::class);
+
+		$this->service()->submitAuthenticated(1, $form, ['q1' => 'x'], 'bob', 'Bob');
+		$this->service()->submitAnonymousWithForm(1, $form, ['q1' => 'y'], $request, null, null, null, 'bob');
+		$this->service()->submitAnonymousWithForm(1, $form, ['q1' => 'z'], $request);
+
+		$this->assertSame([true, true, false], $signedIn);
+	}
+
+	/** The respondent's language and, where their browser named a real one, time zone: for the PDF of the response. */
+	public function testAResponseKeepsItsLanguageAndARealTimeZone(): void {
+		$form = ['title' => 'F', 'settings' => ['allow_multiple' => true], 'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q']]];
+		$captured = [];
+		$this->responsePersistence->method('appendResponsePublic')->willReturnCallback(function ($id, $response) use (&$captured) {
+			$captured[] = $response;
+			return $response;
+		});
+
+		$this->service()->submitAuthenticated(1, $form, ['q1' => 'x'], 'bob', 'Bob', null, 'Europe/Berlin');
+		$this->service()->submitAuthenticated(1, $form, ['q1' => 'y'], 'bob', 'Bob', null, '<script>');
+
+		$this->assertSame('Europe/Berlin', $captured[0]['timezone']);
+		$this->assertArrayNotHasKey('timezone', $captured[1]);
+		$this->assertSame('nl', $captured[0]['language']);
+	}
+
 	public function testSubmitAuthenticatedDuplicateThrows(): void {
 		$form = ['settings' => [], 'questions' => []];
-		$this->formRepository->method('loadPublic')->willReturn($form);
 		$this->indexService->method('hasUserResponse')->willReturn(true);
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessage('You have already submitted');
-		$this->service()->submitAuthenticated(1, [], 'bob', 'Bob');
+		$this->service()->submitAuthenticated(1, $form, [], 'bob', 'Bob');
 	}
 
 	public function testSubmitAuthenticatedValidationErrorBubbles(): void {
@@ -1410,9 +891,87 @@ class ResponseServiceTest extends TestCase {
 			'settings' => ['allow_multiple' => true],
 			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Q', 'required' => true]],
 		];
-		$this->formRepository->method('loadPublic')->willReturn($form);
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessage("Question 'Q' is required");
-		$this->service()->submitAuthenticated(1, [], 'bob', 'Bob');
+		$this->service()->submitAuthenticated(1, $form, [], 'bob', 'Bob');
+	}
+
+	// =====================================================================
+	// The external API's writes: the public form's checks, one response under the lock (H8, M16, Q7, M30)
+	// =====================================================================
+
+	private function apiForm(array $settings = []): array {
+		return ['settings' => $settings, 'questions' => [['id' => 'c', 'type' => 'choice', 'question' => 'Colour', 'options' => [['value' => 'red']]]]];
+	}
+
+	/** The persistence layer holds it to the form's rules under the lock (ResponsePersistenceServiceTest). */
+	public function testAnApiResponseIsCheckedAndAddedThroughTheSharedRules(): void {
+		$file = $this->createMock(File::class);
+		$this->responsePersistence->expects($this->once())->method('append')
+			->with($file, $this->callback(function (array $response) {
+				return $response['answers'] === ['c' => 'red']
+					&& $response['respondent'] === ['type' => 'api', 'key_id' => 'k1', 'display_name' => 'CRM']
+					&& $response['source'] === 'api'
+					&& preg_match('/^[0-9a-f]{32}$/', $response['id']) === 1;
+			}), [ResponseOutbox::WEBHOOKS, ResponseOutbox::NOTIFY], 'nl')
+			->willReturnArgument(1);
+
+		$this->service()->submitViaApi(7, $file, $this->apiForm(), ['c' => 'red', 'invented' => 'x'], ['id' => 'k1', 'name' => 'CRM']);
+	}
+
+	public function testAnApiResponseToAFullFormIsRefusedBeforeAnythingIsWritten(): void {
+		$this->indexService->method('getResponseCount')->willReturn(5);
+		$this->responsePersistence->expects($this->never())->method('append');
+
+		$this->expectException(ResponseRefusedException::class);
+		$this->service()->submitViaApi(7, $this->createMock(File::class), $this->apiForm(['max_responses' => 5]), ['c' => 'red'], ['id' => 'k1']);
+	}
+
+	public function testAnApiResponseToAClosedFormIsRefusedBeforeAnythingIsWritten(): void {
+		$this->responsePersistence->expects($this->never())->method('append');
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('This form has expired');
+		$this->service()->submitViaApi(7, $this->createMock(File::class), $this->apiForm(['share_expires_at' => '2001-01-01T00:00:00Z']), ['c' => 'red'], ['id' => 'k1']);
+	}
+
+	public function testAnApiResponseBeforeTheFormOpensIsRefused(): void {
+		$this->responsePersistence->expects($this->never())->method('append');
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('This form is not yet open');
+		$this->service()->submitViaApi(7, $this->createMock(File::class), $this->apiForm(['share_starts_at' => '2999-01-01T00:00:00Z']), ['c' => 'red'], ['id' => 'k1']);
+	}
+
+	public function testAnApiResponseThatDoesNotFitIsRefused(): void {
+		$this->responsePersistence->expects($this->never())->method('append');
+
+		$this->expectException(InvalidAnswerException::class);
+		$this->service()->submitViaApi(7, $this->createMock(File::class), $this->apiForm(), ['c' => 'purple'], ['id' => 'k1']);
+	}
+
+	public function testAnApiUpdateChangesOneResponseAndRecordsTheKey(): void {
+		$stored = ['id' => 'r1', 'answers' => ['c' => 'old'], 'respondent' => ['type' => 'user', 'user_id' => 'anna']];
+		$this->responsePersistence->expects($this->once())->method('update')
+			->willReturnCallback(fn (File $f, string $id, callable $change) => $change($stored));
+
+		$updated = $this->service()->updateViaApi(7, $this->createMock(File::class), $this->apiForm(), 'r1', ['c' => 'red'], ['id' => 'k9']);
+
+		$this->assertSame(['c' => 'red'], $updated['answers']);
+		$this->assertSame('api:k9', $updated['updated_by']);
+		$this->assertSame('anna', $updated['respondent']['user_id'], 'who answered stays who answered');
+	}
+
+	/**
+	 * One delete path for web and API, and for deleting everything; the webhooks of each follow from the background job,
+	 * queued by the persistence in the same write (ResponsePersistenceServiceTest) (L33, PO, review 3a-4).
+	 */
+	public function testDeletingGoesThroughTheOneDeletePath(): void {
+		$file = $this->createMock(File::class);
+		$this->responsePersistence->expects($this->once())->method('delete')->with($file, 'r1')->willReturn([['id' => 'r1'], []]);
+		$this->responsePersistence->expects($this->once())->method('deleteAll')->with($file)->willReturn([[], []]);
+
+		$this->service()->deleteResponse(7, $file, 'r1');
+		$this->service()->deleteAllResponses(7, $file);
 	}
 }

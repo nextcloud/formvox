@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="5.26.1@d747f6500b38ac4f7dfc5edbcae6e4b637d7add0">
+  <file src="lib/Listener/RegisterDavPluginListener.php">
+    <MissingDependency>
+      <code><![CDATA[FormUploadPlugin]]></code>
+      <code><![CDATA[HideFormFilesPlugin]]></code>
+      <code><![CDATA[PublicFormDataPlugin]]></code>
+      <code><![CDATA[PublicFormDataPlugin]]></code>
+      <code><![CDATA[StripFormDataPlugin]]></code>
+      <code><![CDATA[StripFormDataPlugin]]></code>
+    </MissingDependency>
+  </file>
+  <file src="lib/Preview/FormPreview.php">
+    <MissingDependency>
+      <code><![CDATA[Image]]></code>
+    </MissingDependency>
+  </file>
+  <file src="lib/Service/AiFormGeneratorService.php">
+    <InvalidOperand>
+      <code><![CDATA[$j]]></code>
+    </InvalidOperand>
+  </file>
+  <file src="lib/Service/BrandingService.php">
+    <UndefinedInterfaceMethod>
+      <code><![CDATA[getContent]]></code>
+    </UndefinedInterfaceMethod>
+  </file>
+  <file src="lib/Service/FormFactory.php">
+    <InvalidArrayOffset>
+      <code><![CDATA[$templateData['responses']]]></code>
+    </InvalidArrayOffset>
+  </file>
+  <file src="lib/Service/FormFileLocator.php">
+    <InvalidArgument>
+      <code><![CDATA[\PDO::PARAM_INT]]></code>
+      <code><![CDATA[\PDO::PARAM_INT]]></code>
+      <code><![CDATA[\PDO::PARAM_INT]]></code>
+    </InvalidArgument>
+  </file>
+  <file src="lib/Service/FormRepository.php">
+    <UndefinedInterfaceMethod>
+      <code><![CDATA[newFile]]></code>
+    </UndefinedInterfaceMethod>
+  </file>
+  <file src="lib/Service/MSFormsImportService.php">
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="lib/Service/MicrosoftFormsApiClient.php">
+    <InvalidArgument>
+      <code><![CDATA[($questionInfo['ChoiceType'] ?? 0) === 1
+							  || $question['allowMultipleSelection']]]></code>
+    </InvalidArgument>
+    <RedundantCondition>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$response]]></code>
+      <code><![CDATA[$response]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA[[]]]></code>
+      <code><![CDATA[[]]]></code>
+      <code><![CDATA[[]]]></code>
+    </TypeDoesNotContainNull>
+  </file>
+  <file src="lib/Service/ResponseService.php">
+    <InvalidOperand>
+      <code><![CDATA[$r]]></code>
+    </InvalidOperand>
+    <NoValue>
+      <code><![CDATA[$question]]></code>
+      <code><![CDATA[$question]]></code>
+      <code><![CDATA[$question]]></code>
+    </NoValue>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+    <TypeDoesNotContainType>
+      <code><![CDATA[in_array($question['type'], ['text', 'textarea', 'number', 'date', 'datetime', 'time'], true)]]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="lib/Service/StatisticsService.php">
+    <UndefinedInterfaceMethod>
+      <code><![CDATA[getContent]]></code>
+    </UndefinedInterfaceMethod>
+  </file>
+  <file src="lib/Service/TelemetryService.php">
+    <RedundantCondition>
+      <code><![CDATA[$this->licenseService->getLicenseKey()]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA['']]></code>
+    </TypeDoesNotContainNull>
+  </file>
+</files>

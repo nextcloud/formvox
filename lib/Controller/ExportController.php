@@ -5,211 +5,159 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\Pdf\PdfExport;
+use OCA\FormVox\Pdf\ResponsePdf;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\RequireFormPermission;
+use OCA\FormVox\Service\FileNames;
+use OCA\FormVox\Service\FormAccessService;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\OdtTemplateService;
-use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\ResponseService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\StrictCookiesRequired;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\DataResponse;
+use OCP\AppFramework\Http\ZipResponse;
+use OCP\IL10N;
 use OCP\IRequest;
-use OCP\IUserSession;
 
 class ExportController extends Controller {
-	private FormRepository $formRepository;
-	private FormFileLocator $fileLocator;
-	private ResponseService $responseService;
-	private OdtTemplateService $odtTemplateService;
-	private PermissionService $permissionService;
-	private IUserSession $userSession;
-
 	public function __construct(
 		IRequest $request,
-		FormRepository $formRepository,
-		FormFileLocator $fileLocator,
-		ResponseService $responseService,
-		OdtTemplateService $odtTemplateService,
-		PermissionService $permissionService,
-		IUserSession $userSession,
+		private FormRepository $formRepository,
+		private FormAccessService $access,
+		private ResponseService $responseService,
+		private OdtTemplateService $odtTemplateService,
+		private PdfExport $pdfExport,
+		private IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->formRepository = $formRepository;
-		$this->fileLocator = $fileLocator;
-		$this->responseService = $responseService;
-		$this->odtTemplateService = $odtTemplateService;
-		$this->permissionService = $permissionService;
-		$this->userSession = $userSession;
 	}
 
-	/**
-	 * Export to CSV
-	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
 	public function exportCsv(int $fileId): DataDownloadResponse {
-		$file = $this->fileLocator->getFileById($fileId);
-		$form = $this->formRepository->load($fileId);
-		$userId = $this->userSession->getUser()?->getUID() ?? '';
-		$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-		if (!$this->permissionService->canViewResponses($role)) {
-			throw new \Exception('Permission denied');
-		}
-
-		$csv = $this->responseService->exportCsv($fileId);
-		$filename = $this->sanitizeFilename($form['title']) . '-responses.csv';
-
-		return new DataDownloadResponse($csv, $filename, 'text/csv; charset=utf-8');
-	}
-
-	/**
-	 * Export to XLSX (real Excel spreadsheet — no CSV encoding/separator
-	 * ambiguity, so umlauts and columns are correct in every locale, #114).
-	 */
-	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	public function exportExcel(int $fileId): DataDownloadResponse {
-		$file = $this->fileLocator->getFileById($fileId);
-		$form = $this->formRepository->load($fileId);
-		$userId = $this->userSession->getUser()?->getUID() ?? '';
-		$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-		if (!$this->permissionService->canViewResponses($role)) {
-			throw new \Exception('Permission denied');
-		}
-
-		$xlsx = $this->responseService->exportXlsx($fileId);
-		$filename = $this->sanitizeFilename($form['title']) . '-responses.xlsx';
-
 		return new DataDownloadResponse(
-			$xlsx,
-			$filename,
-			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+			$this->responseService->exportCsv($fileId),
+			$this->filename($fileId, 'csv'),
+			'text/csv; charset=utf-8'
 		);
 	}
 
 	/**
-	 * Export to JSON
+	 * A real spreadsheet, so umlauts and columns are right in every locale (#114).
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function exportJson(int $fileId): DataDownloadResponse {
-		$file = $this->fileLocator->getFileById($fileId);
-		$form = $this->formRepository->load($fileId);
-		$userId = $this->userSession->getUser()?->getUID() ?? '';
-		$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-		if (!$this->permissionService->canViewResponses($role)) {
-			throw new \Exception('Permission denied');
-		}
-
-		$json = $this->responseService->exportJson($fileId);
-		$filename = $this->sanitizeFilename($form['title']) . '-responses.json';
-
-		return new DataDownloadResponse($json, $filename, 'application/json');
-	}
-
-	/**
-	 * Upload ODT template
-	 */
-	#[NoAdminRequired]
-	public function uploadOdtTemplate(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			if (!$this->permissionService->canViewResponses($role)) {
-				return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
-			}
-
-			$uploadedFile = $this->request->getUploadedFile('template');
-			if (!$uploadedFile || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
-				return new DataResponse(['error' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
-			}
-
-			$this->odtTemplateService->storeOdtTemplate($fileId, $uploadedFile);
-			return new DataResponse(['success' => true]);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	/**
-	 * Download ODT template
-	 */
-	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	public function downloadOdtTemplate(int $fileId): DataDownloadResponse {
-		$file = $this->fileLocator->getFileById($fileId);
-		$userId = $this->userSession->getUser()?->getUID() ?? '';
-		$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-		if (!$this->permissionService->canViewResponses($role)) {
-			throw new \Exception('Permission denied');
-		}
-
-		$template = $this->odtTemplateService->getOdtTemplate($fileId);
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
+	public function exportExcel(int $fileId): DataDownloadResponse {
 		return new DataDownloadResponse(
-			$template->getContent(),
+			$this->responseService->exportXlsx($fileId),
+			$this->filename($fileId, 'xlsx'),
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+		);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
+	public function exportJson(int $fileId): DataDownloadResponse {
+		return new DataDownloadResponse(
+			$this->responseService->exportJson($fileId),
+			$this->filename($fileId, 'json'),
+			'application/json'
+		);
+	}
+
+	/** Every response's PDF in one ZIP, with a note on those still being made or that could not be made, and manifest.csv. */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	// Heavy to make: only from Nextcloud's own pages, not from a link on another site.
+	#[StrictCookiesRequired]
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
+	public function exportPdfs(int $fileId): ZipResponse {
+		$form = $this->formRepository->loadForm($fileId);
+		if (!ResponsePdf::keptFor($form)) {
+			throw RequestException::pdfOff();
+		}
+		$zip = new ZipResponse($this->request, substr(self::nameFor($form, 'zip'), 0, -4) . '-pdf');
+		$export = $this->pdfExport->entries($this->access->getFile($fileId), $form, $this->formRepository->eachResponse($fileId, $form));
+		foreach ($export['entries'] as $entry) {
+			$zip->addResource($entry['stream'], $entry['name'], $entry['size'], $entry['time']);
+		}
+		$note = '';
+		if ($export['pending'] > 0) {
+			$note .= $this->l->t('PDFs still being made: %s. Download the ZIP again in a few minutes.', [(string)$export['pending']]) . "\n";
+		}
+		if ($export['failed'] > 0) {
+			$note .= $this->l->t('PDFs that could not be made: %s. Your administrator finds the reason in the Nextcloud log.', [(string)$export['failed']]) . "\n";
+		}
+		if ($note !== '') {
+			$stream = fopen('php://temp', 'w+b');
+			if ($stream !== false) {
+				fwrite($stream, $note);
+				rewind($stream);
+				// TRANSLATORS: Name, without extension, of the note in a ZIP of PDFs that says which are missing
+				$zip->addResource($stream, $this->l->t('README') . '.txt', strlen($note), time());
+			}
+		}
+		// Last: it is written as the ZIP reads the PDFs before it.
+		$manifest = $export['manifest'];
+		$zip->addResource($manifest['stream'], $manifest['name'], $manifest['size'], $manifest['time']);
+		return $zip;
+	}
+
+	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
+	public function uploadOdtTemplate(int $fileId): DataResponse {
+		$uploadedFile = $this->request->getUploadedFile('template');
+		if (!$uploadedFile || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
+			return new DataResponse(['error' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
+		}
+
+		$this->odtTemplateService->storeOdtTemplate($this->access->getFile($fileId), $uploadedFile);
+		return new DataResponse(['success' => true]);
+	}
+
+	/**
+	 * The client fills this template with responses, so it counts as an export.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
+	public function downloadOdtTemplate(int $fileId): DataDownloadResponse {
+		return new DataDownloadResponse(
+			$this->odtTemplateService->getOdtTemplate($this->access->getFile($fileId))->getContent(),
 			'template.odt',
 			'application/vnd.oasis.opendocument.text'
 		);
 	}
 
-	/**
-	 * Delete ODT template
-	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function deleteOdtTemplate(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			if (!$this->permissionService->canViewResponses($role)) {
-				return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
-			}
-
-			$this->odtTemplateService->deleteOdtTemplate($fileId);
-			return new DataResponse(['success' => true]);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		$this->odtTemplateService->deleteOdtTemplate($this->access->getFile($fileId));
+		return new DataResponse(['success' => true]);
 	}
 
-	/**
-	 * Check if ODT template exists
-	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::READ)]
 	public function hasOdtTemplate(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			if (!$this->permissionService->canViewResponses($role)) {
-				return new DataResponse(['error' => 'Permission denied'], Http::STATUS_FORBIDDEN);
-			}
-
-			return new DataResponse(['hasTemplate' => $this->odtTemplateService->hasOdtTemplate($fileId)]);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		return new DataResponse(['hasTemplate' => $this->odtTemplateService->hasOdtTemplate($this->access->getFile($fileId))]);
 	}
 
-	/**
-	 * Sanitize filename
-	 */
-	private function sanitizeFilename(string $name): string {
-		$name = preg_replace('/[\/\\\\:*?"<>|]/', '', $name);
-		$name = preg_replace('/\s+/', '-', $name);
-		$name = strtolower($name);
-		return substr($name, 0, 50);
+	private function filename(int $fileId, string $extension): string {
+		return self::nameFor($this->formRepository->loadForm($fileId), $extension);
+	}
+
+	private static function nameFor(array $form, string $extension): string {
+		return FileNames::export(is_scalar($form['title'] ?? null) ? (string)$form['title'] : '', $extension);
 	}
 }

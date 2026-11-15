@@ -4,116 +4,41 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\Files_Trashbin\Trash\ITrashManager;
+use OCA\FormVox\Store\FormFolders;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\NotFoundException;
+use OCP\Server;
 
 /**
- * Response file uploads and the hidden sibling folders that hold them.
+ * Response uploads and branding images, kept in hidden folders next to the .fvform, or in app data for a form in the
+ * database (FormFolders).
  *
- * Each form keeps its uploads and branding images in hidden folders named by
- * the form's file ID (`.formvox-uploads-{id}`, `.formvox-branding-{id}`) as
- * siblings of the .fvform file, so they survive a rename/move of the form and
- * are reachable from public rendering. Resolution goes through FormFileLocator
- * so the #90 read-only-vs-write-capable account selection is honoured.
- *
- * Extracted verbatim from FormService.
+ * Callers pass the form File opened for them; only the *Public methods resolve it
+ * themselves, through a borrowed account, for respondents without one.
  */
 class UploadService {
-	private FormFileLocator $fileLocator;
-	private FormFactory $formFactory;
-
-	public function __construct(FormFileLocator $fileLocator, FormFactory $formFactory) {
-		$this->fileLocator = $fileLocator;
-		$this->formFactory = $formFactory;
+	public function __construct(
+		private FormFileLocator $fileLocator,
+		private FormFactory $formFactory,
+		private ?FormFolders $folders = null,
+	) {
 	}
 
 	/**
-	 * Get the uploads folder for a form
-	 * Creates it if it doesn't exist
-	 * Uses file ID in the folder name so renaming the form doesn't break uploads
-	 */
-	public function getUploadsFolder(int $fileId, bool $requireWrite = false): Folder {
-		// Only writing callers need a write-capable account; a read-only caller
-		// (e.g. downloading an upload) must keep working on shares where the
-		// reachable account can read but not write (#90).
-		$formFile = $this->fileLocator->getFileByIdPublic($fileId, $requireWrite);
-		$formFolder = $formFile->getParent();
-
-		// Hidden folder with file ID - never changes even if form is renamed
-		$uploadsFolderName = ".formvox-uploads-{$fileId}";
-
-		try {
-			$uploadsFolder = $formFolder->get($uploadsFolderName);
-			if (!($uploadsFolder instanceof Folder)) {
-				throw new \RuntimeException('Uploads path is not a folder');
-			}
-			return $uploadsFolder;
-		} catch (NotFoundException $e) {
-			// Read-only callers must not try to create the folder — signal
-			// "nothing here" so they can 404 cleanly instead of erroring.
-			if (!$requireWrite) {
-				throw $e;
-			}
-			return $formFolder->newFolder($uploadsFolderName);
-		}
-	}
-
-	/**
-	 * Hidden per-form folder for branding images (logo/header pictures).
-	 * Sibling of the .fvform file, so it travels along on rename/move and
-	 * is reachable from public form rendering as well as the editor.
-	 */
-	public function getBrandingFolder(int $fileId, bool $requireWrite = false): Folder {
-		// Read-only by default so public form rendering can still show branding
-		// images on shares where the reachable account cannot write (#90).
-		$formFile = $this->fileLocator->getFileByIdPublic($fileId, $requireWrite);
-		$formFolder = $formFile->getParent();
-		$brandingFolderName = ".formvox-branding-{$fileId}";
-
-		try {
-			$brandingFolder = $formFolder->get($brandingFolderName);
-			if (!($brandingFolder instanceof Folder)) {
-				throw new \RuntimeException('Branding path is not a folder');
-			}
-			return $brandingFolder;
-		} catch (NotFoundException $e) {
-			if (!$requireWrite) {
-				throw $e;
-			}
-			return $formFolder->newFolder($brandingFolderName);
-		}
-	}
-
-	/**
-	 * Store an uploaded file for a form response
+	 * Store an upload from a public respondent. They have no account, so the
+	 * form is opened through an account that may write where the files go (#90).
 	 *
-	 * @param int $fileId The form file ID
-	 * @param string $responseId The response ID (temporary or final)
-	 * @param array $uploadedFile The uploaded file from $_FILES
 	 * @return array File metadata
 	 */
-	public function storeUpload(int $fileId, string $responseId, array $uploadedFile): array {
-		$uploadsFolder = $this->getUploadsFolder($fileId, true);
+	public function storeUploadPublic(int $fileId, string $responseId, array $uploadedFile): array {
+		$formFile = $this->fileLocator->getFileByIdPublicForWrite($fileId);
+		$responseFolder = $this->childFolder($this->getUploadsFolder($formFile, true), $responseId, true);
 
-		// Create response subfolder
-		try {
-			$responseFolder = $uploadsFolder->get($responseId);
-			if (!($responseFolder instanceof Folder)) {
-				throw new \RuntimeException('Response path is not a folder');
-			}
-		} catch (NotFoundException $e) {
-			$responseFolder = $uploadsFolder->newFolder($responseId);
-		}
-
-		// Sanitize filename but keep original for display
 		$originalName = $uploadedFile['name'];
-		$safeName = $this->sanitizeUploadFilename($originalName);
+		$safeName = $this->formFactory->getUniqueFilename($responseFolder, self::sanitizeUploadFilename($originalName));
 
-		// Ensure unique filename in folder
-		$safeName = $this->formFactory->getUniqueFilename($responseFolder, $safeName);
-
-		// Create the file
 		$newFile = $responseFolder->newFile($safeName);
 		$newFile->putContent(file_get_contents($uploadedFile['tmp_name']));
 
@@ -127,124 +52,175 @@ class UploadService {
 		];
 	}
 
-	/**
-	 * Get an uploaded file
-	 *
-	 * @param int $formFileId The form file ID
-	 * @param string $responseId The response ID
-	 * @param string $filename The filename
-	 * @return File The file
-	 */
-	public function getUpload(int $formFileId, string $responseId, string $filename): File {
-		$uploadsFolder = $this->getUploadsFolder($formFileId);
-
+	/** How many files one response's upload folder holds so far. */
+	public function countUploadsPublic(int $fileId, string $responseId): int {
 		try {
-			$responseFolder = $uploadsFolder->get($responseId);
-			if (!($responseFolder instanceof Folder)) {
-				throw new NotFoundException('Response folder not found');
-			}
+			$folder = $this->childFolder($this->getUploadsFolder($this->fileLocator->getFileByIdPublicForWrite($fileId)), $responseId);
+		} catch (NotFoundException|\InvalidArgumentException) {
+			return 0;
+		}
+		return count($folder->getDirectoryListing());
+	}
 
-			$file = $responseFolder->get($filename);
-			if (!($file instanceof File)) {
-				throw new NotFoundException('File not found');
-			}
+	/**
+	 * An upload folder name: 32 hex characters (server) or a UUID (the browser's crypto.randomUUID) (H5, L18).
+	 */
+	public static function isValidResponseId(string $responseId): bool {
+		return preg_match('/^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/', $responseId) === 1;
+	}
 
-			return $file;
-		} catch (NotFoundException $e) {
+	/**
+	 * @throws NotFoundException
+	 */
+	public function getUpload(File $formFile, string $responseId, string $filename): File {
+		try {
+			$file = $this->childFolder($this->getUploadsFolder($formFile), $responseId)->get($filename);
+		} catch (NotFoundException|\InvalidArgumentException $e) {
 			throw new NotFoundException('Upload not found');
 		}
+		if (!($file instanceof File)) {
+			throw new NotFoundException('Upload not found');
+		}
+		return $file;
+	}
+
+	public function deleteResponseUploads(File $formFile, string $responseId): void {
+		try {
+			$folder = $this->childFolder($this->getUploadsFolder($formFile), $responseId);
+			self::withoutTrash(fn () => $folder->delete());
+		} catch (NotFoundException|\InvalidArgumentException $e) {
+			// Nothing stored for this response, or an id that is not a folder name.
+		}
 	}
 
 	/**
-	 * Delete all uploads for a response
-	 *
-	 * @param int $formFileId The form file ID
-	 * @param string $responseId The response ID
+	 * One file of a response, when a changed response no longer names it.
 	 */
-	public function deleteResponseUploads(int $formFileId, string $responseId): void {
+	public function deleteUpload(File $formFile, string $responseId, string $filename): void {
 		try {
-			$uploadsFolder = $this->getUploadsFolder($formFileId, true);
-			$responseFolder = $uploadsFolder->get($responseId);
-			if ($responseFolder instanceof Folder) {
-				$responseFolder->delete();
-			}
+			$upload = $this->getUpload($formFile, $responseId, $filename);
+			self::withoutTrash(fn () => $upload->delete());
 		} catch (NotFoundException $e) {
-			// No uploads to delete
+			// Already gone.
 		}
 	}
 
-	/**
-	 * Delete the entire uploads folder for a form
-	 *
-	 * @param int $fileId The form file ID
-	 */
-	public function deleteAllUploads(int $fileId): void {
+	public function deleteAllUploads(File $formFile): void {
 		try {
-			$formFile = $this->fileLocator->getFileByIdPublic($fileId, true);
-			$formFolder = $formFile->getParent();
-
-			// Use file ID based folder name
-			$uploadsFolderName = ".formvox-uploads-{$fileId}";
-
-			try {
-				$uploadsFolder = $formFolder->get($uploadsFolderName);
-				if ($uploadsFolder instanceof Folder) {
-					$uploadsFolder->delete();
-				}
-			} catch (NotFoundException $e) {
-				// No uploads folder
-			}
-		} catch (\Exception $e) {
-			// Form file not found or other error
+			$folder = $this->getUploadsFolder($formFile);
+			self::withoutTrash(fn () => $folder->delete());
+		} catch (NotFoundException $e) {
+			// No uploads folder
 		}
 	}
 
 	/**
-	 * Create a ZIP file containing all uploads for a form
-	 *
-	 * @param int $fileId The form file ID
+	 * For good: whoever deletes a response deletes its files, rather than leaving them in the trash of the
+	 * account the form lives with, where nobody looks (qual#4, secu#47, PO 5).
+	 */
+	public static function withoutTrash(callable $delete): void {
+		try {
+			$trash = interface_exists(ITrashManager::class) ? Server::get(ITrashManager::class) : null;
+		} catch (\Throwable) {
+			$trash = null;
+		}
+		$trash?->pauseTrash();
+		try {
+			$delete();
+		} finally {
+			$trash?->resumeTrash();
+		}
+	}
+
+	/**
 	 * @return string The ZIP file content
 	 * @throws NotFoundException If no uploads exist
 	 */
-	public function createUploadsZip(int $fileId): string {
-		$formFile = $this->fileLocator->getFileByIdPublic($fileId);
-		$formFolder = $formFile->getParent();
+	public function createUploadsZip(File $formFile): string {
+		$uploadsFolder = $this->getUploadsFolder($formFile);
 
-		// Get uploads folder
-		$uploadsFolderName = ".formvox-uploads-{$fileId}";
-		try {
-			$uploadsFolder = $formFolder->get($uploadsFolderName);
-			if (!($uploadsFolder instanceof Folder)) {
-				throw new NotFoundException('No uploads found');
-			}
-		} catch (NotFoundException $e) {
-			throw new NotFoundException('No uploads found');
-		}
-
-		// Create temporary ZIP file
 		$tempFile = tempnam(sys_get_temp_dir(), 'formvox_uploads_');
 		$zip = new \ZipArchive();
-
 		if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
 			throw new \RuntimeException('Failed to create ZIP file');
 		}
-
-		// Add all files from uploads folder
 		$this->addFolderToZip($zip, $uploadsFolder, '');
-
 		$zip->close();
 
-		// Read ZIP content
 		$content = file_get_contents($tempFile);
-
-		// Clean up temp file
 		unlink($tempFile);
 
 		if ($content === false || strlen($content) === 0) {
 			throw new NotFoundException('No uploads found');
 		}
-
 		return $content;
+	}
+
+	/**
+	 * Hidden sibling folder named by file id, so a rename or move of the form keeps it.
+	 *
+	 * @throws NotFoundException when it does not exist and $create is false
+	 */
+	public function getUploadsFolder(File $formFile, bool $create = false): Folder {
+		return $this->folders?->of($formFile, FormFolders::UPLOADS, $create)
+			?? $this->siblingFolder($formFile, '.formvox-uploads-' . $formFile->getId(), $create);
+	}
+
+	/**
+	 * @throws NotFoundException when it does not exist and $create is false
+	 */
+	public function getBrandingFolder(File $formFile, bool $create = false): Folder {
+		return $this->folders?->of($formFile, FormFolders::BRANDING, $create)
+			?? $this->siblingFolder($formFile, '.formvox-branding-' . $formFile->getId(), $create);
+	}
+
+	/**
+	 * Branding images for public rendering, opened through any account that can read the form.
+	 *
+	 * @throws NotFoundException
+	 */
+	public function getBrandingFolderPublic(int $fileId): Folder {
+		return $this->getBrandingFolder($this->fileLocator->getFileByIdPublic($fileId));
+	}
+
+	private function siblingFolder(File $formFile, string $name, bool $create): Folder {
+		$parent = $formFile->getParent();
+		try {
+			$folder = $parent->get($name);
+		} catch (NotFoundException $e) {
+			if (!$create) {
+				throw $e;
+			}
+			return $parent->newFolder($name);
+		}
+		if (!($folder instanceof Folder)) {
+			throw new NotFoundException($name . ' is not a folder');
+		}
+		return $folder;
+	}
+
+	/**
+	 * A response's subfolder. An empty or path-like id would address the uploads folder
+	 * itself, and deleting it would wipe every response's files.
+	 *
+	 * @throws NotFoundException|\InvalidArgumentException
+	 */
+	private function childFolder(Folder $uploadsFolder, string $responseId, bool $create = false): Folder {
+		if (!self::isValidResponseId($responseId)) {
+			throw new \InvalidArgumentException('Invalid response id');
+		}
+		try {
+			$folder = $uploadsFolder->get($responseId);
+		} catch (NotFoundException $e) {
+			if (!$create) {
+				throw $e;
+			}
+			return $uploadsFolder->newFolder($responseId);
+		}
+		if (!($folder instanceof Folder)) {
+			throw new NotFoundException('Response folder not found');
+		}
+		return $folder;
 	}
 
 	/**
@@ -267,10 +243,26 @@ class UploadService {
 	}
 
 	/**
+	 * Whether $claimed is the name a respondent's file was stored as $stored under (getUniqueFilename may add -N).
+	 */
+	public static function isStoredNameOf(string $stored, string $claimed): bool {
+		if ($claimed === '' || mb_strlen($claimed) > 255 || basename(str_replace('\\', '/', $claimed)) !== $claimed) {
+			return false;
+		}
+		$safe = self::sanitizeUploadFilename($claimed);
+		if ($stored === $safe) {
+			return true;
+		}
+		$base = pathinfo($safe, PATHINFO_FILENAME);
+		$extension = pathinfo($safe, PATHINFO_EXTENSION);
+		return preg_match('/^' . preg_quote($base, '/') . '-\d+\.' . preg_quote($extension, '/') . '$/', $stored) === 1;
+	}
+
+	/**
 	 * Sanitize upload filename
 	 * Keeps extension, removes unsafe characters
 	 */
-	private function sanitizeUploadFilename(string $filename): string {
+	private static function sanitizeUploadFilename(string $filename): string {
 		$info = pathinfo($filename);
 		$extension = $info['extension'] ?? 'bin';
 
@@ -279,20 +271,20 @@ class UploadService {
 		// Remove path traversal characters and null bytes
 		$name = str_replace(['..', "\0", '/', '\\'], '', $name);
 		// Replace problematic characters with underscores
-		$name = preg_replace('/[<>:"|?*]/', '_', $name);
+		$name = preg_replace('/[<>:"|?*]/u', '_', $name) ?? '';
 		// Collapse multiple underscores/spaces
-		$name = preg_replace('/[_\s]+/', '_', $name);
+		$name = preg_replace('/[_\s]+/u', '_', $name) ?? '';
 		// Trim
 		$name = trim($name, '._');
-		// Limit length
-		$name = substr($name, 0, 100);
+		// At most 100 bytes, cut between characters: Nextcloud refuses names over 250 bytes, and half a character is none.
+		$name = mb_strcut($name, 0, 100, 'UTF-8');
 		// Default if empty
 		if (empty($name)) {
 			$name = 'upload';
 		}
 
 		// Clean extension
-		$extension = preg_replace('/[^a-zA-Z0-9]/', '', $extension);
+		$extension = substr(preg_replace('/[^a-zA-Z0-9]/', '', $extension) ?? '', 0, 16);
 		if (empty($extension)) {
 			$extension = 'bin';
 		}

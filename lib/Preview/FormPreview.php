@@ -11,116 +11,41 @@ use OCP\IImage;
 use OCP\Image;
 use OCP\Preview\IProviderV2;
 
+/**
+ * Gives a form the FormVox icon wherever Nextcloud shows a preview: the Files list and grid, search, activity, shares.
+ * Nextcloud takes file type icons only from its own signed core folder (#128), so the preview is how a form gets one.
+ */
 class FormPreview implements IProviderV2 {
-	/**
-	 * @inheritDoc
-	 */
+	/** Rendered from img/filetypes/application-x-fvform.svg by scripts/render-filetype-icon.sh. */
+	public const ICON = __DIR__ . '/../../img/filetypes/application-x-fvform.png';
+	public const ICON_SIZE = 512;
+
 	public function getMimeType(): string {
 		return Application::MIME_TYPE;
 	}
 
-	/**
-	 * @inheritDoc
-	 */
+	// By type, not name: a form in the trash is "x.fvform.d1729600000", an older version "x.fvform.v1729600000".
 	public function isAvailable(FileInfo $file): bool {
-		return $file->getExtension() === Application::FILE_EXTENSION;
+		return $file->getMimetype() === Application::MIME_TYPE;
 	}
 
 	/**
-	 * @inheritDoc
+	 * The icon, not the form: nothing is read, and the PNG's transparency keeps the dark theme dark.
 	 */
 	public function getThumbnail(File $file, int $maxX, int $maxY): ?IImage {
-		try {
-			$content = $file->getContent();
-			$form = json_decode($content, true);
-
-			if ($form === null) {
-				return null;
-			}
-
-			// Create image
-			$image = imagecreatetruecolor($maxX, $maxY);
-			if ($image === false) {
-				return null;
-			}
-
-			// Colors
-			$bgColor = imagecolorallocate($image, 255, 255, 255);
-			$primaryColor = imagecolorallocate($image, 0, 130, 201);
-			$textColor = imagecolorallocate($image, 51, 51, 51);
-			$mutedColor = imagecolorallocate($image, 128, 128, 128);
-
-			// Fill background
-			imagefill($image, 0, 0, $bgColor);
-
-			// Draw form icon (simple form representation)
-			$iconSize = min($maxX, $maxY) * 0.4;
-			$iconX = ($maxX - $iconSize) / 2;
-			$iconY = $maxY * 0.15;
-
-			// Draw form rectangle
-			imagefilledrectangle(
-				$image,
-				(int)$iconX,
-				(int)$iconY,
-				(int)($iconX + $iconSize),
-				(int)($iconY + $iconSize),
-				$primaryColor
-			);
-
-			// Draw lines to represent form fields
-			$lineY = $iconY + $iconSize * 0.2;
-			$lineHeight = $iconSize * 0.15;
-			$lineSpacing = $iconSize * 0.25;
-
-			for ($i = 0; $i < 3; $i++) {
-				imagefilledrectangle(
-					$image,
-					(int)($iconX + $iconSize * 0.1),
-					(int)$lineY,
-					(int)($iconX + $iconSize * 0.9),
-					(int)($lineY + $lineHeight),
-					$bgColor
-				);
-				$lineY += $lineSpacing;
-			}
-
-			// Draw title text
-			$title = $form['title'] ?? 'Form';
-			if (strlen($title) > 20) {
-				$title = substr($title, 0, 17) . '...';
-			}
-
-			$fontSize = 3;
-			$textWidth = imagefontwidth($fontSize) * strlen($title);
-			$textX = ($maxX - $textWidth) / 2;
-			$textY = $iconY + $iconSize + $maxY * 0.1;
-
-			imagestring($image, $fontSize, (int)$textX, (int)$textY, $title, $textColor);
-
-			// Draw question count
-			$questionCount = count($form['questions'] ?? []);
-			$responseCount = $form['_index']['response_count'] ?? count($form['responses'] ?? []);
-			$stats = "{$questionCount} questions, {$responseCount} responses";
-
-			$statsWidth = imagefontwidth(2) * strlen($stats);
-			$statsX = ($maxX - $statsWidth) / 2;
-			$statsY = $textY + $maxY * 0.1;
-
-			imagestring($image, 2, (int)$statsX, (int)$statsY, $stats, $mutedColor);
-
-			// Convert to IImage
-			ob_start();
-			imagepng($image);
-			$data = ob_get_clean();
-			imagedestroy($image);
-
-			$img = new Image();
-			$img->loadFromData($data);
-
-			return $img;
-		} catch (\Exception $e) {
+		$data = @file_get_contents(self::ICON);
+		if ($data === false) {
 			return null;
 		}
+		$image = new Image();
+		if (!$image->loadFromData($data)) {
+			return null;
+		}
+		// Nextcloud derives every size from this one; an admin may have set a smaller maximum.
+		$size = min(self::ICON_SIZE, $maxX, $maxY);
+		if ($size < self::ICON_SIZE) {
+			$image->resize($size);
+		}
+		return $image->valid() ? $image : null;
 	}
 }

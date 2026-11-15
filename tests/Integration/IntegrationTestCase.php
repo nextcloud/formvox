@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Integration;
 
 use OCA\FormVox\Service\FormFactory;
+use OCA\FormVox\Service\OwnWrites;
+use OCP\Files\Config\IUserMountCache;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
@@ -34,6 +36,15 @@ abstract class IntegrationTestCase extends TestCase {
 	protected IUser $owner;
 	protected IRootFolder $rootFolder;
 	protected Folder $userFolder;
+
+	public static function setUpBeforeClass(): void {
+		parent::setUpBeforeClass();
+		// Core empties oc_storages after each class but keeps the numbers it knew; files would be stored under gone ones.
+		\OC\Files\Cache\Storage::getGlobalCache()->clearCache();
+		$setup = Server::get(\OC\Files\SetupManager::class);
+		$setup->tearDown();
+		$setup->setupRoot();
+	}
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -87,6 +98,8 @@ abstract class IntegrationTestCase extends TestCase {
 	 */
 	protected function loginAs(string $uid, ?IUser $user = null): void {
 		$user ??= $this->ensureUser($uid);
+		// A new request knows no mounts yet: one moved or gone in an earlier step is looked up again.
+		Server::get(IUserMountCache::class)->clear();
 		$this->loginAsUser($uid);                       // \Test\TestCase helper
 		Server::get(IUserSession::class)->setUser($user); // the FormVox-specific step
 	}
@@ -117,8 +130,8 @@ abstract class IntegrationTestCase extends TestCase {
 
 		$name = $factory->sanitizeFilename($title) . '.fvform';
 		$name = $factory->getUniqueFilename($folder, $name);
-		$file = $folder->newFile($name);
-		$file->putContent(json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+		// As FormVox writes it; otherwise FormIntake takes it in as a new form from outside, without its responses.
+		$file = Server::get(OwnWrites::class)->during(fn () => $folder->newFile($name, json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)));
 
 		// Ensure the file is present in oc_filecache before any public lookup:
 		// getFileByIdPublic() queries filecache/storages directly (it has no
@@ -173,6 +186,19 @@ abstract class IntegrationTestCase extends TestCase {
 				. 'file here. Test-fixture limitation, not a production defect; the '
 				. 'resolution logic is covered by the FormFileLocatorTest unit test.'
 			);
+		}
+	}
+
+	/**
+	 * \Test\TestCase::tearDownAfterClass() calls \OC_Hook::clear(), which also
+	 * disconnects Nextcloud's view→node bridge for every test class that runs
+	 * after the first — so a copy no longer dispatches NodeCopiedEvent. In
+	 * production the bridge is always connected; reconnect it if it is gone.
+	 */
+	protected function reconnectNodeEvents(): void {
+		$hooks = \OC_Hook::getHooks();
+		if (empty($hooks['OC_Filesystem']['post_copy'])) {
+			Server::get(\OC\Files\Node\HookConnector::class)->viewToNode();
 		}
 	}
 

@@ -27,4 +27,6 @@ require_once __DIR__ . '/../../../lib/base.php';        // <ncroot>/lib/base.php
 require_once __DIR__ . '/../../../tests/autoload.php';  // registers \Test\ namespace
 require_once __DIR__ . '/../vendor/autoload.php';       // FormVox OCA\FormVox\Tests\ PSR-4
 
+// As every request does before it sets up files: on Nextcloud 32 a share is not mounted for its recipient without files_sharing.
+Server::get(IAppManager::class)->loadApps(['filesystem']);
 Server::get(IAppManager::class)->loadApp('formvox');

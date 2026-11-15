@@ -5,91 +5,14 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 class IndexService {
-	/**
-	 * Update index after adding a new response
-	 */
-	public function updateIndex(array &$form, array $response, int $index): void {
-		if (!isset($form['_index'])) {
-			$this->rebuildIndex($form);
-			return;
-		}
-
-		$idx = &$form['_index'];
-
-		// Update response count
-		$idx['response_count'] = ($idx['response_count'] ?? 0) + 1;
-		$idx['last_response_at'] = $response['submitted_at'] ?? date('c');
-
-		// Update fingerprint or user_id index
-		if (isset($response['respondent'])) {
-			if ($response['respondent']['type'] === 'anonymous' && isset($response['respondent']['fingerprint'])) {
-				$fingerprint = $response['respondent']['fingerprint'];
-				$idx['fingerprints'][$fingerprint] = $index;
-			} elseif ($response['respondent']['type'] === 'user' && isset($response['respondent']['user_id'])) {
-				$userId = $response['respondent']['user_id'];
-				$idx['user_ids'][$userId] = $index;
-			}
-		}
-
-		// Update by_date index
-		$date = substr($response['submitted_at'] ?? date('c'), 0, 10);
-		if (!isset($idx['by_date'][$date])) {
-			$idx['by_date'][$date] = [];
-		}
-		$idx['by_date'][$date][] = $index;
-
-		// Update answer counts
-		if (isset($response['answers'])) {
-			foreach ($response['answers'] as $questionId => $answer) {
-				if (!isset($idx['answer_counts'][$questionId])) {
-					$idx['answer_counts'][$questionId] = [];
-				}
-
-				// Skip file upload answers (they have responseId property)
-				if ($this->isFileAnswer($answer)) {
-					// Count actual number of files (multi-file uploads are arrays of file objects)
-					$fileCount = 1;
-					if (isset($answer[0]) && is_array($answer[0])) {
-						$fileCount = count($answer);
-					}
-					$idx['answer_counts'][$questionId]['[file]'] = ($idx['answer_counts'][$questionId]['[file]'] ?? 0) + $fileCount;
-				} elseif ($this->isTableAnswer($answer)) {
-					$rowCount = count($answer);
-					$idx['answer_counts'][$questionId]['[table]'] = ($idx['answer_counts'][$questionId]['[table]'] ?? 0) + $rowCount;
-				} elseif ($this->isMatrixAnswer($answer)) {
-					// Matrix: count as "rowId:colValue" pairs
-					foreach ($answer as $rowId => $colValue) {
-						$key = $rowId . ':' . $colValue;
-						$idx['answer_counts'][$questionId][$key] = ($idx['answer_counts'][$questionId][$key] ?? 0) + 1;
-					}
-				} elseif (is_array($answer)) {
-					// Multiple choice
-					foreach ($answer as $val) {
-						$val = (string)$val;
-						$idx['answer_counts'][$questionId][$val] = ($idx['answer_counts'][$questionId][$val] ?? 0) + 1;
-					}
-				} elseif (is_bool($answer)) {
-					// Consent: index as Yes/No so the results summary
-					// shows a sensible breakdown instead of "" vs "1" (#94).
-					$key = $answer ? 'Yes' : 'No';
-					$idx['answer_counts'][$questionId][$key] = ($idx['answer_counts'][$questionId][$key] ?? 0) + 1;
-				} else {
-					$answer = (string)$answer;
-					$idx['answer_counts'][$questionId][$answer] = ($idx['answer_counts'][$questionId][$answer] ?? 0) + 1;
-				}
-			}
-		}
-
-		// Update checksum
-		$idx['_checksum'] = $this->calculateChecksum($form['responses'] ?? []);
-	}
+	/** Answers that come from a fixed set (options, scale points, matrix cells), plus files and table rows. */
+	private const COUNTED_TYPES = ['choice', 'multiple', 'dropdown', 'scale', 'rating', 'consent', 'matrix', 'table', 'file'];
 
 	/**
 	 * Rebuild the entire index from scratch
 	 */
 	public function rebuildIndex(array &$form): void {
 		$form['_index'] = [
-			'_checksum' => '',
 			'response_count' => 0,
 			'last_response_at' => null,
 			'fingerprints' => [],
@@ -125,64 +48,30 @@ class IndexService {
 				$form['_index']['by_date'][$date][] = $index;
 			}
 
-			// Count answers
-			if (isset($response['answers'])) {
-				foreach ($response['answers'] as $questionId => $answer) {
-					if (!isset($form['_index']['answer_counts'][$questionId])) {
-						$form['_index']['answer_counts'][$questionId] = [];
-					}
-
-					// Skip file upload answers (they have responseId property)
-					if ($this->isFileAnswer($answer)) {
-						$fileCount = 1;
-						if (isset($answer[0]) && is_array($answer[0])) {
-							$fileCount = count($answer);
-						}
-						$form['_index']['answer_counts'][$questionId]['[file]']
-							= ($form['_index']['answer_counts'][$questionId]['[file]'] ?? 0) + $fileCount;
-					} elseif ($this->isTableAnswer($answer)) {
-						$rowCount = count($answer);
-						$form['_index']['answer_counts'][$questionId]['[table]']
-							= ($form['_index']['answer_counts'][$questionId]['[table]'] ?? 0) + $rowCount;
-					} elseif ($this->isMatrixAnswer($answer)) {
-						foreach ($answer as $rowId => $colValue) {
-							$key = $rowId . ':' . $colValue;
-							$form['_index']['answer_counts'][$questionId][$key]
-								= ($form['_index']['answer_counts'][$questionId][$key] ?? 0) + 1;
-						}
-					} elseif (is_array($answer)) {
-						foreach ($answer as $val) {
-							$val = (string)$val;
-							$form['_index']['answer_counts'][$questionId][$val]
-								= ($form['_index']['answer_counts'][$questionId][$val] ?? 0) + 1;
-						}
-					} elseif (is_bool($answer)) {
-						$key = $answer ? 'Yes' : 'No';
-						$form['_index']['answer_counts'][$questionId][$key]
-							= ($form['_index']['answer_counts'][$questionId][$key] ?? 0) + 1;
-					} else {
-						$answer = (string)$answer;
-						$form['_index']['answer_counts'][$questionId][$answer]
-							= ($form['_index']['answer_counts'][$questionId][$answer] ?? 0) + 1;
-					}
-				}
-			}
+			$this->countAnswers($form['_index']['answer_counts'], $form, $response);
 		}
-
-		// Calculate checksum
-		$form['_index']['_checksum'] = $this->calculateChecksum($responses);
 	}
 
 	/**
-	 * Verify index integrity
+	 * What one response adds to the counts a summary shows, as rebuildIndex counts them: for responses read a page at
+	 * a time.
+	 *
+	 * @param array{response_count?: int, last_response_at?: ?string, answer_counts?: array} $index
 	 */
-	public function verifyIndex(array $form): bool {
-		if (!isset($form['_index']) || !isset($form['_index']['_checksum'])) {
-			return false;
+	public function tally(array &$index, array $form, array $response): void {
+		$index['response_count'] = ($index['response_count'] ?? 0) + 1;
+		if (isset($response['submitted_at'])) {
+			$index['last_response_at'] = $response['submitted_at'];
 		}
+		$index['answer_counts'] ??= [];
+		$this->countAnswers($index['answer_counts'], $form, $response);
+	}
 
-		$expectedChecksum = $this->calculateChecksum($form['responses'] ?? []);
-		return $form['_index']['_checksum'] === $expectedChecksum;
+	/** @return array<string, array<string, int>> what one response adds to the answer counts */
+	public function answerCounts(array $form, array $response): array {
+		$counts = [];
+		$this->countAnswers($counts, $form, $response);
+		return $counts;
 	}
 
 	/**
@@ -230,83 +119,52 @@ class IndexService {
 	}
 
 	/**
-	 * Calculate checksum for responses
+	 * Questions whose answers are counted: those with a fixed set of possible answers, plus files and table rows.
+	 *
+	 * @return array<string, string> type by question id
 	 */
-	private function calculateChecksum(array $responses): string {
-		return hash('sha256', json_encode($responses));
-	}
-
-	/**
-	 * Check if an answer is a file upload (has responseId and filename properties)
-	 */
-	private function isFileAnswer($answer): bool {
-		if (!is_array($answer)) {
-			return false;
-		}
-
-		// Single file upload
-		if (isset($answer['responseId']) && isset($answer['filename'])) {
-			return true;
-		}
-
-		// Multiple file uploads (array of file objects)
-		if (isset($answer[0]) && is_array($answer[0]) && isset($answer[0]['responseId']) && isset($answer[0]['filename'])) {
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * Check if an answer is a table (dynamic rows) answer
-	 * Table answers are arrays of associative arrays with string keys (column IDs)
-	 */
-	private function isTableAnswer($answer): bool {
-		if (!is_array($answer) || empty($answer)) {
-			return false;
-		}
-
-		// Must have numeric keys (sequential array)
-		if (!isset($answer[0]) || !is_array($answer[0])) {
-			return false;
-		}
-
-		// First element must have string keys (column IDs), not file properties
-		$firstRow = $answer[0];
-		if (isset($firstRow['responseId']) || isset($firstRow['filename'])) {
-			return false;
-		}
-
-		// Check that keys are strings (column IDs like "col1a2b3c4")
-		foreach (array_keys($firstRow) as $key) {
-			if (!is_string($key)) {
-				return false;
+	private function countedQuestions(array $form): array {
+		$out = [];
+		foreach ($form['questions'] ?? [] as $question) {
+			if (isset($question['id']) && in_array($question['type'] ?? '', self::COUNTED_TYPES, true)) {
+				$out[(string)$question['id']] = $question['type'];
 			}
 		}
-
-		return true;
+		return $out;
 	}
 
-	/**
-	 * Check if an answer is a matrix answer.
-	 * Matrix answers are associative arrays with string keys (row IDs) and scalar values (column values).
-	 */
-	private function isMatrixAnswer($answer): bool {
-		if (!is_array($answer) || empty($answer)) {
-			return false;
-		}
-
-		// Must have string keys (row IDs like "r1", "r2")
-		foreach ($answer as $key => $value) {
-			if (!is_string($key)) {
-				return false;
+	private function countAnswers(array &$counts, array $form, array $response): void {
+		$counted = $this->countedQuestions($form);
+		foreach ($response['answers'] ?? [] as $questionId => $answer) {
+			$type = $counted[(string)$questionId] ?? null;
+			if ($type === null || $answer === null || $answer === '' || $answer === []) {
+				continue;
 			}
-			// Values must be scalar (not arrays/objects)
-			if (is_array($value)) {
-				return false;
+			$add = function (string $key, int $by = 1) use (&$counts, $questionId): void {
+				$counts[$questionId][$key] = ($counts[$questionId][$key] ?? 0) + $by;
+			};
+			if ($type === 'file') {
+				// Multi-file uploads are a list of file objects.
+				$add('[file]', is_array($answer) && array_is_list($answer) ? count($answer) : 1);
+			} elseif ($type === 'table') {
+				$add('[table]', is_array($answer) ? count($answer) : 0);
+			} elseif ($type === 'matrix' && is_array($answer)) {
+				foreach ($answer as $rowId => $colValue) {
+					if (is_scalar($colValue)) {
+						$add($rowId . ':' . $colValue);
+					}
+				}
+			} elseif ($type === 'consent') {
+				// Yes/No reads better in the summary than "" vs "1" (#94).
+				$add($answer === true ? 'Yes' : 'No');
+			} elseif (is_array($answer)) {
+				// A multiple choice counts each option once (H6).
+				foreach (array_unique(array_map('strval', array_filter($answer, 'is_scalar'))) as $value) {
+					$add($value);
+				}
+			} elseif (is_scalar($answer)) {
+				$add((string)$answer);
 			}
 		}
-
-		return true;
 	}
 }

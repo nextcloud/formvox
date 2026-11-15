@@ -1,11 +1,113 @@
 # Changelog
 
-All notable changes to FormVox will be documented in this file.
+All notable changes to this project will be documented in this file.
+This format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+---
 
-### Changed
-- **The English interface text now uses American spelling throughout** ("license", "organization"), as Nextcloud itself does. Until now the source strings mixed British and American forms. The existing Dutch, German, French, Catalan and Ukrainian translations carry over to the new spelling.
+## [1.6.0] - 2026-11-15
+
+**FormVox 1.6 is here.** Notably faster at any size, because responses now live in the Nextcloud database instead of the form file. A PDF of every response, and permissions that follow Nextcloud's own throughout. Plus a public link that never hands out more than it should, and a new icon.
+
+### Upgrade notes
+Read these before you update: 1.6 keeps responses in the database, and is stricter than 1.5 in a few places.
+- **Responses move into the database by themselves.** A background job moves existing forms in after the update, largest first, and any save, submission or settings change moves a form the moment it is touched. Nothing to do, but `occ formvox:migrate` moves everything now instead of waiting, `--status` shows what is left, and `--file-id=<id>` moves one form.
+- **Restart PHP before `occ formvox:migrate`.** After an update through `occ`, restart PHP, or wait a minute, before you run `occ formvox:migrate`: until then PHP can still run the code of the version before.
+- **Background jobs need system cron.** PDFs, confirmation emails, webhooks and the move into the database run as background jobs. With AJAX cron they wait until someone opens Nextcloud; set background jobs to Cron.
+- **Back up the database and app data too.** A form's responses, its secrets (link, password, API keys, webhooks) and its uploads, branding images, ODT template and PDFs are no longer only in the `.fvform` file. Back up all three together with your files, or a files-only backup is missing the responses.
+- **No way back without that backup.** Once a form has moved in, its file no longer holds the responses. Putting the 1.5 code back without restoring the backup from before the update first answers `503` for the whole instance, and then shows empty forms.
+- **What is kept for 30 days.** A form whose file merely disappeared (removed on disk, a restore without it), and the forms of a deleted team folder, keep their responses for 30 days: `occ formvox:orphans` lists them and removes one at once. The forms in a deleted account's home, its trash included, lose their responses, uploads and PDFs when the account is deleted.
+- **Not covered by Nextcloud's server-side encryption.** That encryption protects files; it does not reach the database or app data, so responses, secrets and respondents' uploads are not covered by it even when it is on. `occ encryption:encrypt-all` and `decrypt-all` leave them untouched.
+- **A busy form answers `503`.** A form that is being saved answers `503` with `Retry-After` (reason `busy`) and the browser tries again on its own. It used to answer `409`, and on the public side sometimes "Form not found". Check integrations that expected `409`.
+- **The external API and the results page can be paged.** Ask for `limit` (up to 1000) and `after`, and the answer carries `next`. Without those parameters both behave as before.
+- **Every error has the same shape,** `{"error": "…", "reason": "…"}`, with a fixed `reason` that does not change with language. Several status codes now match their cause: a file that is not a FormVox form answers `422` with reason `broken_form` instead of a server error; the external API documentation lists them all.
+- **API keys and webhooks work within their creator's rights.** Reading responses, also as a PDF, needs that the API key's creator may still download the form; a key whose creator lost that right gets `401`. A webhook is sent only while its creator may: check who created your webhooks.
+- **PDFs in the API and webhooks.** `GET /forms/{fileId}/responses/{responseId}/pdf` returns a response's PDF. The `response.created` and `response.updated` webhooks carry a `pdf` block with `url`, `sha256`, `size` and `filename` (never the PDF itself), plus `pdf.status` and `pdf.generated_at`. The `sha256` always matches what the API gives.
+- **When there is no PDF.** A webhook waits until its PDF is made and, after three tries, goes with `"pdf": null` when the PDF cannot be kept, so the response itself always arrives. A deletion carries `"pdf": null` too, and so does every event of a form that does not keep PDFs. On such a form the PDF route answers `409` with reason `pdf_disabled`, and before the background job has made a PDF it answers `409` with reason `pdf_not_ready`.
+- **PDFs from the moment you turn them on.** **Keep a PDF of every response** is off by default, per form. Every response that comes in after you turn it on gets its PDF; earlier responses, including all responses from before the update, get none, and the PDF route answers `409` with reason `pdf_not_ready` for them.
+- **Which answers applied, and which event.** Webhooks and the API now say which answers applied: `applicable_answers` holds the answers to the questions the respondent was shown, and `not_applicable` names the questions that did not apply. A webhook carries its event id as `event_id`, and names its form by `form.fileId`, the id the API knows it by, and by `form.id`.
+- **Dates and numbers are checked for what they are.** A date must be a real day, a date-time a real moment, and a number, scale or rating answer a finite number of at most 64 characters (`1e400` is refused). The form always sent these; an API call with anything else now gets `400` with reason `invalid_answer`.
+
+### New: a PDF of every response
+- **Keep a PDF of every response.** A new switch in the share dialog, under the confirmation email, off by default. Turn it on and every submission gets its PDF right away, to download from the results. Leave it off and the form has no PDFs anywhere: not in the results, the API, the webhooks or the confirmation email.
+- **The form as the respondent saw it.** The pages they went through and only the questions they were shown, with earlier answers filled in where the form refers to them, in their language and time zone, with your instance's theming and the form's description.
+- **Who filled it in, on every page.** The PDF names who filled in the form, "Anonymous", or the API key that sent it. Every page carries the response id and "Page 1 of 3", so a loose printed page can be found again.
+- **Made once, kept as long as the response exists.** It stays the same document when the form changes later. A changed response gets a new PDF, and a deleted response's PDF goes with it.
+- **One name, everywhere.** A response's PDF is named after the form, the day it was sent and the response id: in a download, the API, the ZIP, the email and the webhook.
+- **Export every response at once.** **Export PDFs (ZIP)** builds them in the background. For a form with many responses the ZIP holds what is ready and says how many are still on the way, and it ends with a manifest of every response and its PDF.
+- **Email it to the respondent.** Turn on **Attach a PDF of the response** under the confirmation email. A signed-in respondent's confirmation, PDF included, goes to their account's e-mail address, and the form says so under the e-mail question. Anonymous respondents get the PDF only where the administrator allows it, with a daily limit per address and an hourly limit per form. A PDF larger than 8 MiB, or one that could not be sent three times, stays behind and the confirmation goes without it.
+- **Built for integrations.** The external API and the webhooks carry the PDF alongside the response, with the answers that applied. The details are in the Upgrade notes.
+- **Long answers, no problem.** A response full of text or line breaks no longer stops PDFs from being made, and a table keeps equal columns however long one cell is. An answer shortened in the PDF says so. The theming logo is scaled down once for the header.
+- **A PDF that cannot be made says so in the app,** instead of leaving the results page for an error.
+
+This feature was funded by the [Landesinstitut für Schulqualität und Lehrerbildung Sachsen-Anhalt (LISA)](https://lisa.sachsen-anhalt.de), which asked for it. Like the rest of FormVox, it is open source and available to every user.
+
+### Faster, at any size
+- **Responses live in the database.** Each one is stored in a short step of its own, instead of the whole form file being rewritten for every submission.
+- **A busy form takes many submissions at once.\*** Up to 46% more submissions saved per second under heavy load, with no server errors.
+- **Noticeably lighter under load.\*** Up to a third less server work per submission, and more than a quarter less when filling in signed in.
+- **The editor opens about 3× faster\*\*** on a form with many responses, and needs much less memory per request.
+- **Large forms load and export in pages.\*\*** The results page shows the newest responses first and loads more as you scroll. Exports and the PDF ZIP stream through a large form's responses instead of holding them all in memory.
+- **A busy form is a moment's wait, not an error.** The form page, submissions, uploads, the external API and the editor all keep working while a form is being saved, and a browser that meets a busy form tries again on its own. Integrations: see the Upgrade notes.
+- **Respondents never wait for webhooks, notifications or the confirmation email.** They go out from a background job shortly after the submission, tried again for about an hour if a webhook or mail server fails.
+- **A submission is stored once, however often it arrives.** A browser that retries after "busy" is answered with the response already stored, including on forms that take one response per person.
+- **Uploads are no longer limited to 50 an hour per address.** The limit now counts per response, with a higher hourly ceiling per address.
+- **Existing forms move in without losing a thing.\*\*\*** Responses, links, keys and uploads arrive intact, and a form file shrinks to a fraction of its size.
+
+\* *Load test on a 1 vCPU test server (Nextcloud 35, MySQL), 200 respondents at once, three runs of 1,000 submissions: this version saved 8.9–9.7 a second against 6.4–6.6 for the previous version (+39–46%) and gave no server error, where the previous version repeatedly ran out of database connections ("Too many connections"). Server CPU time per stored response, from the first to the last submission: −28 to −33% at 200 at once, and −27 to −28% filling a form signed in, from 0 to 5,000 responses. A second test on a later build gave 8.8–9.1 a second and the same CPU per submission within the spread. The two versions differ in more than storage, so take the figures as a direction, not an exact number for your own server.*
+
+\*\* *A form with 5,180 responses on the same test server: the editor opened in 102 ms and sent 1.2 kB, against 368 ms and 1.8 MB, and at 20,180 responses it still took 112 ms. Times are as the client saw them, network included. PHP's peak memory per request was 14–25 MB instead of 35–41 MB; a request for everything at once still grows with the form, to 84 MB at 20,180 responses. Fetching those 20,180 responses in pages of 2,000, as the results page does, took 0.4 s for the first page and 2.6 s for all 11 (later build).*
+
+\*\*\* *The 176 forms on the test server, 15,682 responses in all, moved in. Every response arrived with the same content (checked by hash), and the links, passwords, API keys, webhooks and uploads were the same afterwards. The form files shrank from 16.6 MB in total to 183 kB; three forms of 5,180 responses went from 5.2–5.5 MB to under 1 kB each. In a separate test the background job moved 1,200 small forms in three consecutive cron runs.*
+
+### Permissions, the Nextcloud way
+- **One rule for everything.** FormVox follows Nextcloud's own permissions, ACL included: in the app, on a public link, through the external API and in WebDAV.
+- **An API key works within its creator's rights.** Reading responses, also as a PDF, needs that the key's creator may still download the form, as an export in the app does. A key whose creator lost that right stops working.
+- **A webhook too.** It sends every response out, like an export, so it is made, redirected or sent only while its creator may download the form. The share dialog shows one that lost that right as inactive.
+- **Preview without download is respected.** A share without download permission shows the responses and the results only where Nextcloud lets that person preview the file.
+- **Opening a public link, or dropping its password, takes full rights,** whatever value a request sends.
+- **Taken away means taken away.** The editor loses its editing rights the moment they are taken away.
+
+### Your data, safe
+- **A public link never hands out a form's responses or its own folders.** Downloading a shared folder that holds a form no longer gives out the form file with its responses, and the folders a form keeps for its uploads, branding and PDFs do not exist for a public link.
+- **Old responses and secrets never come back.** Restoring an old version, or putting a form file back over another, brings back only the form's content: questions, pages, settings. Its responses and secrets always stay where they are.
+- **Encrypting or decrypting all your files no longer touches a form's responses.**
+- **A copy, or a `.fvform` uploaded from outside, always starts empty:** no responses, link or keys, whatever the file carries.
+- **Deleting a response deletes its uploaded files too,** instead of leaving them in a trash nobody checks.
+- **Deleting a form for good deletes its responses too.** When a form is removed from the trash, or the trash is emptied, its responses, uploads, PDFs and keys are gone right away, in a personal folder and in a team folder alike. A form in the trash keeps everything and comes back complete.
+- **The PDFs of responses, and branding images, open only from Nextcloud's own pages,** never from a link elsewhere.
+- **The link password is protected against guessing everywhere,** and a new password or link signs every visitor out.
+- **Hidden means not stored.** A question hidden by a condition, or on a page that routing skips, is never required and its answer is never stored, also through the external API. This is enforced on the server, not only in the browser.
+- **A second tab can no longer overwrite newer changes.** The editor checks the version it last saw before saving, and offers to reload on a conflict.
+
+### A look of its own
+- **A form has its own icon in Files.** A purple clipboard, in the list and grid, search, shares and the New menu, on light and dark themes. Its thumbnail no longer reads the form, so it is lighter on every save.
+
+### Clearer wording
+- **American spelling throughout,** as Nextcloud's own: "license", "organization".
+- **Accounts, as in Nextcloud.** "Accounts" where Nextcloud says accounts, and labels in sentence case.
+- **Plurals that read right** in every language: "1 option", "3 options".
+- **Every translation carries over** to the new wording: Dutch, German, French, Catalan and Ukrainian.
+
+### Fixed
+- **New responses notify the form's creator, also in a Team Folder.** A form in a Team Folder notified an arbitrary member of the folder, and which one could change on its own ([#146](https://github.com/nextcloud/formvox/issues/146)).
+- **Formal German shows FormVox in German.** An instance or account set to "Deutsch (Förmlich: Sie)" saw FormVox, and the PDFs made in the background or through the API, in English.
+- **Public links work for forms in an S3 home folder or an older Team Folder.**
+- **Forms in a team folder work whatever the data directory's path,** also a long one, as in a snap install.
+- **A form that is not open yet shows the time in a readable time zone,** not bare UTC.
+- **A date question's first and last allowed day are the days the creator picked.** East of UTC they were stored a day early; an existing form keeps its limits until the question is saved again.
+- **A number too large to hold no longer breaks the results summary.**
+- **A full quota never cuts a form off mid-write.** Nextcloud's silent truncation on a full quota is now caught and undone.
+- **Forms open from Files again on every supported Nextcloud** (32 to 35).
+- **A form moved to a team folder or external storage keeps its uploads, branding images and templates.**
+- **Quick edits no longer stop the editor with "changed elsewhere".**
+- **Forms no longer vanish from the list while responses come in,** and a settings save no longer drops its settings silently when the form was busy.
+- **Long titles and file names in other scripts no longer break forms, uploads or exports.**
+- **Exports download with any title.** Their file names are plain letters now; on Nextcloud 35 a title with "½" or "÷" made every download fail.
+- **Answer checks and the confirmation email are translated** in Dutch, German, French, Catalan and Ukrainian.
+
+---
 
 ## [1.5.0] - 2026-09-21
 
@@ -19,6 +121,8 @@ All notable changes to FormVox will be documented in this file.
 ### Changed
 - **Nextcloud 35 is now supported, and Nextcloud 30 and 31 are not.** The supported range is now Nextcloud 32 to 35, matching the rest of the Vox app family. Verified on a 35.0.0 instance: enabling the app, the migration, creating and editing a form, minting a public link, and an anonymous submission through the proof-of-work challenge all work, with no errors or deprecation warnings in the server log. If you run Nextcloud 30 or 31, stay on 1.4.6 until you have upgraded the server. Nextcloud 35 itself requires PHP 8.3; FormVox keeps a PHP 8.2 floor so it still installs on Nextcloud 32–34 instances that run 8.2.
 
+---
+
 ## [1.4.6] - 2026-09-11
 
 > **Upgrading from 1.4.4?** This release also contains everything listed under 1.4.5 below. Version 1.4.5 was tagged but never published to the App Store, so 1.4.6 is the first release to carry those two fixes — the stable public share link ([#135](https://github.com/nextcloud/formvox/issues/135)) and Team Folder links on LDAP/AD ([#136](https://github.com/nextcloud/formvox/issues/136)).
@@ -27,11 +131,15 @@ All notable changes to FormVox will be documented in this file.
 - **AI form generation settings could not be saved.** Saving the admin AI settings — enabling generation, the question or document-size limits, the source-upload and conditional-logic switches — failed silently: the panel errored the moment it tried to persist, so no change ever stuck and the toggles snapped back. The settings now save as expected. The subscription notice on the same admin page was affected by the same underlying flaw and showed blank or malformed text; it now renders correctly, including the user count in the support message.
 - **Two demo-form placeholders lost their translations.** The internal service split dropped a non-breaking space before the ellipsis in the "Write a short bio …" and "Share your thoughts …" placeholders of the example form. Every translation is keyed on the original text, so both fell back to English in Dutch, German, French, Catalan and Ukrainian. The original spelling is restored and the translations apply again.
 
+---
+
 ## [1.4.5] - 2026-09-04
 
 ### Fixed
 - **Public links to forms in a Team Folder returned 404 on LDAP or AD instances.** Opening a form stored in a Team Folder (Groupfolder) needs an account that can see that folder, and FormVox looked those members up with a direct database query against local group membership. On an instance where groups come from LDAP or Active Directory that membership lives in the directory, so the query found nobody, no account was available to open the file, and every public link answered 404 — while the same form opened fine for logged-in members, and fine from a personal folder. Members are now resolved through Nextcloud's group API, which asks every configured backend. Team Folders shared with a Team (Circle) also work now; those were not consulted at all. ([#136](https://github.com/nextcloud/formvox/issues/136))
 - **A form's public link could change on its own, breaking every link already shared.** The link's token was accepted from whatever the browser sent along with a save, so any save carrying an outdated copy of the form settings silently replaced the link — and the previous URL stopped working for everyone who had it. This happened when several people could edit a form: a colleague with an older browser tab, or one who had opened the form before the link existed, rotated the token on their next edit. The token is now owned by the server and never changes as a side effect of saving: it is created once, kept through every settings change (access restrictions, notification recipients, password, expiry), and only replaced when you explicitly ask for a new link. Replacing a link is now its own action in the share dialog, with a confirmation naming the consequence. New tokens use the same human-readable character set as Nextcloud's own share links. ([#135](https://github.com/nextcloud/formvox/issues/135))
+
+---
 
 ## [1.4.4] - 2026-09-02
 
@@ -44,6 +152,8 @@ All notable changes to FormVox will be documented in this file.
 
 ### Changed
 - **Dependency updates.** Bumped `@nextcloud/vue` 9.9.0 → 9.11.0, `@nextcloud/dialogs` 7.4.1 → 7.5.0, `vue` 3.5.41 → 3.5.42, `axios` 1.19.0 → 1.20.0, `markdown-it` 14.3.0 → 14.3.1, `fast-xml-parser` 5.11.0 → 5.11.1, `webpack` 5.109 → 5.110 and related build tooling to their latest compatible releases.
+
+---
 
 ## [1.4.3] - 2026-08-25
 
@@ -61,6 +171,8 @@ All notable changes to FormVox will be documented in this file.
 ### Internal
 - **Groundwork for community translations.** The translation files are no longer maintained by hand: FormVox now generates a POT template and per-language PO files, the layout the Nextcloud translation bot expects. A request to add FormVox to the community Transifex project is pending; until it is accepted nothing changes for users, and Dutch, German, French, Catalan and Ukrainian ship as before.
 
+---
+
 ## [1.4.2] - 2026-08-25
 
 ### Fixed
@@ -70,10 +182,14 @@ All notable changes to FormVox will be documented in this file.
 - **Licence reporting now counts users the same way everywhere.** FormVox already counted all users correctly; it now also reports how many accounts are disabled, and identifies the instance the same way IntraVox and IntroVox do. Previously each app derived that identifier differently, so the same server looked like several — which made usage impossible to line up across apps. Instances update automatically; nothing needs to be reconfigured.
 - **Dependency updates.** Bumped `odf-kit` 0.13.10 → 0.14.1, `@nextcloud/vue` 9.8.2 → 9.9.0, `vue` 3.5.38 → 3.5.41, `dompurify` 3.4.12 → 3.4.14, `axios` 1.18.1 → 1.19.0, `markdown-it` 14.2.0 → 14.3.0, `fast-xml-parser` 5.10.1 → 5.11.0, `sass` 1.97 → 1.103, `webpack` 5.104 → 5.109 and related build tooling to their latest compatible releases, picking up upstream security and bug fixes.
 
+---
+
 ## [1.4.1] - 2026-08-11
 
 ### Fixed
 - **Code-integrity error on the FormVox file icon.** Earlier versions copied a file-type icon into Nextcloud's signed `core/` directory, which raised an `EXTRA_FILE` integrity warning and could stop Nextcloud AIO from starting. FormVox no longer writes into core, and the upgrade now removes the leftover file automatically so existing installs self-heal. The `.fvform` icon is unchanged — it's served from the app itself. ([#128](https://github.com/nextcloud/formvox/issues/128))
+
+---
 
 ## [1.4.0] - 2026-07-14
 
@@ -95,6 +211,8 @@ All notable changes to FormVox will be documented in this file.
 - **Document toolkit updated** (`odf-kit` 0.9.4 → 0.13.10), which brings the table-row repetition needed for ODT template loops ([#112](https://github.com/nextcloud/formvox/issues/112)).
 - **Dependency updates.** Bumped axios, dompurify, markdown-it, postcss, fast-xml-parser, fast-uri, linkify-it, immutable and form-data to their latest patch/minor releases, including security fixes.
 
+---
+
 ## [1.3.1] - 2026-07-07
 
 ### Fixed
@@ -102,6 +220,8 @@ All notable changes to FormVox will be documented in this file.
 - **Table and matrix answers now export as real tables in ODT.** The per-response ODT export rendered table/matrix questions as flat "Row 1: …" text lines; they are now proper formatted tables with a header row. Note: custom ODT templates use plain-text placeholders, so answers stay flat text there. ([#111](https://github.com/nextcloud/formvox/issues/111))
 
 Note: forms that were copied onto external storage outside of Nextcloud may need a rescan (`occ maintenance:mimetype:update-db` or the automatic one during app upgrade) before they show up in the list.
+
+---
 
 ## [1.3.0] - 2026-06-22
 
@@ -123,10 +243,14 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **NC 34: `Notifier::prepare()` now throws `UnknownNotificationException`** instead of `\InvalidArgumentException`, removing the deprecation warning that NC 33/34 emit on every notifications poll.
 - **NC 34: `ImportController` annotations migrated to PHP attributes** (`@NoAdminRequired` → `#[NoAdminRequired]`).
 
+---
+
 ## [1.2.5] - 2026-06-22
 
 ### Fixed
 - **Nextcloud Enterprise instances were never recognised in telemetry.** The telemetry instance hash was computed differently from the license `instance_url_hash` (different fallback source and/or no URL normalisation), so the license server's enterprise-claim validation could never match the two. `TelemetryService::getInstanceHash()` now delegates to `LicenseService::getInstanceUrlHash()`, guaranteeing both are byte-for-byte identical. Existing instances will report under a new (correct) instance hash on their next telemetry run.
+
+---
 
 ## [1.2.4] - 2026-06-08
 
@@ -135,6 +259,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 
 ### Fixed
 - **Telemetry reports missing host/country fields** — FormVox's telemetry payload didn't include `defaultTimezone`, `defaultLanguage`, `databaseType`, `osFamily`, `webServer`, `isDocker` or `countryCode`, so the license server's All Instances dashboard showed "—" for country and OS on almost every FormVox install. The payload now matches MetaVox/RoomVox and includes the same fields, letting the server populate country via `default_phone_region` or the timezone fallback.
+
+---
 
 ## [1.2.3] - 2026-05-30
 
@@ -147,6 +273,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Multi-page forms skipped pages on "Next"** — Clicking Next jumped from page 1 to page 3 because the button accidentally also triggered the form submit. The button type is now correct so each click moves exactly one page. ([#99](https://github.com/nextcloud/formvox/issues/99))
 - **Page-routing rules on choice questions didn't match** — A rule like "if answer = Ja → go to page 3" never fired because the routing editor saved labels while the form stored option ids. Both forms of rule now match correctly. ([#99](https://github.com/nextcloud/formvox/issues/99))
 
+---
+
 ## [1.2.2] - 2026-05-18
 
 ### Fixed
@@ -157,6 +285,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 
 ### Changed
 - **Upgraded `sass-loader` to v16** (modern Dart Sass compiler API).
+
+---
 
 ## [1.2.1] - 2026-05-12
 
@@ -180,6 +310,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Question labels shoved sideways in Microsoft Edge** — The flex container holding a question label and the TTS button could grow horizontally beyond its parent in Edge when the label was long. The label is now a shrinkable flex item (`flex: 1 1 auto; min-width: 0`) with `overflow-wrap: break-word` and the row allows wrapping, matching the layout other browsers already produced. ([#84](https://github.com/nextcloud/formvox/issues/84))
 - **"Move to section" did nothing when Pages were enabled** — The pages-mode draggable did not listen for the `move-to-section` event from the question overflow menu, and questions dragged under a section header did not become visually nested because the wrapper that applies the indent style was only rendered in single-page mode. Both code paths now match: dropdown moves work, drag-into-section auto-assigns the `sectionId`, and dragging a section header carries its children with it on the same page. ([#88](https://github.com/nextcloud/formvox/issues/88))
 
+---
+
 ## [1.2.0] - 2026-05-05
 
 ### Added
@@ -191,6 +323,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 ### Fixed
 - **Form description rendered as plain text on the public form** — The form description on the public response page now renders as markdown instead of literal text with the raw `#`/`*` characters and collapsed newlines. Headings, lists, links, code, and blockquotes in the form description, section descriptions, and the in-editor markdown preview all render with proper visual styling. ([#63](https://github.com/nextcloud/formvox/issues/63))
 - **"Form not found" / "Access forbidden" for logged-in respondents on restricted folders** — When a public form had `require login` enabled and was stored in a Group Folder or Team Folder the respondent was not a member of, the submission failed because the authenticated submit path used a user-context file load. Authenticated respondents now use the same admin-bypass loader as anonymous submissions, so the share link plus token (and any `allowed_users`/`allowed_groups` rules) are the only gate — no folder ACL needed. ([#77](https://github.com/nextcloud/formvox/issues/77))
+
+---
 
 ## [1.1.5] - 2026-05-04
 
@@ -206,10 +340,14 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Orphaned fields persisted after question type change** — Switching a question's type (e.g. from `scale` to `text`) now strips type-specific fields (options, scale bounds, rating, matrix, table, file, validation, date bounds) so the saved question matches its new type. ([#69](https://github.com/nextcloud/formvox/issues/69))
 - **Newlines in answers broke CSV row alignment** — Long-text answers containing newlines are now normalised to `\r\n` per RFC 4180 before being written to CSV, so spreadsheets parse rows correctly. ([#65](https://github.com/nextcloud/formvox/issues/65))
 
+---
+
 ## [1.1.4] - 2026-04-24
 
 ### Fixed
 - **Description textareas overlap question actions when resized** — The question description and section description textareas in the form editor no longer have a resize handle, preventing them from growing over the per-question action buttons (edit/delete/drag) when dragged. Matches the existing behaviour of the top-level form description. ([#62](https://github.com/nextcloud/formvox/issues/62))
+
+---
 
 ## [1.1.3] - 2026-04-24
 
@@ -220,12 +358,16 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 ### Changed
 - **License usage reports now include `activeUsers30d`** — The daily license sync (`/api/licenses/usage`) now carries the same active-user metric that telemetry already reports, giving the license server full visibility of active instance usage.
 
+---
+
 ## [1.1.2] - 2026-04-23
 
 ### Fixed
 - **CSV export garbled German/special characters** — CSV export now includes a UTF-8 BOM so Excel on Windows correctly recognises the encoding ([#57](https://github.com/nextcloud/formvox/issues/57))
 - **Results chart legend shows internal option IDs** — The chart legend now uses the same label mapping as the charts themselves ([#58](https://github.com/nextcloud/formvox/issues/58))
 - **Unanswered questions blank in Results** — Unanswered questions now show "Not answered" (translated) instead of a blank dash ([#58](https://github.com/nextcloud/formvox/issues/58))
+
+---
 
 ## [1.1.1] - 2026-04-23
 
@@ -234,6 +376,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 
 ### Security
 - Updated `fast-xml-parser` from 5.5.7 to 5.7.1 (fixes malicious CDATA/comment sanitization and stack overflow on long tag expressions)
+
+---
 
 ## [1.1.0] - 2026-04-20
 
@@ -253,6 +397,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 ### Changed
 - **AI form generation is off by default** until the admin enables it (unless a provider was already installed when the admin first visits the AI tab, in which case it's enabled automatically for convenience)
 
+---
+
 ## [1.0.2] - 2026-04-17
 
 ### Fixed
@@ -260,6 +406,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 
 ### Security
 - Updated `dompurify` and `follow-redirects` dependencies to fix moderate security vulnerabilities
+
+---
 
 ## [1.0.1] - 2026-04-17
 
@@ -273,6 +421,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 
 ### Security
 - Security improvements to the public submission flow (token handling and share-link gating)
+
+---
 
 ## [1.0.0] - 2026-04-07
 
@@ -288,6 +438,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 
 ### Changed
 - **Statistics tab simplified** — The "About FormVox" blurb and anonymous usage statistics section have been moved to the Support tab, keeping the Statistics tab focused on form and response counts
+
+---
 
 ## [0.4.0] - 2026-04-07
 
@@ -308,6 +460,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Toolbar layout** — Editor toolbar splits into left (content actions) and right (view/share actions); labels hide when space is tight
 - **"Add page" moved to `...` menu** — Keeps the toolbar compact when pages are enabled
 - **odf-kit updated to v0.9.4** — Picks up latest fixes from upstream
+
+---
 
 ## [0.3.9] - 2026-03-26
 
@@ -335,15 +489,21 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Presence endpoints moved to PresenceController** — Collaborative editing presence heartbeat and editor list moved from `ApiController` to dedicated `PresenceController` for cleaner separation
 - **FormDeletedListener extended** — Now also cleans up ODT template folders when a form is deleted
 
+---
+
 ## [0.3.8] - 2026-03-13
 
 ### Fixed
 - **Form submits on Enter key in multi-page forms** - Pressing Enter in a text input triggered the browser's native form submit event, bypassing page navigation and submitting the form even on page 1 of a multi-page form. The submit handler now checks for remaining pages and navigates forward instead of submitting ([#21](https://github.com/nextcloud/formvox/issues/21))
 
+---
+
 ## [0.3.7] - 2026-03-13
 
 ### Fixed
 - **Single choice / multiple choice / dropdown options have no value** - Option values were never populated when creating questions in the editor (always empty string `""`), making all options indistinguishable. Radio buttons, checkboxes, dropdowns, and conditional rules all failed because every option had the same empty value. Now generates a unique value (based on option ID) for each option. Existing forms with empty values are automatically migrated on load ([#16](https://github.com/nextcloud/formvox/issues/16), [#18](https://github.com/nextcloud/formvox/issues/18))
+
+---
 
 ## [0.3.6] - 2026-03-13
 
@@ -351,12 +511,16 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Translation .js runtime files not updated** - The v0.3.5 release fixed placeholder names in `.json` files but not in the corresponding `.js` files that Nextcloud actually loads at runtime via `OC.L10N.register()`. All broken placeholder names are now also fixed in `de.js`, `nl.js`, and `fr.js` ([#22](https://github.com/nextcloud/formvox/issues/22))
 - **Single choice / checkbox questions not selectable** - Confirmed fix was present in source since v0.3.2 but may not have been correctly included in the v0.3.4 App Store tarball. This release ensures the correct compiled JavaScript is shipped ([#18](https://github.com/nextcloud/formvox/issues/18))
 
+---
+
 ## [0.3.5] - 2026-03-12
 
 ### Fixed
 - **Form submits instead of going to next page on multi-page forms** - Previous and Next buttons were missing `native-type="button"`, causing the browser to treat them as submit buttons inside the form element. Clicking Next triggered both page navigation and form submission simultaneously ([#21](https://github.com/nextcloud/formvox/issues/21))
 - **Translation placeholders not interpolated** - Placeholder names in German, Dutch and French translations used translated names (e.g. `{aktuell}`, `{huidig}`, `{courant}`) instead of the original variable names. Vue's `t()` function only substitutes exact matches, so the raw placeholder text was shown instead of the actual value ([#22](https://github.com/nextcloud/formvox/issues/22))
 - **Screenshot filenames with spaces** - Renamed all screenshot files to use hyphens instead of spaces and updated `info.xml` URLs accordingly to improve compatibility
+
+---
 
 ## [0.3.4] - 2026-03-12
 
@@ -379,10 +543,14 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Date comparison in conditions not working** - "Greater than" and "Less than" operators on date questions always evaluated to false because date strings (e.g. `2026-03-12`) were converted with `Number()` resulting in `NaN`. Now correctly compares date strings lexicographically ([#19](https://github.com/nextcloud/formvox/issues/19))
 - **Question reordering not visible to respondents** - Dragging questions to a new position in the editor was saved correctly, but the public form still displayed questions in their original creation order. Fixed by using the page's question ID order instead of the form's question array order ([#20](https://github.com/nextcloud/formvox/issues/20))
 
+---
+
 ## [0.3.3] - 2026-03-11
 
 ### Fixed
 - **Public form scrolling broken on some Nextcloud setups** - Contradictory CSS `overflow: visible` combined with `overflow-x: hidden` / `overflow-y: auto` caused scroll to break per CSS spec. Removed `overflow: visible` from all public templates ([#17](https://github.com/nextcloud/formvox/issues/17))
+
+---
 
 ## [0.3.2] - 2026-03-10
 
@@ -392,10 +560,14 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Dropdown selection not registering** - Dropdown questions showed validation errors even when answered. Root cause was the same NcCheckboxRadioSwitch misuse in the underlying component ([#16](https://github.com/nextcloud/formvox/issues/16))
 - **Matrix radio buttons broken** - Matrix question type had the same boolean vs string model-value issue ([#16](https://github.com/nextcloud/formvox/issues/16))
 
+---
+
 ## [0.3.1] - 2026-03-06
 
 ### Fixed
 - Added missing translations for all 0.3.0 features (page routing, collaborative presence, draft autosave, QR code, accessibility) in NL, DE, FR
+
+---
 
 ## [0.3.0] - 2026-03-06
 
@@ -452,6 +624,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - **Mimetype registration breaking all file types** - FormVox's MIME type registration in `Application::boot()` populated `MimeTypeDetector::$mimeTypes` before core defaults were loaded, causing Nextcloud to lose mimetype detection for images, PDFs, and all other file types ([#12](https://github.com/nextcloud/formvox/issues/12))
   - After updating, run `occ maintenance:mimetype:update-db` and `occ maintenance:mimetype:update-js` to restore mimetypes
 
+---
+
 ## [0.2.9] - 2026-02-05
 
 ### Added
@@ -480,6 +654,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - Improved scroll compatibility for Nextcloud 28+ public page layout
 - **Nextcloud 33 compatibility** - Fixed deprecated `OC_App::getAppPath()` call
 
+---
+
 ## [0.2.8] - 2026-02-02
 
 ### Added
@@ -502,6 +678,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 ### Fixed
 - PreviewProvider regex pattern fix (preg_match delimiter error)
 
+---
+
 ## [0.2.7] - 2026-01-30
 
 ### Added
@@ -520,6 +698,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 ### Fixed
 - Admin settings page no longer blocks on statistics loading (statistics are now fetched async)
 - Consistent app icon (`app-dark.svg` now matches `app.svg` structure)
+
+---
 
 ## [0.2.6] - 2026-01-28
 
@@ -545,6 +725,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - Icon vertical alignment in dropdown menus
 - Suppress @nextcloud/vue appName/appVersion warnings in console
 
+---
+
 ## [0.2.5] - 2026-01-27
 
 ### Added
@@ -563,16 +745,22 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 - Deprecated monolithic `docs/user-guide.md` (replaced by structured docs)
 - Deprecated `docs/comparison-with-nextcloud-forms.md` (moved to `docs/architecture/`)
 
+---
+
 ## [0.2.4] - 2026-01-26
 
 ### Changed
 - Added website and documentation links to App Store listing
+
+---
 
 ## [0.2.3] - 2026-01-26
 
 ### Changed
 - Updated authors in App Store metadata (Sam Ditmeijer & Rik Dekker)
 - Added screenshots to App Store listing
+
+---
 
 ## [0.2.2] - 2026-01-25
 
@@ -608,6 +796,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 ### Removed
 - Favorites functionality (temporarily removed due to API issues)
 
+---
+
 ## [0.2.1] - 2026-01-24
 
 ### Added
@@ -621,6 +811,8 @@ Note: forms that were copied onto external storage outside of Nextcloud may need
 
 ### Changed
 - Simplified "About FormVox" section in admin settings
+
+---
 
 ## [0.2.0] - 2026-01-24
 

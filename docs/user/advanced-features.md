@@ -174,6 +174,8 @@ Customize the appearance of your forms to match your organization.
 - **Accent color** - Buttons and highlights
 - **Custom CSS** - Advanced styling (admin only)
 
+The header image must be PNG, JPEG, GIF or WebP, at most 2 MB.
+
 ### Per-Form Branding
 
 Each form can have its own branding, or inherit from organization defaults.

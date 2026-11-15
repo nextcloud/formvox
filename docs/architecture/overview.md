@@ -4,33 +4,45 @@ This document describes the technical architecture of FormVox.
 
 ## System Design
 
-### File-Based Architecture
+### Hybrid Architecture
 
-FormVox uses a unique file-based approach:
+FormVox splits a form across the file it is created in and Nextcloud's own storage:
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   Nextcloud                      │
-├─────────────────────────────────────────────────┤
-│  ┌──────────────┐    ┌──────────────────────┐   │
-│  │   FormVox    │    │    Nextcloud Files    │   │
-│  │     App      │◄──►│    (.fvform files)    │   │
-│  └──────────────┘    └──────────────────────┘   │
-│         │                                        │
-│         ▼                                        │
-│  ┌──────────────┐                               │
-│  │   Vue.js     │                               │
-│  │   Frontend   │                               │
-│  └──────────────┘                               │
-└─────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                           Nextcloud                            │
+├───────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌───────────────────┐  ┌─────────────────┐ │
+│  │   FormVox    │  │  Nextcloud Files  │  │    Database      │ │
+│  │     App      │◄►│  (.fvform: the    │  │  (responses,     │ │
+│  │              │  │  form definition) │  │  secrets)        │ │
+│  └──────────────┘  └───────────────────┘  └─────────────────┘ │
+│         │          ┌───────────────────┐                      │
+│         │          │ FormVox app data  │                      │
+│         └─────────►│ (uploads, PDFs,   │                      │
+│                    │ branding, ODT)    │                      │
+│                    └───────────────────┘                      │
+│         │                                                      │
+│         ▼                                                      │
+│  ┌──────────────┐                                             │
+│  │   Vue.js     │                                             │
+│  │   Frontend   │                                             │
+│  └──────────────┘                                             │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Principles
 
-1. **No Database Tables** - All data stored in files
-2. **Native Integration** - Uses Nextcloud's file system
-3. **Portability** - Forms can be copied, moved, shared like any file
-4. **Encryption Compatible** - Works with server-side and E2E encryption
+1. **The file holds only the form** - Questions, pages and settings live in `.fvform`; its responses, secrets and
+   respondent files do not
+2. **Native Integration** - The form file still uses Nextcloud's file system, with standard permissions and sharing
+3. **Portability** - A form's definition can be copied, moved, shared like any file; a copy of a `.fvform` file starts
+   with no responses of its own
+4. **Encryption Compatible** - The `.fvform` file works with server-side and E2E encryption; the database and FormVox's
+   app data are not covered by Nextcloud's server-side file encryption (see [Security](../admin/security.md#encryption))
+5. **Converted on touch** - A form created before 1.6.0 still has everything in its file; it is moved into the database
+   and app data by a background job, or immediately the first time anything writes to it (see [Where FormVox keeps
+   data](../admin/configuration.md#where-formvox-keeps-data))
 
 ## Components
 
@@ -41,20 +53,31 @@ Located in `lib/`:
 ```
 lib/
 ├── AppInfo/
-│   └── Application.php      # App bootstrap
+│   └── Application.php       # App bootstrap
 ├── Controller/
-│   ├── PageController.php   # Main page routes
-│   ├── FormController.php   # Form CRUD operations
-│   └── PublicController.php # Public form access
+│   ├── PageController.php    # Main page routes
+│   ├── FormController.php    # Form CRUD operations
+│   ├── PublicController.php  # Public form access
+│   └── ExternalApiController.php # External API (API keys, webhooks)
 ├── Service/
-│   └── FormService.php      # Business logic
+│   └── FormService.php       # Business logic
+├── Store/
+│   ├── FormStore.php         # Binds a form's database row to its file
+│   ├── ResponseStore.php     # Responses, keys, counts, outbox
+│   ├── SecretStore.php       # Link token, password hash, API keys, webhooks
+│   ├── FormFolders.php       # App data: uploads, branding, template, PDFs
+│   └── FormMigration.php, FormConverter.php # Moving a v1 form into the database
+├── Command/
+│   ├── Migrate.php, Orphans.php, Rebind.php, Unlock.php # occ formvox:*
 ├── Migration/
-│   └── RegisterMimeType.php # MIME type registration
+│   └── RegisterMimeType.php  # MIME type registration
 ├── Settings/
-│   ├── AdminSettings.php    # Admin panel
-│   └── AdminSection.php     # Admin navigation
+│   ├── AdminSettings.php     # Admin panel
+│   └── AdminSection.php      # Admin navigation
 └── BackgroundJob/
-    └── TelemetryJob.php     # Telemetry reporting
+    ├── TelemetryJob.php      # Telemetry reporting
+    ├── MigrateFormsJob.php   # Moves v1 forms into the database
+    └── OrphanSweepJob.php    # Removes forms whose file disappeared, after 30 days
 ```
 
 ### Frontend (Vue.js)
@@ -138,40 +161,38 @@ User submits form
 └───────────────────┘
         │
         ▼
-┌───────────────────┐
-│ FormService       │
-│ - Acquires lock   │
-│ - Reads file      │
-│ - Appends response│
-│ - Writes file     │
-│ - Releases lock   │
-└───────────────────┘
+┌─────────────────────────────┐
+│ ResponseStore                │
+│ - A v1 form is moved into    │
+│   the database first         │
+│ - Takes the form's row       │
+│ - Checks limits/capacity     │
+│   against the stored counts  │
+│ - Writes the response, its   │
+│   keys and outbox row        │
+└─────────────────────────────┘
 ```
 
 ## Concurrent Access Handling
 
-FormVox handles multiple simultaneous submissions using file locking:
+Responses, secrets and the counts behind the results page are written to the database, one form at a time: a
+submission takes the form's own row (held until the transaction commits), so changes to one form go one after the
+other, and a deadlock or lock timeout retries the whole transaction. A concurrency test runs many respondents in
+separate processes at the same moment to check that a form's limit and any per-option capacity hold exactly, with no
+response lost or duplicated.
 
-```php
-// Simplified locking mechanism
-$lock = $this->lockManager->acquireLock($fileId);
-try {
-    $content = $this->readFile($fileId);
-    $content['responses'][] = $newResponse;
-    $this->writeFile($fileId, $content);
-} finally {
-    $lock->release();
-}
-```
+FormVox also keeps a lock of its own per form (independent of this, see
+[Security](../admin/security.md#nextclouds-own-file-lock)) so only one writer edits a form, or sends its outbox, at a
+time:
 
 ### Lock Types
-- **Exclusive lock** - For writes (form editing, response submission)
-- **Shared lock** - For reads (viewing results)
+- **FormVox's own form lock** - One writer at a time (editing, settings, migrating a form into the database)
+- **Nextcloud's file lock** - Taken whenever FormVox writes to the `.fvform` file itself
 
 ### Conflict Resolution
-- Locks have timeout to prevent deadlocks
-- Failed locks retry with exponential backoff
-- Users see error message if lock cannot be acquired
+- A busy form answers `503` with `reason: busy` and a `Retry-After` header; clients may simply retry
+- FormVox's own lock retries with jittered backoff until its deadline, and is taken over once its holder is gone
+- `occ formvox:unlock` frees FormVox's own stuck lock by hand; it does not touch Nextcloud's file lock
 
 ## File Format
 
@@ -251,9 +272,9 @@ Request → Middleware → Permission Check → Controller
 
 ### External Integration
 
-- REST API for programmatic access
+- External API with API-key authentication, for programmatic access (see [External API](external-api.md))
 - JSON export for data analysis
-- Webhook support (planned)
+- Webhooks on response created/updated/deleted, HMAC-signed (see [External API](external-api.md))
 
 ## Development Architecture
 

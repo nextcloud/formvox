@@ -11,6 +11,14 @@ describe('HeadingBlock', () => {
 		expect(h.text()).toBe('Hello')
 	})
 
+	it('draws only a heading, whatever level the branding names (secu#8)', () => {
+		for (const level of ['img', 'script', 'iframe', 'a']) {
+			const w = make({ settings: { level, text: 'X' } })
+			expect(w.find('h1').exists()).toBe(true)
+			expect(w.find(level).exists()).toBe(false)
+		}
+	})
+
 	it('defaults to an h1 tag', () => {
 		const w = make({ settings: { text: 'X' } })
 		expect(w.find('h1').exists()).toBe(true)

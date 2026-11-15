@@ -5,95 +5,44 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\RequireFormPermission;
+use OCA\FormVox\Service\FormAccessService;
 use OCA\FormVox\Service\FormRepository;
-use OCA\FormVox\Service\PermissionService;
 use OCA\FormVox\Service\UploadService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\IRequest;
-use OCP\IUserSession;
 
 class FormUploadController extends Controller {
-	private FormFileLocator $fileLocator;
-	private UploadService $uploadService;
-	private FormRepository $formRepository;
-	private PermissionService $permissionService;
-	private IUserSession $userSession;
-
 	public function __construct(
 		IRequest $request,
-		FormFileLocator $fileLocator,
-		UploadService $uploadService,
-		FormRepository $formRepository,
-		PermissionService $permissionService,
-		IUserSession $userSession,
+		private FormAccessService $access,
+		private UploadService $uploadService,
+		private FormRepository $formRepository,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->fileLocator = $fileLocator;
-		$this->uploadService = $uploadService;
-		$this->formRepository = $formRepository;
-		$this->permissionService = $permissionService;
-		$this->userSession = $userSession;
 	}
 
-	/**
-	 * Download an uploaded file from a form response
-	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
 	public function downloadUpload(int $fileId, string $responseId, string $filename): DataDownloadResponse {
-		try {
-			$formFile = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($formFile, $userId);
-
-			if (!$this->permissionService->canViewResponses($role)) {
-				throw new \Exception('Permission denied');
-			}
-
-			$uploadedFile = $this->uploadService->getUpload($fileId, $responseId, $filename);
-
-			return new DataDownloadResponse(
-				$uploadedFile->getContent(),
-				$uploadedFile->getName(),
-				$uploadedFile->getMimeType()
-			);
-		} catch (\OCP\Files\NotFoundException $e) {
-			throw new \Exception('File not found');
-		}
+		$upload = $this->uploadService->getUpload($this->access->getFile($fileId), $responseId, $filename);
+		return new DataDownloadResponse($upload->getContent(), $upload->getName(), $upload->getMimeType());
 	}
 
-	/**
-	 * Download all uploads for a form as a ZIP file
-	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
 	public function downloadAllUploads(int $fileId): DataDownloadResponse {
-		try {
-			$formFile = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($formFile, $userId);
-
-			if (!$this->permissionService->canViewResponses($role)) {
-				throw new \Exception('Permission denied');
-			}
-
-			$form = $this->formRepository->load($fileId);
-			$formTitle = preg_replace('/[^a-zA-Z0-9_-]/', '_', $form['title'] ?? 'form');
-
-			// Create ZIP file
-			$zipContent = $this->uploadService->createUploadsZip($fileId);
-
-			return new DataDownloadResponse(
-				$zipContent,
-				$formTitle . '-uploads.zip',
-				'application/zip'
-			);
-		} catch (\OCP\Files\NotFoundException $e) {
-			throw new \Exception('No uploads found');
-		}
+		$title = preg_replace('/[^a-zA-Z0-9_-]/', '_', $this->formRepository->loadForm($fileId)['title'] ?? 'form');
+		return new DataDownloadResponse(
+			$this->uploadService->createUploadsZip($this->access->getFile($fileId)),
+			$title . '-uploads.zip',
+			'application/zip'
+		);
 	}
 }

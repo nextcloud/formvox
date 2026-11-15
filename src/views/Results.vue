@@ -7,6 +7,9 @@
           <p class="response-count">
             {{ n('formvox', '%n response', '%n responses', summary.responseCount) }}
           </p>
+          <p v-if="loadingMore" class="response-count loading-more">
+            {{ t('formvox', 'Loading more responses … {loaded} of {total}', { loaded: responses.length, total: summary.responseCount }) }}
+          </p>
 
           <div class="header-actions">
             <NcButton @click="goToEditor">
@@ -17,24 +20,27 @@
               {{ t('formvox', 'Edit form') }}
             </NcButton>
 
-            <NcActions>
-              <NcActionButton @click="exportCsv">
+            <NcActions v-if="permissions.canDownload || permissions.editSettings">
+              <NcActionButton v-if="permissions.canDownload" @click="exportCsv">
                 <!-- TRANSLATORS: Verb: button; CSV is a file format -->
                 {{ t('formvox', 'Export CSV') }}
               </NcActionButton>
-              <NcActionButton @click="exportExcel">
+              <NcActionButton v-if="permissions.canDownload" @click="exportExcel">
                 <!-- TRANSLATORS: Verb: button; Excel is a product name -->
                 {{ t('formvox', 'Export Excel') }}
               </NcActionButton>
-              <NcActionButton @click="exportJson">
+              <NcActionButton v-if="permissions.canDownload" @click="exportJson">
                 <!-- TRANSLATORS: Verb: button; JSON is a file format -->
                 {{ t('formvox', 'Export JSON') }}
               </NcActionButton>
-              <NcActionButton @click="exportAllOdt">
+              <NcActionButton v-if="permissions.canDownload" @click="exportAllOdt">
                 <!-- TRANSLATORS: Verb: button; ODT is the OpenDocument text format -->
                 {{ t('formvox', 'Export ODT') }}
               </NcActionButton>
-              <NcActionButton @click="showTemplateDialog = true">
+              <NcActionButton v-if="permissions.canDownload && keepsPdf" @click="exportPdfs">
+                {{ t('formvox', 'Export PDFs (ZIP)') }}
+              </NcActionButton>
+              <NcActionButton v-if="permissions.editSettings" @click="showTemplateDialog = true">
                 {{ t('formvox', 'ODT template …') }}
               </NcActionButton>
             </NcActions>
@@ -225,7 +231,7 @@
             <div v-else class="text-responses">
               <p class="text-count">
                 <!-- TRANSLATORS: %n is the number of different answers -->
-                {{ n('formvox', '%n unique answer', '%n unique answers', Object.keys(question.answerCounts).length) }}
+                {{ n('formvox', '%n unique answer', '%n unique answers', question.uniqueAnswers ?? Object.keys(question.answerCounts).length) }}
               </p>
             </div>
           </div>
@@ -300,12 +306,24 @@
               <tr v-for="response in paginatedResponses" :key="response.id">
                 <td class="response-actions">
                   <NcButton
+                    v-if="permissions.canDownload"
                     type="tertiary"
                     :title="t('formvox', 'Export ODT')"
                     @click="exportResponseOdt(response)"
                   >
                     <template #icon>
                       <DownloadIcon :size="20" />
+                    </template>
+                  </NcButton>
+                  <NcButton
+                    v-if="permissions.canDownload && keepsPdf"
+                    type="tertiary"
+                    :title="t('formvox', 'Download PDF')"
+                    :aria-label="t('formvox', 'Download PDF')"
+                    @click="downloadResponsePdf(response)"
+                  >
+                    <template #icon>
+                      <FileIcon :size="20" />
                     </template>
                   </NcButton>
                   <NcButton
@@ -320,10 +338,9 @@
                 </td>
                 <td>{{ formatDate(response.submitted_at) }}</td>
                 <td>
-                  <span v-if="response.respondent.type === 'user'">
-                    {{ response.respondent.display_name }}
+                  <span :class="{ anonymous: respondentName(response, '') === '' }">
+                    {{ respondentName(response, t('formvox', 'Anonymous')) }}
                   </span>
-                  <span v-else class="anonymous">{{ t('formvox', 'Anonymous') }}</span>
                 </td>
                 <td v-for="question in answerableQuestions" :key="question.id">
                   <template v-if="isFileAnswer(response.answers[question.id])">
@@ -402,6 +419,7 @@
 </template>
 
 <script>
+import { respondentName } from '../utils/respondent.js';
 import { ref, computed, onMounted } from 'vue';
 import {
   NcContent,
@@ -466,6 +484,10 @@ export default {
     const view = ref('summary');
     const summary = ref({ responseCount: 0, questions: [] });
     const responses = ref([]);
+    // Large forms load in pages: the first shows at once, the rest follows behind it.
+    const PAGE = 2000;
+    const loadingMore = ref(false);
+    let allLoaded = Promise.resolve();
     const chartTypes = ref({}); // Store chart type per question
     const showTemplateDialog = ref(false);
     const hasOdtTemplate = ref(false);
@@ -490,6 +512,9 @@ export default {
       return (props.form.questions || []).filter(q => !['section', 'descriptor'].includes(q.type));
     });
 
+    // A form that keeps no PDFs has none to download: the server refuses them too.
+    const keepsPdf = computed(() => !!props.form.settings?.keepResponsePdf);
+
     const getChartType = (questionId) => {
       return chartTypes.value[questionId] || 'bar';
     };
@@ -501,16 +526,35 @@ export default {
     const loadData = async () => {
       loading.value = true;
       try {
-        const response = await axios.get(
-          generateUrl('/apps/formvox/api/form/{fileId}/responses', { fileId: props.fileId })
-        );
+        const url = generateUrl('/apps/formvox/api/form/{fileId}/responses', { fileId: props.fileId });
+        const response = await axios.get(url, { params: { limit: PAGE } });
         summary.value = response.data.summary;
         responses.value = response.data.responses;
+        if (response.data.next) {
+          allLoaded = loadRest(url, response.data.next);
+        }
       } catch (error) {
         showError(t('formvox', 'Failed to load responses'));
         console.error(error);
       } finally {
         loading.value = false;
+      }
+    };
+
+    const loadRest = async (url, next) => {
+      loadingMore.value = true;
+      try {
+        let after = next;
+        while (after) {
+          const { data } = await axios.get(url, { params: { limit: PAGE, after } });
+          responses.value = responses.value.concat(data.responses);
+          after = data.next;
+        }
+      } catch (error) {
+        showError(t('formvox', 'Failed to load responses'));
+        console.error(error);
+      } finally {
+        loadingMore.value = false;
       }
     };
 
@@ -705,11 +749,66 @@ export default {
       window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/export/json', { fileId: props.fileId });
     };
 
+    // The document its confirmation email carried: made once and kept. Fetched here, so a PDF that cannot be made
+    // says so in the app instead of leaving the page for a bare error.
+    const downloadResponsePdf = async (response) => {
+      try {
+        const { data, headers } = await axios.get(
+          generateUrl('/apps/formvox/api/form/{fileId}/responses/{responseId}/pdf', { fileId: props.fileId, responseId: response.id }),
+          { responseType: 'blob' },
+        );
+        downloadFile(data, attachmentName(headers?.['content-disposition'], `${response.id}.pdf`), 'application/pdf');
+      } catch (error) {
+        showError(await refusalText(error, t('formvox', 'The PDF could not be made')));
+        console.error(error);
+      }
+    };
+
+    // The name the server gave the download.
+    const attachmentName = (disposition, fallback) => {
+      const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition || '');
+      if (encoded) {
+        try {
+          return decodeURIComponent(encoded[1]);
+        } catch {
+          // Not what it claims to be: the plain name below.
+        }
+      }
+      const plain = /filename="?([^";]+)"?/i.exec(disposition || '');
+      return plain ? plain[1] : fallback;
+    };
+
+    // What the server said when it refused the request as such (gone, not allowed); a failure of its own gets the
+    // fallback. With a blob asked for, the reason arrives as one too.
+    const refusalText = async (error, fallback) => {
+      const status = error?.response?.status || 0;
+      if (status < 400 || status >= 500) {
+        return fallback;
+      }
+      try {
+        const body = error.response.data;
+        const text = body instanceof Blob ? await body.text() : (typeof body === 'string' ? body : JSON.stringify(body));
+        const reason = JSON.parse(text)?.error;
+        return typeof reason === 'string' && reason ? reason : fallback;
+      } catch {
+        return fallback;
+      }
+    };
+
+    const exportPdfs = () => {
+      if (responses.value.length === 0) {
+        showError(t('formvox', 'No responses to export'));
+        return;
+      }
+      window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/export/pdf', { fileId: props.fileId });
+    };
+
     const downloadAllUploads = () => {
       window.location.href = generateUrl('/apps/formvox/api/form/{fileId}/uploads', { fileId: props.fileId });
     };
 
     const exportAllOdt = async () => {
+      await allLoaded;
       if (responses.value.length === 0) {
         showError(t('formvox', 'No responses to export'));
         return;
@@ -772,6 +871,7 @@ export default {
     };
 
     const exportAllFromTemplate = async () => {
+      await allLoaded;
       if (responses.value.length === 0) {
         showError(t('formvox', 'No responses to export'));
         return;
@@ -814,10 +914,12 @@ export default {
     });
 
     return {
+      respondentName,
       loading,
       view,
       summary,
       responses,
+      loadingMore,
       chartTypes,
       // Pagination
       currentPage,
@@ -859,6 +961,9 @@ export default {
       hasOdtTemplate,
       onTemplateChanged,
       downloadAllUploads,
+      downloadResponsePdf,
+      exportPdfs,
+      keepsPdf,
       deleteResponse,
       t,
       n,

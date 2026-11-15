@@ -60,6 +60,12 @@ describe('useTts buildSpeechText', () => {
 		expect(buildSpeechText(q, 'Rate it', null)).toBe('Rate it. 1 - 5, Poor - Great')
 	})
 
+	it('reads the names older forms used, and a scale from 0', () => {
+		expect(buildSpeechText({ type: 'scale', min: 1, max: 10, minLabel: 'Not likely' }, 'Q', '')).toContain('1 - 10, Not likely')
+		expect(buildSpeechText({ type: 'scale', scaleMin: 0, scaleMax: 3 }, 'Q', '')).toContain('0 - 3')
+		expect(buildSpeechText({ type: 'rating', max: 7 }, 'Q', '')).toContain('1 - 7')
+	})
+
 	it('describes a rating from 1 to its max', () => {
 		const q = { type: 'rating', ratingMax: 10 }
 		expect(buildSpeechText(q, 'Stars?', null)).toBe('Stars?. 1 - 10')

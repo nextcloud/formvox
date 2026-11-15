@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import axios from '@nextcloud/axios'
 import Results from '@/views/Results.vue'
@@ -34,6 +34,24 @@ describe('views/Results', () => {
 		vi.spyOn(axios, 'get').mockResolvedValue({
 			data: { summary: { responseCount: 0, questions: [] }, responses: [], hasTemplate: false },
 		})
+	})
+
+	it('loads a large form in pages, the rest behind the first', async () => {
+		const first = Array.from({ length: 2000 }, (_, i) => ({ id: `r${i}`, answers: {} }))
+		const rest = [{ id: 'r2000', answers: {} }]
+		axios.get.mockImplementation((url, config) => Promise.resolve({
+			data: config?.params?.after
+				? { responses: rest, next: null }
+				: { summary: { responseCount: 2001, questions: [] }, responses: first, next: '~2000', hasTemplate: false },
+		}))
+
+		const wrapper = mountResults()
+		await flushPromises()
+
+		const pages = axios.get.mock.calls.filter(([url]) => url.includes('/responses'))
+		expect(pages.map(([, config]) => config.params)).toEqual([{ limit: 2000 }, { limit: 2000, after: '~2000' }])
+		expect(wrapper.vm.responses).toHaveLength(2001)
+		expect(wrapper.vm.loadingMore).toBe(false)
 	})
 
 	it('mounts and renders the form title', () => {
@@ -216,4 +234,138 @@ describe('views/Results', () => {
 		await wrapper.vm.$nextTick()
 		expect(wrapper.vm.getFilesForQuestion('q1').map(f => f.filename)).toEqual(['a', 'b'])
 	})
+
+	// What a share without download permission sees (FormPermission::DOWNLOAD).
+	it('hides exports when the user may not download', () => {
+		const wrapper = mountResults({}, { permissions: { canDownload: false, editSettings: false } })
+		expect(wrapper.text()).not.toContain('Export CSV')
+		expect(wrapper.text()).not.toContain('Export ODT')
+	})
+
+	it('shows exports when the user may download', () => {
+		const wrapper = mountResults({}, { permissions: { canDownload: true } })
+		expect(wrapper.text()).toContain('Export CSV')
+	})
+
+	it('offers the ODT template only to editors', () => {
+		// The menu entry; the dialog's own heading reads "ODT template" too.
+		expect(mountResults({}, { permissions: { canDownload: true, editSettings: false } }).text()).not.toContain('ODT template …')
+		expect(mountResults({}, { permissions: { canDownload: true, editSettings: true } }).text()).toContain('ODT template …')
+	})
+
+	// Typed answers are no longer in the index (H6); the server counts them for the summary.
+	it('shows the unique answers the server counted for a text question', async () => {
+		axios.get.mockResolvedValue({
+			data: {
+				summary: { responseCount: 3, questions: [{ id: 't', type: 'text', question: 'Name', answerCounts: {}, uniqueAnswers: 2 }] },
+				responses: [],
+				hasTemplate: false,
+			},
+		})
+		const wrapper = mountResults()
+		await flushPromises()
+
+		expect(wrapper.find('.text-count').text()).toContain('2')
+	})
+
+	describe("a response's PDF", () => {
+		afterEach(() => {
+			vi.unstubAllGlobals()
+		})
+
+		const atLocation = () => {
+			const location = { href: '' }
+			vi.stubGlobal('location', location)
+			Object.defineProperty(window, 'location', { value: location, configurable: true })
+			return location
+		}
+
+		const loads = { data: { summary: { responseCount: 0, questions: [] }, responses: [], hasTemplate: false } }
+
+		it("downloads one response's PDF under the name the server gives it", async () => {
+			const exporter = await import('@/utils/odt-export')
+			const downloadFile = vi.spyOn(exporter, 'downloadFile').mockImplementation(() => {})
+			const pdf = new Blob(['%PDF-1.7'], { type: 'application/pdf' })
+			axios.get.mockImplementation((url) => Promise.resolve(url.endsWith('/pdf')
+				? { data: pdf, headers: { 'content-disposition': 'attachment; filename*=UTF-8\'\'Poll_2026-11-10_r-1.pdf; filename="Poll_2026-11-10_r-1.pdf"' } }
+				: loads))
+			const wrapper = mountResults()
+
+			await wrapper.vm.downloadResponsePdf({ id: 'r-1' })
+
+			expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('/apps/formvox/api/form/5/responses/r-1/pdf'), { responseType: 'blob' })
+			expect(downloadFile).toHaveBeenCalledWith(pdf, 'Poll_2026-11-10_r-1.pdf', 'application/pdf')
+			downloadFile.mockRestore()
+		})
+
+		it('says in the app that the PDF could not be made, and stays on the page', async () => {
+			const location = atLocation()
+			const dialogs = await import('@nextcloud/dialogs')
+			const showError = vi.spyOn(dialogs, 'showError')
+			vi.spyOn(console, 'error').mockImplementation(() => {})
+			axios.get.mockImplementation((url) => url.endsWith('/pdf')
+				? Promise.reject({ response: { status: 500, data: new Blob(['{"error":"Something went wrong, please try again","reason":"internal_error"}']) } })
+				: Promise.resolve(loads))
+			const wrapper = mountResults()
+
+			await wrapper.vm.downloadResponsePdf({ id: 'r-1' })
+
+			expect(showError).toHaveBeenCalledWith('The PDF could not be made')
+			expect(location.href).toBe('')
+			showError.mockRestore()
+		})
+
+		it("shows the server's own reason when it refused the request as such", async () => {
+			const dialogs = await import('@nextcloud/dialogs')
+			const showError = vi.spyOn(dialogs, 'showError')
+			vi.spyOn(console, 'error').mockImplementation(() => {})
+			axios.get.mockImplementation((url) => url.endsWith('/pdf')
+				? Promise.reject({ response: { status: 404, data: new Blob(['{"error":"Response not found","reason":"not_found"}']) } })
+				: Promise.resolve(loads))
+			const wrapper = mountResults()
+
+			await wrapper.vm.downloadResponsePdf({ id: 'r-1' })
+
+			expect(showError).toHaveBeenCalledWith('Response not found')
+			showError.mockRestore()
+		})
+
+		it('exports all PDFs as one ZIP, not when there is nothing to export', async () => {
+			const location = atLocation()
+			const wrapper = mountResults()
+			await flushPromises()
+
+			wrapper.vm.exportPdfs()
+			expect(location.href).toBe('')
+
+			wrapper.vm.responses.push({ id: 'r-1', answers: {} })
+			wrapper.vm.exportPdfs()
+			expect(location.href).toContain('/apps/formvox/api/form/5/export/pdf')
+		})
+
+		it('offers the PDF download and the ZIP only where the form keeps PDFs', async () => {
+			const pdfButtons = (wrapper) => wrapper.findAll('[title="Download PDF"]').length
+			const permissions = { deleteResponses: true, canDownload: true }
+
+			const without = mountResults({ settings: {} }, { permissions })
+			await flushPromises()
+			without.vm.view = 'responses'
+			without.vm.responses.push({ id: 'r-1', answers: {} })
+			await flushPromises()
+			expect(without.text()).not.toContain('Export PDFs (ZIP)')
+			expect(without.text()).toContain('Export CSV')
+			expect(pdfButtons(without)).toBe(0)
+
+			const keeping = mountResults({ settings: { keepResponsePdf: true } }, { permissions })
+			await flushPromises()
+			keeping.vm.view = 'responses'
+			// The responses live outside the component instance: start this one from nothing.
+			keeping.vm.responses.splice(0)
+			keeping.vm.responses.push({ id: 'r-1', answers: {} })
+			await flushPromises()
+			expect(keeping.text()).toContain('Export PDFs (ZIP)')
+			expect(pdfButtons(keeping)).toBe(1)
+		})
+	})
 })
+

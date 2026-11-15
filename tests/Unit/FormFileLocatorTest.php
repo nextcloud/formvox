@@ -117,8 +117,14 @@ class FormFileLocatorTest extends TestCase {
 	}
 
 	/** A File mock that resolves for a user, with a given updateable flag. */
-	private function fileFor(bool $updateable): File {
+	private function formFile(string $name = 'Survey.fvform'): File {
 		$file = $this->createMock(File::class);
+		$file->method('getName')->willReturn($name);
+		return $file;
+	}
+
+	private function fileFor(bool $updateable): File {
+		$file = $this->formFile();
 		$file->method('isUpdateable')->willReturn($updateable);
 		return $file;
 	}
@@ -179,6 +185,101 @@ class FormFileLocatorTest extends TestCase {
 
 		// requireWrite=false => a readable file is fine even if not writable.
 		$this->assertSame($ro, $this->locator()->getFileByIdPublic($fileId, false));
+	}
+
+	/** qual#9: with S3 as primary storage a home is object::user:{uid}; the owner opens it, nobody is guessed. */
+	public function testAHomeOnS3IsOpenedByItsOwner(): void {
+		$fileId = 43;
+		$this->programDb([
+			[['id' => 'object::user:alice', 'numeric_id' => 7, 'path' => 'files/Survey.fvform']],
+			[['user_id' => 'mallory']], // what a lookup among the storage's mounts would find first
+		]);
+		$file = $this->fileFor(true);
+		$this->programUserFolders(['alice' => [$file], 'mallory' => [$this->fileFor(true)]], $fileId);
+
+		$this->assertSame($file, $this->locator()->getFileByIdPublic($fileId, true));
+		$this->assertSame(1, $this->queryIndex);
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function sharedStorages(): array {
+		return [
+			'on disk' => ['local::/var/www/data/'],
+			'on S3' => ['object::store:amazon::formvox-bucket'],
+		];
+	}
+
+	/**
+	 * qual#9, test#4: a team folder made before Groupfolders 20 has no storage of its own; only its path,
+	 * __groupfolders/{id}/, says which folder it is. Its members open it, as in any team folder.
+	 *
+	 * @dataProvider sharedStorages
+	 */
+	public function testATeamFolderFromBeforeGroupfolders20IsFoundByItsPath(string $storageId): void {
+		$fileId = 56;
+		$this->programDb([
+			[['id' => $storageId, 'numeric_id' => 1, 'path' => '__groupfolders/12/Forms/Survey.fvform']],
+			[['circle_id' => null]],
+			[['group_id' => 'staff', 'circle_id' => null, 'permissions' => 31]],
+		]);
+		$group = $this->createMock(IGroup::class);
+		$group->method('searchUsers')->willReturn([$this->userWithUid('bob')]);
+		$this->groupManager->expects($this->atLeastOnce())->method('get')->with('staff')->willReturn($group);
+		$writable = $this->fileFor(true);
+		$this->programUserFolders(['bob' => [$writable]], $fileId);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
+	public function testOnlyAFolderNumberMakesAPathATeamFolder(): void {
+		$fileId = 57;
+		$this->programDb([
+			[['id' => 'local::/var/www/data/', 'numeric_id' => 1, 'path' => '__groupfolders/trash/12/Survey.fvform.d1']],
+			[['user_id' => 'dave']],
+		]);
+		$this->groupManager->expects($this->never())->method('get');
+		$file = $this->fileFor(true);
+		$this->programUserFolders(['dave' => [$file]], $fileId);
+
+		$this->assertSame($file, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
+	/**
+	 * Nextcloud keeps a storage id over 64 characters as its md5, so a long data directory hides
+	 * __groupfolders/{id}/; the folder is then found by its storage, and its members open the form,
+	 * not whoever the mounts list first.
+	 */
+	public function testATeamFolderWhoseStorageIdNextcloudHashedIsFoundByItsStorage(): void {
+		$fileId = 58;
+		$this->programDb([
+			[['id' => md5('local::/workspace/voxcloud-apps/formvox/server/data/__groupfolders/12/'), 'numeric_id' => 9, 'path' => 'Forms/Survey.fvform']],
+			[['folder_id' => 12]],
+			[['circle_id' => null]],
+			[['group_id' => 'staff', 'circle_id' => null, 'permissions' => 31]],
+		]);
+		$group = $this->createMock(IGroup::class);
+		$group->method('searchUsers')->willReturn([$this->userWithUid('bob')]);
+		$this->groupManager->expects($this->atLeastOnce())->method('get')->with('staff')->willReturn($group);
+		$writable = $this->fileFor(true);
+		$this->programUserFolders(['bob' => [$writable], 'mallory' => [$this->fileFor(true)]], $fileId);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
+	}
+
+	public function testAHashedStorageIdThatIsNoTeamFolderStaysExternalStorage(): void {
+		$fileId = 59;
+		$this->programDb([
+			[['id' => md5('local::/a/very/long/path/to/an/external/storage/mount/point/somewhere/'), 'numeric_id' => 9, 'path' => 'Survey.fvform']],
+			[],
+			[['user_id' => 'dave']],
+		]);
+		$this->groupManager->expects($this->never())->method('get');
+		$file = $this->fileFor(true);
+		$this->programUserFolders(['dave' => [$file]], $fileId);
+
+		$this->assertSame($file, $this->locator()->getFileByIdPublic($fileId, true));
 	}
 
 	// ---- Case 2: group folder — #136 backend lookup + #90 order/skip -------
@@ -525,9 +626,97 @@ class FormFileLocatorTest extends TestCase {
 		$this->assertSame($writable, $this->locator()->getFileByIdPublic($fileId, true));
 	}
 
+	// ---- one rule for a form reachable along several paths -----------------
+
+	private function nodeWith(int $permissions, bool $updateable = true): File {
+		$file = $this->formFile();
+		$file->method('getPermissions')->willReturn($permissions);
+		$file->method('isReadable')->willReturn(true);
+		$file->method('isUpdateable')->willReturn($updateable);
+		return $file;
+	}
+
+	/** A team folder and a share, two shares: the path with the most rights, whatever the mount order. */
+	public function testTheMostPermissivePathWinsWhateverTheOrder(): void {
+		$readOnly = $this->nodeWith(\OCP\Constants::PERMISSION_READ, false);
+		$full = $this->nodeWith(\OCP\Constants::PERMISSION_ALL);
+		$folder = $this->createMock(Folder::class);
+
+		$this->assertSame($full, FormFileLocator::mostPermissive([$readOnly, $folder, $full]));
+		$this->assertSame($full, FormFileLocator::mostPermissive([$full, $readOnly]));
+		$this->assertNull(FormFileLocator::mostPermissive([$folder]));
+		$this->assertNull(FormFileLocator::mostPermissive([]));
+	}
+
+	/** The creator and API keys are checked on the same path a session would use (T33). */
+	public function testAnAccountsOwnViewTakesThePathWithMostRights(): void {
+		$readOnly = $this->nodeWith(\OCP\Constants::PERMISSION_READ, false);
+		$writable = $this->nodeWith(\OCP\Constants::PERMISSION_READ | \OCP\Constants::PERMISSION_UPDATE);
+		$this->programUserFolders(['anna' => [$readOnly, $writable]], 5);
+
+		$this->assertSame($writable, $this->locator()->getFileForUser('anna', 5));
+	}
+
+	public function testAPublicWriteFindsTheWritablePathOfTheSameAccount(): void {
+		$this->programDb([[['id' => 'home::anna', 'numeric_id' => 7]]]);
+		$readOnly = $this->nodeWith(\OCP\Constants::PERMISSION_READ, false);
+		$writable = $this->nodeWith(\OCP\Constants::PERMISSION_READ | \OCP\Constants::PERMISSION_UPDATE);
+		$this->programUserFolders(['anna' => [$readOnly, $writable]], 5);
+
+		$this->assertSame($writable, $this->locator()->getFileByIdPublic(5, true));
+	}
+
+	// ---- getFileForUser: one account's own view ----------------------------
+
+	public function testGetFileForUserReturnsTheFileTheAccountCanRead(): void {
+		$file = $this->formFile();
+		$file->method('isReadable')->willReturn(true);
+		$this->programUserFolders(['anna' => [$file]], 5);
+
+		$this->assertSame($file, $this->locator()->getFileForUser('anna', 5));
+	}
+
+	public function testGetFileForUserIsNullWhenTheFileIsNotInTheAccountsView(): void {
+		// e.g. removed from the team folder's groups, or a share revoked.
+		$this->programUserFolders(['anna' => []], 5);
+
+		$this->assertNull($this->locator()->getFileForUser('anna', 5));
+	}
+
+	public function testGetFileForUserIsNullWhenNextcloudDeniesRead(): void {
+		// e.g. an advanced-permission (ACL) rule that takes away read.
+		$file = $this->formFile();
+		$file->method('isReadable')->willReturn(false);
+		$this->programUserFolders(['anna' => [$file]], 5);
+
+		$this->assertNull($this->locator()->getFileForUser('anna', 5));
+	}
+
+	public function testGetFileForUserIsNullWhenTheAccountsFolderCannotBeOpened(): void {
+		$this->rootFolder->method('getUserFolder')->willThrowException(new \RuntimeException('no such user'));
+
+		$this->assertNull($this->locator()->getFileForUser('ghost', 5));
+	}
+
 	private function userWithUid(string $uid): IUser {
 		$u = $this->createMock(IUser::class);
 		$u->method('getUID')->willReturn($uid);
 		return $u;
+	}
+
+	/** secu#9: a JSON file dropped through an upload link, with a token of its own, is never opened as a form. */
+	public function testOnlyAFormIsEverOpened(): void {
+		$json = $this->formFile('planted.json');
+		$json->method('getMimetype')->willReturn('application/json');
+		$byMimetype = $this->formFile('Survey');
+		$byMimetype->method('getMimetype')->willReturn('application/x-fvform');
+
+		$this->assertNull(FormFileLocator::mostPermissive([$json]));
+		$this->assertSame($byMimetype, FormFileLocator::mostPermissive([$json, $byMimetype]));
+
+		$this->programDb([[['id' => 'home::anna', 'numeric_id' => 7]]]);
+		$this->programUserFolders(['anna' => [$json]], 5);
+		$this->expectException(\OCP\Files\NotFoundException::class);
+		$this->locator()->getFileByIdPublic(5);
 	}
 }

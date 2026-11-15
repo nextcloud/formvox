@@ -1,6 +1,6 @@
 # Dependencies
-node_modules/
-vendor/
+/node_modules
+/vendor/
 
 # PHPUnit
 .phpunit.cache/
@@ -44,6 +44,7 @@ npm-debug.log*
 
 # Release artifacts (uploaded to GitHub releases, not in git)
 formvox-*.tar.gz
+formvox.tar.gz
 
 # Certificates and private keys (NEVER commit to GitHub!)
 *.key

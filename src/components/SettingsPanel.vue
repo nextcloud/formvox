@@ -47,7 +47,6 @@
 <script>
 import { t } from '@/utils/l10n';
 import { generateUrl } from '@nextcloud/router';
-import axios from '@nextcloud/axios';
 import {
   NcAppSidebar,
   NcButton,
@@ -69,26 +68,10 @@ export default {
   },
   emits: ['close'],
   setup(props) {
-    const openNativeShareDialog = async () => {
-      // Try legacy API (NC < 33) - works when Files app is loaded
-      if (window.OCA?.Files?.Sidebar) {
-        try {
-          const response = await axios.get(
-            generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId })
-          );
-          const filePath = response.data.path;
-
-          window.OCA.Files.Sidebar.open(filePath);
-          window.OCA.Files.Sidebar.setActiveTab('sharing');
-          return;
-        } catch (e) {
-          console.error('Failed to open sidebar:', e);
-        }
-      }
-
-      // Fallback: redirect to Files app with the file selected and sharing tab open
-      window.location.href = generateUrl('/apps/files/?fileid={fileId}&openfile=true', {
-        fileId: props.fileId
+    // Files' own detail view; openfile=false, or Files runs FormVox's default action and opens the editor again.
+    const openNativeShareDialog = () => {
+      window.location.href = generateUrl('/f/{fileId}?opendetails=true&openfile=false', {
+        fileId: props.fileId,
       });
     };
 

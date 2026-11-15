@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Settings;
 
 use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Pdf\PdfMailPolicy;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\StatisticsService;
@@ -16,27 +17,15 @@ use OCP\Settings\ISettings;
 use OCP\Util;
 
 class AdminSettings implements ISettings {
-	private IConfig $config;
-	private IInitialState $initialState;
-	private BrandingService $brandingService;
-	private StatisticsService $statisticsService;
-	private TelemetryService $telemetryService;
-	private MicrosoftFormsAuthService $msFormsAuthService;
-
 	public function __construct(
-		IConfig $config,
-		IInitialState $initialState,
-		BrandingService $brandingService,
-		StatisticsService $statisticsService,
-		TelemetryService $telemetryService,
-		MicrosoftFormsAuthService $msFormsAuthService,
+		private IConfig $config,
+		private IInitialState $initialState,
+		private BrandingService $brandingService,
+		private StatisticsService $statisticsService,
+		private TelemetryService $telemetryService,
+		private MicrosoftFormsAuthService $msFormsAuthService,
+		private PdfMailPolicy $pdfMailPolicy,
 	) {
-		$this->config = $config;
-		$this->initialState = $initialState;
-		$this->brandingService = $brandingService;
-		$this->statisticsService = $statisticsService;
-		$this->telemetryService = $telemetryService;
-		$this->msFormsAuthService = $msFormsAuthService;
 	}
 
 	public function getForm(): TemplateResponse {
@@ -49,6 +38,11 @@ class AdminSettings implements ISettings {
 		// Provide embed settings
 		$this->initialState->provideInitialState('embedSettings', [
 			'allowedDomains' => $this->config->getAppValue(Application::APP_ID, 'embed_allowed_domains', '*'),
+		]);
+
+		$this->initialState->provideInitialState('pdfSettings', [
+			'anonymous' => $this->pdfMailPolicy->anonymousAllowed(),
+			'sharedCache' => $this->pdfMailPolicy->sharedCache(),
 		]);
 
 		// Provide Microsoft Forms import settings

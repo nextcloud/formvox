@@ -46,3 +46,10 @@ internal-docs/
 
 # Forgejo Actions: interne hostnamen en namen van secrets. GitHub draait .github/workflows/.
 .forgejo/
+
+# Testserver-deploy (bevat host, IP en SSH-gebruiker), oude Gitea-workflows,
+# lokale Claude-config en takenlijsten.
+deploy-tst.sh
+.gitea/
+.claude/
+tasks/

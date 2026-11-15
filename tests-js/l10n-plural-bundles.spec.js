@@ -55,7 +55,6 @@ describe('plural translations at runtime', () => {
 
 	it('nl: with the Nextcloud key, n=2 gives the plural and n=1 the singular', () => {
 		const { translations } = loadBundle('nl')
-		// No plural is translated yet, so add one to the real nl bundle.
 		translations['_%n response_::_%n responses_'] = ['%n reactie', '%n reacties']
 		expect(translatePlural(APP, '%n response', '%n responses', 2)).toBe('2 reacties')
 		expect(translatePlural(APP, '%n response', '%n responses', 1)).toBe('1 reactie')
@@ -63,6 +62,8 @@ describe('plural translations at runtime', () => {
 
 	it('nl: under the bare singular the plural is not found (the bug this guards)', () => {
 		const { translations } = loadBundle('nl')
+		// Only the hand-made shape: the bundle's real key for this plural is taken out first.
+		delete translations['_%n response_::_%n responses_']
 		translations['%n response'] = ['%n reactie', '%n reacties']
 		expect(translatePlural(APP, '%n response', '%n responses', 2)).toBe('2 responses')
 	})

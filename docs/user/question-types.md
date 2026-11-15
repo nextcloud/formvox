@@ -115,15 +115,23 @@ Allow respondents to upload files with their response.
 **Use for:** Document submissions, photo uploads, attachments
 **Settings:**
 - Allowed file types (e.g., PDF, images, documents)
-- Maximum file size limit
-- Maximum number of files
+- Maximum file size limit (per question; 10 MB if not set, 100 MB at most)
+- Maximum number of files (per question; 20 at most)
+
+**Limits respondents may run into:**
+- A single file over the question's size limit is refused, with the limit named in the error.
+- One response's file questions together take at most `3 × (files the questions allow) + 5` files across all of them;
+  this leaves room for a retry whose answer got lost and for files replaced after a failed attempt.
+- The server's own PHP upload limits (`upload_max_filesize`, `post_max_size`) apply underneath FormVox's own limit;
+  whichever is smaller wins.
 
 **Security:**
-- Uploaded files are stored securely in Nextcloud
+- Uploaded files are kept in Nextcloud's own storage (FormVox's app data, or beside the form file before it is moved
+  into the database)
 - Files are accessible only to form owner
 - Files are deleted when the response is deleted
 
-**Note:** File uploads count toward the form owner's storage quota.
+**Note:** Respondents' files no longer count toward the form owner's or team folder's storage quota.
 
 ## Advanced Questions
 

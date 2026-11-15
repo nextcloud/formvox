@@ -111,6 +111,7 @@
                 @update:files="updatePendingFiles(question.id, $event)"
                 @speak="handleSpeak"
               />
+              <p v-if="confirmationNote(question)" class="confirmation-note">{{ confirmationNote(question) }}</p>
             </div>
           </fieldset>
 
@@ -134,6 +135,7 @@
               @update:files="updatePendingFiles(item.question.id, $event)"
               @speak="handleSpeak"
             />
+            <p v-if="confirmationNote(item.question)" class="confirmation-note">{{ confirmationNote(item.question) }}</p>
           </div>
         </template>
       </div>
@@ -166,6 +168,14 @@
           <!-- TRANSLATORS: Button text while the answers are sent -->
           {{ uploadProgress || (submitting ? t('formvox', 'Submitting …') : t('formvox', 'Submit')) }}
         </NcButton>
+      </div>
+
+      <!-- Busy for a while: the browser keeps trying, so the page must stay open. The live region is always there,
+           so a screen reader reads the text when it appears. -->
+      <div aria-live="polite">
+        <p v-if="busy" class="busy-message">
+          {{ t('formvox', 'It is busy right now, please keep this page open') }}
+        </p>
       </div>
 
       <!-- Submission status for screen readers -->
@@ -201,6 +211,9 @@ import DOMPurify from 'dompurify';
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 
+/** Within the day the server keeps an unsubmitted fill's files (UploadCleanupJob), with an hour to spare. */
+const UPLOADS_KEPT_MS = 23 * 60 * 60 * 1000;
+
 // Open all links in a new tab so respondents don't lose their in-progress
 // form when clicking a description link (#87). rel=noopener+noreferrer
 // is the standard hardening for target=_blank.
@@ -221,6 +234,9 @@ import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
 import { solveChallengeWorkers } from 'altcha-lib';
 import { t } from '@/utils/l10n';
+import { BUSY_NOTICE_MS, RETRY_WINDOW_MS, isTransient, newFillId, withRetry, withoutProof } from '@/utils/retry';
+import { browserTimeZone } from '@/utils/timeZone';
+import { analyse, nextPageIndex } from '@/utils/formLogic';
 import { getCanonicalLocale } from '@nextcloud/l10n';
 import { useTts } from '../composables/useTts';
 import { readableForeground, pageBackground } from '@/utils/contrast';
@@ -253,6 +269,11 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    // A signed-in respondent, as the server knows them ({ email }); null for an anonymous one.
+    respondent: {
+      type: Object,
+      default: null,
+    },
     isPreview: {
       type: Boolean,
       default: false,
@@ -260,9 +281,27 @@ export default {
   },
   emits: ['submit'],
   setup(props, { emit }) {
+    // A signed-in respondent is written to at their account's address, not at the one they type (PO).
+    const confirmationNote = (question) => {
+      if (!props.respondent || !question.useAsRespondentEmail) {
+        return '';
+      }
+      return props.respondent.email
+        ? t('formvox', 'Your confirmation goes to {email}.', { email: props.respondent.email })
+        : t('formvox', 'Your account has no e-mail address, so no confirmation can be sent.');
+    };
     const answers = reactive({});
     const pendingFiles = reactive({});  // questionId -> File[]
     const tempResponseId = ref(null);   // Shared ID for all file uploads in this response
+    // One id per fill, kept with the draft: a retry of a submission the server stored is answered as stored (7a, 3a-5).
+    const submissionId = ref(newFillId());
+    // The pass from the first upload, for the other files of this response.
+    const uploadGrant = ref(null);
+    // Files already uploaded, so a second try of the submission does not upload them again.
+    let uploaded = new WeakMap();
+    // When this fill's first file went up: the server clears a fill nobody submitted a day later.
+    let uploadsStartedAt = 0;
+    const busy = ref(false);
     const submitted = ref(false);
     const submitting = ref(false);
     const uploadProgress = ref('');
@@ -460,6 +499,10 @@ export default {
         if (typeof draft.currentPageIndex === 'number') {
           currentPageIndex.value = draft.currentPageIndex;
         }
+        // The same fill: if its submission was stored before the page closed, sending it again stores nothing twice.
+        if (typeof draft.submissionId === 'string') {
+          submissionId.value = draft.submissionId;
+        }
         draftRestored.value = true;
       } catch (e) {
         localStorage.removeItem(draftKey);
@@ -473,6 +516,7 @@ export default {
           localStorage.setItem(draftKey, JSON.stringify({
             answers: JSON.parse(JSON.stringify(answers)),
             currentPageIndex: currentPageIndex.value,
+            submissionId: submissionId.value,
             savedAt: new Date().toISOString(),
           }));
         } catch (e) { /* localStorage full - ignore */ }
@@ -545,12 +589,8 @@ export default {
       for (const question of questions) {
         // Skip non-answerable UI items (section headers, info blocks)
         if (question.type === 'section' || question.type === 'descriptor') continue;
-        // Skip questions in hidden sections
-        if (question.sectionId && hiddenSectionIds.value.has(question.sectionId)) continue;
-        // Skip questions hidden by showIf conditions
-        if (question.showIf && !evaluateCondition(question.showIf, answers)) {
-          continue;
-        }
+        // Hidden by a condition or on a page the routing skips
+        if (logic.value.hidden.has(String(question.id))) continue;
         visibleCount++;
 
         const answer = answers[question.id];
@@ -597,20 +637,22 @@ export default {
     };
 
     // Layout zones from branding (with injected progress)
-    const headerBlocks = computed(() => injectProgress(props.branding?.layout?.header || []));
-    const footerBlocks = computed(() => injectProgress(props.branding?.layout?.footer || []));
-    const thankYouBlocks = computed(() => props.branding?.layout?.thankYou || []);
-
-    // Build a set of hidden section IDs (sections whose showIf evaluates to false)
-    const hiddenSectionIds = computed(() => {
-      const hidden = new Set();
-      (props.form.questions || []).forEach(q => {
-        if (q.type === 'section' && q.showIf && !evaluateCondition(q.showIf, answers)) {
-          hidden.add(q.id);
-        }
-      });
-      return hidden;
+    // The form's own images are only served with its link's token (qual#87).
+    const withLinkToken = (blocks) => blocks.map((block) => {
+      const url = block?.settings?.imageUrl;
+      if (typeof url !== 'string' || !props.token || !url.includes(`/branding/${props.fileId}/image/`)) {
+        return block;
+      }
+      const imageUrl = url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(props.token);
+      return { ...block, settings: { ...block.settings, imageUrl } };
     });
+
+    const headerBlocks = computed(() => injectProgress(withLinkToken(props.branding?.layout?.header || [])));
+    const footerBlocks = computed(() => injectProgress(withLinkToken(props.branding?.layout?.footer || [])));
+    const thankYouBlocks = computed(() => withLinkToken(props.branding?.layout?.thankYou || []));
+
+    // What a respondent sees, worked out exactly as the server does (utils/formLogic, FormLogic.php).
+    const logic = computed(() => analyse(props.form, answers));
 
     // Visible questions based on current page and showIf conditions
     // Uses pageQuestionIds order (not form.questions order) to respect editor reordering
@@ -624,13 +666,8 @@ export default {
           if (!q) return false;
           // Skip section items themselves (they are rendered as wrappers)
           if (q.type === 'section') return false;
-          // Hide questions in a hidden section
-          if (q.sectionId && hiddenSectionIds.value.has(q.sectionId)) return false;
-          // Individual showIf
-          if (q.showIf) {
-            return evaluateCondition(q.showIf, answers);
-          }
-          return true;
+          // Hidden by its own condition or its section's; the page itself is the one being shown.
+          return !logic.value.hiddenByCondition.has(String(q.id));
         });
     });
 
@@ -675,89 +712,6 @@ export default {
       }
       return items;
     });
-
-    // For choice/multiple/dropdown questions the answer is stored as the
-    // option *value* (typically an internal id like "optdca45095") while
-    // historically the page-routing editor and showIf editor saved the
-    // option *label* (e.g. "Ja"). Accept either form so existing forms
-    // with label-based rules keep working alongside new value-based ones (#99).
-    const normaliseChoiceCompare = (questionId, compareValue) => {
-      const question = (props.form.questions || []).find(q => q.id === questionId);
-      if (!question || !['choice', 'multiple', 'dropdown'].includes(question.type)) {
-        return [compareValue];
-      }
-      const opts = question.options || [];
-      const matched = opts.find(o => o.label === compareValue || (o.value || o.id) === compareValue);
-      if (!matched) return [compareValue];
-      const result = [];
-      const v = matched.value || matched.id;
-      if (v !== undefined && v !== null) result.push(v);
-      if (matched.label !== undefined && matched.label !== null && matched.label !== v) result.push(matched.label);
-      return result;
-    };
-
-    const evaluateCondition = (condition, answers) => {
-      // Combined conditions
-      if (condition.operator === 'and' || condition.operator === 'or') {
-        const results = condition.conditions.map(c => evaluateCondition(c, answers));
-        return condition.operator === 'and'
-          ? results.every(Boolean)
-          : results.some(Boolean);
-      }
-
-      // Simple condition
-      const answer = answers[condition.questionId];
-      const value = condition.value;
-      const isArrayAnswer = Array.isArray(answer);
-      // For choice/multiple/dropdown: accept rule value matching by either
-      // option.value or option.label.
-      const candidates = normaliseChoiceCompare(condition.questionId, value);
-
-      switch (condition.operator) {
-        case 'equals':
-          // For multiple-choice (array answer), match if the array contains any candidate
-          return isArrayAnswer
-            ? candidates.some(c => answer.includes(c))
-            : candidates.includes(answer);
-        case 'notEquals':
-          return isArrayAnswer
-            ? !candidates.some(c => answer.includes(c))
-            : !candidates.includes(answer);
-        case 'contains':
-          if (isArrayAnswer) return candidates.some(c => answer.includes(c));
-          return typeof answer === 'string' && candidates.some(c => answer.includes(c));
-        case 'notContains':
-          if (isArrayAnswer) return !candidates.some(c => answer.includes(c));
-          return typeof answer !== 'string' || !candidates.some(c => answer.includes(c));
-        case 'isEmpty':
-          return !answer || answer === '' || (isArrayAnswer && answer.length === 0);
-        case 'isNotEmpty':
-          return answer && answer !== '' && (!isArrayAnswer || answer.length > 0);
-        case 'greaterThan':
-        case 'lessThan': {
-          // Date strings (YYYY-MM-DD or YYYY-MM-DDTHH:MM) compare correctly as strings
-          const aRaw = isArrayAnswer ? answer[0] : answer;
-          const isDate = /^\d{4}-\d{2}-\d{2}/.test(aRaw) && /^\d{4}-\d{2}-\d{2}/.test(value);
-          const a = isDate ? aRaw : Number(aRaw);
-          const b = isDate ? value : Number(value);
-          return condition.operator === 'greaterThan' ? a > b : a < b;
-        }
-        case 'in':
-          // value is an array of allowed options. For array answers, true if any answer is in the allowed list.
-          if (!Array.isArray(value)) return false;
-          if (isArrayAnswer) return answer.some(a => value.includes(a));
-          return value.includes(answer);
-        case 'notIn':
-          if (!Array.isArray(value)) return true;
-          if (isArrayAnswer) return !answer.some(a => value.includes(a));
-          return !value.includes(answer);
-        default:
-          // Unknown / unset operator → don't match. Returning true used to
-          // silently fire page-routing rules and showIf jumps when a rule
-          // was half-configured (#99).
-          return false;
-      }
-    };
 
     const updateAnswer = (questionId, value) => {
       answers[questionId] = value;
@@ -956,32 +910,6 @@ export default {
       return true;
     };
 
-    // Evaluate page routing rules for current page
-    const evaluatePageRouting = () => {
-      const page = currentPage.value;
-      if (!page?.routing || !Array.isArray(page.routing) || page.routing.length === 0) {
-        return null;
-      }
-      for (const rule of page.routing) {
-        // Skip malformed routing rules — half-configured rules in the
-        // editor could otherwise match by accident (evaluateCondition's
-        // default branch used to return true) and silently skip pages
-        // the user expected to see (#99).
-        if (!rule || !rule.operator || !rule.questionId || !rule.targetPageId) {
-          continue;
-        }
-        const condition = {
-          questionId: rule.questionId,
-          operator: rule.operator,
-          value: rule.value,
-        };
-        if (evaluateCondition(condition, answers)) {
-          return rule.targetPageId;
-        }
-      }
-      return null;
-    };
-
     const previousPage = () => {
       if (pageHistory.value.length > 0) {
         ttsStop();
@@ -998,28 +926,63 @@ export default {
 
     const nextPage = () => {
       if (!validateCurrentPage()) return;
+      // Routing as the server walks the pages, so it agrees on which were skipped.
+      const target = nextPageIndex(props.form, currentPageIndex.value, answers);
+      if (target >= pages.value.length) return;
       ttsStop();
 
       // Push current page to history for back-navigation
       pageHistory.value.push(currentPageIndex.value);
+      currentPageIndex.value = target;
+      saveDraft();
+      focusFirstQuestion();
+    };
 
-      // Check routing rules
-      const targetPageId = evaluatePageRouting();
-      if (targetPageId) {
-        const targetIndex = pages.value.findIndex(p => p.id === targetPageId);
-        if (targetIndex !== -1) {
-          currentPageIndex.value = targetIndex;
-          saveDraft();
-          focusFirstQuestion();
-          return;
+    /**
+     * One file to the server. The first file of a response pays the anti-spam challenge and gets a pass that carries
+     * the others; a pass that ran out is replaced by a new challenge.
+     */
+    const uploadOne = async (file, questionId) => {
+      const uploadUrl = generateUrl('/apps/formvox/public/{fileId}/{token}/upload', {
+        fileId: props.fileId,
+        token: props.token
+      });
+      const send = async () => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('questionId', questionId);
+        formData.append('tempResponseId', tempResponseId.value);
+        let proof = !!uploadGrant.value;
+        if (uploadGrant.value) {
+          formData.append('uploadGrant', uploadGrant.value);
+        } else {
+          const altcha = await solveAltchaChallenge();
+          if (altcha) {
+            proof = true;
+            formData.append('altcha', JSON.stringify(altcha));
+          }
         }
-      }
-
-      // Default: linear navigation
-      if (hasNextPage.value) {
-        currentPageIndex.value++;
-        saveDraft();
-        focusFirstQuestion();
+        try {
+          const { data } = await axios.post(uploadUrl, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          return data;
+        } catch (err) {
+          // A busy form answers with a pass, so the next try of this file needs no new challenge.
+          if (err.response?.data?.uploadGrant) {
+            uploadGrant.value = err.response.data.uploadGrant;
+          }
+          throw proof ? err : withoutProof(err);
+        }
+      };
+      try {
+        return await send();
+      } catch (err) {
+        if (err.response?.data?.reason !== 'challenge_failed' || !uploadGrant.value) {
+          throw err;
+        }
+        uploadGrant.value = null;
+        return send();
       }
     };
 
@@ -1032,13 +995,17 @@ export default {
         return {}; // No files to upload
       }
 
+      // A page left open past the day the server keeps an unsubmitted fill's files: they are gone, so they go again.
+      if (uploadsStartedAt && Date.now() - uploadsStartedAt > UPLOADS_KEPT_MS) {
+        uploaded = new WeakMap();
+        tempResponseId.value = null;
+        uploadGrant.value = null;
+        uploadsStartedAt = 0;
+      }
+
       // Generate a temp response ID if we don't have one yet
       if (!tempResponseId.value) {
-        tempResponseId.value = crypto.randomUUID ? crypto.randomUUID() :
-          'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0;
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-          });
+        tempResponseId.value = newFillId();
       }
 
       const fileAnswers = {};
@@ -1049,24 +1016,18 @@ export default {
 
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          // TRANSLATORS: {name} is a file name
-          uploadProgress.value = t('formvox', 'Uploading {name} …', { name: file.name });
-
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('questionId', questionId);
-          formData.append('tempResponseId', tempResponseId.value);
-
-          const uploadUrl = generateUrl('/apps/formvox/public/{fileId}/{token}/upload', {
-            fileId: props.fileId,
-            token: props.token
-          });
-
-          const response = await axios.post(uploadUrl, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
-
-          uploadedFiles.push(response.data);
+          if (!uploaded.has(file)) {
+            // TRANSLATORS: {name} is a file name
+            uploadProgress.value = t('formvox', 'Uploading {name} …', { name: file.name });
+            // Each file its own minute: a long first file leaves the next one room to try again.
+            const { uploadGrant: grant, ...answer } = await withRetry(() => uploadOne(file, questionId), Date.now() + RETRY_WINDOW_MS, () => { busy.value = true; });
+            if (grant) {
+              uploadGrant.value = grant;
+            }
+            uploadsStartedAt = uploadsStartedAt || Date.now();
+            uploaded.set(file, answer);
+          }
+          uploadedFiles.push(uploaded.get(file));
         }
 
         // Store file metadata as the answer
@@ -1149,29 +1110,48 @@ export default {
 
       submitting.value = true;
       error.value = null;
+      busy.value = false;
+      let busyTimer = null;
 
       try {
-        // Step 1: Upload any pending files
+        // Step 1: Upload any pending files; a busy server is tried again for a minute per file (7a, 3a-5)
         const fileAnswers = await uploadFiles();
 
         // Step 2: Merge file metadata into answers
         const finalAnswers = { ...answers, ...fileAnswers };
 
-        // Step 3: Solve ALTCHA challenge (anti-bot, NAT-friendly).
-        // Skip in preview mode and when explicitly disabled (e.g. tests).
-        const altcha = await solveAltchaChallenge();
-
-        // Step 4: Submit the response
+        // Step 3: Submit the response, with the ALTCHA proof (anti-bot, NAT-friendly). A retry after "busy" brings
+        // the pass the server gave instead, and the same submission id, so nothing is stored twice.
         const url = generateUrl('/apps/formvox/public/{fileId}/{token}/submit', {
           fileId: props.fileId,
           token: props.token
         });
-
-        const response = await axios.post(url, { answers: finalAnswers, altcha });
+        let retryToken = null;
+        // Its own minute, after the uploads: only then is it "not saved", with the answers kept.
+        const deadline = Date.now() + RETRY_WINDOW_MS;
+        const response = await withRetry(async (lastError) => {
+          retryToken = lastError?.response?.data?.retryToken ?? retryToken;
+          const altcha = retryToken ? null : await solveAltchaChallenge();
+          if (!retryToken && !altcha && lastError) {
+            // No proof this time (the challenge could not be fetched): wait and try again rather than be refused.
+            throw lastError;
+          }
+          if (busyTimer === null) {
+            busyTimer = setTimeout(() => { busy.value = true; }, BUSY_NOTICE_MS);
+          }
+          try {
+            return await axios.post(url, { answers: finalAnswers, altcha, submissionId: submissionId.value, retryToken, timezone: browserTimeZone() });
+          } catch (err) {
+            throw altcha || retryToken ? err : withoutProof(err);
+          }
+        }, deadline, () => { busy.value = true; });
 
         submitted.value = true;
         ttsStop();
+        // A save still pending would bring the draft back, with a new id: a second send would store it again.
+        clearTimeout(draftSaveTimeout);
         localStorage.removeItem(draftKey);
+        submissionId.value = newFillId();
 
         if (response.data.score) {
           score.value = response.data.score;
@@ -1184,8 +1164,13 @@ export default {
           }
         });
       } catch (err) {
-        error.value = err.response?.data?.error || t('formvox', 'Failed to submit response');
+        // Never "received" without the server's confirmation; the answers stay in this browser's draft.
+        error.value = isTransient(err)
+          ? t('formvox', 'Not saved. Please try again.')
+          : (err.response?.data?.error || t('formvox', 'Failed to submit response'));
       } finally {
+        clearTimeout(busyTimer);
+        busy.value = false;
         submitting.value = false;
         uploadProgress.value = '';
       }
@@ -1198,9 +1183,12 @@ export default {
 
     return {
       answers,
+      confirmationNote,
+      realProgress,
       submitted,
       submitting,
       uploadProgress,
+      busy,
       error,
       score,
       currentPageIndex,
@@ -1442,6 +1430,12 @@ export default {
   border-radius: var(--border-radius-large);
 }
 
+.confirmation-note {
+  margin: 8px 0 0;
+  font-size: 0.9em;
+  color: var(--color-text-maxcontrast);
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -1452,11 +1446,16 @@ export default {
   min-height: 0;
 }
 
+.busy-message {
+  margin-top: 12px;
+  color: var(--color-text-maxcontrast);
+}
+
 .error-message {
   margin-top: 20px;
   padding: 12px 16px;
   background: var(--color-error);
-  color: white;
+  color: var(--color-error-text);
   border-radius: var(--border-radius);
 }
 

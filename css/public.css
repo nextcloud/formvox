@@ -578,10 +578,10 @@ body.theme--dark#body-public {
   color: var(--formvox-text-muted);
 }
 
-/* Public error */
+/* Public error: the theme's own error pair, which stays readable on any card */
 #formvox-public .error-message {
-  background: #e53935;
-  color: white;
+  background: var(--color-error);
+  color: var(--color-error-text);
   padding: 16px 20px;
   border-radius: 8px;
   margin-top: 20px;

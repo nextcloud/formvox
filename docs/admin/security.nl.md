@@ -155,11 +155,18 @@ Implementeer een retentie-beleid:
 
 ### Server-side encryptie
 
-FormVox werkt met Nextcloud's server-side encryptie:
+Het `.fvform`-bestand van FormVox werkt met Nextcloud's server-side encryptie: het wordt at rest versleuteld als elk
+ander bestand, transparant voor gebruikers, onder de standaard bestand-encryptie-instellingen.
 
-- Bestanden encrypted at rest
-- Transparant voor gebruikers
-- Standaard bestand-encryptie-instellingen gelden
+Sinds 1.6.0 staan de antwoorden en geheimen van een formulier (link-token, link-wachtwoord-hash, API-keys,
+webhook-secrets) in de database, en staan de uploads van invullers, huisstijl-afbeeldingen, het ODT-sjabloon en
+bewaarde PDF's in FormVox's app-data, buiten de bestanden van elke gebruiker. **Geen van beide wordt gedekt door
+Nextclouds server-side bestands-encryptie.** Het `.fvform`-bestand zelf bevat alleen nog de formulier-definitie, dus
+er staat weinig meer in dat bestands-encryptie kan beschermen.
+
+De geheimen die in de database staan, worden verzegeld met Nextclouds eigen encryptiesleutel (`FormSecrets`, via
+`ICrypto`) voordat ze worden weggeschreven, zodat de database rechtstreeks lezen ze niet in platte tekst blootlegt;
+die bescherming geldt niet voor antwoorden of voor de bestanden in app-data.
 
 ### End-to-end-encryptie
 
@@ -169,7 +176,24 @@ FormVox is compatibel met E2E-encryptie:
 - Content wordt op de client versleuteld
 - Server kan formulier-data niet lezen
 
-**Let op:** publieke links werken niet met E2E-versleutelde formulieren.
+**Let op:** publieke links werken niet met E2E-versleutelde formulieren. Omdat de antwoorden en geheimen van het
+formulier niet meer met het bestand meereizen, geldt dit alleen nog voor de formulier-definitie.
+
+## Nextclouds eigen bestands-lock
+
+FormVox houdt per formulier een eigen lock (een databaserij of cache-key, met een houdtijd van twee minuten) zodat
+maar één schrijver tegelijk een formulier aanraakt; `occ formvox:unlock <fileId>` bevrijdt die lock met de hand als
+zijn houder werd gedood.
+
+Daarnaast neemt Nextcloud, telkens als FormVox naar het `.fvform`-bestand zelf schrijft, zijn eigen bestands-lock, in
+Redis of in de database. Wordt PHP gedood terwijl die bestandsschrijfactie loopt, dan kan Nextclouds lock blijven
+staan tot hij verloopt; dat hangt af van de instelling `filelocking.ttl` in `config.php` (standaard: 3600 seconden,
+dus één uur). Tot die tijd meldt de editor dat het formulier bezet is, en `occ formvox:unlock` helpt dan niet: dat
+bevrijdt alleen FormVox's eigen lock, niet Nextclouds bestands-lock.
+
+Gebeurt dit, dan kan een beheerder wachten tot Nextclouds lock zelf verloopt, of `filelocking.ttl` in `config.php`
+verlagen (dit geldt voor bestands-locks in heel Nextcloud, niet alleen voor FormVox) en PHP-FPM/de webserver
+herstarten zodat de nieuwe waarde ingaat.
 
 ## Audit-logging
 

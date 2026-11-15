@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Controller;
 
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
 use OCA\FormVox\Service\LicenseService;
 use OCP\AppFramework\Controller;
-use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IGroupManager;
@@ -36,23 +37,18 @@ class LicenseController extends Controller {
 	#[NoCSRFRequired]
 	public function getStats(): DataResponse {
 		if (!$this->isAdmin()) {
-			return new DataResponse(['success' => false, 'message' => 'Admin privileges required'], Http::STATUS_FORBIDDEN);
+			// TRANSLATORS: Error shown when a non-admin calls an admin-only action
+			throw RequestException::forbidden(Translatable::t('Only an administrator can do this.'));
 		}
 
-		try {
-			$stats = $this->licenseService->getStats();
-			return new DataResponse(array_merge(['success' => true], $stats));
-		} catch (\Exception $e) {
-			return new DataResponse([
-				'success' => false,
-				'message' => 'Failed to get license stats',
-			], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		$stats = $this->licenseService->getStats();
+		return new DataResponse(array_merge(['success' => true], $stats));
 	}
 
 	public function saveSettings(): DataResponse {
 		if (!$this->isAdmin()) {
-			return new DataResponse(['success' => false, 'message' => 'Admin privileges required'], Http::STATUS_FORBIDDEN);
+			// TRANSLATORS: Error shown when a non-admin calls an admin-only action
+			throw RequestException::forbidden(Translatable::t('Only an administrator can do this.'));
 		}
 
 		$licenseKey = $this->request->getParam('licenseKey');
@@ -65,33 +61,21 @@ class LicenseController extends Controller {
 
 	public function validate(): DataResponse {
 		if (!$this->isAdmin()) {
-			return new DataResponse(['success' => false, 'message' => 'Admin privileges required'], Http::STATUS_FORBIDDEN);
+			// TRANSLATORS: Error shown when a non-admin calls an admin-only action
+			throw RequestException::forbidden(Translatable::t('Only an administrator can do this.'));
 		}
 
-		try {
-			$result = $this->licenseService->validateLicense();
-			return new DataResponse(['success' => true, 'validation' => $result]);
-		} catch (\Exception $e) {
-			return new DataResponse([
-				'success' => false,
-				'message' => 'License validation failed',
-			], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		$result = $this->licenseService->validateLicense();
+		return new DataResponse(['success' => true, 'validation' => $result]);
 	}
 
 	public function updateUsage(): DataResponse {
 		if (!$this->isAdmin()) {
-			return new DataResponse(['success' => false, 'message' => 'Admin privileges required'], Http::STATUS_FORBIDDEN);
+			// TRANSLATORS: Error shown when a non-admin calls an admin-only action
+			throw RequestException::forbidden(Translatable::t('Only an administrator can do this.'));
 		}
 
-		try {
-			$result = $this->licenseService->updateUsage();
-			return new DataResponse(['success' => true, 'result' => $result]);
-		} catch (\Exception $e) {
-			return new DataResponse([
-				'success' => false,
-				'message' => 'Usage update failed',
-			], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		$result = $this->licenseService->updateUsage();
+		return new DataResponse(['success' => true, 'result' => $result]);
 	}
 }

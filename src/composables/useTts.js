@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { scaleOf, ratingMaxOf } from '@/utils/scale';
 
 export function useTts() {
 	const speakingQuestionId = ref(null);
@@ -20,16 +21,15 @@ export function useTts() {
 		}
 
 		if (question.type === 'scale') {
-			const min = question.scaleMin || 1;
-			const max = question.scaleMax || 5;
+			const { min, max, minLabel, maxLabel } = scaleOf(question);
 			let scaleText = `${min} - ${max}`;
-			if (question.scaleMinLabel) scaleText += `, ${question.scaleMinLabel}`;
-			if (question.scaleMaxLabel) scaleText += ` - ${question.scaleMaxLabel}`;
+			if (minLabel) scaleText += `, ${minLabel}`;
+			if (maxLabel) scaleText += ` - ${maxLabel}`;
 			parts.push(scaleText);
 		}
 
 		if (question.type === 'rating') {
-			parts.push(`1 - ${question.ratingMax || 5}`);
+			parts.push(`1 - ${ratingMaxOf(question)}`);
 		}
 
 		if (question.type === 'matrix' && question.rows && question.columns) {

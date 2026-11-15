@@ -12,12 +12,10 @@ use OCP\Notification\INotifier;
 use OCP\Notification\UnknownNotificationException;
 
 class Notifier implements INotifier {
-	private IFactory $l10nFactory;
-	private IURLGenerator $urlGenerator;
-
-	public function __construct(IFactory $l10nFactory, IURLGenerator $urlGenerator) {
-		$this->l10nFactory = $l10nFactory;
-		$this->urlGenerator = $urlGenerator;
+	public function __construct(
+		private IFactory $l10nFactory,
+		private IURLGenerator $urlGenerator,
+	) {
 	}
 
 	public function getID(): string {
@@ -80,9 +78,7 @@ class Notifier implements INotifier {
 			case 'ai_form_failed':
 				// TRANSLATORS: Default title of a form that has none
 				$formTitle = $params['formTitle'] ?? $l->t('Untitled form');
-				// Stored without a reason when the AI provider gave none.
-				// TRANSLATORS: Shown when an error has no description
-				$reason = ($params['reason'] ?? '') !== '' ? $params['reason'] : $l->t('Unknown error');
+				$reason = (string)($params['reason'] ?? '');
 				$notification->setRichSubject(
 					// TRANSLATORS: Notification; {formTitle} is the title the user gave the form to generate
 					$l->t('AI could not generate "{formTitle}"'),
@@ -98,10 +94,13 @@ class Notifier implements INotifier {
 					// TRANSLATORS: Notification; %1$s is the title the user gave the form to generate
 					$l->t('AI could not generate "%1$s"', [$formTitle])
 				);
-				if ($reason !== '') {
-					$notification->setParsedMessage($reason);
-					$notification->setRichMessage($reason, []);
-				}
+				// An English reason from FormVox (AiGenerationException), in the reader's language; stored empty when the AI provider gave none.
+				$message = $reason !== ''
+					? $l->t($reason)
+					// TRANSLATORS: Shown when an error has no description
+					: $l->t('Unknown error');
+				$notification->setParsedMessage($message);
+				$notification->setRichMessage($message, []);
 				$notification->setIcon(
 					$this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath(Application::APP_ID, 'app-dark.svg'))
 				);

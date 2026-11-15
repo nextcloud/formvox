@@ -12,15 +12,16 @@ use OCP\Files\NotFoundException;
 use Psr\Log\LoggerInterface;
 
 /**
- * Listener that deletes the uploads folder when a .fvform file is deleted.
+ * Deletes the hidden folders kept beside a .fvform file when it is deleted, for a form not yet moved into app data.
+ * The rows and app data of a form in the database go once its file is gone for good (FormRemovedListener), or with the
+ * orphan sweep when the file only disappeared (Orphans).
  *
  * @template-implements IEventListener<NodeDeletedEvent>
  */
 class FormDeletedListener implements IEventListener {
-	private LoggerInterface $logger;
-
-	public function __construct(LoggerInterface $logger) {
-		$this->logger = $logger;
+	public function __construct(
+		private LoggerInterface $logger,
+	) {
 	}
 
 	public function handle(Event $event): void {
@@ -42,10 +43,11 @@ class FormDeletedListener implements IEventListener {
 		$this->deleteAssociatedFolder($node, 'uploads');
 		$this->deleteAssociatedFolder($node, 'templates');
 		$this->deleteAssociatedFolder($node, 'branding');
+		$this->deleteAssociatedFolder($node, 'pdfs');
 	}
 
 	/**
-	 * Delete an associated folder (uploads or templates) for a form file
+	 * Delete an associated folder (uploads, templates, branding or pdfs) kept beside a form file
 	 */
 	private function deleteAssociatedFolder($formFile, string $type): void {
 		try {

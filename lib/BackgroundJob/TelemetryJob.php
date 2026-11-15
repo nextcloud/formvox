@@ -19,21 +19,13 @@ class TelemetryJob extends TimedJob {
 	private const DEFAULT_INTERVAL_HOURS = 24;
 	private const JITTER_MAX_MINUTES = 120; // Random delay 0-120 minutes
 
-	private TelemetryService $telemetryService;
-	private IConfig $config;
-	private LoggerInterface $logger;
-
 	public function __construct(
 		ITimeFactory $time,
-		TelemetryService $telemetryService,
-		IConfig $config,
-		LoggerInterface $logger,
+		private TelemetryService $telemetryService,
+		private IConfig $config,
+		private LoggerInterface $logger,
 	) {
 		parent::__construct($time);
-
-		$this->telemetryService = $telemetryService;
-		$this->config = $config;
-		$this->logger = $logger;
 
 		// Set interval to 24 hours + random jitter
 		$intervalHours = self::DEFAULT_INTERVAL_HOURS;

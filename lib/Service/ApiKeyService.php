@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\FormVox\Security\FormSecrets;
 use OCP\Security\ISecureRandom;
 
 class ApiKeyService {
-	private ISecureRandom $secureRandom;
-
-	public function __construct(ISecureRandom $secureRandom) {
-		$this->secureRandom = $secureRandom;
+	public function __construct(
+		private ISecureRandom $secureRandom,
+		private FormSecrets $secrets,
+	) {
 	}
 
 	/**
@@ -55,7 +56,7 @@ class ApiKeyService {
 				continue;
 			}
 
-			if ($this->verifyKey($providedKey, $keyConfig['hash'])) {
+			if ($this->verifyKey($providedKey, $this->secrets->open((string)$keyConfig['hash']))) {
 				return $keyConfig;
 			}
 		}

@@ -4,101 +4,82 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\FormVox\Store\FormFolders;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\NotFoundException;
 
 /**
- * The per-form ODT export template file.
+ * The per-form ODT export template, in a hidden folder next to the .fvform, or in app data for a form in the
+ * database (FormFolders).
  *
- * A form may carry a custom .odt template used when exporting responses to ODT.
- * It lives in a hidden sibling folder of the .fvform file
- * (`.formvox-templates-{id}/template.odt`), resolved through FormFileLocator so
- * the #90 account selection is honoured (read-only for export, write-capable for
- * upload/delete). Extracted verbatim from FormService.
+ * Callers pass the form File opened for the current user.
  */
 class OdtTemplateService {
-	private FormFileLocator $fileLocator;
+	private const NAME = 'template.odt';
 
-	public function __construct(FormFileLocator $fileLocator) {
-		$this->fileLocator = $fileLocator;
+	public function __construct(
+		private ?FormFolders $folders = null,
+	) {
 	}
 
 	/**
-	 * Get the templates folder for a form
-	 * Creates it if it doesn't exist
+	 * @throws NotFoundException when it does not exist and $create is false
 	 */
-	public function getTemplatesFolder(int $fileId, bool $requireWrite = false): Folder {
-		// Read-only by default so ODT export can find a template on shares
-		// where the reachable account cannot write (#90).
-		$formFile = $this->fileLocator->getFileByIdPublic($fileId, $requireWrite);
-		$formFolder = $formFile->getParent();
-		$templatesFolderName = ".formvox-templates-{$fileId}";
-
+	public function getTemplatesFolder(File $formFile, bool $create = false): Folder {
+		$stored = $this->folders?->of($formFile, FormFolders::TEMPLATES, $create);
+		if ($stored !== null) {
+			return $stored;
+		}
+		$parent = $formFile->getParent();
+		$name = '.formvox-templates-' . $formFile->getId();
 		try {
-			$templatesFolder = $formFolder->get($templatesFolderName);
-			if (!($templatesFolder instanceof Folder)) {
-				throw new \RuntimeException('Templates path is not a folder');
-			}
-			return $templatesFolder;
+			$folder = $parent->get($name);
 		} catch (NotFoundException $e) {
-			if (!$requireWrite) {
+			if (!$create) {
 				throw $e;
 			}
-			return $formFolder->newFolder($templatesFolderName);
+			return $parent->newFolder($name);
 		}
+		if (!($folder instanceof Folder)) {
+			throw new NotFoundException('Templates path is not a folder');
+		}
+		return $folder;
 	}
 
-	/**
-	 * Store an ODT template for a form
-	 */
-	public function storeOdtTemplate(int $fileId, array $uploadedFile): void {
-		$folder = $this->getTemplatesFolder($fileId, true);
-
-		// Remove existing template if present
+	public function storeOdtTemplate(File $formFile, array $uploadedFile): void {
+		$folder = $this->getTemplatesFolder($formFile, true);
 		try {
-			$existing = $folder->get('template.odt');
-			$existing->delete();
+			$folder->get(self::NAME)->delete();
 		} catch (NotFoundException $e) {
 			// No existing template
 		}
-
-		$newFile = $folder->newFile('template.odt');
-		$newFile->putContent(file_get_contents($uploadedFile['tmp_name']));
+		$folder->newFile(self::NAME)->putContent(file_get_contents($uploadedFile['tmp_name']));
 	}
 
 	/**
-	 * Get the ODT template file for a form
+	 * @throws NotFoundException
 	 */
-	public function getOdtTemplate(int $fileId, bool $requireWrite = false): File {
-		$folder = $this->getTemplatesFolder($fileId, $requireWrite);
-		$file = $folder->get('template.odt');
+	public function getOdtTemplate(File $formFile): File {
+		$file = $this->getTemplatesFolder($formFile)->get(self::NAME);
 		if (!($file instanceof File)) {
 			throw new NotFoundException('Template not found');
 		}
 		return $file;
 	}
 
-	/**
-	 * Check if a form has an ODT template
-	 */
-	public function hasOdtTemplate(int $fileId): bool {
+	public function hasOdtTemplate(File $formFile): bool {
 		try {
-			$this->getOdtTemplate($fileId);
+			$this->getOdtTemplate($formFile);
 			return true;
-		} catch (\Exception $e) {
+		} catch (NotFoundException $e) {
 			return false;
 		}
 	}
 
-	/**
-	 * Delete the ODT template for a form
-	 */
-	public function deleteOdtTemplate(int $fileId): void {
+	public function deleteOdtTemplate(File $formFile): void {
 		try {
-			// Resolve through a write-capable account so the delete succeeds.
-			$file = $this->getOdtTemplate($fileId, true);
-			$file->delete();
+			$this->getOdtTemplate($formFile)->delete();
 		} catch (NotFoundException $e) {
 			// No template to delete
 		}

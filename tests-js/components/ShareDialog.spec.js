@@ -323,7 +323,7 @@ describe('ShareDialog', () => {
 		vi.spyOn(window, 'confirm').mockReturnValue(true)
 		const form = makeForm({
 			public_token: 'tok',
-			share_password_hash: 'h',
+			has_share_password: true,
 			share_expires_at: '2030-01-01T00:00:00.000Z',
 			share_starts_at: '2029-01-01T00:00:00.000Z',
 		})
@@ -344,7 +344,7 @@ describe('ShareDialog', () => {
 		expect(wrapper.vm.linkSettings.startsAt).toBeNull()
 		expect(form.settings.share_expires_at).toBeNull()
 		expect(form.settings.share_starts_at).toBeNull()
-		expect('share_password_hash' in form.settings).toBe(false)
+		expect(form.settings.has_share_password).toBe(false)
 	})
 
 	// ---- confirmDeleteResponses cancel + error ----
@@ -397,6 +397,35 @@ describe('ShareDialog', () => {
 
 		await wrapper.vm.updateResponseSetting('confirmationEmailBody', 'Thanks')
 		expect(wrapper.vm.responseSettings.confirmationEmailBody).toBe('Thanks')
+
+		// the switch under the confirmation email.
+		await wrapper.vm.updateResponseSetting('confirmationEmailPdf', true)
+		expect(wrapper.vm.responseSettings.confirmationEmailPdf).toBe(true)
+		expect(form.settings.confirmationEmailPdf).toBe(true)
+	})
+
+	it('the PDF switch saves keepResponsePdf, and only then is the attach-PDF option free to choose', async () => {
+		const form = makeForm({ public_token: 'tok', sendConfirmationEmail: true })
+		const wrapper = mountDialog(form)
+		await flushPromises()
+		const switchNamed = (label) => wrapper.findAllComponents({ name: 'NcCheckboxRadioSwitch' }).find(c => c.text().includes(label))
+
+		expect(switchNamed('Attach a PDF of the response').attributes('disabled')).toBeDefined()
+		expect(wrapper.text()).toContain('Off, no PDF is made for this form')
+		expect(wrapper.text()).toContain('first turn on "Keep a PDF of every response"')
+
+		switchNamed('Keep a PDF of every response').vm.$emit('update:model-value', true)
+		await flushPromises()
+
+		expect(axios.put).toHaveBeenCalledWith(
+			'/apps/formvox/api/form/7',
+			expect.objectContaining({ settings: expect.objectContaining({ keepResponsePdf: true }) }),
+		)
+		expect(wrapper.vm.responseSettings.keepResponsePdf).toBe(true)
+		expect(form.settings.keepResponsePdf).toBe(true)
+		expect(switchNamed('Attach a PDF of the response').attributes('disabled')).toBeUndefined()
+		expect(wrapper.text()).toContain('Made right after each submission')
+		expect(wrapper.text()).not.toContain('Off, no PDF is made for this form')
 	})
 
 	it('updateResponseSetting persists an unmapped key without touching mapped local fields', async () => {
@@ -449,7 +478,7 @@ describe('ShareDialog', () => {
 	// ---- password toggle / save ----
 
 	it('togglePassword off clears the password and persists; on does not persist', async () => {
-		const form = makeForm({ public_token: 'tok', share_password_hash: 'h' })
+		const form = makeForm({ public_token: 'tok', has_share_password: true })
 		const wrapper = mountDialog(form)
 		await flushPromises()
 		axios.put.mockClear()
@@ -460,11 +489,41 @@ describe('ShareDialog', () => {
 		expect(axios.put).not.toHaveBeenCalled()
 		expect(wrapper.vm.linkSettings.passwordProtected).toBe(true)
 
-		// Turning it off clears the field and saves.
+		// Turning it off clears the field and removes the password on the server.
 		wrapper.vm.togglePassword(false)
 		await flushPromises()
 		expect(wrapper.vm.linkSettings.password).toBe('')
-		expect(axios.put).toHaveBeenCalled()
+		expect(axios.put).toHaveBeenCalledWith(
+			'/apps/formvox/api/form/7',
+			{ settings: expect.objectContaining({ share_password: null }) },
+		)
+		expect(form.settings.has_share_password).toBe(false)
+	})
+
+	it('shows an existing password as set but never puts a placeholder in the field', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', has_share_password: true }))
+		await flushPromises()
+
+		expect(wrapper.vm.linkSettings.passwordProtected).toBe(true)
+		expect(wrapper.vm.linkSettings.password).toBe('')
+	})
+
+	it('changing the expiry or start never resends or clears the password', async () => {
+		const form = makeForm({ public_token: 'tok', has_share_password: true })
+		const wrapper = mountDialog(form)
+		await flushPromises()
+		axios.put.mockClear()
+
+		wrapper.vm.toggleLinkExpiration(true)
+		await flushPromises()
+		wrapper.vm.toggleLinkStart(true)
+		await flushPromises()
+
+		expect(axios.put).toHaveBeenCalledTimes(2)
+		for (const [, body] of axios.put.mock.calls) {
+			expect(body.settings).not.toHaveProperty('share_password')
+		}
+		expect(form.settings.has_share_password).toBe(true)
 	})
 
 	it('savePassword persists only when a password is present', async () => {
@@ -486,6 +545,10 @@ describe('ShareDialog', () => {
 			'/apps/formvox/api/form/7',
 			expect.objectContaining({ settings: expect.objectContaining({ share_password: 's3cret' }) }),
 		)
+		// The plaintext stays out of the form (an autosave would send it again) and out of the field.
+		expect(form.settings).not.toHaveProperty('share_password')
+		expect(form.settings.has_share_password).toBe(true)
+		expect(wrapper.vm.linkSettings.password).toBe('')
 	})
 
 	// ---- expiration / start toggles set or clear the date ----
@@ -555,8 +618,7 @@ describe('ShareDialog', () => {
 			}),
 		)
 
-		// Flags off → server receives explicit nulls.
-		wrapper.vm.linkSettings.passwordProtected = false
+		// Flags off → server receives explicit nulls for the dates and nothing about the password.
 		wrapper.vm.linkSettings.expires = false
 		wrapper.vm.linkSettings.hasStart = false
 		await wrapper.vm.$nextTick()
@@ -565,13 +627,7 @@ describe('ShareDialog', () => {
 		await flushPromises()
 		expect(axios.put).toHaveBeenLastCalledWith(
 			'/apps/formvox/api/form/7',
-			expect.objectContaining({
-				settings: expect.objectContaining({
-					share_password: null,
-					share_expires_at: null,
-					share_starts_at: null,
-				}),
-			}),
+			{ settings: { share_expires_at: null, share_starts_at: null } },
 		)
 	})
 
@@ -646,25 +702,238 @@ describe('ShareDialog', () => {
 		expect(axios.put).not.toHaveBeenCalled()
 	})
 
-	// ---- notify recipients ----
-
-	it('injects the current user as an owner recipient by default', async () => {
-		const wrapper = mountDialog(makeForm({ public_token: 'tok' }))
+	// API keys and webhooks reach outside Nextcloud, so only full rights see them.
+	it('shows API & webhooks without full rights, but only to look at', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }), { canShare: false })
+		wrapper.vm.showAdvanced = true
 		await flushPromises()
-		const owner = wrapper.vm.notifyRecipients.find(r => r.type === 'user' && r.id === 'alice')
-		expect(owner).toBeTruthy()
-		expect(owner.displayName).toContain('Alice')
+		expect(wrapper.text()).toContain('API and webhooks')
+		expect(wrapper.findComponent({ name: 'IntegrationSettings' }).props('canManage')).toBe(false)
 	})
 
-	it('does not inject the owner when notify_owner is explicitly false', async () => {
-		const wrapper = mountDialog(makeForm({ public_token: 'tok', notify_owner: false }))
+	// ---- Nextcloud's link-password rules (M39) ----
+
+	it('where a password is required, a new link comes with the password Nextcloud generated, shown once', async () => {
+		axios.put.mockResolvedValue({ data: { form: { settings: { public_token: 'tok' } }, generatedSharePassword: 'Gen-Pass-123' } })
+		const form = makeForm()
+		const wrapper = mountDialog(form, { passwordEnforced: true })
 		await flushPromises()
+
+		await wrapper.vm.createShareLink()
+		await flushPromises()
+
+		expect(wrapper.text()).toContain('Gen-Pass-123')
+		expect(wrapper.text()).toContain('Copy this generated password now')
+		expect(wrapper.vm.linkSettings.passwordProtected).toBe(true)
+		expect(form.settings.has_share_password).toBe(true)
+	})
+
+	it('a required password cannot be switched off', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', has_share_password: true }), { passwordEnforced: true })
+		await flushPromises()
+
+		expect(wrapper.text()).toContain('A password is required for public links.')
+		const passwordSwitch = wrapper.findAllComponents({ name: 'NcCheckboxRadioSwitch' }).find(c => c.text().includes('Password protect'))
+		expect(passwordSwitch.attributes('disabled')).toBeDefined()
+	})
+
+	it("a refused password shows Nextcloud's reason, and switching off that fails is undone", async () => {
+		const dialogs = await import('@nextcloud/dialogs')
+		const showError = vi.spyOn(dialogs, 'showError')
+		axios.put.mockRejectedValue({ response: { data: { error: 'Password needs to be at least 10 characters long.' } } })
+		const form = makeForm({ public_token: 'tok', has_share_password: true })
+		const wrapper = mountDialog(form)
+		await flushPromises()
+
+		wrapper.vm.linkSettings.password = 'short'
+		wrapper.vm.savePassword()
+		await flushPromises()
+		expect(showError).toHaveBeenCalledWith('Password needs to be at least 10 characters long.')
+
+		wrapper.vm.togglePassword(false)
+		await flushPromises()
+		expect(wrapper.vm.linkSettings.passwordProtected).toBe(true)
+	})
+
+	// ---- not anonymous = always signed in (PO 2026-10-12) ----
+
+	it('shows login as required and locked when responses are not collected anonymously', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', anonymous: false, require_login: false }))
+		await flushPromises()
+
+		const login = wrapper.findAllComponents({ name: 'NcCheckboxRadioSwitch' }).find(c => c.text().includes('Require login to respond'))
+		expect(login.props('modelValue') ?? login.attributes('model-value')).toBeTruthy()
+		expect(login.attributes('disabled')).toBeDefined()
+		expect(wrapper.text()).toContain('respondents always sign in')
+	})
+
+	it('leaves login free to choose on an anonymous form', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', anonymous: true }))
+		await flushPromises()
+
+		const login = wrapper.findAllComponents({ name: 'NcCheckboxRadioSwitch' }).find(c => c.text().includes('Require login to respond'))
+		expect(login.attributes('disabled')).toBeUndefined()
+	})
+
+	it('says honestly how a repeat is recognised on an anonymous form without login', async () => {
+		const honest = 'a repeat is recognized by network and browser'
+		const open = async (settings) => {
+			const wrapper = mountDialog(makeForm({ public_token: 'tok', ...settings }))
+			await flushPromises()
+			return wrapper.text().includes(honest)
+		}
+
+		expect(await open({ anonymous: true, allow_multiple: false })).toBe(true)
+		expect(await open({ anonymous: true, allow_multiple: true })).toBe(false)
+		expect(await open({ anonymous: true, allow_multiple: false, require_login: true })).toBe(false)
+		expect(await open({ anonymous: true, allow_multiple: false, allowed_groups: ['staff'] })).toBe(false)
+		expect(await open({ anonymous: false, allow_multiple: false })).toBe(false)
+	})
+
+	// ---- read-only: everything visible, nothing changeable ----
+
+	const fieldsets = (wrapper) => wrapper.findAll('fieldset').map(f => f.attributes('disabled') !== undefined)
+
+	it('a read-only user sees every setting, with every control disabled', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', allowed_users: ['bob'], notify_recipients: [] }), { canShare: false, canEditSettings: false })
+		await flushPromises()
+
+		expect(wrapper.text()).toContain('read-only access')
+		expect(wrapper.text()).toContain('Response settings')
+		expect(wrapper.text()).toContain('Link settings')
+		// response settings, link password/dates, who may answer: all disabled; no replace/delete link
+		expect(fieldsets(wrapper)).toEqual([true, true, true])
+		expect(wrapper.text()).not.toContain('Delete response link')
+		expect(wrapper.findAll('input[type="text"]').some(i => i.classes('link-input'))).toBe(true)
+	})
+
+	it('an editor without full rights changes the settings, not the link', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }), { canShare: false, canEditSettings: true })
+		await flushPromises()
+
+		expect(wrapper.text()).not.toContain('read-only access')
+		// response settings enabled, link password/dates disabled, who may answer enabled
+		expect(fieldsets(wrapper)).toEqual([false, true, false])
+		expect(wrapper.text()).not.toContain('Delete response link')
+	})
+
+	it('full rights change everything', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }), { canShare: true, canEditSettings: true })
+		await flushPromises()
+
+		expect(fieldsets(wrapper)).toEqual([false, false, false, false])
+		expect(wrapper.text()).toContain('Delete response link')
+	})
+
+	it('shows API & webhooks with full rights', async () => {
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }), { canShare: true })
+		wrapper.vm.showAdvanced = true
+		await flushPromises()
+		expect(wrapper.text()).toContain('API and webhooks')
+	})
+
+	// ---- notify recipients (#146) ----
+
+	// The creator comes from the server, never from whoever is looking.
+	const givenCreator = (creator) => {
+		axios.get.mockImplementation((url) => Promise.resolve({
+			data: url === '/apps/formvox/api/form/7/creator' ? creator : {},
+		}))
+	}
+	const anna = (status = 'ok') => ({ id: 'anna', displayName: 'Anna', status })
+	const lastSavedSettings = () => axios.put.mock.calls[axios.put.mock.calls.length - 1][1].settings
+
+	it('lists the creator as recipient, not the person looking', async () => {
+		givenCreator(anna())
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }))
+		await flushPromises()
+
+		expect(wrapper.vm.notifyRecipients.map(r => r.id)).toEqual(['anna'])
+		expect(wrapper.vm.recipientLabel(wrapper.vm.notifyRecipients[0])).toBe('Anna (creator)')
+		// alice (the viewer, a team member) is not shown as receiving them
 		expect(wrapper.vm.notifyRecipients.find(r => r.id === 'alice')).toBeFalsy()
 	})
 
-	it('addNotifyRecipient dedupes on type+id and removeNotifyRecipient drops the entry', async () => {
-		const form = makeForm({ public_token: 'tok' })
+	it('marks the creator chip as "you" when the creator is looking', async () => {
+		givenCreator({ id: 'alice', displayName: 'Alice', status: 'ok' })
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }))
+		await flushPromises()
+
+		expect(wrapper.vm.recipientLabel(wrapper.vm.notifyRecipients[0])).toBe('Alice (creator, you)')
+	})
+
+	it('does not list the creator when notify_owner is explicitly false', async () => {
+		givenCreator(anna())
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', notify_owner: false }))
+		await flushPromises()
+
+		expect(wrapper.vm.notifyRecipients.find(r => r.id === 'anna')).toBeFalsy()
+	})
+
+	it.each([
+		['no_access', 'Anna can no longer open this form and does not receive notifications.'],
+		['disabled', 'The account of Anna is disabled and does not receive notifications.'],
+		['deleted', 'The account of Anna no longer exists and does not receive notifications.'],
+	])('says why a %s creator does not receive notifications', async (status, message) => {
+		givenCreator(anna(status))
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }))
+		await flushPromises()
+
+		expect(wrapper.vm.creatorWarning).toBe(message)
+		expect(wrapper.find('.creator-warning').exists()).toBe(true)
+		expect(wrapper.find('.chip--inactive').exists()).toBe(true)
+	})
+
+	it('shows no warning for a creator who receives notifications', async () => {
+		givenCreator(anna())
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }))
+		await flushPromises()
+
+		expect(wrapper.vm.creatorWarning).toBe('')
+		expect(wrapper.find('.creator-warning').exists()).toBe(false)
+	})
+
+	it('a team member who adds themselves is stored as a recipient', async () => {
+		givenCreator(anna('no_access'))
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }))
+		await flushPromises()
+
+		wrapper.vm.addNotifyRecipient({ type: 'user', id: 'alice', displayName: 'Alice' })
+		await flushPromises()
+
+		expect(lastSavedSettings().notify_owner).toBe(true)
+		expect(lastSavedSettings().notify_recipients).toEqual([{ type: 'user', id: 'alice', displayName: 'Alice' }])
+		expect(wrapper.vm.recipientLabel(wrapper.vm.notifyRecipients[1])).toBe('Alice (you)')
+	})
+
+	it('removing the creator chip turns off only the creator', async () => {
+		givenCreator(anna())
+		const form = makeForm({ public_token: 'tok', notify_recipients: [{ type: 'group', id: 'devs', displayName: 'Devs' }] })
 		const wrapper = mountDialog(form)
+		await flushPromises()
+
+		wrapper.vm.removeNotifyRecipient({ type: 'user', id: 'anna' })
+		await flushPromises()
+
+		expect(lastSavedSettings().notify_owner).toBe(false)
+		expect(lastSavedSettings().notify_recipients).toEqual([{ type: 'group', id: 'devs', displayName: 'Devs' }])
+	})
+
+	it('adding the creator back through search makes them the creator chip again', async () => {
+		givenCreator(anna())
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', notify_owner: false }))
+		await flushPromises()
+
+		wrapper.vm.addNotifyRecipient({ type: 'user', id: 'anna', displayName: 'Anna' })
+		await flushPromises()
+
+		expect(lastSavedSettings().notify_owner).toBe(true)
+		expect(lastSavedSettings().notify_recipients).toEqual([])
+	})
+
+	it('addNotifyRecipient dedupes on type+id and removeNotifyRecipient drops the entry', async () => {
+		givenCreator(anna())
+		const wrapper = mountDialog(makeForm({ public_token: 'tok' }))
 		await flushPromises()
 		const before = wrapper.vm.notifyRecipients.length
 
@@ -680,38 +949,16 @@ describe('ShareDialog', () => {
 		expect(wrapper.vm.notifyRecipients.length).toBe(before)
 	})
 
-	it('saveNotifyRecipients splits the owner (notify_owner) from the other recipients', async () => {
-		const form = makeForm({ public_token: 'tok' })
-		const wrapper = mountDialog(form)
+	it('without a known creator, saving keeps the stored notify_owner', async () => {
+		givenCreator({ id: null, displayName: null, status: 'none' })
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', notify_owner: false }))
 		await flushPromises()
 
 		wrapper.vm.addNotifyRecipient({ type: 'group', id: 'devs', displayName: 'Devs' })
 		await flushPromises()
 
-		expect(axios.put).toHaveBeenCalledWith(
-			'/apps/formvox/api/form/7',
-			expect.objectContaining({
-				settings: expect.objectContaining({
-					notify_owner: true,
-					notify_recipients: [{ type: 'group', id: 'devs', displayName: 'Devs' }],
-				}),
-			}),
-		)
-		// Owner (alice) is not duplicated into the stored recipients list.
-		const lastCall = axios.put.mock.calls[axios.put.mock.calls.length - 1]
-		expect(lastCall[1].settings.notify_recipients.find(r => r.id === 'alice')).toBeFalsy()
-	})
-
-	it('saveNotifyRecipients records notify_owner=false once the owner is removed', async () => {
-		const form = makeForm({ public_token: 'tok' })
-		const wrapper = mountDialog(form)
-		await flushPromises()
-
-		wrapper.vm.removeNotifyRecipient({ type: 'user', id: 'alice' })
-		await flushPromises()
-
-		const lastCall = axios.put.mock.calls[axios.put.mock.calls.length - 1]
-		expect(lastCall[1].settings.notify_owner).toBe(false)
+		expect(wrapper.vm.creator).toBeNull()
+		expect(lastSavedSettings().notify_owner).toBe(false)
 	})
 
 	// ---- toggleConfirmationEmail (#103 / #6) ----
@@ -842,5 +1089,20 @@ describe('ShareDialog', () => {
 		const emailQs = lastCall[1].questions.filter(q => q.useAsRespondentEmail)
 		expect(emailQs).toHaveLength(1)
 		expect(emailQs[0].id).toBe('qx')
+	})
+
+	it('a link setting that fails to save springs back to what is stored', async () => {
+		axios.put.mockRejectedValue({ response: { data: { error: 'Not allowed' } } })
+		const wrapper = mountDialog(makeForm({ public_token: 'tok', share_expires_at: null, share_starts_at: '2027-01-01T09:00:00.000Z' }))
+		await flushPromises()
+
+		wrapper.vm.toggleLinkExpiration(true)
+		wrapper.vm.toggleLinkStart(false)
+		await flushPromises()
+
+		expect(wrapper.vm.linkSettings.expires).toBe(false)
+		expect(wrapper.vm.linkSettings.expiresAt).toBeNull()
+		expect(wrapper.vm.linkSettings.hasStart).toBe(true)
+		expect(wrapper.vm.linkSettings.startsAt.toISOString()).toBe('2027-01-01T09:00:00.000Z')
 	})
 })

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Unit;
 
+use OCA\FormVox\Security\RequireFormPermission;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -46,9 +48,12 @@ class RoutesIntegrityTest extends TestCase {
 		'GET /api/ai/resolve-file',
 		'GET /api/branding',
 		'GET /api/form/{fileId}',
+		'GET /api/form/{fileId}/creator',
 		'GET /api/form/{fileId}/export/csv',
 		'GET /api/form/{fileId}/export/json',
 		'GET /api/form/{fileId}/export/xlsx',
+		'GET /api/form/{fileId}/export/pdf',
+		'GET /api/form/{fileId}/responses/{responseId}/pdf',
 		'GET /api/form/{fileId}/odt-template',
 		'GET /api/form/{fileId}/odt-template/status',
 		'GET /api/form/{fileId}/presence',
@@ -74,6 +79,7 @@ class RoutesIntegrityTest extends TestCase {
 		'GET /api/v1/external/forms/{fileId}',
 		'GET /api/v1/external/forms/{fileId}/responses',
 		'GET /api/v1/external/forms/{fileId}/responses/{responseId}',
+		'GET /api/v1/external/forms/{fileId}/responses/{responseId}/pdf',
 		'GET /api/v1/external/forms/{fileId}/schema',
 		'GET /branding/image/{blockId}',
 		'GET /branding/{fileId}/image/{blockId}',
@@ -100,6 +106,7 @@ class RoutesIntegrityTest extends TestCase {
 		'POST /api/license/validate',
 		'POST /api/settings/ai',
 		'POST /api/settings/embed',
+		'POST /api/settings/pdf',
 		'POST /api/settings/license',
 		'POST /api/settings/ms-forms',
 		'POST /api/statistics/telemetry',
@@ -116,6 +123,87 @@ class RoutesIntegrityTest extends TestCase {
 		'PUT /api/form/{fileId}/webhooks/{webhookId}',
 		'PUT /api/v1/external/forms/{fileId}/responses/{responseId}',
 	];
+
+	/**
+	 * What every route on a form needs; '-' marks the deliberately public ones
+	 * (public link, embed, external API with its own key, public branding image).
+	 */
+	private const FORM_PERMISSIONS = [
+		'GET /edit/{fileId}' => 'read',
+		'GET /results/{fileId}' => 'view-content',
+		'GET /api/form/{fileId}' => 'read',
+		'GET /api/form/{fileId}/creator' => 'read',
+		'GET /api/form/{fileId}/responses' => 'view-content',
+		'GET /api/form/{fileId}/presence' => 'read',
+		'GET /api/form/{fileId}/odt-template/status' => 'read',
+		'GET /api/permissions/{fileId}' => 'read',
+		'POST /api/form/{fileId}/save-as-template' => 'read',
+		'PUT /api/form/{fileId}' => 'edit',
+		'POST /api/form/{fileId}/favorite' => 'edit',
+		'DELETE /api/form/{fileId}/responses' => 'edit',
+		'DELETE /api/form/{fileId}/responses/{responseId}' => 'edit',
+		'POST /api/form/{fileId}/odt-template' => 'edit',
+		'DELETE /api/form/{fileId}/odt-template' => 'edit',
+		'POST /api/form/{fileId}/rebuild-index' => 'edit',
+		'POST /api/form/{fileId}/presence' => 'edit',
+		'POST /api/form/{fileId}/branding/image/{blockId}' => 'edit',
+		'DELETE /api/form/{fileId}/branding/image/{blockId}' => 'edit',
+		'DELETE /api/form/{fileId}' => 'delete',
+		'GET /api/form/{fileId}/export/csv' => 'download',
+		'GET /api/form/{fileId}/export/json' => 'download',
+		'GET /api/form/{fileId}/export/xlsx' => 'download',
+		'GET /api/form/{fileId}/export/pdf' => 'download',
+		'GET /api/form/{fileId}/responses/{responseId}/pdf' => 'download',
+		'GET /api/form/{fileId}/odt-template' => 'download',
+		'GET /api/form/{fileId}/uploads/{responseId}/{filename}' => 'download',
+		'GET /api/form/{fileId}/uploads' => 'download',
+		'POST /api/form/{fileId}/share-token' => 'manage-sharing',
+		'POST /api/form/{fileId}/api-keys' => 'manage-sharing',
+		'DELETE /api/form/{fileId}/api-keys/{keyId}' => 'manage-sharing',
+		'POST /api/form/{fileId}/webhooks' => 'manage-sharing',
+		'PUT /api/form/{fileId}/webhooks/{webhookId}' => 'manage-sharing',
+		'DELETE /api/form/{fileId}/webhooks/{webhookId}' => 'manage-sharing',
+		'GET /public/{fileId}/{token}' => '-',
+		'POST /public/{fileId}/{token}' => '-',
+		'POST /public/{fileId}/{token}/submit' => '-',
+		'GET /public/{fileId}/{token}/challenge' => '-',
+		'POST /public/{fileId}/{token}/upload' => '-',
+		'GET /embed/{fileId}/{token}' => '-',
+		'POST /embed/{fileId}/{token}' => '-',
+		'GET /branding/{fileId}/image/{blockId}' => '-',
+		'GET /api/v1/external/forms/{fileId}' => '-',
+		'GET /api/v1/external/forms/{fileId}/schema' => '-',
+		'GET /api/v1/external/forms/{fileId}/responses' => '-',
+		'GET /api/v1/external/forms/{fileId}/responses/{responseId}' => '-',
+		'GET /api/v1/external/forms/{fileId}/responses/{responseId}/pdf' => '-',
+		'POST /api/v1/external/forms/{fileId}/responses' => '-',
+		'PUT /api/v1/external/forms/{fileId}/responses/{responseId}' => '-',
+		'DELETE /api/v1/external/forms/{fileId}/responses/{responseId}' => '-',
+	];
+
+	/**
+	 * Every route on a form declares its permission, and it is the one listed
+	 * above — a new endpoint without #[RequireFormPermission] fails the build.
+	 */
+	public function testEveryFormRouteDeclaresTheExpectedPermission(): void {
+		$actual = [];
+		foreach ($this->loadRoutes() as $r) {
+			if (!str_contains($r['url'], '{fileId}')) {
+				continue;
+			}
+			[$controllerKey, $method] = explode('#', $r['name'], 2);
+			$rm = (new ReflectionClass('OCA\\FormVox\\Controller\\' . $this->toClassName($controllerKey) . 'Controller'))->getMethod($method);
+			$attribute = $rm->getAttributes(RequireFormPermission::class)[0] ?? null;
+			$actual[$r['verb'] . ' ' . $r['url']] = $attribute !== null
+				? $attribute->newInstance()->permission
+				: ($rm->getAttributes(PublicPage::class) !== [] ? '-' : 'MISSING');
+		}
+		ksort($actual);
+		$expected = self::FORM_PERMISSIONS;
+		ksort($expected);
+
+		$this->assertSame($expected, $actual);
+	}
 
 	private function loadRoutes(): array {
 		/** @var array{routes: array<int, array{name: string, url: string, verb: string}>} $routes */

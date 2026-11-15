@@ -1,6 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import axios from '@nextcloud/axios'
 import Respond from '@/views/Respond.vue'
+
+// The proof of work is solved by workers the test environment does not have: a solved number stands in.
+vi.mock('altcha-lib', () => ({ solveChallengeWorkers: vi.fn(async () => ({ number: 7 })) }))
 
 /**
  * Characterization tests for the Respond (form-fill) view.
@@ -51,6 +55,37 @@ describe('views/Respond', () => {
 	it('mounts and renders the form title', () => {
 		const wrapper = mountRespond({ title: 'Survey' })
 		expect(wrapper.find('.form-header h1').text()).toBe('Survey')
+	})
+
+	describe("a signed-in respondent's confirmation", () => {
+		const confirming = () => ({
+			settings: { sendConfirmationEmail: true },
+			questions: [
+				{ id: 'q1', type: 'text', question: 'Email', useAsRespondentEmail: true },
+				{ id: 'q2', type: 'text', question: 'Name' },
+			],
+		})
+
+		it('says under the e-mail question, and there only, that it goes to the account address', () => {
+			const wrapper = mountRespond(confirming(), { respondent: { email: 'alice@school.example' } })
+
+			const notes = wrapper.findAll('.confirmation-note')
+			expect(notes).toHaveLength(1)
+			expect(notes[0].text()).toBe('Your confirmation goes to alice@school.example.')
+			expect(wrapper.find('#question-q1 .confirmation-note').exists()).toBe(true)
+		})
+
+		it('says that none can go when the account has no address', () => {
+			const wrapper = mountRespond(confirming(), { respondent: { email: '' } })
+
+			expect(wrapper.find('.confirmation-note').text()).toBe('Your account has no e-mail address, so no confirmation can be sent.')
+		})
+
+		it('shows nothing of it to an anonymous respondent', () => {
+			const wrapper = mountRespond(confirming())
+
+			expect(wrapper.find('.confirmation-note').exists()).toBe(false)
+		})
 	})
 
 	it('does not render a description block when description is empty (#134)', () => {
@@ -306,6 +341,25 @@ describe('views/Respond', () => {
 		expect(wrapper.vm.brandingTokens['--formvox-text-primary']).toBeUndefined()
 	})
 
+	it("shows the form's own branding images with the link's token, and the default ones as they are (qual#87)", () => {
+		const image = (id, imageUrl) => ({ id, type: 'image', settings: { imageId: id, imageUrl } })
+		const wrapper = mountRespond({}, {
+			fileId: 7,
+			token: 'a b',
+			branding: { layout: { header: [
+				image('own', '/apps/formvox/branding/7/image/own?t=1'),
+				image('default', '/apps/formvox/branding/image/default'),
+				image('other', '/apps/formvox/branding/8/image/other'),
+			] } },
+		})
+		const sources = wrapper.findAll('.zone-header img').map((img) => img.attributes('src'))
+		expect(sources).toEqual([
+			'/apps/formvox/branding/7/image/own?t=1&token=a%20b',
+			'/apps/formvox/branding/image/default',
+			'/apps/formvox/branding/8/image/other',
+		])
+	})
+
 	it('preview submit emits the answers instead of posting', async () => {
 		const wrapper = mountRespond(
 			{ questions: [{ id: 'q1', type: 'text' }] },
@@ -359,6 +413,429 @@ describe('views/Respond', () => {
 			w.vm.updateAnswer('q1', 'x')
 			await w.vm.$nextTick()
 			expect(w.vm.visibleQuestions.map(q => q.id)).not.toContain('q2')
+		})
+	})
+
+	describe('what the respondent sees, as the server works it out', () => {
+		const routed = () => ({
+			questions: [
+				{ id: 'q1', type: 'text' },
+				{ id: 'q2', type: 'text', required: true },
+				{ id: 'q3', type: 'text' },
+			],
+			pages: [
+				{ id: 'p1', title: '', questions: ['q1'], routing: [{ questionId: 'q1', operator: 'equals', value: 'skip', targetPageId: 'p3' }] },
+				{ id: 'p2', title: '', questions: ['q2'] },
+				{ id: 'p3', title: '', questions: ['q3'] },
+			],
+		})
+
+		it('Next follows the routing', () => {
+			const wrapper = mountRespond(routed())
+			wrapper.vm.updateAnswer('q1', 'skip')
+			wrapper.vm.nextPage()
+			expect(wrapper.vm.currentPageIndex).toBe(2)
+		})
+
+		it('Next goes on in order without a matching rule', () => {
+			const wrapper = mountRespond(routed())
+			wrapper.vm.updateAnswer('q1', 'stay')
+			wrapper.vm.nextPage()
+			expect(wrapper.vm.currentPageIndex).toBe(1)
+		})
+
+		it('a question hidden by a hidden question stays hidden', async () => {
+			const wrapper = mountRespond({
+				questions: [
+					{ id: 'q1', type: 'text' },
+					{ id: 'q2', type: 'text', showIf: { questionId: 'q1', operator: 'equals', value: 'yes' } },
+					{ id: 'q3', type: 'text', showIf: { questionId: 'q2', operator: 'equals', value: 'yes' } },
+				],
+			})
+			wrapper.vm.updateAnswer('q1', 'yes')
+			wrapper.vm.updateAnswer('q2', 'yes')
+			wrapper.vm.updateAnswer('q1', 'no')
+			await wrapper.vm.$nextTick()
+			expect(wrapper.vm.visibleQuestions.map(q => q.id)).toEqual(['q1'])
+		})
+
+		it('a 0 counts as an answer for what depends on it', async () => {
+			const wrapper = mountRespond({
+				questions: [
+					{ id: 'q1', type: 'scale', scaleMin: 0, scaleMax: 10 },
+					{ id: 'q2', type: 'text', showIf: { questionId: 'q1', operator: 'isNotEmpty' } },
+				],
+			})
+			wrapper.vm.updateAnswer('q1', 0)
+			await wrapper.vm.$nextTick()
+			expect(wrapper.vm.visibleQuestions.map(q => q.id)).toContain('q2')
+		})
+
+		it('the progress leaves out a page the routing skips', async () => {
+			const wrapper = mountRespond(routed())
+			wrapper.vm.updateAnswer('q1', 'skip')
+			wrapper.vm.updateAnswer('q3', 'z')
+			await wrapper.vm.$nextTick()
+			expect(wrapper.vm.realProgress).toBe(100)
+		})
+	})
+
+	/**
+	 * A busy server is tried again with the same submission id for a minute; never "received" without the server's
+	 * confirmation (7a, 3a-5).
+	 */
+	describe('when the server is busy', () => {
+		const busy = () => Object.assign(new Error('busy'), { response: { status: 503, data: { reason: 'busy', retryToken: 'pass' }, headers: { 'retry-after': '2' } } })
+		const stored = { data: { success: true, response: { id: 'r1', submitted_at: 'now' } } }
+
+		beforeEach(() => {
+			vi.useFakeTimers()
+			// No challenge in this test environment: solving it fails quietly and the post carries none.
+			vi.spyOn(axios, 'get').mockRejectedValue(new Error('no challenge here'))
+			vi.spyOn(console, 'warn').mockImplementation(() => {})
+		})
+
+		afterEach(() => {
+			vi.useRealTimers()
+			vi.restoreAllMocks()
+		})
+
+		it('tries again with the same submission id and the pass, then thanks', async () => {
+			const post = vi.spyOn(axios, 'post').mockRejectedValueOnce(busy()).mockResolvedValueOnce(stored)
+			const wrapper = mountRespond({ questions: [] })
+
+			const done = wrapper.vm.submit()
+			await vi.runAllTimersAsync()
+			await done
+
+			expect(post).toHaveBeenCalledTimes(2)
+			const [first, second] = post.mock.calls.map(call => call[1])
+			expect(first.submissionId).toMatch(/^[0-9a-f-]{36}$/)
+			expect(second.submissionId).toBe(first.submissionId)
+			expect([first.retryToken, second.retryToken]).toEqual([null, 'pass'])
+			expect(wrapper.vm.submitted).toBe(true)
+			expect(wrapper.vm.error).toBe(null)
+		})
+
+		// The server's retry pass holds only for the same answers: a retry that sent other bytes would be refused for good.
+		it('sends the very same answers again, even when they change while it waits', async () => {
+			const post = vi.spyOn(axios, 'post').mockRejectedValueOnce(busy()).mockResolvedValueOnce(stored)
+			const wrapper = mountRespond({ questions: [{ id: 'q1', type: 'text' }, { id: 'q2', type: 'checkbox', options: [{ id: 'o1', label: 'One' }, { id: 'o2', label: 'Two' }] }] })
+			wrapper.vm.updateAnswer('q1', 'Anna')
+			wrapper.vm.updateAnswer('q2', ['o2', 'o1'])
+
+			const done = wrapper.vm.submit()
+			await vi.advanceTimersByTimeAsync(100)
+			wrapper.vm.updateAnswer('q1', 'Bert')
+			await vi.runAllTimersAsync()
+			await done
+
+			const [first, second] = post.mock.calls.map(call => call[1])
+			expect(JSON.stringify(second.answers)).toBe(JSON.stringify(first.answers))
+			expect(first.answers.q1).toBe('Anna')
+		})
+
+		it('says it is busy after two seconds of waiting', async () => {
+			let answer
+			vi.spyOn(axios, 'post').mockImplementation(() => new Promise(resolve => { answer = resolve }))
+			const wrapper = mountRespond({ questions: [] })
+
+			const done = wrapper.vm.submit()
+			await vi.advanceTimersByTimeAsync(1000)
+			expect(wrapper.vm.busy).toBe(false)
+			await vi.advanceTimersByTimeAsync(1500)
+			await wrapper.vm.$nextTick()
+			expect(wrapper.find('.busy-message').exists()).toBe(true)
+
+			answer(stored)
+			await done
+			expect(wrapper.vm.busy).toBe(false)
+		})
+
+		it('after a minute it is not saved, and the form stays filled in', async () => {
+			vi.spyOn(axios, 'post').mockRejectedValue(busy())
+			const wrapper = mountRespond({ questions: [{ id: 'q1', type: 'text' }] })
+			wrapper.vm.updateAnswer('q1', 'Anna')
+
+			const done = wrapper.vm.submit()
+			await vi.advanceTimersByTimeAsync(61000)
+			await done
+
+			expect(wrapper.vm.submitted).toBe(false)
+			expect(wrapper.vm.error).toBe('Not saved. Please try again.')
+			expect(wrapper.vm.answers.q1).toBe('Anna')
+		})
+
+		it('shows a refusal at once and does not try it again', async () => {
+			const post = vi.spyOn(axios, 'post').mockRejectedValue(Object.assign(new Error('no'), { response: { status: 409, data: { error: 'You have already submitted a response to this form' }, headers: {} } }))
+			const wrapper = mountRespond({ questions: [] })
+
+			const done = wrapper.vm.submit()
+			await vi.runAllTimersAsync()
+			await done
+
+			expect(post).toHaveBeenCalledTimes(1)
+			expect(wrapper.vm.error).toBe('You have already submitted a response to this form')
+		})
+
+		it('leaves no draft behind after the thanks, also with a save still pending', async () => {
+			vi.spyOn(axios, 'post').mockResolvedValue(stored)
+			const wrapper = mountRespond({ questions: [{ id: 'q1', type: 'text' }] })
+			wrapper.vm.updateAnswer('q1', 'Anna')
+
+			const done = wrapper.vm.submit()
+			await vi.runAllTimersAsync()
+			await done
+
+			expect(localStorage.getItem('formvox-draft-1-tok')).toBe(null)
+		})
+
+		it('sends the fill again with the id of the draft it was restored from', async () => {
+			localStorage.setItem('formvox-draft-1-tok', JSON.stringify({ answers: { q1: 'Anna' }, submissionId: '0f8b6c1e-aaaa-4bbb-8ccc-123456789abc', savedAt: new Date().toISOString() }))
+			const post = vi.spyOn(axios, 'post').mockResolvedValue(stored)
+			const wrapper = mountRespond({ questions: [{ id: 'q1', type: 'text' }] })
+
+			const done = wrapper.vm.submit()
+			await vi.runAllTimersAsync()
+			await done
+
+			expect(post.mock.calls[0][1].submissionId).toBe('0f8b6c1e-aaaa-4bbb-8ccc-123456789abc')
+		})
+
+		it("sends the respondent's time zone, for the times in the response's PDF", async () => {
+			vi.spyOn(Intl, 'DateTimeFormat').mockReturnValue({ resolvedOptions: () => ({ timeZone: 'Europe/Berlin' }), format: () => '' })
+			const post = vi.spyOn(axios, 'post').mockResolvedValue(stored)
+			const wrapper = mountRespond({ questions: [{ id: 'q1', type: 'text' }] })
+
+			const done = wrapper.vm.submit()
+			await vi.runAllTimersAsync()
+			await done
+
+			expect(post.mock.calls[0][1].timezone).toBe('Europe/Berlin')
+		})
+
+		describe('files and the anti-spam proof', () => {
+			const challenge = { data: { algorithm: 'SHA-256', challenge: 'c', salt: 's', signature: 'sig', maxnumber: 10 } }
+			const refusedForProof = () => Object.assign(new Error('no proof'), { response: { status: 429, data: { reason: 'challenge_failed', error: 'Challenge verification failed. Please refresh the page.' }, headers: {} } })
+			const answer = (name, grant) => ({ data: { responseId: 'tmp', filename: name, ...(grant ? { uploadGrant: grant } : {}) } })
+			const uploadsOf = (post) => post.mock.calls.filter(call => call[0].includes('/upload')).map(call => call[1])
+			const withFiles = (...names) => {
+				const wrapper = mountRespond({ questions: [{ id: 'f', type: 'file' }] })
+				wrapper.vm.updatePendingFiles('f', names.map(name => new File([name], name)))
+				return wrapper
+			}
+			const send = async (wrapper, ms = 0) => {
+				const done = wrapper.vm.submit()
+				await (ms ? vi.advanceTimersByTimeAsync(ms) : vi.runAllTimersAsync())
+				await done
+			}
+
+			beforeEach(() => {
+				axios.get.mockResolvedValue(challenge)
+				vi.stubGlobal('fetch', vi.fn(async () => ({ text: async () => '' })))
+				URL.createObjectURL = vi.fn(() => 'blob:worker')
+				URL.revokeObjectURL = vi.fn()
+			})
+
+			afterEach(() => {
+				vi.unstubAllGlobals()
+			})
+
+			it('pays the challenge for the first file and carries the pass for the next', async () => {
+				const post = vi.spyOn(axios, 'post').mockImplementation(async (url, data) => url.includes('/upload') ? answer(data.get('file').name, data.get('altcha') ? 'G' : null) : stored)
+				const wrapper = withFiles('a.pdf', 'b.pdf')
+
+				await send(wrapper)
+
+				const [first, second] = uploadsOf(post)
+				expect([JSON.parse(first.get('altcha')).number, first.get('uploadGrant')]).toEqual([7, null])
+				expect([second.get('altcha'), second.get('uploadGrant')]).toEqual([null, 'G'])
+				expect(wrapper.vm.submitted).toBe(true)
+			})
+
+			it('tries a file again on the pass a busy answer carried, without a new challenge', async () => {
+				let uploads = 0
+				const post = vi.spyOn(axios, 'post').mockImplementation(async (url, data) => {
+					if (!url.includes('/upload')) {
+						return stored
+					}
+					if (++uploads === 1) {
+						throw Object.assign(new Error('busy'), { response: { status: 503, data: { reason: 'busy', uploadGrant: 'B' }, headers: { 'retry-after': '2' } } })
+					}
+					return answer('a.pdf', 'G')
+				})
+				const wrapper = withFiles('a.pdf')
+
+				await send(wrapper)
+
+				const [first, retry] = uploadsOf(post)
+				expect([JSON.parse(first.get('altcha')).number, first.get('uploadGrant')]).toEqual([7, null])
+				expect([retry.get('altcha'), retry.get('uploadGrant')]).toEqual([null, 'B'])
+				// One for the first file and one for the submission itself; none for the retry.
+				expect(axios.get.mock.calls.filter(call => String(call[0]).includes('/challenge'))).toHaveLength(2)
+				expect(wrapper.vm.submitted).toBe(true)
+			})
+
+			it('falls back to a new challenge when the pass ran out', async () => {
+				let uploads = 0
+				const post = vi.spyOn(axios, 'post').mockImplementation(async (url, data) => {
+					if (!url.includes('/upload')) {
+						return stored
+					}
+					uploads++
+					if (uploads === 1) {
+						return answer('a.pdf', 'G')
+					}
+					if (data.get('uploadGrant')) {
+						throw refusedForProof()
+					}
+					return answer('b.pdf', 'H')
+				})
+				const wrapper = withFiles('a.pdf', 'b.pdf')
+
+				await send(wrapper)
+
+				const third = uploadsOf(post)[2]
+				expect([JSON.parse(third.get('altcha')).number, third.get('uploadGrant')]).toEqual([7, null])
+				expect(wrapper.vm.submitted).toBe(true)
+			})
+
+			// Review of the 3a fixes: sent without proof, the refusal was final.
+			it('waits for a challenge it could not fetch rather than be refused for want of proof', async () => {
+				axios.get.mockRejectedValueOnce(new Error('gateway timeout'))
+				const post = vi.spyOn(axios, 'post').mockImplementation(async (url, data) => {
+					if (!url.includes('/upload')) {
+						return stored
+					}
+					if (!data.get('altcha') && !data.get('uploadGrant')) {
+						throw refusedForProof()
+					}
+					return answer('a.pdf', 'G')
+				})
+				const wrapper = withFiles('a.pdf')
+
+				await send(wrapper, 20000)
+
+				expect(uploadsOf(post)).toHaveLength(2)
+				expect([wrapper.vm.submitted, wrapper.vm.error]).toEqual([true, null])
+			})
+
+			it('tries the submission again when it was refused for want of a proof it could not fetch', async () => {
+				axios.get.mockRejectedValueOnce(new Error('gateway timeout'))
+				const post = vi.spyOn(axios, 'post').mockImplementation(async (url, data) => {
+					if (!data.altcha && !data.retryToken) {
+						throw refusedForProof()
+					}
+					return stored
+				})
+				const wrapper = mountRespond({ questions: [] })
+
+				await send(wrapper, 20000)
+
+				expect(post).toHaveBeenCalledTimes(2)
+				expect(post.mock.calls[1][1].altcha.number).toBe(7)
+				expect(wrapper.vm.submitted).toBe(true)
+			})
+
+			// Review of the 3a fixes: all files shared one minute, so a long first file left the next none.
+			it('gives every file its own minute to get through a busy server', async () => {
+				const start = Date.now()
+				let firstDone = 0
+				vi.spyOn(axios, 'post').mockImplementation(async (url, data) => {
+					if (!url.includes('/upload')) {
+						return stored
+					}
+					if (data.get('file').name === 'a.pdf') {
+						if (Date.now() - start < 50000) {
+							throw busy()
+						}
+						firstDone = Date.now()
+						return answer('a.pdf', 'G')
+					}
+					if (Date.now() - firstDone < 30000) {
+						throw busy()
+					}
+					return answer('b.pdf')
+				})
+				const wrapper = withFiles('a.pdf', 'b.pdf')
+
+				await send(wrapper, 150000)
+
+				expect([wrapper.vm.submitted, wrapper.vm.error]).toEqual([true, null])
+			})
+
+			// Review of the 3a fixes: a page left open past the day kept sending files the server had cleared.
+			it('sends its files again after a day, as the server cleared them, and not before', async () => {
+				const fills = []
+				let submits = 0
+				vi.spyOn(axios, 'post').mockImplementation(async (url, data) => {
+					if (url.includes('/upload')) {
+						fills.push(data.get('tempResponseId'))
+						return answer('a.pdf', 'G')
+					}
+					submits++
+					if (submits < 3) {
+						throw Object.assign(new Error('no'), { response: { status: 400, data: { error: 'Please check your answers' }, headers: {} } })
+					}
+					return stored
+				})
+				const wrapper = withFiles('a.pdf')
+
+				await send(wrapper)
+				await send(wrapper)
+				expect(fills).toHaveLength(1)
+
+				vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1000)
+				await send(wrapper)
+				expect(fills).toHaveLength(2)
+				expect(fills[1]).not.toBe(fills[0])
+				expect(wrapper.vm.submitted).toBe(true)
+			})
+		})
+
+		describe('the draft', () => {
+			const key = 'formvox-draft-1-tok'
+
+			it('keeps the fill id in the draft it writes', async () => {
+				const wrapper = mountRespond({ questions: [{ id: 'q1', type: 'text' }] })
+				wrapper.vm.updateAnswer('q1', 'Anna')
+				await vi.advanceTimersByTimeAsync(1500)
+
+				expect(JSON.parse(localStorage.getItem(key)).submissionId).toMatch(/^[0-9a-f-]{36}$/)
+			})
+
+			it('removes a written draft after the thanks and gives the next fill a new id', async () => {
+				const post = vi.spyOn(axios, 'post').mockResolvedValue(stored)
+				const wrapper = mountRespond({ questions: [{ id: 'q1', type: 'text' }] })
+				wrapper.vm.updateAnswer('q1', 'Anna')
+				await vi.advanceTimersByTimeAsync(1500)
+				const id = JSON.parse(localStorage.getItem(key)).submissionId
+
+				let done = wrapper.vm.submit()
+				await vi.runAllTimersAsync()
+				await done
+				expect(localStorage.getItem(key)).toBe(null)
+				expect(post.mock.calls[0][1].submissionId).toBe(id)
+
+				done = wrapper.vm.submit()
+				await vi.runAllTimersAsync()
+				await done
+				expect(post.mock.calls[1][1].submissionId).not.toBe(id)
+			})
+		})
+
+		it('waits and tries again rather than send a retry without proof', async () => {
+			const lost = Object.assign(new Error('Network Error'), { response: undefined })
+			const post = vi.spyOn(axios, 'post').mockRejectedValueOnce(lost).mockResolvedValueOnce(stored)
+			const wrapper = mountRespond({ questions: [] })
+
+			const done = wrapper.vm.submit()
+			await vi.advanceTimersByTimeAsync(61000)
+			await done
+
+			// The challenge cannot be fetched here: the retry waits for the deadline instead of going out bare.
+			expect(post).toHaveBeenCalledTimes(1)
+			expect(wrapper.vm.error).toBe('Not saved. Please try again.')
 		})
 	})
 })

@@ -319,7 +319,7 @@ class BrandingServiceTest extends TestCase {
 		// Pin getExtensionFromMimeType via observable filename in newFile().
 		$cases = [
 			'image/jpeg' => 'block_x.jpg',
-			'image/svg+xml' => 'block_x.svg',
+			'image/svg+xml' => 'block_x.png', // never stored as SVG (secu#54)
 			'image/gif' => 'block_x.gif',
 			'image/webp' => 'block_x.webp',
 			'image/png' => 'block_x.png',
@@ -442,6 +442,10 @@ class BrandingServiceTest extends TestCase {
 
 	// ---- saveFormBlockImage() (per-form folder) ---------------------------
 
+	private function formFile(): File {
+		return $this->createMock(File::class);
+	}
+
 	public function testSaveFormBlockImageWritesToFormFolder(): void {
 		$tmp = $this->tmpFile('FORMDATA');
 
@@ -455,12 +459,13 @@ class BrandingServiceTest extends TestCase {
 			->with('block_fb.png')
 			->willReturn($newFile);
 
+		$formFile = $this->formFile();
 		$this->uploadService->expects($this->once())
 			->method('getBrandingFolder')
-			->with(42, true)
+			->with($formFile, true)
 			->willReturn($folder);
 
-		$result = $this->service()->saveFormBlockImage(42, 'fb', $tmp, 'image/png');
+		$result = $this->service()->saveFormBlockImage($formFile, 'fb', $tmp, 'image/png');
 
 		$this->assertSame('fb', $result);
 		unlink($tmp);
@@ -485,7 +490,7 @@ class BrandingServiceTest extends TestCase {
 
 		$this->uploadService->method('getBrandingFolder')->willReturn($folder);
 
-		$this->service()->saveFormBlockImage(1, 'fb', $tmp, 'image/jpeg');
+		$this->service()->saveFormBlockImage($this->formFile(), 'fb', $tmp, 'image/jpeg');
 		unlink($tmp);
 	}
 
@@ -502,7 +507,7 @@ class BrandingServiceTest extends TestCase {
 
 		$this->uploadService->method('getBrandingFolder')->willReturn($folder);
 
-		$result = $this->service()->saveFormBlockImage(1, 'fb', $tmp, 'image/png');
+		$result = $this->service()->saveFormBlockImage($this->formFile(), 'fb', $tmp, 'image/png');
 		$this->assertSame('fb', $result);
 		unlink($tmp);
 	}
@@ -518,7 +523,7 @@ class BrandingServiceTest extends TestCase {
 		$folder->method('getDirectoryListing')->willReturn([$file]);
 
 		$this->uploadService->expects($this->once())
-			->method('getBrandingFolder')
+			->method('getBrandingFolderPublic')
 			->with(7)
 			->willReturn($folder);
 
@@ -532,13 +537,13 @@ class BrandingServiceTest extends TestCase {
 		$file->method('getName')->willReturn('block_other.png');
 		$folder = $this->createMock(Folder::class);
 		$folder->method('getDirectoryListing')->willReturn([$file]);
-		$this->uploadService->method('getBrandingFolder')->willReturn($folder);
+		$this->uploadService->method('getBrandingFolderPublic')->willReturn($folder);
 
 		$this->assertNull($this->service()->getFormBlockImage(7, 'fb'));
 	}
 
 	public function testGetFormBlockImageReturnsNullWhenFolderThrows(): void {
-		$this->uploadService->method('getBrandingFolder')
+		$this->uploadService->method('getBrandingFolderPublic')
 			->willThrowException(new NotFoundException());
 
 		$this->assertNull($this->service()->getFormBlockImage(7, 'fb'));
@@ -562,12 +567,13 @@ class BrandingServiceTest extends TestCase {
 		$folder = $this->createMock(Folder::class);
 		$folder->method('getDirectoryListing')->willReturn([$m1, $skip, $m2]);
 
+		$formFile = $this->formFile();
 		$this->uploadService->expects($this->once())
 			->method('getBrandingFolder')
-			->with(7, true)
+			->with($formFile)
 			->willReturn($folder);
 
-		$this->service()->deleteFormBlockImage(7, 'fb');
+		$this->service()->deleteFormBlockImage($formFile, 'fb');
 	}
 
 	public function testDeleteFormBlockImageSilentWhenFolderThrows(): void {
@@ -575,7 +581,7 @@ class BrandingServiceTest extends TestCase {
 			->willThrowException(new NotFoundException());
 
 		// Must not throw.
-		$this->service()->deleteFormBlockImage(7, 'fb');
+		$this->service()->deleteFormBlockImage($this->formFile(), 'fb');
 		$this->assertTrue(true);
 	}
 }

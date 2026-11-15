@@ -6,6 +6,9 @@ namespace OCA\FormVox\Listener;
 
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Db\AiPendingMapper;
+use OCA\FormVox\Exception\AiGenerationException;
+use OCA\FormVox\Exception\ClientErrorException;
+use OCA\FormVox\L10n\Translatable;
 use OCA\FormVox\Service\AiFormGeneratorService;
 use OCA\FormVox\Service\FormRepository;
 use OCP\EventDispatcher\Event;
@@ -13,33 +16,21 @@ use OCP\EventDispatcher\IEventListener;
 use OCP\IUserManager;
 use OCP\Notification\IManager as INotificationManager;
 use OCP\TaskProcessing\Events\TaskSuccessfulEvent;
+use OCP\TaskProcessing\Task;
 use Psr\Log\LoggerInterface;
 
 /**
  * @template-implements IEventListener<Event>
  */
 class AiTaskSuccessfulListener implements IEventListener {
-	private AiPendingMapper $pendingMapper;
-	private AiFormGeneratorService $aiService;
-	private FormRepository $formRepository;
-	private INotificationManager $notificationManager;
-	private IUserManager $userManager;
-	private LoggerInterface $logger;
-
 	public function __construct(
-		AiPendingMapper $pendingMapper,
-		AiFormGeneratorService $aiService,
-		FormRepository $formRepository,
-		INotificationManager $notificationManager,
-		IUserManager $userManager,
-		LoggerInterface $logger,
+		private AiPendingMapper $pendingMapper,
+		private AiFormGeneratorService $aiService,
+		private FormRepository $formRepository,
+		private INotificationManager $notificationManager,
+		private IUserManager $userManager,
+		private LoggerInterface $logger,
 	) {
-		$this->pendingMapper = $pendingMapper;
-		$this->aiService = $aiService;
-		$this->formRepository = $formRepository;
-		$this->notificationManager = $notificationManager;
-		$this->userManager = $userManager;
-		$this->logger = $logger;
 	}
 
 	public function handle(Event $event): void {
@@ -88,20 +79,20 @@ class AiTaskSuccessfulListener implements IEventListener {
 				'form',
 				(string)($result['fileId'] ?? 0)
 			);
+		} catch (AiGenerationException|ClientErrorException $e) {
+			// Our own reason, in English for the Notifier to translate.
+			$this->failed($task, $pending->getTitle(), $e->getMessage(), $e);
 		} catch (\Throwable $e) {
-			$this->logger->warning('FormVox AI listener: failed to materialise form from task ' . $task->getId(), [
-				'exception' => $e,
-			]);
-			$this->sendNotification(
-				$task->getUserId(),
-				'ai_form_failed',
-				['formTitle' => $pending->getTitle(), 'reason' => $e->getMessage()],
-				'task',
-				(string)$task->getId()
-			);
+			// TRANSLATORS: Shown in a notification when an AI form could not be created for a reason the log has
+			$this->failed($task, $pending->getTitle(), Translatable::t('Something went wrong while creating the form.'), $e);
 		}
 
 		$this->pendingMapper->deleteByTaskId($task->getId());
+	}
+
+	private function failed(Task $task, string $title, string $reason, \Throwable $e): void {
+		$this->logger->warning('FormVox AI listener: failed to materialise form from task ' . $task->getId(), ['exception' => $e]);
+		$this->sendNotification($task->getUserId(), 'ai_form_failed', ['formTitle' => $title, 'reason' => $reason], 'task', (string)$task->getId());
 	}
 
 	private function sendNotification(string $userId, string $subject, array $params, string $objectType, string $objectId): void {

@@ -46,6 +46,14 @@
 			"allowedVersions": "<6"
 		},
 		{
+			"description": "dompdf ships prefixed in lib/Vendor: an update needs `composer vendor:pdf` run and lib/Vendor committed in the same PR (VendorPdfTest fails until then).",
+			"matchManagers": ["composer"],
+			"matchPackageNames": ["dompdf/dompdf", "dompdf/php-font-lib", "dompdf/php-svg-lib", "masterminds/html5", "sabberworm/php-css-parser"],
+			"groupName": "dompdf (rebuild lib/Vendor)",
+			"automerge": false,
+			"addLabels": ["rebuild-lib-vendor"]
+		},
+		{
 			"description": "Stryker needs Node >=22; keep it on the current major line.",
 			"matchPackageNames": ["@stryker-mutator/core", "@stryker-mutator/vitest-runner"],
 			"matchUpdateTypes": ["major"],

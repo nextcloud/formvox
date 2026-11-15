@@ -39,7 +39,6 @@
           <div class="editor-topbar__actions">
             <NcButton
               type="secondary"
-              :disabled="!canShare"
               :title="t('formvox', 'Share')"
               :aria-label="t('formvox', 'Share')"
               @click="showShare = true"
@@ -118,6 +117,38 @@
         <div v-else-if="!hasEditPermission" class="permission-banner">
           <span class="permission-icon">🔒</span>
           <span>{{ t('formvox', 'You have read-only access to this form. Contact the owner to request edit permissions.') }}</span>
+        </div>
+
+        <!-- A save showed this tab can no longer edit the form -->
+        <div v-if="blocked" class="save-error-banner" role="alert">
+          <p v-if="blocked === 'changed'">
+            <strong>{{ t('formvox', 'This form was changed elsewhere.') }}</strong>
+            {{ t('formvox', 'Your latest changes are not saved. Reload to see the current version and continue from there.') }}
+          </p>
+          <p v-else-if="blocked === 'forbidden'">
+            <strong>{{ t('formvox', 'You can no longer edit this form.') }}</strong>
+            {{ t('formvox', 'Your latest changes are not saved. Ask the owner for edit rights.') }}
+          </p>
+          <p v-else>
+            <strong>{{ t('formvox', 'This form no longer exists or was moved.') }}</strong>
+            {{ t('formvox', 'Your latest changes are not saved.') }}
+          </p>
+          <NcButton v-if="blocked === 'changed'" type="primary" @click="reload">
+            {{ t('formvox', 'Reload') }}
+          </NcButton>
+        </div>
+
+        <!-- The server refused the form: what is wrong, until a save goes through -->
+        <div v-if="saveErrors.length" class="save-error-banner" role="alert">
+          <p>
+            <strong>{{ t('formvox', 'Your latest changes are not saved.') }}</strong>
+            {{ t('formvox', 'Fix what is marked; the next change is saved again.') }}
+          </p>
+          <ul>
+            <li v-for="(error, i) in saveErrors" :key="i">
+              <template v-if="error.question">{{ questionLabel(error.question) }}: </template>{{ error.message }}
+            </li>
+          </ul>
         </div>
 
         <div class="editor-header">
@@ -211,6 +242,7 @@
                     :pages="form.pages"
                     :current-page-index="currentPageIndex"
                     :readonly="!canEdit"
+                    :errors="errorsFor(element.id)"
                     @update="updateQuestionById(element.id, $event)"
                     @delete="deleteQuestionById(element.id)"
                     @duplicate="duplicateQuestionById(element.id)"
@@ -242,6 +274,7 @@
                     :index="index"
                     :questions="form.questions"
                     :readonly="!canEdit"
+                    :errors="errorsFor(element.id)"
                     @update="updateQuestion(index, $event)"
                     @delete="element.type === 'section' ? deleteSectionById(element.id) : deleteQuestion(index)"
                     @duplicate="duplicateQuestion(index)"
@@ -286,11 +319,6 @@
     <SettingsPanel
       v-if="showSettings"
       :file-id="fileId"
-      :settings="form.settings"
-      :permissions="form.permissions"
-      :can-edit-settings="permissions.editSettings"
-      @update:settings="updateSettings"
-      @update:permissions="updatePermissions"
       @close="showSettings = false"
     />
 
@@ -299,6 +327,8 @@
       :file-id="fileId"
       :form="form"
       :can-share="canShare"
+      :can-edit-settings="canEditSettings"
+      :password-enforced="linkPasswordEnforced"
       @close="showShare = false"
     />
 
@@ -336,7 +366,8 @@ import {
 } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
-import { showError, showSuccess } from '@nextcloud/dialogs';
+import { showError, showSuccess, showWarning } from '@nextcloud/dialogs';
+import { removeReferencesToQuestion, removeRoutingToPage } from '@/utils/formReferences';
 import { t } from '@/utils/l10n';
 import { v4 as uuidv4 } from 'uuid';
 import draggable from 'vuedraggable';
@@ -360,6 +391,12 @@ import PagesOnIcon from 'vue-material-design-icons/Grid.vue';
 import PagesOffIcon from 'vue-material-design-icons/GridOff.vue';
 import ArrowLeftIcon from '../components/icons/ArrowLeftIcon.vue';
 import RouteIcon from 'vue-material-design-icons/DirectionsFork.vue';
+
+// Well above the lock waits (the save's, then the title rename's) with room for a big form on slow storage: only a save
+// that never answers is given up, and a given-up save is checked against the form (settleLostSave).
+const SAVE_TIMEOUT_MS = 180000;
+// The check of a lost save only reads, waiting at most for a writer's lock: it need not hold later saves back as long.
+const SETTLE_TIMEOUT_MS = 30000;
 
 export default {
   name: 'Editor',
@@ -416,6 +453,10 @@ export default {
       type: Object,
       default: null,
     },
+    linkPasswordEnforced: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup(props) {
     // Deep copy to preserve nested objects like question.validation
@@ -428,6 +469,9 @@ export default {
     if (form.title === null || form.title === undefined) form.title = '';
     if (form.description === null) form.description = '';
     const saving = ref(false);
+    // What the server refused in the last save, per question (400 invalid_form).
+    const saveErrors = ref([]);
+    let shownSaveErrors = '';
     const showSettings = ref(false);
     const showShare = ref(false);
     const showBranding = ref(false);
@@ -441,6 +485,10 @@ export default {
     let presenceInterval = null;
 
     let saveTimeout = null;
+    // A save asked for while one is under way: sent after it, on the revision it got back.
+    let saveAgain = false;
+    // The ids of this tab's saves without an answer since its last known revision, asked about again on a later refusal.
+    let unsettled = [];
 
     // Permission checks
     const hasEditPermission = computed(() => props.permissions?.editQuestions ?? false);
@@ -459,8 +507,10 @@ export default {
       // Check if any other editor arrived before us
       return activeEditors.value.some(e => e.firstSeen <= myFirstSeen.value);
     });
-    const canEdit = computed(() => hasEditPermission.value && !lockedByOther.value);
-    const canEditSettings = computed(() => (props.permissions?.editSettings ?? false) && !lockedByOther.value);
+    // Set when a save showed the form can no longer be edited here: 'changed' elsewhere, 'forbidden' or 'gone'.
+    const blocked = ref(null);
+    const canEdit = computed(() => hasEditPermission.value && !lockedByOther.value && !blocked.value);
+    const canEditSettings = computed(() => (props.permissions?.editSettings ?? false) && !lockedByOther.value && !blocked.value);
     const canViewResponses = computed(() => props.permissions?.viewResponses ?? false);
     const canShare = computed(() => props.permissions?.canShare ?? false);
 
@@ -520,42 +570,152 @@ export default {
     });
 
     const save = async () => {
+      if (blocked.value) {
+        return;
+      }
       if (!canEdit.value) {
         showError(t('formvox', 'You do not have permission to edit this form'));
         return;
       }
+      // One at a time: a save waiting on a busy form would refuse its follow-up as changed elsewhere (review of 3b-3b).
+      if (saving.value) {
+        saveAgain = true;
+        return;
+      }
       saving.value = true;
+      // Settings are saved where they are changed (share dialog), key by key, so a stale tab cannot undo them.
+      const payload = {
+        title: form.title,
+        description: form.description,
+        descriptionAlign: form.descriptionAlign || 'left',
+        questions: form.questions,
+        pages: form.pages,
+        branding: form.branding,
+      };
+      const sent = { id: uuidv4(), revision: form.revision };
+      // The structure this tab last saw, the server refusing the save when it changed since; and this save's own id,
+      // kept with the form, so a lost answer can be settled exactly (review of 3b-4d).
+      const headers = { 'X-FormVox-Save-Id': sent.id };
+      if (sent.revision) {
+        headers['If-Match'] = `"${sent.revision}"`;
+      }
       try {
-        await axios.put(
+        const response = await axios.put(
           generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
-          {
-            title: form.title,
-            description: form.description,
-            descriptionAlign: form.descriptionAlign || 'left',
-            questions: form.questions,
-            settings: form.settings,
-            pages: form.pages,
-            branding: form.branding,
-          }
+          payload,
+          { timeout: SAVE_TIMEOUT_MS, headers },
         );
+        if (response?.data?.form?.revision) {
+          form.revision = response.data.form.revision;
+        }
+        // A save went through on the revision before: a lost one either landed before it or is refused when it lands.
+        unsettled = [];
+        saveErrors.value = [];
+        shownSaveErrors = '';
         showSuccess(t('formvox', 'All changes saved'));
       } catch (error) {
-        if (error.response?.status === 403) {
-          showError(t('formvox', 'You do not have permission to edit this form'));
+        const data = error.response?.data || {};
+        // No answer, a proxy's or PHP's error page, or an error after the write: the save may have arrived. Only busy
+        // (the form never taken) and a full quota (the form put back) say it did not (review of 3b-3d to 3b-4e).
+        const unanswered = !error.response || (error.response.status >= 500 && data.reason !== 'busy' && error.response.status !== 507);
+        if (sent.revision && unanswered) {
+          unsettled.push(sent.id);
+          const { verdict, id } = await settleLostSaves();
+          if (verdict === 'saved' && id !== sent.id) {
+            // An earlier one of this tab landed; this one, with later edits, did not: sent again on that revision.
+            saveAgain = true;
+          } else if (verdict === 'saved') {
+            saveErrors.value = [];
+            shownSaveErrors = '';
+            showSuccess(t('formvox', 'All changes saved'));
+          } else if (verdict === 'changed') {
+            blocked.value = 'changed';
+          } else {
+            showError(t('formvox', 'Failed to save form'));
+          }
+        } else if (error.response?.status === 400 && data.reason === 'invalid_form') {
+          saveErrors.value = Array.isArray(data.errors) ? data.errors : [];
+          // Every save sends the whole form, so one broken question fails each change: tell it once.
+          const key = JSON.stringify(saveErrors.value);
+          if (key !== shownSaveErrors) {
+            shownSaveErrors = key;
+            showError(data.error || t('formvox', 'Failed to save form'));
+          }
+        } else if (error.response?.status === 412 && data.reason === 'changed_elsewhere') {
+          // Refused perhaps only because a lost save of this tab landed after all: then sent again on its revision.
+          if (unsettled.length > 0 && (await settleLostSaves()).verdict === 'saved') {
+            saveAgain = true;
+          } else {
+            blocked.value = 'changed';
+          }
+        } else if (error.response?.status === 403) {
+          // Rights taken away while editing: stop, rather than fail again on every key.
+          blocked.value = 'forbidden';
+        } else if (error.response?.status === 404) {
+          blocked.value = 'gone';
         } else {
-          showError(t('formvox', 'Failed to save form'));
+          showError(data.error || t('formvox', 'Failed to save form'));
         }
         console.error(error);
       } finally {
         saving.value = false;
+        if (saveAgain) {
+          saveAgain = false;
+          // The re-send carries every change so far; a timer still pending would send the same again.
+          clearTimeout(saveTimeout);
+          saveTimeout = null;
+          save();
+        }
       }
+    };
+
+    /**
+     * This tab's saves without an answer: 'saved' (with its id) when the form's last save is one of them and nothing
+     * changed it since; 'changed' when another change came after the revision they were sent on, which refuses them;
+     * 'unknown' while neither can be told, kept to ask again (review of 3b-4e).
+     */
+    const settleLostSaves = async () => {
+      const base = form.revision;
+      try {
+        const response = await axios.get(generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }), { timeout: SETTLE_TIMEOUT_MS });
+        const stored = response?.data?.form;
+        const last = stored?._lastSave;
+        if (stored?.revision && last?.revision === stored.revision && unsettled.includes(last.id)) {
+          form.revision = stored.revision;
+          unsettled = [];
+          return { verdict: 'saved', id: last.id };
+        }
+        if (stored?.revision && stored.revision !== base) {
+          unsettled = [];
+          return { verdict: 'changed' };
+        }
+      } catch (e) {
+        // Still no answer.
+      }
+      return { verdict: 'unknown' };
+    };
+
+    const reload = () => window.location.reload();
+
+    const errorsFor = (questionId) => saveErrors.value
+      .filter(error => error.question === questionId)
+      .map(error => error.message);
+
+    const questionLabel = (questionId) => {
+      const index = form.questions.findIndex(q => q.id === questionId);
+      if (index === -1) {
+        return questionId;
+      }
+      const text = String(form.questions[index].question || '').trim();
+      return text ? '“' + (text.length > 60 ? text.slice(0, 57) + '…' : text) + '”' : t('formvox', 'Question {n}', { n: index + 1 });
     };
 
     const debouncedSave = () => {
       if (saveTimeout) {
         clearTimeout(saveTimeout);
       }
-      saveTimeout = setTimeout(save, 500);
+      // Each save rewrites the whole file, responses included: wait for a pause in typing.
+      saveTimeout = setTimeout(save, 2000);
     };
 
     const updateDescriptionAlign = (align) => {
@@ -753,8 +913,18 @@ export default {
       debouncedSave();
     };
 
+    // Conditions and routing on a deleted question would be refused by the server, so they go too.
+    const forgetQuestion = (questionId) => {
+      if (removeReferencesToQuestion(form, questionId) > 0) {
+        showWarning(t('formvox', 'Conditions and page routing that used this question were removed too'));
+      }
+    };
+
     const deleteQuestion = (index) => {
-      form.questions.splice(index, 1);
+      const [removed] = form.questions.splice(index, 1);
+      if (removed) {
+        forgetQuestion(removed.id);
+      }
       debouncedSave();
     };
 
@@ -806,6 +976,9 @@ export default {
       const removed = form.pages[pageIndex];
       const targetIndex = pageIndex > 0 ? pageIndex - 1 : 1; // prev page, or next when deleting the first
       form.pages.splice(pageIndex, 1);
+      if (removed && removeRoutingToPage(form, removed.id) > 0) {
+        showWarning(t('formvox', 'Page routing that led to this page was removed too'));
+      }
       const target = form.pages[Math.min(targetIndex, form.pages.length - 1)];
       if (target && Array.isArray(removed?.questions) && removed.questions.length) {
         target.questions.push(...removed.questions);
@@ -844,14 +1017,8 @@ export default {
       const index = getQuestionIndex(questionId);
       if (index !== -1) {
         form.questions.splice(index, 1);
-        // Also remove from current page
-        if (hasPages.value) {
-          const page = form.pages[currentPageIndex.value];
-          const qIndex = page.questions.indexOf(questionId);
-          if (qIndex !== -1) {
-            page.questions.splice(qIndex, 1);
-          }
-        }
+        // Also takes it off its page.
+        forgetQuestion(questionId);
         debouncedSave();
       }
     };
@@ -961,16 +1128,6 @@ export default {
       debouncedSave();
     };
 
-    const updateSettings = (newSettings) => {
-      Object.assign(form.settings, newSettings);
-      debouncedSave();
-    };
-
-    const updatePermissions = (newPermissions) => {
-      Object.assign(form.permissions, newPermissions);
-      debouncedSave();
-    };
-
     const updateBranding = (newBranding) => {
       form.branding = newBranding;
       debouncedSave();
@@ -996,8 +1153,11 @@ export default {
       }
     };
 
-    // Presence
+    // Presence: only editors announce themselves, because it locks others out.
     const sendHeartbeat = async () => {
+      if (!hasEditPermission.value) {
+        return;
+      }
       try {
         await axios.post(
           generateUrl('/apps/formvox/api/form/{fileId}/presence', { fileId: props.fileId })
@@ -1049,6 +1209,12 @@ export default {
       canViewResponses,
       canShare,
       debouncedSave,
+      save,
+      blocked,
+      reload,
+      saveErrors,
+      errorsFor,
+      questionLabel,
       updateDescriptionAlign,
       addDescriptor,
       visibleFormQuestions,
@@ -1071,8 +1237,6 @@ export default {
       duplicateQuestionById,
       onQuestionDragEnd,
       moveQuestionToPage,
-      updateSettings,
-      updatePermissions,
       updateBranding,
       viewResults,
       goBack,
@@ -1118,6 +1282,25 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.save-error-banner {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: var(--color-error-light, #fde8e8);
+  border: 1px solid var(--color-error);
+  border-radius: var(--border-radius-large);
+  color: var(--color-error-text, var(--color-main-text));
+
+  p {
+    margin: 0 0 4px;
+  }
+
+  ul {
+    margin: 0;
+    padding-inline-start: 20px;
+    list-style: disc;
+  }
 }
 
 .permission-banner {

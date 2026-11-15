@@ -72,10 +72,10 @@ function makeRegexes() {
 		N_RE: new RegExp(`(?<![\\w$])${T_PREFIX}n\\(\\s*(?:'formvox'\\s*,\\s*)?${NOT_APPID}${STR}\\s*,\\s*${STR}`, 'g'),
 		DT_RE: new RegExp(`(?:this\\.)?\\$t\\(\\s*${STR}`, 'g'),
 		DN_RE: new RegExp(`(?:this\\.)?\\$n\\(\\s*${STR}\\s*,\\s*${STR}`, 'g'),
-		// PHP only: ->t("…") / ->n("…", "…"). xgettext (the bot's PHP pass)
-		// reads both quote styles, so the manifest must too.
-		PT_RE: new RegExp(`->t\\(\\s*${DQ_STR}`, 'g'),
-		PN_RE: new RegExp(`->n\\(\\s*${DQ_STR}\\s*,\\s*${DQ_STR}`, 'g'),
+		// PHP only: ->t("…") / ->n("…", "…") / Translatable::t("…"). xgettext (the
+		// bot's PHP pass) reads both quote styles, so the manifest must too.
+		PT_RE: new RegExp(`(?<![\\w$])${T_PREFIX}t\\(\\s*${DQ_STR}`, 'g'),
+		PN_RE: new RegExp(`(?<![\\w$])${T_PREFIX}n\\(\\s*${DQ_STR}\\s*,\\s*${DQ_STR}`, 'g'),
 	};
 }
 
@@ -215,7 +215,7 @@ function computeSourceStrings() {
 		const isPhp = file.endsWith('.php');
 		const template = file.endsWith('.vue') ? content.match(/<template>([\s\S]*)<\/template>/) : null;
 		const inTemplate = (i) => template !== null && i >= template.index && i < template.index + template[0].length;
-		const callRe = isPhp ? /->[tn]\(/g : /(?<![\w$])(?:this\.)?[tn]\(\s*'formvox'/g;
+		const callRe = isPhp ? /(?:->|::)[tn]\(/g : /(?<![\w$])(?:this\.)?[tn]\(\s*'formvox'/g;
 		const hintAt = (i) => hintFor(content, i, inTemplate(i), callRe);
 
 		// Plurals first so we can record the pairing; their singular also counts.

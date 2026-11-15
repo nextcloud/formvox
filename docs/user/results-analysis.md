@@ -112,14 +112,12 @@ Export and clear old responses:
 
 ## Notifications
 
-Get notified of new responses:
+FormVox sends a Nextcloud notification when someone submits a response, on by
+default for the form owner. You manage the recipients under **Share → Response
+settings → Notify on new responses**.
 
-1. Open form settings
-2. Enable **Email notifications**
-3. Choose notification frequency:
-   - Every submission
-   - Daily summary
-   - Weekly summary
+See [Notifications on New Responses](sharing-publishing.md#notifications-on-new-responses)
+for the full details.
 
 ## Best Practices
 

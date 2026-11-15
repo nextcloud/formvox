@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FormVox 1.5.0\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"POT-Creation-Date: 2026-10-09 17:03+0000\n"
+"POT-Creation-Date: 2026-11-14 14:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -14,6 +14,9 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "'%1$s' is not an option of question '%2$s'"
+msgstr ""
 
 #. TRANSLATORS: {question} is the question text
 msgid "\"{question}\" does not match the required format"
@@ -39,8 +42,17 @@ msgstr ""
 msgid "{n} of max {max} selected"
 msgstr ""
 
+msgid "{name} (creator, you)"
+msgstr ""
+
+msgid "{name} (creator)"
+msgstr ""
+
 #. TRANSLATORS: {name} is the name of the person looking at the dialog
 msgid "{name} (you)"
+msgstr ""
+
+msgid "{name} can no longer open this form and does not receive notifications."
 msgstr ""
 
 #. TRANSLATORS: {size} is a number of megabytes, for example 8
@@ -53,19 +65,48 @@ msgstr ""
 msgid "/ (root folder)"
 msgstr ""
 
+#. TRANSLATORS: Error when a form file put through Files or WebDAV would break the form; %1$s is what is wrong, %2$s the question's id
+msgid "%1$s (question %2$s)"
+msgstr ""
+
 #. TRANSLATORS: %1$s is the form title; a date and time follow below
 msgid "%1$s is scheduled to open at:"
+msgstr ""
+
+msgid "%d more responses were not imported for the same kind of reasons"
+msgstr ""
+
+#. TRANSLATORS: Warning after a Microsoft Forms import when the storage ran full; %d is how many responses were left out
+msgid "%d responses were not imported: there is not enough storage space"
 msgstr ""
 
 msgid "+ Add condition"
 msgstr ""
 
-msgid "A server extension blocked the upload"
+msgid "A form can have at most %s questions"
+msgstr ""
+
+msgid "A form can send respondents their answers as a PDF with the confirmation email. By default only respondents who are signed in get it."
+msgstr ""
+
+#. TRANSLATORS: Error when renaming or copying a FormVox form to another file type in Files
+msgid "A form keeps the .fvform extension"
+msgstr ""
+
+#. TRANSLATORS: Error when a form file holds a number such as 1e999 that cannot be stored
+msgid "A number in the form is too large."
+msgstr ""
+
+msgid "A password is required for public links."
+msgstr ""
+
+msgid "A response from %1$s was not imported: %2$s"
 msgstr ""
 
 msgid "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development."
 msgstr ""
 
+#. TRANSLATORS: Error shown when an AI form is asked for without a title
 msgid "A title is required."
 msgstr ""
 
@@ -74,10 +115,6 @@ msgstr ""
 
 #. TRANSLATORS: Heading
 msgid "Access control"
-msgstr ""
-
-#. TRANSLATORS: Error when the account may not open the form
-msgid "Access denied"
 msgstr ""
 
 #. TRANSLATORS: Heading when an account may not open a form
@@ -142,6 +179,9 @@ msgstr ""
 msgid "Add social links in settings"
 msgstr ""
 
+msgid "Add someone below who should receive them."
+msgstr ""
+
 msgid "Add source document (optional)"
 msgstr ""
 
@@ -168,9 +208,11 @@ msgstr ""
 msgid "AI could not generate \"%1$s\""
 msgstr ""
 
+#. TRANSLATORS: Shown in a notification when the AI made a form without questions
 msgid "AI did not generate any questions."
 msgstr ""
 
+#. TRANSLATORS: Shown in a notification when none of the AI's questions could be used
 msgid "AI did not generate any usable questions."
 msgstr ""
 
@@ -188,6 +230,7 @@ msgstr ""
 msgid "AI form generation"
 msgstr ""
 
+#. TRANSLATORS: Error shown when the instance has no AI provider for generating forms
 msgid "AI form generation is not available on this instance."
 msgstr ""
 
@@ -209,6 +252,7 @@ msgstr ""
 msgid "AI provider available"
 msgstr ""
 
+#. TRANSLATORS: Shown in a notification when the AI's answer could not be read as a form
 msgid "AI returned an invalid response. Try a shorter or simpler description."
 msgstr ""
 
@@ -288,6 +332,9 @@ msgstr ""
 msgid "Allowed groups"
 msgstr ""
 
+msgid "Also send the PDF to anonymous respondents"
+msgstr ""
+
 #. TRANSLATORS: Label: a text that describes an image for screen readers
 msgid "Alt text"
 msgstr ""
@@ -296,7 +343,10 @@ msgstr ""
 msgid "Amount"
 msgstr ""
 
-msgid "An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there."
+msgid "An anonymous respondent can type in any email address, and it is not checked. Someone could have your mail server send a PDF with their own text to another person. At most 3 such emails go to one address a day and 200 per form an hour; above that the email goes without the PDF."
+msgstr ""
+
+msgid "An email question is added to your form automatically."
 msgstr ""
 
 msgid "An error occurred"
@@ -322,6 +372,13 @@ msgstr ""
 
 #. TRANSLATORS: Error shown to a respondent; %1$s is the question text, %2$d the maximum number of characters
 msgid "Answer for question '%1$s' exceeds the %2$d-character limit"
+msgstr ""
+
+msgid "Answer for question '%s' is out of range"
+msgstr ""
+
+#. TRANSLATORS: Error for integrations that send a response without its answers
+msgid "answers parameter is required and must be an object"
 msgstr ""
 
 msgid "Any final thoughts or feedback?"
@@ -350,6 +407,10 @@ msgstr ""
 msgid "API key deleted"
 msgstr ""
 
+#. TRANSLATORS: Error for integrations; %s is the name of an API key permission, e.g. read_responses
+msgid "API key does not have %s permission"
+msgstr ""
+
 msgid "Are you sure you want to delete ALL responses? This action cannot be undone."
 msgstr ""
 
@@ -369,6 +430,9 @@ msgid "Are you sure you want to delete this response?"
 msgstr ""
 
 msgid "Are you sure you want to delete this webhook?"
+msgstr ""
+
+msgid "Attach a PDF of the response"
 msgstr ""
 
 #. TRANSLATORS: Heading above the placeholders a template can use
@@ -474,6 +538,7 @@ msgstr ""
 msgid "Center"
 msgstr ""
 
+#. TRANSLATORS: Error shown when the anti-spam check of a public form failed
 msgid "Challenge verification failed. Please refresh the page."
 msgstr ""
 
@@ -552,6 +617,9 @@ msgstr ""
 msgid "Conditions"
 msgstr ""
 
+msgid "Conditions and page routing that used this question were removed too"
+msgstr ""
+
 msgid "Configure Microsoft Azure AD credentials to enable importing forms from Microsoft Forms."
 msgstr ""
 
@@ -574,6 +642,10 @@ msgid "Connect Microsoft account"
 msgstr ""
 
 msgid "Connect to Microsoft"
+msgstr ""
+
+#. TRANSLATORS: Error shown when the import needs the user to connect their Microsoft account first
+msgid "Connect your Microsoft account first"
 msgstr ""
 
 msgid "Connect your Microsoft account to access your forms."
@@ -621,28 +693,15 @@ msgstr ""
 msgid "Copy this code to embed the form in your website, SharePoint, or intranet."
 msgstr ""
 
+msgid "Copy this generated password now; it will not be shown again."
+msgstr ""
+
 #. TRANSLATORS: Answer option in the demo form (something a user may find important)
 msgid "Cost"
 msgstr ""
 
 #. TRANSLATORS: {error} is a technical message, often in English
 msgid "Could not create FormVox form: {error}"
-msgstr ""
-
-#. TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
-msgid "Could not fetch your forms: %s"
-msgstr ""
-
-#. TRANSLATORS: Import warning; %s is the technical reason, usually in English
-msgid "Could not import responses: %s"
-msgstr ""
-
-#. TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
-msgid "Could not import the form: %s"
-msgstr ""
-
-#. TRANSLATORS: Microsoft Forms import error; %s is the technical reason, usually in English
-msgid "Could not load the form: %s"
 msgstr ""
 
 msgid "Could not reach the license server, so the FormVox subscription status could not be confirmed."
@@ -655,9 +714,6 @@ msgid "Could not reach the telemetry server. Please try again later."
 msgstr ""
 
 msgid "Could not resolve the selected file."
-msgstr ""
-
-msgid "Could not schedule the AI task."
 msgstr ""
 
 #. TRANSLATORS: Verb: button that creates the form
@@ -892,6 +948,9 @@ msgstr ""
 msgid "Download all"
 msgstr ""
 
+msgid "Download PDF"
+msgstr ""
+
 msgid "Download QR code"
 msgstr ""
 
@@ -1062,6 +1121,9 @@ msgstr ""
 msgid "Events"
 msgstr ""
 
+msgid "Every question needs an id of letters, digits, - or _ (at most 64)"
+msgstr ""
+
 #. TRANSLATORS: {pattern1} and {pattern2} are regular expressions; they stay as they are
 msgid "Examples: {pattern1} (license plate), {pattern2} (10 digits)"
 msgstr ""
@@ -1099,6 +1161,9 @@ msgstr ""
 
 #. TRANSLATORS: Answer option in the demo form (ways to export responses)
 msgid "Export options"
+msgstr ""
+
+msgid "Export PDFs (ZIP)"
 msgstr ""
 
 #. TRANSLATORS: Label at the high end of an imported 0 to 10 recommendation scale
@@ -1248,7 +1313,7 @@ msgstr ""
 msgid "File \"{name}\" is too large. Maximum size is {size} MB"
 msgstr ""
 
-#. TRANSLATORS: Upload error; %s is a number of megabytes, for example 2
+#. TRANSLATORS: Error shown when an uploaded file is too large; %s is the limit in megabytes
 msgid "File is too large. The maximum size is %s MB."
 msgstr ""
 
@@ -1260,8 +1325,21 @@ msgstr ""
 msgid "File-based storage"
 msgstr ""
 
+msgid "Files and folders that belong to a form cannot be shared by link, email, Talk or Teams."
+msgstr ""
+
+#. TRANSLATORS: In the PDF of a response: who filled in the form, a name or "Anonymous"
+msgid "Filled in by: %s"
+msgstr ""
+
+msgid "Fix what is marked; the next change is saved again."
+msgstr ""
+
 #. TRANSLATORS: Answer option in the demo form (something a user may find important)
 msgid "Flexibility"
+msgstr ""
+
+msgid "Folders with forms cannot be downloaded through a public link."
 msgstr ""
 
 #. TRANSLATORS: Noun: the area below the form
@@ -1309,7 +1387,27 @@ msgstr ""
 msgid "Formatting"
 msgstr ""
 
+#. TRANSLATORS: Name of a check in the admin overview about the database FormVox stores responses in
+msgid "FormVox database"
+msgstr ""
+
+#. TRANSLATORS: Warning in the admin overview; keep "occ db:convert-type" as it is, it is a command
+msgid "FormVox does not fully support SQLite. Responses are stored in the database, and SQLite handles one write at a time, so many respondents at once can get errors. Use MySQL, MariaDB or PostgreSQL; to move, use the command line tool \"occ db:convert-type\"."
+msgstr ""
+
+#. TRANSLATORS: Name of a check in the admin overview about how FormVox sends emails, webhooks and notifications
+msgid "FormVox emails, webhooks and notifications"
+msgstr ""
+
 msgid "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support."
+msgstr ""
+
+#. TRANSLATORS: Name of a check in the admin overview about sending the PDF of a response to anonymous respondents
+msgid "FormVox PDF for anonymous respondents"
+msgstr ""
+
+#. TRANSLATORS: Warning in the admin overview; "Cron" is the name of the background jobs setting in Nextcloud
+msgid "FormVox sends confirmation emails, webhooks and notifications about new responses in the background. Without the system cron they can arrive late. Set background jobs to \"Cron\"."
 msgstr ""
 
 #. TRANSLATORS: {reason} comes from the license server, in English
@@ -1503,7 +1601,22 @@ msgstr ""
 msgid "In Nextcloud files"
 msgstr ""
 
+msgid "In question '%1$s', %2$s is larger than %3$s"
+msgstr ""
+
 msgid "In the cloud"
+msgstr ""
+
+msgid "Inactive — {name} no longer has access to this form"
+msgstr ""
+
+msgid "Inactive — it is not known who made it"
+msgstr ""
+
+msgid "Inactive — the account of {name} is disabled"
+msgstr ""
+
+msgid "Inactive — the account of {name} no longer exists"
 msgstr ""
 
 msgid "Include your API key in the X-FormVox-API-Key header."
@@ -1543,6 +1656,10 @@ msgstr ""
 msgid "Invalid answer for question '%s'"
 msgstr ""
 
+#. TRANSLATORS: Error for integrations whose API key is not valid for this form (any reason looks the same)
+msgid "Invalid API key"
+msgstr ""
+
 #. TRANSLATORS: Error; %s is the question text
 msgid "Invalid date format for question '%s'"
 msgstr ""
@@ -1551,16 +1668,16 @@ msgstr ""
 msgid "Invalid datetime format for question '%s'"
 msgstr ""
 
-#. TRANSLATORS: Upload error; %s is a list of file formats such as "PNG, JPEG, SVG, GIF, WebP"
-msgid "Invalid file type. Allowed: %s"
-msgstr ""
-
-#. TRANSLATORS: Upload error: the upload does not belong to a file question of this form
+#. TRANSLATORS: Error shown when a file is sent for a question that does not take files
 msgid "Invalid question"
 msgstr ""
 
 #. TRANSLATORS: Error; %s is the question text
 msgid "Invalid time format for question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Error shown when an upload names an upload group that is not valid
+msgid "Invalid upload id"
 msgstr ""
 
 msgid "is currently editing this form"
@@ -1585,8 +1702,15 @@ msgstr ""
 msgid "is one of"
 msgstr ""
 
+msgid "It is busy right now, please keep this page open"
+msgstr ""
+
 #. TRANSLATORS: Tooltip of a text editor button
 msgid "Italic"
+msgstr ""
+
+#. TRANSLATORS: Switch: the form keeps a PDF of each response, for downloads, the API, webhooks and the confirmation email
+msgid "Keep a PDF of every response"
 msgstr ""
 
 #. TRANSLATORS: Label of the name field of a new API key
@@ -1654,6 +1778,9 @@ msgstr ""
 msgid "Loading …"
 msgstr ""
 
+msgid "Loading more responses … {loaded} of {total}"
+msgstr ""
+
 msgid "Loading statistics …"
 msgstr ""
 
@@ -1666,6 +1793,10 @@ msgstr ""
 
 #. TRANSLATORS: Question type: an answer of several lines
 msgid "Long text"
+msgstr ""
+
+#. TRANSLATORS: Hint under the switch "Keep a PDF of every response" when it is on
+msgid "Made right after each submission, with the questions as the respondent saw them."
 msgstr ""
 
 #. TRANSLATORS: Verb: button that opens Nextcloud's sharing
@@ -1747,6 +1878,7 @@ msgstr ""
 msgid "Microsoft Forms import is not configured. Please ask your administrator to configure it in Administration settings > FormVox > Integrations."
 msgstr ""
 
+#. TRANSLATORS: Error shown when the admin has not set up the Microsoft Forms import
 msgid "Microsoft Forms is not configured. Ask your administrator to configure it."
 msgstr ""
 
@@ -1767,6 +1899,10 @@ msgstr ""
 
 #. TRANSLATORS: Label: how many options must be picked at least
 msgid "Minimum selections"
+msgstr ""
+
+#. TRANSLATORS: Error for integrations that call the API without their key
+msgid "Missing API key. Provide X-FormVox-API-Key header."
 msgstr ""
 
 #. TRANSLATORS: Menu entry; {section} is the title of a section
@@ -1792,6 +1928,9 @@ msgstr ""
 
 #. TRANSLATORS: Name of a tab
 msgid "My forms"
+msgstr ""
+
+msgid "Needs a shared memory cache (Redis or Memcached), so the limits for anonymous respondents can be kept."
 msgstr ""
 
 #. TRANSLATORS: Shown instead of a date when no report was sent yet
@@ -1844,9 +1983,6 @@ msgstr ""
 msgid "No AI provider configured"
 msgstr ""
 
-msgid "No AI text-to-text provider is available on this Nextcloud instance."
-msgstr ""
-
 #. TRANSLATORS: %s is the technical name of a Nextcloud app, "integration_openai"; keep it as is
 msgid "No AI text-to-text provider is configured on this instance. Install an AI provider (for example %s) first."
 msgstr ""
@@ -1861,6 +1997,12 @@ msgstr ""
 msgid "No custom templates yet."
 msgstr ""
 
+#. TRANSLATORS: Error shown when a save of a form carries nothing to save
+msgid "No data provided"
+msgstr ""
+
+#. TRANSLATORS: Error when a branding image upload carried no file
+#. TRANSLATORS: Error shown when no file was sent
 msgid "No file was uploaded"
 msgstr ""
 
@@ -1886,6 +2028,10 @@ msgstr ""
 
 #. TRANSLATORS: Placeholder of an empty minimum field
 msgid "No minimum"
+msgstr ""
+
+#. TRANSLATORS: Error shown when more files are sent for one response than the form's questions take
+msgid "No more files can be added to this response"
 msgstr ""
 
 msgid "No previous questions available. Conditions can only reference questions that appear before this one."
@@ -1915,19 +2061,23 @@ msgstr ""
 msgid "Not at all likely"
 msgstr ""
 
-#. TRANSLATORS: Error when a request has no logged-in account
-msgid "Not authenticated"
-msgstr ""
-
-msgid "Not connected to Microsoft. Please connect first."
-msgstr ""
-
 #. TRANSLATORS: Comparison operator in a routing rule
 msgid "not equals"
 msgstr ""
 
+#. TRANSLATORS: Error shown when something asked for does not exist or cannot be seen
+msgid "Not found"
+msgstr ""
+
 #. TRANSLATORS: Label at the low end of an example rating scale
 msgid "Not likely"
+msgstr ""
+
+#. TRANSLATORS: Error shown when the session has ended and the user must log in again
+msgid "Not logged in"
+msgstr ""
+
+msgid "Not saved. Please try again."
 msgstr ""
 
 msgid "Note: Search for \"Microsoft Forms\" under \"APIs my organization uses\""
@@ -1963,7 +2113,19 @@ msgstr ""
 msgid "ODT template …"
 msgstr ""
 
+#. TRANSLATORS: Hint under the switch "Keep a PDF of every response" when it is off
+msgid "Off, no PDF is made for this form: not for the API, webhooks or the confirmation email."
+msgstr ""
+
 msgid "On external servers"
+msgstr ""
+
+#. TRANSLATORS: Error shown when a non-admin calls an admin-only action
+msgid "Only an administrator can do this."
+msgstr ""
+
+#. TRANSLATORS: Error when renaming or copying a file to the .fvform extension in Files
+msgid "Only FormVox turns a file into a form"
 msgstr ""
 
 msgid "Only selected accounts and group members can access this form. They will need to log in."
@@ -2025,6 +2187,9 @@ msgstr ""
 msgid "Overview of forms and responses in your FormVox installation."
 msgstr ""
 
+msgid "Page '%s' is not valid"
+msgstr ""
+
 #. TRANSLATORS: {current} is the page number, {total} the number of pages
 msgid "Page {current} of {total}"
 msgstr ""
@@ -2041,6 +2206,9 @@ msgstr ""
 msgid "Page routing"
 msgstr ""
 
+msgid "Page routing that led to this page was removed too"
+msgstr ""
+
 #. TRANSLATORS: Label of the password field
 msgid "Password"
 msgstr ""
@@ -2049,12 +2217,29 @@ msgstr ""
 msgid "Password protect"
 msgstr ""
 
-#. TRANSLATORS: Error when a password-protected form is submitted without the password
+#. TRANSLATORS: Error shown when the form's link needs a password that was not given
 msgid "Password required"
+msgstr ""
+
+msgid "PDF confirmation"
+msgstr ""
+
+#. TRANSLATORS: Error when a PDF is asked of a form whose owner turned "Keep a PDF of every response" off
+msgid "PDF generation is disabled for this form"
+msgstr ""
+
+#. TRANSLATORS: Error for integrations asking for a response's PDF before the background job made it
+msgid "PDF is not ready yet"
 msgstr ""
 
 #. TRANSLATORS: Choice of which files may be uploaded
 msgid "PDF only"
+msgstr ""
+
+msgid "PDFs still being made: %s. Download the ZIP again in a few minutes."
+msgstr ""
+
+msgid "PDFs that could not be made: %s. Your administrator finds the reason in the Nextcloud log."
 msgstr ""
 
 #. TRANSLATORS: Label of the number of rows per page
@@ -2100,6 +2285,10 @@ msgstr ""
 msgid "Please answer all rows in this question"
 msgstr ""
 
+msgid "Please answer all rows of question '%s'"
+msgstr ""
+
+#. TRANSLATORS: Error shown when an AI form is asked for without a description or a document
 msgid "Please describe the form you want to create or pick a source document."
 msgstr ""
 
@@ -2186,6 +2375,10 @@ msgstr ""
 msgid "Provide a description, an uploaded document, or both."
 msgstr ""
 
+#. TRANSLATORS: Error shown when the admin does not allow public links for this user
+msgid "Public links are not allowed"
+msgstr ""
+
 #. TRANSLATORS: Color name, also the name of a color theme
 msgid "Purple"
 msgstr ""
@@ -2194,8 +2387,32 @@ msgstr ""
 msgid "Question"
 msgstr ""
 
+msgid "Question '%1$s' can have at most %2$s columns"
+msgstr ""
+
+msgid "Question '%1$s' can have at most %2$s options"
+msgstr ""
+
+msgid "Question '%1$s' can have at most %2$s rows"
+msgstr ""
+
+msgid "Question '%1$s' can have at most %2$s stars"
+msgstr ""
+
+msgid "Question '%1$s' can take at most %2$s files of %3$s MB each"
+msgstr ""
+
+msgid "Question '%1$s' has an invalid %2$s"
+msgstr ""
+
 #. TRANSLATORS: Import warning; %1$s is the question text, %2$s a technical question type from Microsoft Forms
 msgid "Question '%1$s': Unknown type '%2$s' converted to text"
+msgstr ""
+
+msgid "Question '%s' has an invalid color"
+msgstr ""
+
+msgid "Question '%s' has an unknown type"
 msgstr ""
 
 #. TRANSLATORS: Error shown to a respondent; %s is the text of the question
@@ -2218,6 +2435,7 @@ msgstr ""
 msgid "Question {n}"
 msgstr ""
 
+#. TRANSLATORS: Error shown when an upload does not say which question it is for
 msgid "Question ID is required"
 msgstr ""
 
@@ -2267,6 +2485,10 @@ msgstr ""
 msgid "Read responses"
 msgstr ""
 
+#. TRANSLATORS: Name, without extension, of the note in a ZIP of PDFs that says which are missing
+msgid "README"
+msgstr ""
+
 #. TRANSLATORS: Name of a tab with recently used forms
 msgid "Recent"
 msgstr ""
@@ -2281,6 +2503,9 @@ msgstr ""
 
 #. TRANSLATORS: Technical term: a search pattern; use the common term in your language
 msgid "Regular expression"
+msgstr ""
+
+msgid "Reload"
 msgstr ""
 
 #. TRANSLATORS: Verb: button
@@ -2353,6 +2578,9 @@ msgstr ""
 msgid "Respondent:"
 msgstr ""
 
+msgid "Response %s"
+msgstr ""
+
 #. TRANSLATORS: Webhook event: a response was submitted
 msgid "Response created"
 msgstr ""
@@ -2378,6 +2606,11 @@ msgstr ""
 msgid "Response link deleted"
 msgstr ""
 
+#. TRANSLATORS: Error for integrations asking for a response that does not exist
+#. TRANSLATORS: Error when the response whose PDF was asked for does not exist
+msgid "Response not found"
+msgstr ""
+
 #. TRANSLATORS: Heading
 msgid "Response settings"
 msgstr ""
@@ -2388,6 +2621,9 @@ msgstr ""
 
 #. TRANSLATORS: Heading; {count} is the number of responses
 msgid "Responses ({count})"
+msgstr ""
+
+msgid "Responses carry the respondent's name, so respondents always sign in."
 msgstr ""
 
 #. TRANSLATORS: Checkbox: the embedded form adapts to the page width
@@ -2464,6 +2700,9 @@ msgstr ""
 msgid "Score"
 msgstr ""
 
+msgid "Score: %1$s / %2$s (%3$s%%)"
+msgstr ""
+
 msgid "Search accounts and groups"
 msgstr ""
 
@@ -2518,10 +2757,11 @@ msgstr ""
 msgid "Sending …"
 msgstr ""
 
-msgid "Server configuration error: missing temporary folder"
+#. TRANSLATORS: Note in the admin overview; Redis and Memcached are names of shared memory caches for Nextcloud
+msgid "Sending the PDF to anonymous respondents needs a shared memory cache (Redis or Memcached) to keep its limits, so it cannot be switched on."
 msgstr ""
 
-msgid "Server error: could not write the file"
+msgid "Sent to signed-in respondents at their account's e-mail address. Anonymous respondents get it only where the administrator allows it."
 msgstr ""
 
 #. TRANSLATORS: Switch: the link stops working after a set date
@@ -2575,6 +2815,9 @@ msgstr ""
 msgid "Showing {start}-{end} of {total}"
 msgstr ""
 
+msgid "Signed-in respondents receive it at their account's e-mail address. Others receive it at the address they enter in the question marked as their e-mail."
+msgstr ""
+
 #. TRANSLATORS: Question type: pick one option
 msgid "Single choice"
 msgstr ""
@@ -2609,6 +2852,14 @@ msgid "Someone"
 msgstr ""
 
 msgid "Something went wrong"
+msgstr ""
+
+#. TRANSLATORS: Shown in a notification when an AI form could not be created for a reason the log has
+msgid "Something went wrong while creating the form."
+msgstr ""
+
+#. TRANSLATORS: Error shown when the server failed for a reason it does not tell; the request id helps the admin find it in the log
+msgid "Something went wrong, please try again"
 msgstr ""
 
 #. TRANSLATORS: Step name in the import dialog: choose where to import from; keep it short
@@ -2678,6 +2929,9 @@ msgstr ""
 msgid "Submitted at"
 msgstr ""
 
+msgid "Submitted on %s"
+msgstr ""
+
 #. TRANSLATORS: Label in an exported document; the date of the response follows
 msgid "Submitted:"
 msgstr ""
@@ -2738,6 +2992,10 @@ msgstr ""
 msgid "Table"
 msgstr ""
 
+#. TRANSLATORS: Error shown when polling an AI task that does not exist or is someone else's
+msgid "Task not found"
+msgstr ""
+
 #. TRANSLATORS: Label before the technical name of the AI task type, which stays in English
 msgid "Task type:"
 msgstr ""
@@ -2750,6 +3008,10 @@ msgstr ""
 
 #. TRANSLATORS: Confirmation message
 msgid "Template deleted"
+msgstr ""
+
+#. TRANSLATORS: Error shown when an admin removes a template that is already gone
+msgid "Template not found"
 msgstr ""
 
 #. TRANSLATORS: Confirmation message
@@ -2810,30 +3072,91 @@ msgstr ""
 msgid "Thank you!"
 msgstr ""
 
-#. TRANSLATORS: Error; %s is the reason given by the AI provider, often in English
-msgid "The AI task failed: %s"
+msgid "The account of {name} is disabled and does not receive notifications."
+msgstr ""
+
+msgid "The account of {name} no longer exists and does not receive notifications."
 msgstr ""
 
 msgid "The AI will draft questions based on your description. Generation can take up to 2 minutes."
 msgstr ""
 
-msgid "The file exceeds the maximum size allowed"
+msgid "The answers are too large"
 msgstr ""
 
+msgid "The branding is not valid"
+msgstr ""
+
+msgid "The condition of question '%s' is not valid"
+msgstr ""
+
+msgid "The condition of question '%s' refers to a question that no longer exists"
+msgstr ""
+
+msgid "The description must be text"
+msgstr ""
+
+#. TRANSLATORS: Error shown when an uploaded file is larger than the server allows
 msgid "The file exceeds the maximum upload size"
 msgstr ""
 
+#. TRANSLATORS: Error shown when an upload was interrupted
 msgid "The file was only partially uploaded"
 msgstr ""
 
-msgid "The import is not available."
+#. TRANSLATORS: Error when saving a form put through Files or WebDAV failed on the server
+msgid "The form could not be saved, please try again"
 msgstr ""
 
-msgid "The Microsoft Forms connection is not available."
+#. TRANSLATORS: Error shown when another save holds the form for a moment
+#. TRANSLATORS: Error when a form is moved or renamed in Files while FormVox saves it
+#. TRANSLATORS: Error when a form file is written through Files or another app while FormVox saves it
+msgid "The form is busy, please try again"
+msgstr ""
+
+#. TRANSLATORS: Error when a branding image is too large
+msgid "The image is larger than 2 MB"
+msgstr ""
+
+#. TRANSLATORS: Error shown to an admin when no more form templates can be saved
+msgid "The maximum number of templates has been reached"
+msgstr ""
+
+#. TRANSLATORS: Error shown when the Microsoft Forms import is not set up on this server
+msgid "The Microsoft Forms import is not available"
 msgstr ""
 
 #. TRANSLATORS: Error shown to a respondent; %s is the label of an answer option that has no places left
 msgid "The option '%s' is no longer available — capacity reached"
+msgstr ""
+
+msgid "The pages must be a list"
+msgstr ""
+
+msgid "The pattern of question '%s' is not a valid regular expression"
+msgstr ""
+
+msgid "The PDF could not be made"
+msgstr ""
+
+msgid "The questions must be a list"
+msgstr ""
+
+#. TRANSLATORS: Warning after a Microsoft Forms import when its responses could not be fetched
+msgid "The responses could not be imported; the form itself was."
+msgstr ""
+
+msgid "The scale of question '%1$s' must start at 0 or 1 and end at %2$s at most"
+msgstr ""
+
+#. TRANSLATORS: Error shown when the server could not store an upload for a reason of its own
+msgid "The server could not store the file"
+msgstr ""
+
+msgid "The setting %s has an invalid value"
+msgstr ""
+
+msgid "The settings must be an object"
 msgstr ""
 
 msgid "The source must be a file."
@@ -2843,8 +3166,22 @@ msgstr ""
 msgid "The telemetry server returned an error: {error}"
 msgstr ""
 
+msgid "The title must be text of at most %s characters"
+msgstr ""
+
+msgid "The uploaded file for question '%s' was not found"
+msgstr ""
+
 #. TRANSLATORS: Label above ready-made color themes
 msgid "Theme presets"
+msgstr ""
+
+#. TRANSLATORS: Error when the form cannot be saved because the owner's or team folder's storage is full
+msgid "There is not enough storage space to save this form"
+msgstr ""
+
+#. TRANSLATORS: In the PDF of a response, under an answer too long to show whole
+msgid "This answer is shortened in the PDF; the full answer is in FormVox."
 msgstr ""
 
 msgid "This controls whether the next question is shown"
@@ -2859,28 +3196,56 @@ msgstr ""
 msgid "This field does not match the required format"
 msgstr ""
 
+#. TRANSLATORS: Error shown when a form file is damaged or is no form
+#. TRANSLATORS: Error when a file put over a form through Files or WebDAV is not a FormVox form
+msgid "This file is not a FormVox form"
+msgstr ""
+
+#. TRANSLATORS: Error shown when an uploaded file is of a type the question does not take
 msgid "This file type is not allowed"
 msgstr ""
 
+#. TRANSLATORS: Error when a form file put through Files or WebDAV is far larger than any form can be
+msgid "This form file is too large"
+msgstr ""
+
+#. TRANSLATORS: Error shown when a form's closing date has passed
 msgid "This form has expired"
 msgstr ""
 
+#. TRANSLATORS: Error shown when replacing a form's link while it has none
+msgid "This form has no share link to replace"
+msgstr ""
+
+#. TRANSLATORS: Error shown when a form has as many responses as its creator allows
 msgid "This form has reached its response limit"
 msgstr ""
 
 msgid "This form is no longer accepting responses."
 msgstr ""
 
+#. TRANSLATORS: Error shown when a form's opening date has not come yet
 msgid "This form is not yet open"
 msgstr ""
 
 msgid "This form is password protected"
 msgstr ""
 
+msgid "This form no longer exists or was moved."
+msgstr ""
+
+#. TRANSLATORS: Error shown when a form only takes answers from signed-in people
 msgid "This form requires you to be logged in"
 msgstr ""
 
 msgid "This form uses the default theme. Enable custom theme above to customize."
+msgstr ""
+
+msgid "This form was changed elsewhere."
+msgstr ""
+
+#. TRANSLATORS: Error when a form was changed in another tab or by someone else since it was opened
+msgid "This form was changed elsewhere. Reload to see the latest version."
 msgstr ""
 
 msgid "This FormVox subscription key has been deactivated. Contact us to reactivate it."
@@ -2958,6 +3323,10 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
+#. TRANSLATORS: Hint under the disabled "Attach a PDF of the response" option; "Keep a PDF of every response" is the switch below it
+msgid "To attach it, first turn on \"Keep a PDF of every response\" below."
+msgstr ""
+
 msgid "To enable Microsoft Forms import, you need to register an application in Azure AD."
 msgstr ""
 
@@ -2992,9 +3361,6 @@ msgstr ""
 
 #. TRANSLATORS: Shown in a notification when the form's title is not known
 msgid "Unknown form"
-msgstr ""
-
-msgid "Unknown upload error"
 msgstr ""
 
 msgid "Unsupported file type. Use PDF, DOCX, ODT, or a plain text file."
@@ -3053,6 +3419,10 @@ msgid "URL"
 msgstr ""
 
 msgid "Use \"common\" for multi-tenant, or your specific tenant ID for single-tenant."
+msgstr ""
+
+#. TRANSLATORS: Error when a branding image is not one of the allowed formats
+msgid "Use a PNG, JPEG, GIF or WebP image"
 msgstr ""
 
 msgid "Use custom theme for this form"
@@ -3186,6 +3556,9 @@ msgstr ""
 msgid "Width:"
 msgstr ""
 
+msgid "Without login, a repeat is recognized by network and browser; colleagues on one network may look like one person."
+msgstr ""
+
 #. TRANSLATORS: Verb: button to edit the form together with others
 msgid "Work together"
 msgstr ""
@@ -3214,6 +3587,9 @@ msgstr ""
 msgid "You are connected to Microsoft. Click Next to select a form to import."
 msgstr ""
 
+msgid "You can no longer edit this form."
+msgstr ""
+
 msgid "You can view the form but not make changes right now."
 msgstr ""
 
@@ -3229,12 +3605,15 @@ msgstr ""
 msgid "You do not have permission to edit this form"
 msgstr ""
 
+#. TRANSLATORS: Error shown when a form only takes answers from certain people or groups
 msgid "You do not have permission to submit this form"
 msgstr ""
 
+#. TRANSLATORS: Error shown when a form only takes files from certain people or groups
 msgid "You do not have permission to upload files to this form"
 msgstr ""
 
+#. TRANSLATORS: Error shown when someone answers a form that takes one response per person a second time
 msgid "You have already submitted a response to this form"
 msgstr ""
 
@@ -3244,7 +3623,13 @@ msgstr ""
 msgid "You have read-only access to this form. Contact the owner to request edit permissions."
 msgstr ""
 
+msgid "Your account has no e-mail address, so no confirmation can be sent."
+msgstr ""
+
 msgid "Your actual server URL"
+msgstr ""
+
+msgid "Your confirmation goes to {email}."
 msgstr ""
 
 msgid "Your email address"
@@ -3265,6 +3650,15 @@ msgstr ""
 
 #. TRANSLATORS: Heading above statistics of this Nextcloud server
 msgid "Your installation"
+msgstr ""
+
+msgid "Your latest changes are not saved."
+msgstr ""
+
+msgid "Your latest changes are not saved. Ask the owner for edit rights."
+msgstr ""
+
+msgid "Your latest changes are not saved. Reload to see the current version and continue from there."
 msgstr ""
 
 msgid "Your response has been recorded."
@@ -3314,6 +3708,12 @@ msgid_plural "%n responses collected"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: %n is the number of responses that were not imported
+msgid "%n response did not fit the form and was not imported; the reason is below."
+msgid_plural "%n responses did not fit the form and were not imported; the reasons are below."
+msgstr[0] ""
+msgstr[1] ""
+
 #. TRANSLATORS: %n is the number of responses that were imported
 msgid "%n response imported"
 msgid_plural "%n responses imported"
@@ -3359,11 +3759,5 @@ msgstr[1] ""
 #. TRANSLATORS: Error shown to a respondent; %n is the maximum number of options to tick, %s the question text
 msgid "Select at most %n option for question '%s'"
 msgid_plural "Select at most %n options for question '%s'"
-msgstr[0] ""
-msgstr[1] ""
-
-#. TRANSLATORS: Error; %n is the number of seconds the app waited for the AI
-msgid "The AI task timed out after %n second"
-msgid_plural "The AI task timed out after %n seconds"
 msgstr[0] ""
 msgstr[1] ""

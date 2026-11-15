@@ -27,6 +27,7 @@ return [
 		['name' => 'form#update', 'url' => '/api/form/{fileId}', 'verb' => 'PUT'],
 		['name' => 'form#delete', 'url' => '/api/form/{fileId}', 'verb' => 'DELETE'],
 		['name' => 'form#setFavorite', 'url' => '/api/form/{fileId}/favorite', 'verb' => 'POST'],
+		['name' => 'form#getCreator', 'url' => '/api/form/{fileId}/creator', 'verb' => 'GET'],
 
 		// API routes - AI form generator
 		['name' => 'settings#getAi', 'url' => '/api/settings/ai', 'verb' => 'GET'],
@@ -40,11 +41,13 @@ return [
 		['name' => 'response#getResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'GET'],
 		['name' => 'response#deleteAllResponses', 'url' => '/api/form/{fileId}/responses', 'verb' => 'DELETE'],
 		['name' => 'response#deleteResponse', 'url' => '/api/form/{fileId}/responses/{responseId}', 'verb' => 'DELETE'],
+		['name' => 'response#getResponsePdf', 'url' => '/api/form/{fileId}/responses/{responseId}/pdf', 'verb' => 'GET'],
 
 		// API routes - Export
 		['name' => 'export#exportCsv', 'url' => '/api/form/{fileId}/export/csv', 'verb' => 'GET'],
 		['name' => 'export#exportJson', 'url' => '/api/form/{fileId}/export/json', 'verb' => 'GET'],
 		['name' => 'export#exportExcel', 'url' => '/api/form/{fileId}/export/xlsx', 'verb' => 'GET'],
+		['name' => 'export#exportPdfs', 'url' => '/api/form/{fileId}/export/pdf', 'verb' => 'GET'],
 
 		// API routes - ODT template
 		['name' => 'export#uploadOdtTemplate', 'url' => '/api/form/{fileId}/odt-template', 'verb' => 'POST'],
@@ -94,6 +97,7 @@ return [
 
 		// Settings routes (admin only)
 		['name' => 'settings#saveEmbed', 'url' => '/api/settings/embed', 'verb' => 'POST'],
+		['name' => 'settings#savePdf', 'url' => '/api/settings/pdf', 'verb' => 'POST'],
 		['name' => 'settings#saveMsForms', 'url' => '/api/settings/ms-forms', 'verb' => 'POST'],
 
 		// Admin-managed templates (#100)
@@ -134,6 +138,7 @@ return [
 		['name' => 'external_api#getSchema', 'url' => '/api/v1/external/forms/{fileId}/schema', 'verb' => 'GET'],
 		['name' => 'external_api#getResponses', 'url' => '/api/v1/external/forms/{fileId}/responses', 'verb' => 'GET'],
 		['name' => 'external_api#getResponse', 'url' => '/api/v1/external/forms/{fileId}/responses/{responseId}', 'verb' => 'GET'],
+		['name' => 'external_api#getResponsePdf', 'url' => '/api/v1/external/forms/{fileId}/responses/{responseId}/pdf', 'verb' => 'GET'],
 		['name' => 'external_api#createResponse', 'url' => '/api/v1/external/forms/{fileId}/responses', 'verb' => 'POST'],
 		['name' => 'external_api#updateResponse', 'url' => '/api/v1/external/forms/{fileId}/responses/{responseId}', 'verb' => 'PUT'],
 		['name' => 'external_api#deleteResponse', 'url' => '/api/v1/external/forms/{fileId}/responses/{responseId}', 'verb' => 'DELETE'],

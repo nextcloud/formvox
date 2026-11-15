@@ -122,6 +122,29 @@ describe('ImportModal', () => {
 		expect(wrapper.text()).toContain('Form imported successfully!')
 	})
 
+	it('says how many responses did not fit the form, with the reasons', async () => {
+		vi.spyOn(axios, 'post').mockResolvedValue({
+			data: {
+				fileId: 99,
+				title: 'Feedback',
+				questionsImported: 4,
+				responsesImported: 3,
+				responsesSkipped: 2,
+				warnings: ["A response from 2024-01-03 was not imported: 'Purple' is not an option of question 'Colour'"],
+			},
+		})
+		const wrapper = mountModal()
+		await flushPromises()
+		wrapper.vm.selectMsForm({ id: 'f1', title: 'Feedback' })
+		await wrapper.vm.$nextTick()
+
+		await wrapper.vm.startImport()
+		await flushPromises()
+
+		expect(wrapper.find('.import-skipped').text()).toContain('2 responses did not fit the form')
+		expect(wrapper.text()).toContain("'Purple' is not an option of question 'Colour'")
+	})
+
 	it('surfaces the server error message on import failure', async () => {
 		vi.spyOn(axios, 'post').mockRejectedValue({ response: { data: { error: 'Quota exceeded' } } })
 		const wrapper = mountModal()

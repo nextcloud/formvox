@@ -178,13 +178,21 @@ class ChallengeService {
 	 * by fileId and a fixed purpose tag so it can't be reused as an ALTCHA
 	 * signature (or vice versa).
 	 */
-	public function issuePasswordToken(int $fileId): string {
+	/**
+	 * Proof that the link password was given, bound to that password and that link: a new password or a new link
+	 * lets nobody in with the old one (qual#110, secu#51, PO 6).
+	 *
+	 * @param array $settings the form's stored settings
+	 */
+	public function issuePasswordToken(int $fileId, array $settings): string {
 		$expiry = time() + self::PASSWORD_TOKEN_TTL;
-		$sig = hash_hmac('sha256', "pw:{$fileId}:{$expiry}", $this->hmacKey());
-		return "{$expiry}.{$sig}";
+		return "{$expiry}." . $this->passwordTokenSignature($fileId, $expiry, $settings);
 	}
 
-	public function verifyPasswordToken(?string $token, int $fileId): bool {
+	/**
+	 * @param array $settings the form's stored settings
+	 */
+	public function verifyPasswordToken(?string $token, int $fileId, array $settings): bool {
 		if ($token === null || $token === '') {
 			return false;
 		}
@@ -196,8 +204,36 @@ class ChallengeService {
 		if (!ctype_digit($expiry) || (int)$expiry < time()) {
 			return false;
 		}
-		$expected = hash_hmac('sha256', "pw:{$fileId}:{$expiry}", $this->hmacKey());
-		return hash_equals($expected, $sig);
+		return hash_equals($this->passwordTokenSignature($fileId, (int)$expiry, $settings), $sig);
+	}
+
+	private function passwordTokenSignature(int $fileId, int $expiry, array $settings): string {
+		$access = hash('sha256', (string)($settings['share_password_hash'] ?? '') . '|' . (string)($settings['public_token'] ?? ''));
+		return hash_hmac('sha256', "pw:{$fileId}:{$expiry}:{$access}", $this->hmacKey());
+	}
+
+	/**
+	 * A short-lived signed pass for one thing, "<expiry>.<hmac>": to retry a submission without solving a new challenge,
+	 * or to upload more files to one response (7a, 3a-5). Scoped by purpose, so one never works as the other.
+	 */
+	public function issuePass(string $purpose, string $subject, int $seconds): string {
+		$expiry = time() + $seconds;
+		return "{$expiry}." . hash_hmac('sha256', "pass:{$purpose}:{$expiry}:{$subject}", $this->hmacKey());
+	}
+
+	/**
+	 * @param string|\Closure():string $subject what the pass is for; a closure is only worked out for a pass that has
+	 *                                          not run out
+	 */
+	public function verifyPass(?string $pass, string $purpose, string|\Closure $subject): bool {
+		$parts = explode('.', (string)$pass, 2);
+		if (\count($parts) !== 2 || !ctype_digit($parts[0]) || (int)$parts[0] < time()) {
+			return false;
+		}
+		if ($subject instanceof \Closure) {
+			$subject = $subject();
+		}
+		return hash_equals(hash_hmac('sha256', "pass:{$purpose}:{$parts[0]}:{$subject}", $this->hmacKey()), $parts[1]);
 	}
 
 	private function currentHourBucket(): string {

@@ -61,7 +61,6 @@ class FormFactoryTest extends TestCase {
 			'settings' => [
 				'anonymous' => true,
 				'allow_multiple' => false,
-				'expires_at' => null,
 				'require_login' => false,
 				'allowed_users' => [],
 				'allowed_groups' => [],
@@ -74,7 +73,6 @@ class FormFactoryTest extends TestCase {
 			'pages' => null,
 			'branding' => null,
 			'_index' => [
-				'_checksum' => '',
 				'response_count' => 0,
 				'last_response_at' => null,
 				'fingerprints' => [],
@@ -96,7 +94,6 @@ class FormFactoryTest extends TestCase {
 		$this->assertSame([
 			'anonymous' => true,
 			'allow_multiple' => false,
-			'expires_at' => null,
 			'require_login' => false,
 			'allowed_users' => [],
 			'allowed_groups' => [],
@@ -151,7 +148,6 @@ class FormFactoryTest extends TestCase {
 		$this->assertSame([
 			'anonymous' => false,
 			'allow_multiple' => false,
-			'expires_at' => null,
 			'require_login' => false,
 			'allowed_users' => [],
 			'allowed_groups' => [],
@@ -174,7 +170,6 @@ class FormFactoryTest extends TestCase {
 		$this->assertSame([
 			'anonymous' => true,
 			'allow_multiple' => true,
-			'expires_at' => null,
 			'require_login' => false,
 			'allowed_users' => [],
 			'allowed_groups' => [],
@@ -248,6 +243,7 @@ class FormFactoryTest extends TestCase {
 	 */
 	public function testSanitizeFilename(string $in, string $expected): void {
 		$this->assertSame($expected, $this->factory->sanitizeFilename($in));
+		$this->assertTrue(mb_check_encoding($this->factory->sanitizeFilename($in), 'UTF-8'));
 	}
 
 	public static function sanitizeCases(): array {
@@ -258,6 +254,9 @@ class FormFactoryTest extends TestCase {
 			'empty becomes form' => ['', 'form'],
 			'only-invalid becomes form' => ['///', 'form'],
 			'truncates to 50' => [str_repeat('a', 80), str_repeat('a', 50)],
+			'truncates by character, not byte' => [str_repeat('ä', 60), str_repeat('ä', 50)],
+			'keeps Cyrillic whole' => [str_repeat('Анкета ', 10), mb_substr(str_repeat('Анкета-', 10), 0, 50)],
+			'invalid UTF-8 becomes form' => ["\xC3\x28 broken", 'form'],
 		];
 	}
 

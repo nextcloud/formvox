@@ -81,6 +81,29 @@ uploads/
 
 **Let op:** deze optie verschijnt alleen voor formulieren met bestand-upload-vragen waar bestanden zijn ingediend.
 
+### PDF per antwoord
+
+Elk antwoord is als PDF te downloaden: het formulier zoals de invuller het zag, alleen met de vragen die de invuller te
+zien kreeg, in diens taal en tijdzone. Bovenaan staat de huisstijl van je Nextcloud (de naam, de hoofdkleur en, als dat
+is ingesteld, het eigen logo), daaronder de titel en beschrijving van het formulier.
+
+- **Eén antwoord:** klik in de lijst met antwoorden op de PDF-knop in de rij.
+- **Alle antwoorden:** kies **PDF's exporteren (ZIP)** in het exportmenu. Bij een formulier met veel antwoorden van vóór
+  de PDF's bevat de ZIP de PDF's die klaar zijn en een LEESMIJ met hoeveel er nog worden gemaakt; die worden op de
+  achtergrond gemaakt, dus download de ZIP een paar minuten later opnieuw.
+
+De ZIP eindigt met `manifest.csv`: per antwoord één regel, met het id, de bestandsnaam van de PDF, de status
+(`included`; `pending` zolang hij nog wordt gemaakt; `failed` als hij niet gemaakt kon worden) en de SHA-256-controlesom en
+grootte van de PDF in de ZIP.
+
+Een PDF heet `{titel}_{datum}_{reactie-id}.pdf`, bijvoorbeeld `Aanmelding_2026-11-10_3f2a9c1e-….pdf`, overal hetzelfde: bij
+een download, in de ZIP en bij de bevestigingsmail. De titel staat er in gewone letters in (ä wordt ae, é wordt e).
+
+De PDF van een antwoord wordt één keer gemaakt en bewaard, dus het blijft hetzelfde document als je de vragen later
+aanpast. Wil je hem naar invullers sturen, zet dan in het deelvenster onder de bevestigingsmail **PDF van het antwoord
+meesturen** aan. Invullers die ingelogd zijn krijgen hem op het e-mailadres van hun account. Een PDF groter dan 8 MiB
+blijft achter; de bevestiging gaat dan zonder.
+
 ## Hoe te exporteren
 
 ### Vanuit de resultaten-weergave

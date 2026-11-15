@@ -74,9 +74,11 @@ export default {
     const localCondition = ref(props.condition ? JSON.parse(JSON.stringify(props.condition)) : null);
 
     const availableQuestions = computed(() => {
-      // Only show questions that come before the current question
+      // Only questions before this one that can be answered; unknown position offers none rather than later ones.
       const currentIndex = props.questions.findIndex(q => q.id === props.currentQuestionId);
-      return props.questions.slice(0, currentIndex);
+      return props.questions
+        .slice(0, Math.max(currentIndex, 0))
+        .filter(q => q.type !== 'section' && q.type !== 'descriptor');
     });
 
     const addSimpleCondition = () => {

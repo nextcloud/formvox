@@ -88,4 +88,14 @@ describe('FormCard', () => {
 		const wrapper = mount(FormCard, { props: { form: { ...baseForm, modifiedAt: null } } })
 		expect(wrapper.get('.form-card__date').text()).toBe('')
 	})
+
+	it('hides delete when Nextcloud does not allow deleting the form', () => {
+		const wrapper = mount(FormCard, { props: { form: { ...baseForm, canDelete: false } } })
+		expect(wrapper.find('.form-card__actions').exists()).toBe(false)
+	})
+
+	it('shows delete by default', () => {
+		const wrapper = mount(FormCard, { props: { form: baseForm } })
+		expect(wrapper.find('.form-card__actions').exists()).toBe(true)
+	})
 })

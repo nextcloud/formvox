@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Integration\Repository;
 
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\Security\FormSecrets;
 use OCA\FormVox\Service\FormRepository;
+use OCA\FormVox\Service\FormRevision;
+use OCA\FormVox\Service\OwnWrites;
+use OCA\FormVox\Service\ResponseService;
 use OCA\FormVox\Tests\Integration\IntegrationTestCase;
 use OCP\Files\File;
 use OCP\Files\Folder;
+use OCP\Server;
 
 /**
  * Target 4 — real .fvform storage round-trip through FormRepository, against a
@@ -94,7 +100,7 @@ class FormRepositoryIntegrationTest extends IntegrationTestCase {
 		// Also strip branding/pages so the default-injection branch runs.
 		$raw = $this->readFormFromStorage($file);
 		unset($raw['branding'], $raw['pages']);
-		$file->putContent(json_encode($raw, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+		Server::get(OwnWrites::class)->during(fn () => $file->putContent(json_encode($raw, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)));
 
 		$form = $this->repo()->load($file->getId());
 
@@ -146,12 +152,16 @@ class FormRepositoryIntegrationTest extends IntegrationTestCase {
 		$this->repo()->update($fileId, ['settings' => $settings]);
 
 		$file = $this->fileById($fileId);
-		$stored = $this->readFormFromStorage($file);
+		$this->assertArrayNotHasKey('share_password_hash', $this->readFormFromStorage($file)['settings'], 'the file keeps no secrets');
+		$stored = $this->repo()->read($file);
 
+		// Stored as a bcrypt hash, encrypted with the server's key (FormSecrets).
 		$this->assertArrayHasKey('share_password_hash', $stored['settings']);
-		$this->assertStringStartsWith('$2y$', $stored['settings']['share_password_hash']);
+		$this->assertStringStartsWith('enc:v1:', $stored['settings']['share_password_hash']);
+		$hash = Server::get(FormSecrets::class)->open($stored['settings']['share_password_hash']);
+		$this->assertStringStartsWith('$2y$', $hash);
 		$this->assertTrue(
-			password_verify('secret', $stored['settings']['share_password_hash']),
+			password_verify('secret', $hash),
 			'stored hash should verify against the original password'
 		);
 		$this->assertArrayNotHasKey(
@@ -205,5 +215,46 @@ class FormRepositoryIntegrationTest extends IntegrationTestCase {
 			$this->assertArrayHasKey('name', $entry);
 			$this->assertArrayHasKey('responseCount', $entry);
 		}
+	}
+
+	/** qual#26: a stale tab cannot overwrite a newer structure, and a submission meanwhile is no change. */
+	public function testAStaleSaveIsRefusedButASubmissionIsNoConflict(): void {
+		$file = $this->writeFormFile($this->userFolder, 'Revision ' . uniqid(), [
+			'settings' => ['allow_multiple' => true, 'anonymous' => false],
+			'questions' => [['id' => 'q1', 'type' => 'text', 'question' => 'Name']],
+		]);
+		$this->requirePublicResolvable($file->getId());
+		$fileId = $file->getId();
+		$seen = FormRevision::of($this->repo()->load($fileId));
+
+		Server::get(ResponseService::class)->submitAuthenticated($fileId, $this->repo()->loadPublic($fileId), ['q1' => 'Anna'], $this->ownerUid, 'Owner');
+		$this->repo()->update($fileId, ['description' => 'saved after a response came in'], $seen);
+
+		try {
+			$this->repo()->update($fileId, ['description' => 'from a tab that missed that save'], $seen);
+			$this->fail('A stale save went through');
+		} catch (RequestException $e) {
+			$this->assertSame('changed_elsewhere', $e->getReason());
+		}
+		$form = $this->repo()->load($fileId);
+		$this->assertSame('saved after a response came in', $form['description']);
+		$this->assertCount(1, $form['responses']);
+	}
+
+	/**
+	 * A folder named like a form is no form in the list, and the list's self-healing lookup never marks it as one
+	 * (review 3a-6: it would have turned the folder into a file for Nextcloud).
+	 */
+	public function testAFolderNamedLikeAFormStaysOutOfTheListAndAFolder(): void {
+		$folder = $this->userFolder->newFolder('Archive ' . uniqid() . '.fvform');
+		$loader = Server::get(\OCP\Files\IMimeTypeLoader::class);
+
+		$ids = array_column($this->repo()->listForms(), 'fileId');
+
+		$this->assertNotContains($folder->getId(), $ids);
+		$qb = Server::get(\OCP\IDBConnection::class)->getQueryBuilder();
+		$result = $qb->select('mimetype')->from('filecache')->where($qb->expr()->eq('fileid', $qb->createNamedParameter($folder->getId())))->executeQuery();
+		$this->assertSame($loader->getId('httpd/unix-directory'), (int)$result->fetchOne());
+		$result->closeCursor();
 	}
 }

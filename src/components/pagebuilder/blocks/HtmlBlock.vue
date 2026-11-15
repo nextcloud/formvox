@@ -8,7 +8,7 @@
 <script>
 import { computed } from 'vue';
 import { t } from '@/utils/l10n';
-import DOMPurify from 'dompurify';
+import { sanitizeBlockHtml } from '@/utils/blockHtml';
 
 export default {
   name: 'HtmlBlock',
@@ -21,10 +21,7 @@ export default {
 
     const sanitizedHtml = computed(() => {
       if (!props.block.settings.content) return '';
-      return DOMPurify.sanitize(props.block.settings.content, {
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'span', 'div'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
-      });
+      return sanitizeBlockHtml(props.block.settings.content);
     });
 
     return { alignmentClass, sanitizedHtml, t };

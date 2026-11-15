@@ -1,9 +1,13 @@
 <template>
   <div
     class="question-editor"
-    :class="{ collapsed, 'has-color': localQuestion.color, 'is-section': localQuestion.type === 'section', 'is-descriptor': localQuestion.type === 'descriptor' }"
+    :class="{ collapsed, 'has-color': localQuestion.color, 'has-errors': errors.length > 0, 'is-section': localQuestion.type === 'section', 'is-descriptor': localQuestion.type === 'descriptor' }"
     :style="localQuestion.color ? { '--question-color': localQuestion.color } : {}"
   >
+    <!-- Why the server refused the last save, at the question it is about -->
+    <ul v-if="errors.length" class="question-editor__errors" role="alert">
+      <li v-for="(message, i) in errors" :key="i">{{ message }}</li>
+    </ul>
     <!-- Descriptor / info block — markdown content only, no answer (#64) -->
     <template v-if="localQuestion.type === 'descriptor'">
       <div class="section-editor-header">
@@ -44,7 +48,8 @@
         <ConditionEditor
           v-if="showConditions"
           :condition="localQuestion.showIf"
-          :questions="questions.filter(q => q.id !== localQuestion.id && q.type !== 'section' && q.type !== 'descriptor')"
+          :questions="questions"
+          :current-question-id="localQuestion.id"
           @update="(val) => { updateCondition(val); showConditions = false; }"
           @close="showConditions = false"
         />
@@ -96,7 +101,8 @@
         <ConditionEditor
           v-if="showConditions"
           :condition="localQuestion.showIf"
-          :questions="questions.filter(q => q.id !== localQuestion.id && q.type !== 'section')"
+          :questions="questions"
+          :current-question-id="localQuestion.id"
           @update="(val) => { updateCondition(val); showConditions = false; }"
           @close="showConditions = false"
         />
@@ -755,6 +761,7 @@ import {
 } from '@nextcloud/vue';
 import { v4 as uuidv4 } from 'uuid';
 import { t } from '@/utils/l10n';
+import { renameOldScaleFields } from '@/utils/scale';
 import draggable from 'vuedraggable';
 import ConditionEditor from './ConditionEditor.vue';
 import MarkdownEditor from './MarkdownEditor.vue';
@@ -818,6 +825,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    errors: {
+      type: Array,
+      default: () => [],
+    },
   },
   emits: ['update', 'delete', 'duplicate', 'move', 'move-to-section'],
   setup(props, { emit }) {
@@ -853,6 +864,9 @@ export default {
     };
 
     const migrateQuestion = (question) => {
+      // Older forms said min/max on a scale or rating; the fields below read the current names.
+      renameOldScaleFields(question);
+
       // Numeric settings: an absent key is the correct "not set" state.
       NULLABLE_NUMBER_SETTINGS.forEach((key) => {
         if (question[key] === null) {
@@ -1317,7 +1331,8 @@ export default {
       if (!localQuestion.columns) {
         localQuestion.columns = [];
       }
-      const nextValue = localQuestion.columns.length + 1;
+      // Past the highest value, not the count: after a removal the count repeats one, and answers would mix.
+      const nextValue = localQuestion.columns.reduce((max, c) => Math.max(max, Number(c?.value) || 0), 0) + 1;
       localQuestion.columns.push({
         id: `c${uuidv4().split('-')[0]}`,
         label: '',
@@ -1360,13 +1375,17 @@ export default {
       }
     };
 
+    // The local calendar day, as the form page stores a picked date: toISOString() gives the UTC day, which is one
+    // early east of UTC (#80, #89).
+    const localDay = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
     const updateDateMin = (date) => {
       if (!date) {
         delete localQuestion.dateMin;
       } else if (localQuestion.type === 'datetime') {
         localQuestion.dateMin = date.toISOString();
       } else {
-        localQuestion.dateMin = date.toISOString().split('T')[0];
+        localQuestion.dateMin = localDay(date);
       }
       emitUpdate();
     };
@@ -1377,7 +1396,7 @@ export default {
       } else if (localQuestion.type === 'datetime') {
         localQuestion.dateMax = date.toISOString();
       } else {
-        localQuestion.dateMax = date.toISOString().split('T')[0];
+        localQuestion.dateMax = localDay(date);
       }
       emitUpdate();
     };
@@ -1450,6 +1469,19 @@ export default {
 
   &.has-color {
     border-left: 4px solid var(--question-color);
+  }
+
+  &.has-errors {
+    border-color: var(--color-error);
+  }
+
+  .question-editor__errors {
+    margin: 0;
+    padding: 8px 16px 8px 32px;
+    list-style: disc;
+    color: var(--color-error-text, var(--color-error));
+    background: var(--color-error-light, transparent);
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
   }
 
   &:hover {

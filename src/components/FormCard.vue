@@ -22,7 +22,7 @@
 				</span>
 			</div>
 		</div>
-		<div class="form-card__actions">
+		<div v-if="form.canDelete !== false" class="form-card__actions">
 			<NcActions>
 				<NcActionButton @click.stop="$emit('delete')">
 					<template #icon>

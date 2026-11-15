@@ -19,7 +19,8 @@ use OCP\Files\File;
  * ResponseService need real infrastructure.
  *
  * The logged-in $this->owner owns every fixture form file, so
- * PermissionService::getRoleFromFile() returns ROLE_OWNER and
+ * PermissionService::getRoleFromFile() returns ROLE_ADMIN (all Nextcloud
+ * permissions in its home folder) and
  * canViewResponses() is true — the export permission gate always passes here.
  *
  * @group DB
@@ -84,6 +85,7 @@ class ExportControllerIntegrationTest extends IntegrationTestCase {
 		];
 
 		return $this->writeFormFile($this->userFolder, $title, [
+			'settings' => ['keepResponsePdf' => true],
 			'questions' => $questions,
 			'responses' => $responses,
 		]);
@@ -115,6 +117,33 @@ class ExportControllerIntegrationTest extends IntegrationTestCase {
 		$this->assertStringContainsString('Bob', $body);
 		// choice option value mapped to its label.
 		$this->assertStringContainsString('Red', $body);
+	}
+
+	/** A long title gives a short name in plain ASCII; one in another script, the name without it. */
+	public function testALongTitleGivesAShortPlainDownloadName(): void {
+		/** @var ExportController $controller */
+		$controller = $this->getService(ExportController::class);
+
+		$long = (string)($controller->exportCsv($this->makeFormWithResponses(str_repeat('Größe ', 12))->getId())->getHeaders()['Content-Disposition'] ?? '');
+		$other = (string)($controller->exportCsv($this->makeFormWithResponses(str_repeat('Анкета ', 12))->getId())->getHeaders()['Content-Disposition'] ?? '');
+
+		$this->assertMatchesRegularExpression('/filename="?' . substr(str_repeat('groesse-', 8), 0, 60) . '-responses\\.csv"?(;|$)/', $long);
+		$this->assertMatchesRegularExpression('/filename="?responses\\.csv"?(;|$)/', $other);
+	}
+
+	/** Nextcloud 35 also writes the name in ASCII and refuses one with a slash: "½" became "1/2", and the download a 500. */
+	public function testATitleWithSignsStillDownloads(): void {
+		$file = $this->makeFormWithResponses('Anmeldung ½ Tag ÷ ⅓');
+		/** @var ExportController $exports */
+		$exports = $this->getService(ExportController::class);
+		/** @var \OCA\FormVox\Controller\ResponseController $responses */
+		$responses = $this->getService(\OCA\FormVox\Controller\ResponseController::class);
+
+		$csv = (string)($exports->exportCsv($file->getId())->getHeaders()['Content-Disposition'] ?? '');
+		$pdf = (string)($responses->getResponsePdf($file->getId(), 'resp-0001')->getHeaders()['Content-Disposition'] ?? '');
+
+		$this->assertMatchesRegularExpression('/filename="?anmeldung-tag-responses\\.csv"?(;|$)/', $csv);
+		$this->assertMatchesRegularExpression('/filename="?Anmeldung-Tag_2026-01-01_resp-0001\\.pdf"?(;|$)/', $pdf);
 	}
 
 	public function testExportJsonReturnsDownload(): void {

@@ -5,65 +5,68 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\BrandingController;
+use OCA\FormVox\Middleware\ExceptionMiddleware;
+use OCA\FormVox\Security\FormNotFoundException;
 use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormFileLocator;
-use OCA\FormVox\Service\PermissionService;
+use OCA\FormVox\Service\FormAccessService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDisplayResponse;
+use OCP\AppFramework\Http\Response;
 use OCP\Files\File;
-use OCP\Files\NotFoundException;
+use OCP\Files\IMimeTypeDetector;
+use OCP\IConfig;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 /**
- * Characterization tests for BrandingController. Pins: admin/settings permission
- * gating (per-form endpoints), image upload validation (missing file, bad type,
- * too large), the DataDisplayResponse image-serving path (instanceof + status),
- * and error mapping (401/403/404/500). Everything is mocked against ocp stubs.
+ * BrandingController: an image is what its content is, never SVG (secu#54); a form's own image is shown with
+ * its link's token or to whoever may open the form (qual#87); an older SVG is never opened as a page.
  */
 class BrandingControllerTest extends TestCase {
 	private IRequest $request;
 	private BrandingService $brandingService;
-	private FormFileLocator $fileLocator;
-	private PermissionService $permissionService;
+	private FormAccessService $access;
+	private FormRepository $formRepository;
+	private IMimeTypeDetector $mimeTypeDetector;
 	private IUserSession $userSession;
+	private File $formFile;
+	private string $detected = 'image/png';
 
 	protected function setUp(): void {
 		parent::setUp();
 		$this->request = $this->createMock(IRequest::class);
 		$this->brandingService = $this->createMock(BrandingService::class);
-		$this->fileLocator = $this->createMock(FormFileLocator::class);
-		$this->permissionService = $this->createMock(PermissionService::class);
+		$this->access = $this->createMock(FormAccessService::class);
+		$this->formRepository = $this->createMock(FormRepository::class);
+		$this->mimeTypeDetector = $this->createMock(IMimeTypeDetector::class);
+		$this->mimeTypeDetector->method('detectContent')->willReturnCallback(fn () => $this->detected);
 		$this->userSession = $this->createMock(IUserSession::class);
-
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('alice');
-		$this->userSession->method('getUser')->willReturn($user);
+		$this->formFile = $this->createMock(File::class);
+		$this->access->method('getFile')->with(7)->willReturn($this->formFile);
 	}
 
 	private function controller(): BrandingController {
-		return new BrandingController(
-			$this->request,
-			$this->brandingService,
-			$this->fileLocator,
-			$this->permissionService,
-			$this->userSession,
-			new EnglishL10N(),
-		);
+		return new BrandingController($this->request, $this->brandingService, $this->access, $this->formRepository, $this->mimeTypeDetector, $this->userSession);
 	}
 
-	/** A valid uploaded-file array as the controller expects it. */
-	private function validFile(string $type = 'image/png', int $size = 1024): array {
-		return [
-			'name' => 'logo.png',
-			'type' => $type,
-			'tmp_name' => '/tmp/phpupload',
-			'error' => UPLOAD_ERR_OK,
-			'size' => $size,
-		];
+	/** Call an endpoint as Nextcloud's dispatcher does: what it throws is answered by ExceptionMiddleware. */
+	private function respond(string $method, mixed ...$args): Response {
+		$controller = $this->controller();
+		try {
+			return $controller->$method(...$args);
+		} catch (\Exception $e) {
+			return (new ExceptionMiddleware($this->request, $this->createMock(IConfig::class), new EnglishL10N(), $this->createMock(LoggerInterface::class)))->afterException($controller, $method, $e);
+		}
+	}
+
+	/** An uploaded file, whatever type the browser claims for it. */
+	private function upload(string $claimed = 'image/png', int $size = 1024): array {
+		return ['name' => 'logo.png', 'type' => $claimed, 'tmp_name' => '/tmp/phpupload', 'error' => UPLOAD_ERR_OK, 'size' => $size];
 	}
 
 	// ---- get() -------------------------------------------------------------
@@ -97,223 +100,159 @@ class BrandingControllerTest extends TestCase {
 		$this->assertSame(['globalStyles' => $styles], $resp->getData());
 	}
 
-	// ---- uploadBlockImage() ------------------------------------------------
+	// ---- uploads: one check for both ----------------------------------------
 
-	public function testUploadBlockImageBadRequestWhenNoFile(): void {
-		$this->request->method('getUploadedFile')->with('image')->willReturn(null);
-		$this->brandingService->expects($this->never())->method('saveBlockImage');
-		$resp = $this->controller()->uploadBlockImage('b1');
-		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertSame(['error' => 'No file was uploaded'], $resp->getData());
+	/**
+	 * @return array<string, array{string, list<mixed>, string}>
+	 */
+	public static function uploads(): array {
+		return [
+			'the default branding' => ['uploadBlockImage', ['b1'], 'saveBlockImage'],
+			"a form's branding" => ['uploadFormBlockImage', [7, 'b1'], 'saveFormBlockImage'],
+		];
 	}
 
-	public function testUploadBlockImageBadRequestWhenUploadError(): void {
-		$file = $this->validFile();
-		$file['error'] = UPLOAD_ERR_PARTIAL;
-		$this->request->method('getUploadedFile')->willReturn($file);
-		$this->brandingService->expects($this->never())->method('saveBlockImage');
-		$resp = $this->controller()->uploadBlockImage('b1');
-		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertSame(['error' => 'No file was uploaded'], $resp->getData());
-	}
-
-	public function testUploadBlockImageRejectsInvalidType(): void {
-		$this->request->method('getUploadedFile')->willReturn($this->validFile('application/pdf'));
-		$this->brandingService->expects($this->never())->method('saveBlockImage');
-		$resp = $this->controller()->uploadBlockImage('b1');
-		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertStringContainsString('Invalid file type', $resp->getData()['error']);
-	}
-
-	public function testUploadBlockImageRejectsTooLarge(): void {
-		$this->request->method('getUploadedFile')->willReturn($this->validFile('image/png', 2 * 1024 * 1024 + 1));
-		$this->brandingService->expects($this->never())->method('saveBlockImage');
-		$resp = $this->controller()->uploadBlockImage('b1');
-		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertStringContainsString('too large', strtolower($resp->getData()['error']));
-	}
-
-	public function testUploadBlockImageSucceeds(): void {
-		$file = $this->validFile('image/svg+xml', 500);
-		$this->request->method('getUploadedFile')->willReturn($file);
-		$this->brandingService->expects($this->once())->method('saveBlockImage')
-			->with('b1', $file['tmp_name'], 'image/svg+xml')->willReturn('img-123');
-		$resp = $this->controller()->uploadBlockImage('b1');
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-		$this->assertSame(['imageId' => 'img-123'], $resp->getData());
-	}
-
-	public function testUploadBlockImageAcceptsExactMaxSize(): void {
-		$file = $this->validFile('image/jpeg', 2 * 1024 * 1024);
-		$this->request->method('getUploadedFile')->willReturn($file);
-		$this->brandingService->method('saveBlockImage')->willReturn('img-max');
-		$resp = $this->controller()->uploadBlockImage('b1');
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-		$this->assertSame(['imageId' => 'img-max'], $resp->getData());
-	}
-
-	// ---- deleteBlockImage() ------------------------------------------------
-
-	public function testDeleteBlockImageSucceeds(): void {
-		$this->brandingService->expects($this->once())->method('deleteBlockImage')->with('b1');
-		$resp = $this->controller()->deleteBlockImage('b1');
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-		$this->assertSame(['success' => true], $resp->getData());
-	}
-
-	// ---- blockImage() (DataDisplayResponse) --------------------------------
-
-	public function testBlockImageReturns404WhenMissing(): void {
-		$this->brandingService->method('getBlockImage')->with('b1')->willReturn(null);
-		$resp = $this->controller()->blockImage('b1');
-		$this->assertInstanceOf(DataDisplayResponse::class, $resp);
-		$this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
-	}
-
-	public function testBlockImageServesImage(): void {
-		$this->brandingService->method('getBlockImage')
-			->with('b1')->willReturn(['content' => 'BINARY', 'mimeType' => 'image/png']);
-		$resp = $this->controller()->blockImage('b1');
-		$this->assertInstanceOf(DataDisplayResponse::class, $resp);
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-		$this->assertSame('image/png', $resp->getHeaders()['Content-Type'] ?? null);
-	}
-
-	// ---- uploadFormBlockImage() gating -------------------------------------
-
-	public function testUploadFormBlockImageUnauthenticatedWhenNoUser(): void {
-		$session = $this->createMock(IUserSession::class);
-		$session->method('getUser')->willReturn(null);
-		$controller = new BrandingController(
-			$this->request, $this->brandingService, $this->fileLocator,
-			$this->permissionService, $session, new EnglishL10N()
-		);
-		$resp = $controller->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_UNAUTHORIZED, $resp->getStatus());
-		$this->assertSame(['error' => 'Not authenticated'], $resp->getData());
-	}
-
-	public function testUploadFormBlockImageForbiddenWhenCannotEditSettings(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
-		$this->permissionService->method('canEditSettings')->willReturn(false);
-		$this->brandingService->expects($this->never())->method('saveFormBlockImage');
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
-		$this->assertSame(['error' => 'Permission denied'], $resp->getData());
-	}
-
-	public function testUploadFormBlockImageNotFoundWhenFormMissing(): void {
-		$this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
-		$this->assertSame(['error' => 'Form not found'], $resp->getData());
-	}
-
-	public function testUploadFormBlockImageMapsGenericExceptionTo500(): void {
-		$this->fileLocator->method('getFileById')->willThrowException(new \RuntimeException('boom'));
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
-		$this->assertSame(['error' => 'boom'], $resp->getData());
-	}
-
-	public function testUploadFormBlockImageBadRequestWhenNoFile(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canEditSettings')->willReturn(true);
+	/**
+	 * @dataProvider uploads
+	 */
+	public function testNoFileIsRefused(string $endpoint, array $args, string $save): void {
 		$this->request->method('getUploadedFile')->willReturn(null);
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
+		$this->brandingService->expects($this->never())->method($save);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $this->respond($endpoint, ...$args)->getStatus());
+	}
+
+	/**
+	 * secu#54: an SVG can carry script, whatever the browser calls it.
+	 *
+	 * @dataProvider uploads
+	 */
+	public function testAnSvgIsRefusedEvenWhenTheBrowserCallsItAPng(string $endpoint, array $args, string $save): void {
+		$this->request->method('getUploadedFile')->willReturn($this->upload('image/png'));
+		$this->detected = 'image/svg+xml';
+		$this->brandingService->expects($this->never())->method($save);
+
+		$resp = $this->respond($endpoint, ...$args);
+
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertSame(['error' => 'No file was uploaded'], $resp->getData());
+		$this->assertSame('Use a PNG, JPEG, GIF or WebP image', $resp->getData()['error']);
 	}
 
-	public function testUploadFormBlockImageRejectsInvalidType(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canEditSettings')->willReturn(true);
-		$this->request->method('getUploadedFile')->willReturn($this->validFile('text/plain'));
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertStringContainsString('Invalid file type', $resp->getData()['error']);
+	/**
+	 * @dataProvider uploads
+	 */
+	public function testAnImageIsStoredAsWhatItIsNotWhatTheBrowserSays(string $endpoint, array $args, string $save): void {
+		$this->request->method('getUploadedFile')->willReturn($this->upload('application/octet-stream'));
+		$this->detected = 'image/webp';
+		$this->brandingService->expects($this->once())->method($save)
+			->with(...($save === 'saveBlockImage' ? ['b1', '/tmp/phpupload', 'image/webp'] : [$this->identicalTo($this->formFile), 'b1', '/tmp/phpupload', 'image/webp']))
+			->willReturn('img-1');
+
+		$this->assertSame(['imageId' => 'img-1'], $this->respond($endpoint, ...$args)->getData());
 	}
 
-	public function testUploadFormBlockImageRejectsTooLarge(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canEditSettings')->willReturn(true);
-		$this->request->method('getUploadedFile')->willReturn($this->validFile('image/png', 2 * 1024 * 1024 + 1));
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_BAD_REQUEST, $resp->getStatus());
-		$this->assertStringContainsString('too large', strtolower($resp->getData()['error']));
+	/**
+	 * @dataProvider uploads
+	 */
+	public function testAnImageOverTwoMegabytesIsRefused(string $endpoint, array $args, string $save): void {
+		$this->request->method('getUploadedFile')->willReturn($this->upload('image/png', 2 * 1024 * 1024 + 1));
+		$this->brandingService->expects($this->never())->method($save);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $this->respond($endpoint, ...$args)->getStatus());
 	}
 
-	public function testUploadFormBlockImageSucceeds(): void {
-		$file = $this->validFile('image/webp', 800);
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
-		$this->permissionService->method('canEditSettings')->willReturn(true);
-		$this->request->method('getUploadedFile')->willReturn($file);
-		$this->brandingService->expects($this->once())->method('saveFormBlockImage')
-			->with(7, 'b1', $file['tmp_name'], 'image/webp')->willReturn('fimg-9');
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-		$this->assertSame(['imageId' => 'fimg-9'], $resp->getData());
-	}
+	/** It names the stored file, so only a plain name. */
+	public function testABlockIdThatIsNoPlainNameIsNotFound(): void {
+		$this->brandingService->expects($this->never())->method('getBlockImage');
 
-	public function testUploadFormBlockImageMapsSaveExceptionTo500(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canEditSettings')->willReturn(true);
-		$this->request->method('getUploadedFile')->willReturn($this->validFile());
-		$this->brandingService->method('saveFormBlockImage')
-			->willThrowException(new \Exception('disk full'));
-		$resp = $this->controller()->uploadFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
-		$this->assertSame(['error' => 'disk full'], $resp->getData());
+		$this->assertSame(Http::STATUS_NOT_FOUND, $this->respond('blockImage', '../x')->getStatus());
 	}
 
 	// ---- deleteFormBlockImage() --------------------------------------------
 
-	public function testDeleteFormBlockImageForbiddenWhenCannotEditSettings(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
-		$this->permissionService->method('canEditSettings')->willReturn(false);
-		$this->brandingService->expects($this->never())->method('deleteFormBlockImage');
-		$resp = $this->controller()->deleteFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
-	}
-
-	public function testDeleteFormBlockImageNotFoundWhenFormMissing(): void {
-		$this->fileLocator->method('getFileById')->willThrowException(new NotFoundException());
-		$resp = $this->controller()->deleteFormBlockImage(7, 'b1');
-		$this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
-	}
-
-	public function testDeleteFormBlockImageSucceeds(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canEditSettings')->willReturn(true);
-		$this->brandingService->expects($this->once())->method('deleteFormBlockImage')->with(7, 'b1');
+	public function testDeleteFormBlockImageDeletesFromTheFormFile(): void {
+		$this->brandingService->expects($this->once())->method('deleteFormBlockImage')
+			->with($this->identicalTo($this->formFile), 'b1');
 		$resp = $this->controller()->deleteFormBlockImage(7, 'b1');
 		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
 		$this->assertSame(['success' => true], $resp->getData());
 	}
 
-	// ---- formBlockImage() (DataDisplayResponse) ----------------------------
+	// ---- serving -----------------------------------------------------------
 
-	public function testFormBlockImageReturns404WhenMissing(): void {
-		$this->brandingService->method('getFormBlockImage')->with(7, 'b1')->willReturn(null);
-		$resp = $this->controller()->formBlockImage(7, 'b1');
-		$this->assertInstanceOf(DataDisplayResponse::class, $resp);
-		$this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
+	public function testTheDefaultBrandingImageIsServedSafely(): void {
+		$this->brandingService->method('getBlockImage')->with('b1')->willReturn(['content' => 'BYTES', 'mimeType' => 'image/png']);
+
+		$resp = $this->controller()->blockImage('b1');
+
+		$this->assertSame('image/png', $resp->getHeaders()['Content-Type'] ?? null);
+		$this->assertSame('nosniff', $resp->getHeaders()['X-Content-Type-Options'] ?? null);
+		$this->assertStringStartsWith('inline', $resp->getHeaders()['Content-Disposition'] ?? 'inline');
 	}
 
-	public function testFormBlockImageServesImage(): void {
-		$this->brandingService->method('getFormBlockImage')
-			->with(7, 'b1')->willReturn(['content' => 'BYTES', 'mimeType' => 'image/gif']);
+	/** An SVG from before is still shown in a page, but opening it downloads it: no script on Nextcloud's domain. */
+	public function testAnOlderSvgIsNeverOpenedAsAPage(): void {
+		$this->brandingService->method('getBlockImage')->willReturn(['content' => '<svg/>', 'mimeType' => 'image/svg+xml']);
+
+		$resp = $this->controller()->blockImage('b1');
+
+		$this->assertStringStartsWith('attachment', $resp->getHeaders()['Content-Disposition'] ?? '');
+	}
+
+	private function storedLink(string $token = 'TOKEN'): void {
+		$this->formRepository->method('loadPublic')->with(7)->willReturn(['settings' => ['public_token' => $token]]);
+		$this->brandingService->method('getFormBlockImage')->with(7, 'b1')->willReturn(['content' => 'BYTES', 'mimeType' => 'image/gif']);
+	}
+
+	public function testAFormImageIsShownWithTheLinksToken(): void {
+		$this->storedLink();
+		$this->request->method('getParam')->willReturnCallback(fn ($key, $default = null) => $key === 'token' ? 'TOKEN' : $default);
+
 		$resp = $this->controller()->formBlockImage(7, 'b1');
+
 		$this->assertInstanceOf(DataDisplayResponse::class, $resp);
 		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
 		$this->assertSame('image/gif', $resp->getHeaders()['Content-Type'] ?? null);
+	}
+
+	/** qual#87: by its id alone, or with another token, nobody gets a form's images. */
+	public function testAFormImageIsNotShownWithoutTheTokenToSomeoneWhoMayNotOpenTheForm(): void {
+		$this->storedLink();
+		$this->request->method('getParam')->willReturnCallback(fn ($key, $default = null) => $key === 'token' ? 'GUESS' : $default);
+		$this->assertSame(Http::STATUS_NOT_FOUND, $this->controller()->formBlockImage(7, 'b1')->getStatus());
+	}
+
+	public function testAFormImageIsNotShownToAVisitorWithoutAToken(): void {
+		$this->storedLink();
+		$this->request->method('getParam')->willReturnCallback(fn ($key, $default = null) => $default);
+		$this->assertSame(Http::STATUS_NOT_FOUND, $this->controller()->formBlockImage(7, 'b1')->getStatus());
+	}
+
+	/** The editor and the results show it to whoever may open the form. */
+	public function testAFormImageIsShownToWhoeverMayOpenTheForm(): void {
+		$this->storedLink();
+		$this->request->method('getParam')->willReturnCallback(fn ($key, $default = null) => $default);
+		$this->userSession->method('getUser')->willReturn($this->createMock(IUser::class));
+		$this->access->expects($this->once())->method('require')->with(7, 'read')->willReturn($this->formFile);
+
+		$this->assertSame(Http::STATUS_OK, $this->controller()->formBlockImage(7, 'b1')->getStatus());
+	}
+
+	public function testAFormImageIsNotShownToSomeoneWhoMayNotOpenTheForm(): void {
+		$this->storedLink();
+		$this->request->method('getParam')->willReturnCallback(fn ($key, $default = null) => $default);
+		$this->userSession->method('getUser')->willReturn($this->createMock(IUser::class));
+		$this->access->method('require')->willThrowException(new FormNotFoundException('Form not found'));
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $this->controller()->formBlockImage(7, 'b1')->getStatus());
+	}
+
+	/** A busy form is a 503 to retry, not an image that is not there (review 3a-3). */
+	public function testAFormImageOfABusyFormIsNoNotFound(): void {
+		$this->formRepository->method('loadPublic')->willThrowException(new \OCA\FormVox\Service\FormLockedException('Form 7 stayed unreadable'));
+		$this->request->method('getParam')->willReturnCallback(fn ($key, $default = null) => $key === 'token' ? 'TOKEN' : $default);
+
+		$this->expectException(\OCA\FormVox\Service\FormLockedException::class);
+		$this->controller()->formBlockImage(7, 'b1');
 	}
 }

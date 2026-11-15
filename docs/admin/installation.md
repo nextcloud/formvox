@@ -14,9 +14,11 @@ This guide covers installing and updating FormVox on your Nextcloud server.
 - **Recommended:** PHP 8.2 or higher
 
 ### Server Requirements
-- No additional database requirements (file-based storage)
 - Standard Nextcloud server setup
-- Adequate disk space for form files
+- Adequate disk space for form files, uploads and kept PDFs
+- MySQL, MariaDB or PostgreSQL recommended: FormVox stores responses and secrets in Nextcloud's database, and SQLite
+  handles only one write at a time, so many respondents at once can get errors on it. Nextcloud's own setup checks
+  (**Settings → Administration → Overview**) warn about this on SQLite and link to `occ db:convert-type` to move.
 
 ## Installation Methods
 
@@ -59,7 +61,9 @@ This guide covers installing and updating FormVox on your Nextcloud server.
 
 ### MIME Type Registration
 
-FormVox automatically registers the `.fvform` file type during installation. If files don't show the correct icon:
+FormVox automatically registers the `.fvform` file type during installation. A form shows the FormVox icon (a purple clipboard) through Nextcloud's previews, so it appears in the Files list and grid, search, activity and shares. With previews turned off (`enable_previews` set to `false`) forms show Nextcloud's plain file icon instead. In search results on Nextcloud 32 to 34, that grey icon shows faintly behind the form icon.
+
+After an update that changes the icon, a background job replaces the stored thumbnails of existing forms once. Until the job has run, and for up to a day in a browser that still has the old image, a form can show the old one. If files don't show the correct icon:
 
 1. Run the repair step:
    ```bash
@@ -69,6 +73,11 @@ FormVox automatically registers the `.fvform` file type during installation. If 
 2. Clear the file cache:
    ```bash
    sudo -u www-data php occ files:scan --all
+   ```
+
+3. If the old thumbnail stays, remove all stored previews; Nextcloud draws them again as they are needed:
+   ```bash
+   sudo -u www-data php occ preview:cleanup
    ```
 
 ## Updating FormVox
@@ -118,13 +127,16 @@ To uninstall but keep form files:
    rm -rf /path/to/nextcloud/apps/formvox
    ```
 
-Form files (`.fvform`) remain in users' file storage.
+Form files (`.fvform`) remain in users' file storage; their responses, secrets and respondents' files remain in the
+database and FormVox's app data, since both are app data that disabling the app does not touch.
 
 ### Complete Removal
-To remove everything including form files:
+To remove everything, including responses and uploaded files:
 
 1. Delete all `.fvform` files from user storage
 2. Follow the steps above to uninstall the app
+3. Removing the app's data entirely (database tables, app data) is for Nextcloud's own app removal tooling, not
+   covered here; disabling and removing the app folder as above is normally enough.
 
 ## Troubleshooting
 
@@ -161,11 +173,12 @@ If `.fvform` files don't open correctly:
    sudo -u www-data php occ maintenance:repair
    ```
 
-2. Clear caches:
+2. Update the file types in the database:
    ```bash
    sudo -u www-data php occ maintenance:mimetype:update-db
-   sudo -u www-data php occ maintenance:mimetype:update-js
    ```
+
+   FormVox does not need `occ maintenance:mimetype:update-js`; that command rewrites a signed core file.
 
 ### Permission Issues
 

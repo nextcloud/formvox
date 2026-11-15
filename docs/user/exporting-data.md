@@ -74,6 +74,29 @@ uploads/
 
 **Note:** This option only appears for forms that have file upload questions with submitted files.
 
+### PDF per Response
+
+Every response can be downloaded as a PDF: the form as the respondent saw it, with only the questions they were shown,
+in their language and time zone. It is headed by your Nextcloud's theming (its name, primary colour and, when one is
+set, its own logo), followed by the form's title and description.
+
+- **One response:** in the responses list, click the PDF button in the row.
+- **All responses:** choose **Export PDFs (ZIP)** in the export menu. For a form with many responses from before PDFs
+  existed, the ZIP holds the PDFs that are ready and a README saying how many are still being made; they are made in the
+  background, so download the ZIP again a few minutes later.
+
+The ZIP ends with `manifest.csv`: one row for every response, with its id, the PDF's file name, its status (`included`,
+`pending` while it is still being made, `failed` when it could not be made), and the SHA-256 checksum and size of the
+PDF in the ZIP.
+
+A PDF is named `{title}_{date}_{response id}.pdf`, for example `Registration_2026-11-10_3f2a9c1e-….pdf`, the same in a
+download, the ZIP and the confirmation email. The title is written in plain letters (ä becomes ae, é becomes e).
+
+A response's PDF is made once and kept, so it stays the same document after you change the form's questions. To send it
+to respondents, switch on **Attach a PDF of the response** under the confirmation email in the share dialog. Respondents
+who are signed in get it at their account's e-mail address. A PDF larger than 8 MiB stays behind; the confirmation goes
+without it.
+
 ## How to Export
 
 ### From the Results View

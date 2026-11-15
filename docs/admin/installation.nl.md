@@ -17,9 +17,12 @@ Deze gids beschrijft het installeren en updaten van FormVox op je Nextcloud-serv
 
 ### Server-vereisten
 
-- Geen aanvullende database-vereisten (file-based opslag)
 - Standaard Nextcloud-server-setup
-- Voldoende schijfruimte voor formulier-bestanden
+- Voldoende schijfruimte voor formulier-bestanden, uploads en bewaarde PDF's
+- MySQL, MariaDB of PostgreSQL aanbevolen: FormVox bewaart antwoorden en geheimen in Nextclouds database, en SQLite
+  verwerkt maar één schrijfactie tegelijk, waardoor veel invullers op hetzelfde moment daarop errors kunnen krijgen.
+  Nextclouds eigen setup-checks (**Instellingen → Beheer → Overzicht**) waarschuwen hiervoor bij SQLite en linken naar
+  `occ db:convert-type` om over te zetten.
 
 ## Installatie-methodes
 
@@ -65,7 +68,9 @@ Deze gids beschrijft het installeren en updaten van FormVox op je Nextcloud-serv
 
 ### MIME-type-registratie
 
-FormVox registreert het `.fvform`-bestandstype automatisch tijdens installatie. Als bestanden niet het juiste icoon tonen:
+FormVox registreert het `.fvform`-bestandstype automatisch tijdens installatie. Een formulier toont het FormVox-icoon (een paars klembord) via de previews van Nextcloud, dus in de lijst en het raster van Bestanden, in zoekresultaten, activiteit en shares. Staan previews uit (`enable_previews` op `false`), dan tonen formulieren het gewone bestandsicoon van Nextcloud. In zoekresultaten op Nextcloud 32 tot en met 34 schemert dat grijze icoon licht door achter het formuliericoon.
+
+Na een update die het icoon verandert, vervangt een achtergrondtaak eenmalig de opgeslagen thumbnails van bestaande formulieren. Tot die taak heeft gedraaid, en tot een dag lang in een browser die het oude plaatje nog heeft, kan een formulier het oude icoon tonen. Als bestanden niet het juiste icoon tonen:
 
 1. Voer de repair-stap uit:
 
@@ -77,6 +82,12 @@ FormVox registreert het `.fvform`-bestandstype automatisch tijdens installatie. 
 
    ```bash
    sudo -u www-data php occ files:scan --all
+   ```
+
+3. Blijft de oude thumbnail staan, verwijder dan alle opgeslagen previews; Nextcloud maakt ze opnieuw aan wanneer ze nodig zijn:
+
+   ```bash
+   sudo -u www-data php occ preview:cleanup
    ```
 
 ## FormVox updaten
@@ -133,14 +144,19 @@ Om te deïnstalleren maar formulier-bestanden te behouden:
    rm -rf /path/to/nextcloud/apps/formvox
    ```
 
-Formulier-bestanden (`.fvform`) blijven in de bestandsopslag van gebruikers.
+Formulier-bestanden (`.fvform`) blijven in de bestandsopslag van gebruikers; hun antwoorden, geheimen en bestanden van
+invullers blijven in de database en FormVox's app-data, want beide zijn app-data die het uitschakelen van de app niet
+raakt.
 
 ### Volledige verwijdering
 
-Om alles inclusief formulier-bestanden te verwijderen:
+Om alles te verwijderen, inclusief antwoorden en geüploade bestanden:
 
 1. Verwijder alle `.fvform`-bestanden uit gebruikers-opslag
 2. Volg de stappen hierboven om de app te deïnstalleren
+3. Het volledig verwijderen van de eigen data van de app (database-tabellen, app-data) is aan Nextclouds eigen
+   app-verwijder-tooling, en valt hier buiten; uitschakelen en de app-map verwijderen zoals hierboven is normaal
+   gesproken genoeg.
 
 ## Problemen oplossen
 
@@ -182,12 +198,13 @@ Als `.fvform`-bestanden niet correct openen:
    sudo -u www-data php occ maintenance:repair
    ```
 
-2. Leeg caches:
+2. Werk de bestandstypen in de database bij:
 
    ```bash
    sudo -u www-data php occ maintenance:mimetype:update-db
-   sudo -u www-data php occ maintenance:mimetype:update-js
    ```
+
+   FormVox heeft `occ maintenance:mimetype:update-js` niet nodig; dat commando herschrijft een ondertekend core-bestand.
 
 ### Permissie-issues
 

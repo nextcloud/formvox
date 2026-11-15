@@ -145,10 +145,17 @@ Implement a retention policy:
 
 ### Server-Side Encryption
 
-FormVox works with Nextcloud's server-side encryption:
-- Files encrypted at rest
-- Transparent to users
-- Standard file encryption settings apply
+FormVox's `.fvform` file works with Nextcloud's server-side encryption: it is encrypted at rest like any other file,
+transparently to users, under the standard file encryption settings.
+
+Since 1.6.0, a form's responses and secrets (link token, link password hash, API keys, webhook secrets) live in the
+database, and respondents' uploads, branding images, the ODT template and kept PDFs live in FormVox's app data,
+outside any user's files. **Neither is covered by Nextcloud's server-side file encryption.** The `.fvform` file itself
+still only holds the form definition, so there is little left in it for file encryption to protect.
+
+The secrets kept in the database are sealed with Nextcloud's own encryption key (`FormSecrets`, using `ICrypto`)
+before they are written, so reading the database directly does not expose them in plain text; that protection does not
+extend to responses or to the files in app data.
 
 ### End-to-End Encryption
 
@@ -157,7 +164,23 @@ FormVox is compatible with E2E encryption:
 - Content encrypted on client
 - Server cannot read form data
 
-**Note:** Public links don't work with E2E encrypted forms.
+**Note:** Public links don't work with E2E encrypted forms. Since the form's responses and secrets no longer travel
+with the file, this applies to the form definition only.
+
+## Nextcloud's Own File Lock
+
+FormVox keeps one lock of its own per form (a database row or cache key, with a two-minute hold) so only one writer
+touches a form at a time; `occ formvox:unlock <fileId>` frees that lock by hand when its holder was killed.
+
+Separately, whenever FormVox writes to the `.fvform` file itself, Nextcloud takes its own file lock, in Redis or in
+the database. If PHP is killed in the middle of that file write, Nextcloud's lock can stay in place until it expires,
+which depends on the `filelocking.ttl` setting in `config.php` (default: 3600 seconds, i.e. one hour). Until then, the
+editor reports the form as busy, and `occ formvox:unlock` does not help: it only frees FormVox's own lock, not
+Nextcloud's file lock.
+
+If this happens, an administrator can either wait for Nextcloud's lock to expire on its own, or lower
+`filelocking.ttl` in `config.php` (it applies to file locks across all of Nextcloud, not just FormVox) and restart
+PHP-FPM/the web server for the new value to take effect.
 
 ## Audit Logging
 

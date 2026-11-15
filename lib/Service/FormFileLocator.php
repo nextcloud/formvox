@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Store\FormStore;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
@@ -43,11 +46,9 @@ class FormFileLocator {
 	 */
 	private const ACCESS_CANDIDATE_USERS_PER_GROUP = 50;
 
-	private IRootFolder $rootFolder;
-	private IUserSession $userSession;
-	private IDBConnection $db;
-	private IGroupManager $groupManager;
-	private IServerContainer $serverContainer;
+	/** How many resolved files the memo keeps: a request asks for a few, a run that moves forms in passes thousands. */
+	private const MEMO_SIZE = 32;
+
 	private ?bool $hasCircleIdColumn = null;
 	/**
 	 * Per-request memo of the account resolved for a group-folder file, keyed by
@@ -65,17 +66,24 @@ class FormFileLocator {
 	private array $groupFolderFileCache = [];
 
 	public function __construct(
-		IRootFolder $rootFolder,
-		IUserSession $userSession,
-		IDBConnection $db,
-		IGroupManager $groupManager,
-		IServerContainer $serverContainer,
+		private IRootFolder $rootFolder,
+		private IUserSession $userSession,
+		private IDBConnection $db,
+		private IGroupManager $groupManager,
+		private IServerContainer $serverContainer,
+		private ?FormStore $forms = null,
 	) {
-		$this->rootFolder = $rootFolder;
-		$this->userSession = $userSession;
-		$this->db = $db;
-		$this->groupManager = $groupManager;
-		$this->serverContainer = $serverContainer;
+	}
+
+	/**
+	 * The form as a public write needs it: an account that may update a form file; for a form in the database, whose
+	 * writes go to the database and app data, one that may read it.
+	 *
+	 * @throws NotFoundException
+	 */
+	public function getFileByIdPublicForWrite(int $fileId, bool $fresh = false): File {
+		// A form moved in keeps its files beside its file until they are moved: writing them needs a writer.
+		return $this->getFileByIdPublic($fileId, $this->forms?->byFileId($fileId)?->filesMoved !== true, $fresh);
 	}
 
 	/**
@@ -93,22 +101,114 @@ class FormFileLocator {
 	}
 
 	/**
-	 * Get file by ID with permission check
+	 * Open a form through the session user's own view.
+	 *
+	 * The same file can be reachable along several paths with different rights;
+	 * take the most permissive so the result does not depend on mount order.
 	 */
 	public function getFileById(int $fileId): File {
-		$userFolder = $this->getUserFolder();
-		$nodes = $userFolder->getById($fileId);
-
+		$nodes = $this->getUserFolder()->getById($fileId);
 		if (empty($nodes)) {
 			throw new NotFoundException('Form not found');
 		}
-
-		$file = $nodes[0];
-		if (!($file instanceof File)) {
-			throw new \RuntimeException('Not a file');
+		$best = self::mostPermissive($nodes);
+		if ($best === null) {
+			throw new NotFoundException('Form not found');
 		}
+		return $best;
+	}
 
-		return $file;
+	/**
+	 * The one rule for a file reachable along several paths (a team folder and a share, two shares):
+	 * the path with the most rights, so nothing depends on mount order. Used for the session user,
+	 * the creator, API keys, public access and the form list alike.
+	 *
+	 * Only a form: any other file id, such as a JSON file dropped through an upload link with a token of
+	 * its own, is never opened as one (secu#9, qual#56).
+	 *
+	 * @param array<\OCP\Files\Node> $nodes
+	 */
+	public static function mostPermissive(array $nodes): ?File {
+		$best = null;
+		foreach ($nodes as $node) {
+			if ($node instanceof File && self::isForm($node) && ($best === null || self::permissionCount($node) > self::permissionCount($best))) {
+				$best = $node;
+			}
+		}
+		return $best;
+	}
+
+	public static function isForm(File $file): bool {
+		return strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION)) === Application::FILE_EXTENSION
+			|| $file->getMimetype() === Application::MIME_TYPE;
+	}
+
+	private static function permissionCount(File $file): int {
+		return substr_count(decbin((int)$file->getPermissions()), '1');
+	}
+
+	/**
+	 * The account whose home a storage is: home::{uid} on disk, object::user:{uid} on S3 as primary storage.
+	 */
+	public static function homeOwner(string $storageId): ?string {
+		foreach (['home::', 'object::user:'] as $prefix) {
+			if (str_starts_with($storageId, $prefix)) {
+				return substr($storageId, strlen($prefix));
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The team folder a file is in. One with its own storage says so in the storage id
+	 * (local::…/__groupfolders/{id}/, object::groupfolder:{id}.…); one made before Groupfolders 20 lives in
+	 * the instance's own storage, under the path __groupfolders/{id}/.
+	 */
+	public static function groupFolderId(string $storageId, string $path): ?int {
+		if (
+			preg_match('#__groupfolders/(\d+)/#', $storageId, $matches)
+			|| preg_match('#^object::groupfolder:(\d+)#', $storageId, $matches)
+			|| preg_match('#^__groupfolders/(\d+)/#', $path, $matches)
+		) {
+			return (int)$matches[1];
+		}
+		return null;
+	}
+
+	/**
+	 * The team folder behind a storage id Nextcloud keeps as an md5, as it does for every id over 64 characters: a long
+	 * data directory makes local::…/__groupfolders/{id}/ one. Groupfolders 20+ records each folder's own storage.
+	 */
+	private function teamFolderBehindHashedId(string $storageId, int $numericId): ?int {
+		if (preg_match('/^[0-9a-f]{32}$/', $storageId) !== 1) {
+			return null;
+		}
+		try {
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('folder_id')
+				->from('group_folders')
+				->where($qb->expr()->eq('storage_id', $qb->createNamedParameter($numericId, IQueryBuilder::PARAM_INT)))
+				->setMaxResults(1);
+			$result = $qb->executeQuery();
+			$row = $result->fetch();
+			$result->closeCursor();
+		} catch (\Throwable) {
+			// Without Groupfolders, or before 20, there is no such column; those folders are found by their path.
+			return null;
+		}
+		return is_array($row) ? (int)$row['folder_id'] : null;
+	}
+
+	/**
+	 * The form where it is now, after it moved during this request: Nextcloud remembers per request where each file
+	 * id was, so that memory is dropped first; a move between older team folders keeps the storage and the path inside
+	 * the folder, and only the dropped memory shows it (review of 3b-4d). Not for every lookup: it costs a query.
+	 *
+	 * @throws NotFoundException
+	 */
+	public function findAgain(int $fileId, bool $requireWrite = true): File {
+		$this->serverContainer->get(\OCP\Files\Config\IUserMountCache::class)->clear();
+		return $this->getFileByIdPublic($fileId, $requireWrite, true);
 	}
 
 	/**
@@ -129,11 +229,13 @@ class FormFileLocator {
 	 * skips candidates that cannot update the file instead of picking the first
 	 * one that can merely see it. Read-only callers leave it false so that
 	 * viewing a form keeps working even where nobody can write.
+	 *
+	 * @param bool $fresh looked up again, not the node this request found before: after a write, to see a move (3b-4)
 	 */
-	public function getFileByIdPublic(int $fileId, bool $requireWrite = false): File {
+	public function getFileByIdPublic(int $fileId, bool $requireWrite = false, bool $fresh = false): File {
 		// Look up the file in the database to find the storage
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('s.id', 's.numeric_id')
+		$qb->select('s.id', 's.numeric_id', 'fc.path')
 			->from('filecache', 'fc')
 			->innerJoin('fc', 'storages', 's', 'fc.storage = s.numeric_id')
 			->where($qb->expr()->eq('fc.fileid', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
@@ -146,13 +248,13 @@ class FormFileLocator {
 			throw new NotFoundException('Form not found');
 		}
 
-		$storageId = $row['id'];
+		$storageId = (string)$row['id'];
 
-		// Case 1: Personal folder (home::username)
+		// Case 1: Personal folder, on disk or on S3
 		// Exactly one account owns the mount, so there is nothing to choose.
-		if (str_starts_with($storageId, 'home::')) {
-			$userId = substr($storageId, 6);
-			$file = $this->resolveFileAsUser($userId, $fileId, $requireWrite);
+		$homeOwner = self::homeOwner($storageId);
+		if ($homeOwner !== null) {
+			$file = $this->resolveFileAsUser($homeOwner, $fileId, $requireWrite);
 			if ($file !== null) {
 				return $file;
 			}
@@ -161,16 +263,11 @@ class FormFileLocator {
 		}
 
 		// Case 2: Group folder / Team folder
-		//   - Local:         local::.../__groupfolders/{id}/
-		//   - Object store:  object::groupfolder:{id}.{objectstore_id}
-		if (
-			preg_match('#__groupfolders/(\d+)/#', $storageId, $matches)
-			|| preg_match('#^object::groupfolder:(\d+)#', $storageId, $matches)
-		) {
-			$groupFolderId = (int)$matches[1];
-
+		$groupFolderId = self::groupFolderId($storageId, (string)($row['path'] ?? ''))
+			?? $this->teamFolderBehindHashedId($storageId, (int)$row['numeric_id']);
+		if ($groupFolderId !== null) {
 			$cacheKey = $fileId . ':' . ($requireWrite ? '1' : '0');
-			if (isset($this->groupFolderFileCache[$cacheKey])) {
+			if (!$fresh && isset($this->groupFolderFileCache[$cacheKey])) {
 				return $this->groupFolderFileCache[$cacheKey];
 			}
 
@@ -185,6 +282,9 @@ class FormFileLocator {
 			foreach ($this->findUsersWithGroupFolderAccess($groupFolderId) as $userId) {
 				$file = $this->resolveFileAsUser($userId, $fileId, $requireWrite);
 				if ($file !== null) {
+					if (count($this->groupFolderFileCache) >= self::MEMO_SIZE) {
+						$this->groupFolderFileCache = [];
+					}
 					$this->groupFolderFileCache[$cacheKey] = $file;
 					return $file;
 				}
@@ -205,6 +305,17 @@ class FormFileLocator {
 	}
 
 	/**
+	 * Open a form through one account's own view; null when Nextcloud gives it no read access.
+	 */
+	public function getFileForUser(string $userId, int $fileId): ?File {
+		$file = $this->resolveFileAsUser($userId, $fileId, false);
+		if ($file === null || !$file->isReadable()) {
+			return null;
+		}
+		return $file;
+	}
+
+	/**
 	 * Open a file through one account's view of the filesystem.
 	 *
 	 * Returns null when that account cannot see the file at all, or — when
@@ -220,12 +331,10 @@ class FormFileLocator {
 			return null;
 		}
 
-		$nodes = $userFolder->getById($fileId);
-		if (empty($nodes) || !($nodes[0] instanceof File)) {
+		$file = self::mostPermissive($userFolder->getById($fileId));
+		if ($file === null) {
 			return null;
 		}
-
-		$file = $nodes[0];
 		if ($requireWrite && !$file->isUpdateable()) {
 			return null;
 		}

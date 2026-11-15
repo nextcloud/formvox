@@ -4,79 +4,55 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Integration\Lock;
 
+use OCA\FormVox\Service\DecodedForms;
+use OCA\FormVox\Service\FormLock;
+use OCA\FormVox\Service\FormLockedException;
 use OCA\FormVox\Service\FormLockManager;
+use OCA\FormVox\Service\FormWriteGuard;
+use OCA\FormVox\Service\OwnWrites;
 use OCA\FormVox\Tests\Integration\IntegrationTestCase;
 use OCP\Files\File;
+use OCP\ICacheFactory;
 use OCP\IDBConnection;
+use OCP\IUserSession;
 use OCP\Server;
 
 /**
- * Integration coverage for FormLockManager against a REAL Nextcloud DB +
- * filesystem: the per-file preferences-row lock, the read-modify-write
- * round-trip through File/Storage, TTL reclaim of a stale lock, and lock
- * release on both success and mutator failure (#7/#90/#97/#101).
+ * FormLockManager against a REAL Nextcloud: the read-modify-write round trip through File/Storage, one writer per form
+ * through Nextcloud's own locking under a key of FormVox's own, a busy form waited for and then 503 busy, the lock
+ * released on success and on failure (#7/#90/#97/#101), and a lock row left by an older FormVox no longer in the way.
+ * Writers at once in separate processes: ConcurrentSubmissionsIntegrationTest.
  *
  * @group DB
  */
 class FormLockManagerIntegrationTest extends IntegrationTestCase {
-	private const LOCK_USERID = '__formvox_lock__';
-	private const LOCK_APPID = 'formvox';
-	/** Mirrors FormLockManager::LOCK_TTL_SECONDS (private const). */
-	private const LOCK_TTL_SECONDS = 60;
-
 	private FormLockManager $manager;
-	private IDBConnection $db;
 
 	protected function setUp(): void {
 		parent::setUp();
 		$this->manager = $this->getService(FormLockManager::class);
-		$this->db = Server::get(IDBConnection::class);
 	}
 
-	/** The lock configkey FormLockManager derives from a file id. */
-	private function lockKeyFor(File $file): string {
-		return 'formvox_response_' . $file->getId();
+	/** Another request's lock, on whatever this Nextcloud has: the shared cache or the row. */
+	private function otherLock(): FormLock {
+		return new FormLock(Server::get(ICacheFactory::class), Server::get(IDBConnection::class), Server::get(\Psr\Log\LoggerInterface::class));
 	}
 
-	/** Count the preferences lock rows for a given configkey. */
-	private function countLockRows(string $lockKey): int {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select($qb->func()->count('*', 'cnt'))
-			->from('preferences')
-			->where($qb->expr()->eq('userid', $qb->createNamedParameter(self::LOCK_USERID)))
-			->andWhere($qb->expr()->eq('appid', $qb->createNamedParameter(self::LOCK_APPID)))
-			->andWhere($qb->expr()->eq('configkey', $qb->createNamedParameter($lockKey)));
-		$result = $qb->executeQuery();
-		$cnt = (int)$result->fetchOne();
-		$result->closeCursor();
-		return $cnt;
+	private function locked(File $file): bool {
+		$probe = $this->otherLock();
+		return (new \ReflectionMethod(FormLock::class, 'current'))->invoke($probe, 'formvox/form/' . $file->getId()) !== null;
 	}
 
-	/** Fetch the single lock row for a configkey, or null. */
-	private function fetchLockRow(string $lockKey): ?array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('userid', 'appid', 'configkey', 'configvalue')
-			->from('preferences')
-			->where($qb->expr()->eq('userid', $qb->createNamedParameter(self::LOCK_USERID)))
-			->andWhere($qb->expr()->eq('appid', $qb->createNamedParameter(self::LOCK_APPID)))
-			->andWhere($qb->expr()->eq('configkey', $qb->createNamedParameter($lockKey)));
-		$result = $qb->executeQuery();
-		$row = $result->fetch();
-		$result->closeCursor();
-		return $row === false ? null : $row;
-	}
-
-	/** Manually insert a lock row with an explicit acquisition timestamp. */
-	private function insertLockRow(string $lockKey, int $acquiredAt): void {
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('preferences')
-			->values([
-				'userid' => $qb->createNamedParameter(self::LOCK_USERID),
-				'appid' => $qb->createNamedParameter(self::LOCK_APPID),
-				'configkey' => $qb->createNamedParameter($lockKey),
-				'configvalue' => $qb->createNamedParameter((string)$acquiredAt),
-			]);
-		$qb->executeStatement();
+	/** A manager that gives up quickly, so a busy form does not keep the test waiting ten seconds. */
+	private function impatientManager(): FormLockManager {
+		return new FormLockManager(
+			Server::get(IUserSession::class),
+			Server::get(OwnWrites::class),
+			Server::get(FormWriteGuard::class),
+			new DecodedForms(),
+			$this->otherLock(),
+			0.3,
+		);
 	}
 
 	/** Resolve the freshly written form file back through the user folder by id. */
@@ -89,15 +65,13 @@ class FormLockManagerIntegrationTest extends IntegrationTestCase {
 	}
 
 	/**
-	 * Target 1: the mutator's in-place change is read-modify-written through
-	 * File/Storage and modified_at is stamped by the manager.
+	 * The mutator's in-place change is read-modify-written through File/Storage and modified_at is stamped.
 	 */
 	public function testMutatePersistsReadModifyWrite(): void {
 		$file = $this->resolveFile($this->writeFormFile());
 
 		$before = $this->readFormFromStorage($file);
 		$this->assertSame([], $before['responses'] ?? null, 'fixture should start with no responses');
-		$beforeModified = $before['modified_at'] ?? null;
 
 		$this->manager->mutateFormFileWithLock($file, function (array &$form): void {
 			$form['responses'][] = ['id' => 'r1'];
@@ -106,69 +80,71 @@ class FormLockManagerIntegrationTest extends IntegrationTestCase {
 		$after = $this->readFormFromStorage($file);
 		$this->assertCount(1, $after['responses']);
 		$this->assertSame('r1', $after['responses'][0]['id']);
-		$this->assertArrayHasKey('modified_at', $after);
-		$this->assertNotEmpty($after['modified_at']);
-		// modified_at must be a valid ISO-8601 (date('c')) value.
-		$this->assertNotFalse(strtotime((string)$after['modified_at']));
+		$this->assertNotFalse(strtotime((string)($after['modified_at'] ?? '')));
 	}
 
-	/**
-	 * Target 1: the DB lock row exists only for the duration of the mutator —
-	 * none before, exactly one during (asserted inside the closure), none after.
-	 */
-	public function testLockRowLifecycle(): void {
+	/** The form is locked exactly while it is written: not before, during the mutator, not after. */
+	public function testTheFormIsLockedOnlyWhileItIsWritten(): void {
 		$file = $this->resolveFile($this->writeFormFile());
-		$lockKey = $this->lockKeyFor($file);
+		$this->assertFalse($this->locked($file), 'not locked before');
 
-		$this->assertSame(0, $this->countLockRows($lockKey), 'no lock row should exist before mutate');
-
-		$sawLockDuring = false;
-		$this->manager->mutateFormFileWithLock($file, function (array &$form) use ($lockKey, &$sawLockDuring): void {
-			// Assert the lock state from INSIDE the mutator: it runs under the lock.
-			$this->assertSame(1, $this->countLockRows($lockKey), 'exactly one lock row must be held during mutate');
-			$row = $this->fetchLockRow($lockKey);
-			$this->assertNotNull($row);
-			$this->assertSame(self::LOCK_USERID, $row['userid']);
-			$this->assertSame(self::LOCK_APPID, $row['appid']);
-			$this->assertSame($lockKey, $row['configkey']);
-			$sawLockDuring = true;
+		$lockedDuring = null;
+		$this->manager->mutateFormFileWithLock($file, function (array &$form) use ($file, &$lockedDuring): void {
+			$lockedDuring = $this->locked($file);
 			$form['responses'][] = ['id' => 'lifecycle'];
 		});
 
-		$this->assertTrue($sawLockDuring, 'mutator must have run');
-		$this->assertSame(0, $this->countLockRows($lockKey), 'lock row must be released (finally) after mutate');
+		$this->assertTrue($lockedDuring, 'locked while the mutator runs');
+		$this->assertFalse($this->locked($file), 'released after');
 	}
 
-	/**
-	 * Target 1: a lock row older than LOCK_TTL_SECONDS is reclaimed on the first
-	 * attempt, so mutate succeeds immediately and the write persists.
-	 */
-	public function testStaleLockReclaimed(): void {
+	/** Held by another writer: this one waits until its deadline and then says busy; once free, it writes. */
+	public function testABusyFormIsWaitedForThenBusyThenWritten(): void {
 		$file = $this->resolveFile($this->writeFormFile());
-		$lockKey = $this->lockKeyFor($file);
+		$other = $this->otherLock();
+		$token = $other->acquire($file->getId(), microtime(true) + 1);
+		try {
+			$this->impatientManager()->mutateFormFileWithLock($file, function (array &$form): void {
+				$form['responses'][] = ['id' => 'while-busy'];
+			});
+			$this->fail('A form held by another writer was written');
+		} catch (FormLockedException) {
+		} finally {
+			$other->release($file->getId(), $token);
+		}
+		$this->assertSame([], $this->readFormFromStorage($file)['responses']);
 
-		// Plant a stale lock (acquired well beyond the TTL ago).
-		$this->insertLockRow($lockKey, time() - (self::LOCK_TTL_SECONDS + 60));
-		$this->assertSame(1, $this->countLockRows($lockKey), 'stale lock should be planted');
+		$this->impatientManager()->mutateFormFileWithLock($file, function (array &$form): void {
+			$form['responses'][] = ['id' => 'once-free'];
+		});
+		$this->assertSame(['once-free'], array_column($this->readFormFromStorage($file)['responses'], 'id'));
+	}
 
-		$this->manager->mutateFormFileWithLock($file, function (array &$form): void {
-			$form['responses'][] = ['id' => 'after-stale'];
+	/** A lock row an older FormVox left behind (an update while a form was being written) no longer blocks anything. */
+	public function testALockRowFromAnOlderVersionIsNoLongerInTheWay(): void {
+		$file = $this->resolveFile($this->writeFormFile());
+		$qb = Server::get(IDBConnection::class)->getQueryBuilder();
+		$qb->insert('preferences')->values([
+			'userid' => $qb->createNamedParameter('__formvox_lock__'),
+			'appid' => $qb->createNamedParameter('formvox'),
+			'configkey' => $qb->createNamedParameter('formvox_response_' . $file->getId()),
+			'configvalue' => $qb->createNamedParameter((string)time()),
+		]);
+		$qb->executeStatement();
+
+		$this->impatientManager()->mutateFormFileWithLock($file, function (array &$form): void {
+			$form['responses'][] = ['id' => 'after-upgrade'];
 		});
 
-		$after = $this->readFormFromStorage($file);
-		$this->assertCount(1, $after['responses']);
-		$this->assertSame('after-stale', $after['responses'][0]['id']);
-		$this->assertSame(0, $this->countLockRows($lockKey), 'lock must be released after the reclaim + write');
+		$this->assertSame(['after-upgrade'], array_column($this->readFormFromStorage($file)['responses'], 'id'));
 	}
 
 	/**
-	 * Target 1: a throwing mutator aborts the write (on-disk content unchanged)
-	 * and the exception propagates, yet the lock is still released (finally).
+	 * A throwing mutator aborts the write (on-disk content unchanged) and the exception propagates, yet the lock is
+	 * still released.
 	 */
 	public function testMutatorThrowAbortsWrite(): void {
 		$file = $this->resolveFile($this->writeFormFile());
-		$lockKey = $this->lockKeyFor($file);
-
 		$storage = $file->getStorage();
 		$internalPath = $file->getInternalPath();
 		$contentBefore = $storage->file_get_contents($internalPath);
@@ -185,29 +161,50 @@ class FormLockManagerIntegrationTest extends IntegrationTestCase {
 		}
 
 		$this->assertTrue($threw, 'the DomainException must propagate to the caller');
-
-		// On-disk bytes must be byte-for-byte unchanged.
-		$contentAfter = $storage->file_get_contents($internalPath);
-		$this->assertSame($contentBefore, $contentAfter, 'a throwing mutator must not persist any write');
-
-		$decoded = json_decode($contentAfter, true);
-		$this->assertSame([], $decoded['responses'] ?? null, 'no response should have been appended');
-
-		$this->assertSame(0, $this->countLockRows($lockKey), 'lock must be released even when the mutator throws');
+		$this->assertSame($contentBefore, $storage->file_get_contents($internalPath), 'a throwing mutator must not persist any write');
+		$this->assertFalse($this->locked($file), 'lock must be released even when the mutator throws');
 	}
 
 	/**
-	 * Target 1 (retry path): true multi-process contention is asserted via the
-	 * stale-reclaim path in testStaleLockReclaimed, which deterministically
-	 * exercises reclaimStaleLock() + the acquire path in a single process. A
-	 * genuine concurrent-holder race (a FRESH row that another process releases
-	 * mid-retry) cannot be driven deterministically from one process without a
-	 * load harness, so it is skipped.
+	 * The row that holds a form where no shared cache is (APCu, none), on this database: one holder at a time, released
+	 * only with its own value, taken over only when its holder is gone; `occ formvox:unlock` frees it (7a, review 3a-2).
 	 */
-	public function testConcurrentRetryThenAcquire(): void {
-		$this->markTestSkipped(
-			'true multi-process contention needs a load harness; the retry/reclaim '
-			. 'path is covered deterministically by testStaleLockReclaimed'
-		);
+	public function testTheRowLockOnARealDatabase(): void {
+		$factory = $this->createMock(ICacheFactory::class);
+		$factory->method('createLocking')->willReturn(new \OC\Memcache\NullCache());
+		$row = fn () => new FormLock($factory, Server::get(IDBConnection::class), Server::get(\Psr\Log\LoggerInterface::class));
+		$fileId = random_int(1_000_000, 9_999_999);
+		$current = fn (FormLock $lock) => (new \ReflectionMethod(FormLock::class, 'current'))->invoke($lock, 'formvox/form/' . $fileId);
+
+		// Where it must succeed, time to spare: a slow database must not look like a held form.
+		$a = $row();
+		$tokenA = $a->acquire($fileId, microtime(true) + 10);
+		try {
+			$row()->acquire($fileId, microtime(true) + 0.2);
+			$this->fail('A second writer got a form that was held');
+		} catch (FormLockedException) {
+		}
+
+		// A lost row taken by a successor: the old holder's release frees nothing.
+		$this->assertTrue($row()->unlock($fileId));
+		$b = $row();
+		$tokenB = $b->acquire($fileId, microtime(true) + 10);
+		$a->release($fileId, $tokenA);
+		$this->assertTrue($b->stillHeld($fileId, $tokenB));
+
+		$b->release($fileId, $tokenB);
+		$this->assertNull($current($row()));
+
+		// A holder past its time is taken over.
+		$qb = Server::get(IDBConnection::class)->getQueryBuilder();
+		$qb->insert('preferences')->values([
+			'userid' => $qb->createNamedParameter('__formvox_lock__'),
+			'appid' => $qb->createNamedParameter('formvox'),
+			'configkey' => $qb->createNamedParameter('formvox/form/' . $fileId),
+			'configvalue' => $qb->createNamedParameter((time() - 121) . ':dead:elsewhere:1'),
+		])->executeStatement();
+		$c = $row();
+		$c->release($fileId, $c->acquire($fileId, microtime(true) + 10));
+		$this->assertNull($current($row()));
 	}
 }

@@ -5,150 +5,124 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\ResponseController;
-use OCA\FormVox\Service\FormFileLocator;
-use OCA\FormVox\Service\PermissionService;
-use OCA\FormVox\Service\ResponsePersistenceService;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\RequireFormPermission;
+use OCA\FormVox\Service\FormAccessService;
 use OCA\FormVox\Service\ResponseService;
 use OCP\AppFramework\Http;
 use OCP\Files\File;
 use OCP\Files\NotFoundException;
 use OCP\IRequest;
-use OCP\IUser;
-use OCP\IUserSession;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Characterization tests for ResponseController — split out of ApiController.
- * Pins: permission gating (403), not-found mapping (404), and the happy path
- * for getResponses / deleteAllResponses / deleteResponse.
- *
- * Everything is mocked; the controller runs against ocp stubs with no server.
- */
+/** Access and error mapping live in FormAccessMiddleware; these pin what the endpoints do once let through. */
 class ResponseControllerTest extends TestCase {
-	private FormFileLocator $fileLocator;
-	private ResponsePersistenceService $responsePersistence;
+	private FormAccessService $access;
 	private ResponseService $responseService;
-	private PermissionService $permissionService;
-	private IUserSession $userSession;
 
 	protected function setUp(): void {
 		parent::setUp();
-		$this->fileLocator = $this->createMock(FormFileLocator::class);
-		$this->responsePersistence = $this->createMock(ResponsePersistenceService::class);
+		$this->access = $this->createMock(FormAccessService::class);
+		$this->access->method('getFile')->willReturn($this->createMock(File::class));
 		$this->responseService = $this->createMock(ResponseService::class);
-		$this->permissionService = $this->createMock(PermissionService::class);
-		$this->userSession = $this->createMock(IUserSession::class);
-
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('alice');
-		$this->userSession->method('getUser')->willReturn($user);
 	}
+
+	private ?\OCA\FormVox\Pdf\ResponsePdf $pdfs = null;
+	private ?\OCA\FormVox\Service\FormRepository $formRepository = null;
 
 	private function controller(): ResponseController {
 		return new ResponseController(
 			$this->createMock(IRequest::class),
-			$this->fileLocator,
-			$this->responsePersistence,
 			$this->responseService,
-			$this->permissionService,
-			$this->userSession
+			$this->access,
+			$this->formRepository ?? $this->createMock(\OCA\FormVox\Service\FormRepository::class),
+			$this->pdfs ?? $this->createMock(\OCA\FormVox\Pdf\ResponsePdf::class),
 		);
+	}
+
+	// ---- getResponsePdf() --------------------------------------------------
+
+	/** A form that keeps no PDFs gives none, also to a direct request: 409, and nothing is made. */
+	public function testThePdfDownloadIsRefusedWhereTheFormKeepsNone(): void {
+		$this->formRepository = $this->createMock(\OCA\FormVox\Service\FormRepository::class);
+		$this->formRepository->method('loadForm')->willReturn(['title' => 'T', 'settings' => ['confirmationEmailPdf' => true]]);
+		$this->pdfs = $this->createMock(\OCA\FormVox\Pdf\ResponsePdf::class);
+		$this->pdfs->expects($this->never())->method('download');
+
+		try {
+			$this->controller()->getResponsePdf(1, 'r1');
+			$this->fail('a PDF was given');
+		} catch (\OCA\FormVox\Exception\RequestException $e) {
+			$this->assertSame(Http::STATUS_CONFLICT, $e->getStatus());
+			$this->assertSame('PDF generation is disabled for this form', $e->getMessage());
+		}
 	}
 
 	// ---- getResponses() ----------------------------------------------------
 
-	public function testGetResponsesDeniedWithoutViewPermission(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_RESPONDENT);
-		$this->permissionService->method('canViewResponses')->willReturn(false);
-		$this->responseService->expects($this->never())->method('getResponses');
+	/** Read lets one open the form; the responses need Nextcloud's leave to see a shared file's content. */
+	public function testListingResponsesNeedsTheRightToSeeTheContent(): void {
+		$attributes = (new \ReflectionMethod(ResponseController::class, 'getResponses'))->getAttributes(RequireFormPermission::class);
 
-		$resp = $this->controller()->getResponses(1);
-		$this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
+		$this->assertSame(FormPermission::VIEW_CONTENT, $attributes[0]->newInstance()->permission);
 	}
 
 	public function testGetResponsesReturnsResponsesAndSummary(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_EDITOR);
-		$this->permissionService->method('canViewResponses')->willReturn(true);
-		$this->responseService->method('getResponses')->willReturn([['id' => 'r1']]);
-		$this->responseService->method('getSummary')->willReturn(['count' => 1]);
+		$this->responseService->expects($this->once())->method('getResponses')
+			->with(1, '2026-10-05')
+			->willReturn([['id' => 'r1']]);
+		$this->responseService->method('getSummary')->with(1)->willReturn(['count' => 1]);
 
-		$resp = $this->controller()->getResponses(1);
+		$resp = $this->controller()->getResponses(1, '2026-10-05');
 		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
 		$data = $resp->getData();
 		$this->assertSame([['id' => 'r1']], $data['responses']);
 		$this->assertSame(['count' => 1], $data['summary']);
 	}
 
-	public function testGetResponsesMapsExceptionTo500(): void {
-		$this->fileLocator->method('getFileById')->willThrowException(new \Exception('boom'));
+	public function testGetResponsesLetsExceptionsPropagate(): void {
+		$this->responseService->method('getResponses')->willThrowException(new \RuntimeException('boom'));
 
-		$resp = $this->controller()->getResponses(1);
-		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('boom');
+		$this->controller()->getResponses(1);
 	}
 
 	// ---- deleteAllResponses() ----------------------------------------------
 
-	public function testDeleteAllResponsesDeniedWithoutPermission(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
-		$this->permissionService->method('canDeleteResponses')->willReturn(false);
-		$this->responsePersistence->expects($this->never())->method('deleteAllResponses');
-
-		$resp = $this->controller()->deleteAllResponses(1);
-		$this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
-	}
-
-	public function testDeleteAllResponsesProceedsWhenAllowed(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canDeleteResponses')->willReturn(true);
-		$this->responsePersistence->expects($this->once())->method('deleteAllResponses')->with(1);
+	/** The same delete path as one response, so integrations hear about each one (PO). */
+	public function testDeleteAllResponsesGoesThroughTheSharedDeletePath(): void {
+		$this->responseService->expects($this->once())->method('deleteAllResponses')->with(1, $this->isInstanceOf(File::class));
 
 		$resp = $this->controller()->deleteAllResponses(1);
 		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
+		$this->assertSame(['success' => true], $resp->getData());
 	}
 
-	public function testDeleteAllResponsesMapsExceptionTo500(): void {
-		$this->fileLocator->method('getFileById')->willThrowException(new \Exception('boom'));
+	public function testDeleteAllResponsesLetsExceptionsPropagate(): void {
+		$this->responseService->method('deleteAllResponses')->willThrowException(new \RuntimeException('boom'));
 
-		$resp = $this->controller()->deleteAllResponses(1);
-		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $resp->getStatus());
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('boom');
+		$this->controller()->deleteAllResponses(1);
 	}
 
 	// ---- deleteResponse() --------------------------------------------------
 
-	// Copied from ApiControllerTest::testDeleteResponseDeniedWithoutPermission,
-	// rewired: getFileById -> fileLocator, deleteResponse -> responsePersistence.
-	public function testDeleteResponseDeniedWithoutPermission(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_VIEWER);
-		$this->permissionService->method('canDeleteResponses')->willReturn(false);
-		$this->responsePersistence->expects($this->never())->method('deleteResponse');
-
-		$resp = $this->controller()->deleteResponse(1, 'r1');
-		$this->assertSame(Http::STATUS_FORBIDDEN, $resp->getStatus());
-	}
-
-	public function testDeleteResponseProceedsWhenAllowed(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canDeleteResponses')->willReturn(true);
-		$this->responsePersistence->expects($this->once())->method('deleteResponse')->with(1, 'r1');
+	/** One delete path for web and API, so integrations hear about it too (L33). */
+	public function testDeleteResponseGoesThroughTheSharedDeletePath(): void {
+		$this->responseService->expects($this->once())->method('deleteResponse')->with(1, $this->isInstanceOf(File::class), 'r1');
 
 		$resp = $this->controller()->deleteResponse(1, 'r1');
 		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
+		$this->assertSame(['success' => true], $resp->getData());
 	}
 
-	public function testDeleteResponseMapsNotFoundTo404(): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->permissionService->method('getRoleFromFile')->willReturn(PermissionService::ROLE_OWNER);
-		$this->permissionService->method('canDeleteResponses')->willReturn(true);
-		$this->responsePersistence->method('deleteResponse')
+	public function testDeleteResponseLetsMissingResponsePropagate(): void {
+		$this->responseService->method('deleteResponse')
 			->willThrowException(new NotFoundException());
 
-		$resp = $this->controller()->deleteResponse(1, 'missing');
-		$this->assertSame(Http::STATUS_NOT_FOUND, $resp->getStatus());
+		$this->expectException(NotFoundException::class);
+		$this->controller()->deleteResponse(1, 'missing');
 	}
 }

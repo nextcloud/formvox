@@ -5,62 +5,58 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
+use OCA\FormVox\Security\FormAccessDeniedException;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\FormSanitizer;
+use OCA\FormVox\Security\LinkPasswordPolicy;
+use OCA\FormVox\Security\RequireFormPermission;
+use OCA\FormVox\Service\FormAccessService;
+use OCA\FormVox\Service\FormCreatorService;
 use OCA\FormVox\Service\FormRepository;
-use OCA\FormVox\Service\IndexService;
+use OCA\FormVox\Service\FormRevision;
+use OCA\FormVox\Service\IntegrationStatus;
 use OCA\FormVox\Service\PermissionService;
+use OCA\FormVox\Service\ResponsePersistenceService;
 use OCA\FormVox\Service\ShareTokenService;
 use OCA\FormVox\Service\TemplateService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
+use OCP\Files\File;
 use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\Notification\IManager as INotificationManager;
+use OCP\Share\IManager as IShareManager;
+use Psr\Log\LoggerInterface;
 
 class FormController extends Controller {
-	private FormRepository $formRepository;
-	private FormFileLocator $fileLocator;
-	private PermissionService $permissionService;
-	private IndexService $indexService;
-	private TemplateService $templateService;
-	private ShareTokenService $shareTokenService;
-	private IUserSession $userSession;
-	private IUserManager $userManager;
-	private IGroupManager $groupManager;
-	private INotificationManager $notificationManager;
-	private IL10N $l;
-
 	public function __construct(
 		IRequest $request,
-		FormRepository $formRepository,
-		FormFileLocator $fileLocator,
-		PermissionService $permissionService,
-		IndexService $indexService,
-		TemplateService $templateService,
-		ShareTokenService $shareTokenService,
-		IUserSession $userSession,
-		IUserManager $userManager,
-		IGroupManager $groupManager,
-		INotificationManager $notificationManager,
-		IL10N $l,
+		private FormRepository $formRepository,
+		private FormAccessService $access,
+		private PermissionService $permissionService,
+		private ResponsePersistenceService $responsePersistence,
+		private TemplateService $templateService,
+		private ShareTokenService $shareTokenService,
+		private IUserSession $userSession,
+		private IUserManager $userManager,
+		private IGroupManager $groupManager,
+		private INotificationManager $notificationManager,
+		private FormCreatorService $creators,
+		private IShareManager $shareManager,
+		private FormSanitizer $sanitizer,
+		private LinkPasswordPolicy $linkPasswords,
+		private IntegrationStatus $integrations,
+		private LoggerInterface $logger,
+		private IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->formRepository = $formRepository;
-		$this->fileLocator = $fileLocator;
-		$this->permissionService = $permissionService;
-		$this->indexService = $indexService;
-		$this->templateService = $templateService;
-		$this->shareTokenService = $shareTokenService;
-		$this->userSession = $userSession;
-		$this->userManager = $userManager;
-		$this->groupManager = $groupManager;
-		$this->notificationManager = $notificationManager;
-		$this->l = $l;
 	}
 
 	/**
@@ -68,69 +64,53 @@ class FormController extends Controller {
 	 */
 	#[NoAdminRequired]
 	public function list(): DataResponse {
-		try {
-			$forms = $this->formRepository->listForms();
-			return new DataResponse($forms);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
-		}
+		return new DataResponse($this->formRepository->listForms());
 	}
 
 	/**
-	 * Create a new form
-	 */
-	/**
 	 * Save an existing form as an admin-managed template (admin only). #100
 	 */
+	#[RequireFormPermission(FormPermission::READ)]
 	public function saveAsTemplate(int $fileId, string $title = '', string $description = ''): DataResponse {
-		try {
-			$form = $this->formRepository->load($fileId);
-			$entry = $this->templateService->addTemplate(
-				// TRANSLATORS: Default name of a form template that has no title
-				$title !== '' ? $title : ($form['title'] ?? $this->l->t('Untitled template')),
-				$description !== '' ? $description : ($form['description'] ?? ''),
-				$form
-			);
-			return new DataResponse(['template' => $entry]);
-		} catch (\Throwable $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		}
+		$form = $this->formRepository->loadForm($fileId);
+		$entry = $this->templateService->addTemplate(
+			// TRANSLATORS: Default name of a form template that has no title
+			$title !== '' ? $title : ($form['title'] ?? $this->l->t('Untitled template')),
+			$description !== '' ? $description : ($form['description'] ?? ''),
+			$form
+		);
+		return new DataResponse(['template' => $entry]);
 	}
 
 	#[NoAdminRequired]
 	public function create(string $title, string $path = '', ?string $template = null, array $prefilled = [], bool $notifyOnReady = false, ?string $adminTemplateId = null): DataResponse {
-		try {
-			// If an admin template id is supplied, load its structure and
-			// pass it as prefilled content so the new form starts as a copy
-			// of the admin template (#100).
-			if ($adminTemplateId !== null && $adminTemplateId !== '') {
-				$tplForm = $this->templateService->getTemplate($adminTemplateId);
-				if ($tplForm !== null) {
-					if (!empty($tplForm['description']) && !isset($prefilled['description'])) {
-						$prefilled['description'] = $tplForm['description'];
-					}
-					if (!empty($tplForm['questions']) && !isset($prefilled['questions'])) {
-						$prefilled['questions'] = $tplForm['questions'];
+		// Pages and settings only ever come from a template, never from the request.
+		unset($prefilled['pages'], $prefilled['settings']);
+		// Start from an admin template's structure when one is given (#100).
+		if ($adminTemplateId !== null && $adminTemplateId !== '') {
+			$tplForm = $this->templateService->getTemplate($adminTemplateId);
+			if ($tplForm !== null) {
+				if (!empty($tplForm['description']) && !isset($prefilled['description'])) {
+					$prefilled['description'] = $tplForm['description'];
+				}
+				if (!empty($tplForm['questions']) && !isset($prefilled['questions'])) {
+					$prefilled['questions'] = $tplForm['questions'];
+				}
+				foreach (['pages', 'settings'] as $part) {
+					if (!empty($tplForm[$part]) && is_array($tplForm[$part])) {
+						$prefilled[$part] = $tplForm[$part];
 					}
 				}
 			}
-
-			$result = $this->formRepository->create($title, $path, $template, $prefilled);
-
-			if ($notifyOnReady) {
-				$this->sendAiReadyNotification($result, $title);
-			}
-
-			return new DataResponse($result, Http::STATUS_CREATED);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
 		}
+
+		$result = $this->formRepository->create($title, $path, $template, $prefilled);
+
+		if ($notifyOnReady) {
+			$this->sendAiReadyNotification($result, $title);
+		}
+
+		return new DataResponse($result, Http::STATUS_CREATED);
 	}
 
 	private function sendAiReadyNotification(array $result, string $title): void {
@@ -158,56 +138,32 @@ class FormController extends Controller {
 		}
 	}
 
-	/**
-	 * Get a form by file ID
-	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::READ)]
 	public function get(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$form = $this->formRepository->load($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
+		$file = $this->access->getFile($fileId);
+		$form = $this->formRepository->loadForm($fileId);
+		$permissions = $this->permissionService->getPermissionsForFile($file);
 
-			// Deny access if user has no permissions
-			if ($role === PermissionService::ROLE_NONE) {
-				return new DataResponse(
-					// TRANSLATORS: Error when the account may not open the form
-					['error' => $this->l->t('Access denied')],
-					Http::STATUS_FORBIDDEN
-				);
-			}
-
-			$permissions = $this->permissionService->getPermissionsForRole($role);
-
-			// Remove responses if user can't view them
-			if (!$permissions['viewResponses']) {
-				unset($form['responses']);
-				unset($form['_index']);
-			}
-
-			return new DataResponse([
-				'form' => $form,
-				'role' => $role,
-				'permissions' => $permissions,
-			]);
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(
-				['error' => $this->l->t('Form not found')],
-				Http::STATUS_NOT_FOUND
-			);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
-		}
+		return new DataResponse([
+			'form' => $this->integrations->annotate($fileId, $this->sanitizer->forUser($form, $permissions)),
+			'role' => $this->permissionService->getRoleFromFile($file),
+			'permissions' => $permissions,
+			'creator' => $this->creators->getCreator($fileId, $form),
+		]);
 	}
 
 	/**
-	 * Update a form
+	 * Creator and whether they still get notifications (FormCreatorService).
 	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::READ)]
+	public function getCreator(int $fileId): DataResponse {
+		return new DataResponse($this->creators->getCreator($fileId, $this->formRepository->loadForm($fileId)));
+	}
+
+	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function update(
 		int $fileId,
 		?string $title = null,
@@ -217,223 +173,88 @@ class FormController extends Controller {
 		?array $pages = null,
 		?array $permissions = null,
 		?array $branding = null,
+		?string $descriptionAlign = null,
 	): DataResponse {
-		// Build data array from individual parameters
-		$data = [];
-		if ($title !== null) {
-			$data['title'] = $title;
-		}
-		if ($description !== null) {
-			$data['description'] = $description;
-		}
-		if ($questions !== null) {
-			$data['questions'] = $questions;
-		}
-		if ($settings !== null) {
-			$data['settings'] = $settings;
-		}
-		if ($pages !== null) {
-			$data['pages'] = $pages;
-		}
-		if ($permissions !== null) {
-			$data['permissions'] = $permissions;
-		}
-		// Branding can be null (use admin defaults) or an array (custom branding)
-		// Check the raw request body to see if branding was explicitly sent
-		$requestBody = file_get_contents('php://input');
-		$requestData = json_decode($requestBody, true) ?? [];
+		$data = array_filter([
+			'title' => $title,
+			'description' => $description,
+			'descriptionAlign' => $descriptionAlign,
+			'questions' => $questions,
+			'settings' => $settings,
+			'pages' => $pages,
+			'permissions' => $permissions,
+		], fn ($value) => $value !== null);
+		// Branding may be sent as an explicit null (use admin defaults); the parameter cannot tell.
+		$requestData = json_decode(file_get_contents('php://input'), true) ?? [];
 		if (array_key_exists('branding', $requestData)) {
-			// Use the value from request data since the parameter might not capture null correctly
 			$data['branding'] = $requestData['branding'];
 		}
 
 		if (empty($data)) {
-			return new DataResponse(
-				['error' => 'No data provided'],
-				Http::STATUS_BAD_REQUEST
-			);
+			// TRANSLATORS: Error shown when a save of a form carries nothing to save
+			throw RequestException::invalid(Translatable::t('No data provided'));
 		}
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
 
-			if (!$this->permissionService->canEditQuestions($role)) {
-				return new DataResponse(
-					['error' => $this->l->t('Permission denied')],
-					Http::STATUS_FORBIDDEN
-				);
+		$generatedPassword = null;
+		if (isset($data['settings'])) {
+			$file = $this->access->getFile($fileId);
+			// Read like every form: a save in progress is waited for, and a form that stays unreadable fails this
+			// save (503) instead of silently dropping its settings.
+			$stored = $this->formRepository->readForm($file)['settings'] ?? [];
+			$currentSettings = is_array($stored) ? $stored : [];
+			$this->requireSharingRightsForChanges($file, $data['settings'], $currentSettings);
+			$refusal = $this->applyLinkPasswordPolicy($data['settings'], $currentSettings, $generatedPassword);
+			if ($refusal !== null) {
+				// Nextcloud's password policy has worded it in the user's language already.
+				throw RequestException::invalid($refusal);
 			}
 
-			// Check settings permission separately
-			if (isset($data['settings']) && !$this->permissionService->canEditSettings($role)) {
+			// The share token is server-owned (#135).
+			$resolvedSettings = $this->shareTokenService->resolveTokenForUpdate(
+				$data['settings'],
+				true,
+				is_string($currentSettings['public_token'] ?? null) ? $currentSettings['public_token'] : null
+			);
+			if ($resolvedSettings === null) {
 				unset($data['settings']);
+			} else {
+				$data['settings'] = $resolvedSettings;
 			}
-
-			// The share token is server-owned: once a link exists its URL must stay
-			// valid until someone deliberately revokes it. A generic save can never
-			// change it, however stale the client's copy of `settings` is (#135).
-			//
-			// This mirrors Nextcloud core, which mints a token only when there is
-			// none (Share20\Manager::createShare) and never touches it in
-			// updateShare — changing a share's password, expiry or permissions
-			// keeps the same link.
-			//
-			// Note this runs whenever settings are written, not only when the
-			// client includes the key: FormRepository::update() replaces `settings`
-			// wholesale, so a save that merely omits public_token would drop the
-			// link just as effectively as one sending a stale value.
-			if (isset($data['settings'])) {
-				// Read the current token from the file we already fetched above
-				// ($file, user-scoped and permission-checked) rather than a second
-				// loadPublic() lookup, which resolves through a different path and
-				// could fail independently of this save succeeding.
-				$existing = null;
-				$readOk = false;
-				try {
-					$currentForm = json_decode($file->getContent(), true);
-					if (is_array($currentForm)) {
-						$existing = $currentForm['settings']['public_token'] ?? null;
-						$readOk = true;
-					}
-				} catch (\Throwable $e) {
-					// Could not read the current form — fall through to fail-closed.
-				}
-
-				// The share-token rules live in ShareTokenService (#135). A null
-				// return means "fail closed": we couldn't read the current form,
-				// so we can't tell whether a link exists and must not risk
-				// dropping it — skip the settings write entirely (every other
-				// field still saves). Otherwise it returns the settings to store.
-				$resolvedSettings = $this->shareTokenService->resolveTokenForUpdate(
-					$data['settings'],
-					$readOk,
-					is_string($existing) ? $existing : null
-				);
-				if ($resolvedSettings === null) {
-					unset($data['settings']);
-				} else {
-					$data['settings'] = $resolvedSettings;
-				}
-			}
-
-			$updatedForm = $this->formRepository->update($fileId, $data);
-			return new DataResponse(['form' => $updatedForm]);
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(
-				['error' => $this->l->t('Form not found')],
-				Http::STATUS_NOT_FOUND
-			);
-		} catch (\RuntimeException $e) {
-			// Lock conflicts and other runtime errors
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_CONFLICT
-			);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
 		}
+
+		$expected = FormRevision::fromIfMatch($this->request->getHeader('If-Match'));
+		// Which save this is, so an editor whose answer got lost can tell whether it landed (review of 3b-4d).
+		$saveId = FormRevision::saveId($this->request->getHeader('X-FormVox-Save-Id'));
+		$result = ['form' => $this->forCurrentUser($fileId, $this->formRepository->update($fileId, $data, $expected, $saveId))];
+		if ($generatedPassword !== null) {
+			// Shown once, like the generated password in Nextcloud's own share dialog.
+			$result['generatedSharePassword'] = $generatedPassword;
+		}
+		return new DataResponse($result);
 	}
 
 	/**
-	 * Set favorite status for a form
+	 * Writes the shared form file, so it needs edit rights like any other change.
 	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function setFavorite(int $fileId, bool $favorite): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			// Any user with at least view permission can favorite a form
-			if ($role === PermissionService::ROLE_NONE) {
-				return new DataResponse(
-					['error' => $this->l->t('Permission denied')],
-					Http::STATUS_FORBIDDEN
-				);
-			}
-
-			$this->formRepository->update($fileId, ['favorite' => $favorite]);
-			return new DataResponse(['success' => true, 'favorite' => $favorite]);
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(
-				['error' => $this->l->t('Form not found')],
-				Http::STATUS_NOT_FOUND
-			);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
-		}
+		$this->formRepository->update($fileId, ['favorite' => $favorite]);
+		return new DataResponse(['success' => true, 'favorite' => $favorite]);
 	}
 
-	/**
-	 * Delete a form
-	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::DELETE)]
 	public function delete(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			if (!$this->permissionService->canDeleteForm($role)) {
-				return new DataResponse(
-					['error' => $this->l->t('Permission denied')],
-					Http::STATUS_FORBIDDEN
-				);
-			}
-
-			$this->formRepository->delete($fileId);
-			return new DataResponse(['success' => true]);
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(
-				['error' => $this->l->t('Form not found')],
-				Http::STATUS_NOT_FOUND
-			);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
-		}
+		$this->formRepository->delete($fileId);
+		return new DataResponse(['success' => true]);
 	}
 
-	/**
-	 * Rebuild form index
-	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function rebuildIndex(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$form = $this->formRepository->load($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			if (!$this->permissionService->canEditSettings($role)) {
-				return new DataResponse(
-					['error' => $this->l->t('Permission denied')],
-					Http::STATUS_FORBIDDEN
-				);
-			}
-
-			// Rebuild index
-			$this->indexService->rebuildIndex($form);
-
-			// Save updated form
-			$this->formRepository->update($fileId, ['_index' => $form['_index']]);
-
-			return new DataResponse(['success' => true]);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
-		}
+		$this->responsePersistence->rebuildIndex($fileId);
+		return new DataResponse(['success' => true]);
 	}
 
 	/**
@@ -441,76 +262,131 @@ class FormController extends Controller {
 	 */
 	#[NoAdminRequired]
 	public function searchSharees(string $search = '', int $limit = 10): DataResponse {
-		try {
-			$users = [];
-			foreach ($this->userManager->search($search, $limit) as $user) {
-				$users[] = [
-					'id' => $user->getUID(),
-					'displayName' => $user->getDisplayName(),
-				];
-			}
+		$users = [];
+		foreach ($this->userManager->search($search, $limit) as $user) {
+			$users[] = [
+				'id' => $user->getUID(),
+				'displayName' => $user->getDisplayName(),
+			];
+		}
 
-			$groups = [];
-			foreach ($this->groupManager->search($search, $limit) as $group) {
-				$groups[] = [
-					'id' => $group->getGID(),
-					'displayName' => $group->getDisplayName(),
-				];
-			}
+		$groups = [];
+		foreach ($this->groupManager->search($search, $limit) as $group) {
+			$groups[] = [
+				'id' => $group->getGID(),
+				'displayName' => $group->getDisplayName(),
+			];
+		}
 
-			return new DataResponse([
-				'users' => $users,
-				'groups' => $groups,
-			]);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
+		return new DataResponse([
+			'users' => $users,
+			'groups' => $groups,
+		]);
+	}
+
+	/**
+	 * Replace the share link with a fresh one. Its own endpoint, never a side effect of saving (#135).
+	 */
+	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::MANAGE_SHARING)]
+	public function rotateShareToken(int $fileId): DataResponse {
+		$this->requireLinkSharingAllowed();
+		$form = $this->formRepository->loadForm($fileId);
+
+		$settings = $this->shareTokenService->rotate($form['settings'] ?? []);
+
+		return new DataResponse(['form' => $this->forCurrentUser($fileId, $this->formRepository->update($fileId, ['settings' => $settings]))]);
+	}
+
+	/**
+	 * Changing the public link needs full rights; creating a link also needs Nextcloud to allow public links for
+	 * this user. What counts as a change is what the save would do (ShareTokenService, FormRepository::update):
+	 * a different existing token is ignored anyway (#135), and the password hash is never sent back.
+	 *
+	 * @throws FormAccessDeniedException
+	 */
+	private function requireSharingRightsForChanges(File $file, array $incoming, array $current): void {
+		$hasLink = self::hasLink($current);
+		$creating = !$hasLink && self::asksForLink($incoming);
+		$revoking = $hasLink && self::revokesLink($incoming);
+		$password = array_key_exists('share_password', $incoming)
+			&& (self::isPassword($incoming['share_password']) || !empty($current['share_password_hash']));
+		$dates = false;
+		foreach (['share_expires_at', 'share_starts_at'] as $key) {
+			$dates = $dates || (array_key_exists($key, $incoming) && $incoming[$key] !== ($current[$key] ?? null));
+		}
+		if (!$creating && !$revoking && !$password && !$dates) {
+			return;
+		}
+		if (!$this->access->allows($file, FormPermission::MANAGE_SHARING)) {
+			throw new FormAccessDeniedException();
+		}
+		if ($creating) {
+			$this->requireLinkSharingAllowed();
 		}
 	}
 
 	/**
-	 * Replace the share link with a freshly minted one.
+	 * Nextcloud's share-password rules (M39): a new password must pass the policy; where passwords are
+	 * enforced, a new link gets a generated one and an existing link cannot lose it.
+	 * Only these changes are checked, so a link from before enforcement keeps saving.
 	 *
-	 * Rotating a link invalidates the URL everyone already has, so it must be a
-	 * deliberate act with its own endpoint — never a side effect of saving the
-	 * form (#135). Password, expiry and access restrictions are left untouched;
-	 * only the token changes.
+	 * @return string|null why the change is refused
 	 */
-	#[NoAdminRequired]
-	public function rotateShareToken(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
+	private function applyLinkPasswordPolicy(array &$incoming, array $current, ?string &$generated): ?string {
+		$sentPassword = array_key_exists('share_password', $incoming);
+		$newPassword = $sentPassword && is_string($incoming['share_password']) ? $incoming['share_password'] : '';
+		if ($newPassword !== '' && ($why = $this->linkPasswords->rejectionFor($newPassword)) !== null) {
+			return $why;
+		}
+		if (!$this->linkPasswords->isEnforced()) {
+			return null;
+		}
+		$hasLink = self::hasLink($current);
+		if (!$hasLink && self::asksForLink($incoming) && $newPassword === '') {
+			$generated = $this->linkPasswords->generate();
+			$incoming['share_password'] = $generated;
+			return null;
+		}
+		if ($hasLink && !self::revokesLink($incoming) && $sentPassword && $newPassword === '') {
+			return 'A password is required for public links';
+		}
+		return null;
+	}
 
-			if (!$this->permissionService->canEditSettings($role)) {
-				return new DataResponse(
-					['error' => $this->l->t('Permission denied')],
-					Http::STATUS_FORBIDDEN
-				);
-			}
+	private static function hasLink(array $settings): bool {
+		return is_string($settings['public_token'] ?? null) && $settings['public_token'] !== '';
+	}
 
-			$form = $this->formRepository->loadPublic($fileId);
+	/** The value sent is only an intent marker, the token is minted on the server: anything but null or '' asks. */
+	private static function asksForLink(array $settings): bool {
+		return array_key_exists('public_token', $settings) && !self::revokesLink($settings);
+	}
 
-			// The "no link to replace" guard + fresh mint live in the service
-			// (#135); it throws DomainException when there is nothing to rotate.
-			try {
-				$settings = $this->shareTokenService->rotate($form['settings'] ?? []);
-			} catch (\DomainException $e) {
-				return new DataResponse(
-					['error' => $e->getMessage()],
-					Http::STATUS_BAD_REQUEST
-				);
-			}
+	private static function revokesLink(array $settings): bool {
+		return array_key_exists('public_token', $settings) && ($settings['public_token'] === null || $settings['public_token'] === '');
+	}
 
-			$updatedForm = $this->formRepository->update($fileId, ['settings' => $settings]);
-			return new DataResponse(['form' => $updatedForm]);
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(['error' => $this->l->t('Form not found')], Http::STATUS_NOT_FOUND);
-		} catch (\RuntimeException $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_CONFLICT);
+	/** What FormRepository::update hashes; anything else sent as share_password removes the password. */
+	private static function isPassword(mixed $value): bool {
+		return is_string($value) && $value !== '';
+	}
+
+	private function forCurrentUser(int $fileId, array $form): array {
+		return $this->integrations->annotate($fileId, $this->sanitizer->forUser($form, $this->permissionService->getPermissionsForFile($this->access->getFile($fileId))));
+	}
+
+	/**
+	 * @throws FormAccessDeniedException
+	 */
+	private function requireLinkSharingAllowed(): void {
+		$user = $this->userSession->getUser();
+		if ($user === null
+			|| !$this->shareManager->shareApiAllowLinks($user)
+			|| $this->shareManager->sharingDisabledForUser($user->getUID())) {
+			// TRANSLATORS: Error shown when the admin does not allow public links for this user
+			throw RequestException::turnedOff(Translatable::t('Public links are not allowed'));
 		}
 	}
+
 }

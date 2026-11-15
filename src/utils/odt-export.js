@@ -2,6 +2,7 @@ import { OdtDocument, fillTemplate } from 'odf-kit';
 import { zipSync } from 'fflate';
 import axios from '@nextcloud/axios';
 import { generateUrl } from '@nextcloud/router';
+import { respondentName } from './respondent.js';
 import { t } from './l10n.js';
 
 // An ODT is not HTML: placeholders go in as they are, not HTML-escaped.
@@ -141,9 +142,7 @@ export async function generateResponseOdt(form, response, fileId) {
 
 	// Submission info
 	const submittedAt = new Date(response.submitted_at).toLocaleString();
-	const respondent = response.respondent.type === 'user'
-		? response.respondent.display_name
-		: t('formvox', 'Anonymous');
+	const respondent = respondentName(response, t('formvox', 'Anonymous'));
 
 	doc.addParagraph((p) => {
 		// TRANSLATORS: Label in an exported document; the date of the response follows
@@ -276,10 +275,8 @@ function buildTemplateData(form, response) {
 	const data = {
 		response_id: response.id,
 		submitted_at: new Date(response.submitted_at).toLocaleString(),
-		respondent_name: response.respondent.type === 'user'
-			? response.respondent.display_name
-			: t('formvox', 'Anonymous'),
-		respondent_type: response.respondent.type,
+		respondent_name: respondentName(response, t('formvox', 'Anonymous')),
+		respondent_type: response.respondent?.type ?? (response.source === 'api' ? 'api' : 'anonymous'),
 		form_title: form.title,
 	};
 

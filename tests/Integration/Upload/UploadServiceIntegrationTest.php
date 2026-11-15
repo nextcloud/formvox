@@ -30,19 +30,19 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 	public function testStoreUploadWritesRealFile(): void {
 		$formFile = $this->writeFormFile($this->userFolder, 'Upload Store Form');
 		$fileId = $formFile->getId();
-		// storeUpload → getUploadsFolder → getFileByIdPublic (public raw lookup).
+		// storeUploadPublic resolves the form through the public lookup.
 		$this->requirePublicResolvable($fileId);
 
-		$meta = $this->service->storeUpload(
+		$meta = $this->service->storeUploadPublic(
 			$fileId,
-			'resp-1',
+			'11111111-1111-4111-8111-111111111111',
 			$this->makeUploadedFile('photo.jpg', 'BYTES', 'image/jpeg')
 		);
 
 		// 'photo.jpg' is already safe — sanitized name is unchanged.
 		$this->assertSame('photo.jpg', $meta['filename']);
 		$this->assertSame('photo.jpg', $meta['originalName']);
-		$this->assertSame('resp-1', $meta['responseId']);
+		$this->assertSame('11111111-1111-4111-8111-111111111111', $meta['responseId']);
 		$this->assertSame('image/jpeg', $meta['mimeType']);
 		$this->assertSame(strlen('BYTES'), $meta['size']);
 		$this->assertIsInt($meta['fileId']);
@@ -52,7 +52,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		$uploadsFolder = $parent->get(".formvox-uploads-{$fileId}");
 		$this->assertInstanceOf(Folder::class, $uploadsFolder);
 
-		$responseFolder = $uploadsFolder->get('resp-1');
+		$responseFolder = $uploadsFolder->get('11111111-1111-4111-8111-111111111111');
 		$this->assertInstanceOf(Folder::class, $responseFolder);
 
 		$stored = $responseFolder->get('photo.jpg');
@@ -69,9 +69,9 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		$this->requirePublicResolvable($fileId);
 
 		// Path traversal + illegal chars + collapsed whitespace must be scrubbed.
-		$meta = $this->service->storeUpload(
+		$meta = $this->service->storeUploadPublic(
 			$fileId,
-			'resp-x',
+			'33333333-3333-4333-8333-333333333333',
 			$this->makeUploadedFile('../my  bad:name?.PNG', 'X', 'image/png')
 		);
 
@@ -81,7 +81,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		$this->assertSame('../my  bad:name?.PNG', $meta['originalName']);
 
 		$parent = $formFile->getParent();
-		$responseFolder = $parent->get(".formvox-uploads-{$fileId}")->get('resp-x');
+		$responseFolder = $parent->get(".formvox-uploads-{$fileId}")->get('33333333-3333-4333-8333-333333333333');
 		$this->assertInstanceOf(Folder::class, $responseFolder);
 		$stored = $responseFolder->get('my_bad_name.PNG');
 		$this->assertInstanceOf(File::class, $stored);
@@ -92,13 +92,13 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		$fileId = $formFile->getId();
 		$this->requirePublicResolvable($fileId);
 
-		$meta = $this->service->storeUpload(
+		$meta = $this->service->storeUploadPublic(
 			$fileId,
-			'resp-1',
+			'11111111-1111-4111-8111-111111111111',
 			$this->makeUploadedFile('doc.txt', 'HELLO-WORLD', 'text/plain')
 		);
 
-		$file = $this->service->getUpload($fileId, 'resp-1', $meta['filename']);
+		$file = $this->service->getUpload($formFile, '11111111-1111-4111-8111-111111111111', $meta['filename']);
 		$this->assertInstanceOf(File::class, $file);
 
 		$bytes = $file->getStorage()->file_get_contents($file->getInternalPath());
@@ -110,18 +110,18 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		$fileId = $formFile->getId();
 		$this->requirePublicResolvable($fileId);
 
-		$this->service->storeUpload(
+		$this->service->storeUploadPublic(
 			$fileId,
-			'resp-1',
+			'11111111-1111-4111-8111-111111111111',
 			$this->makeUploadedFile('one.txt', 'CONTENT-ONE', 'text/plain')
 		);
-		$this->service->storeUpload(
+		$this->service->storeUploadPublic(
 			$fileId,
-			'resp-2',
+			'22222222-2222-4222-8222-222222222222',
 			$this->makeUploadedFile('two.txt', 'CONTENT-TWO', 'text/plain')
 		);
 
-		$zipBytes = $this->service->createUploadsZip($fileId);
+		$zipBytes = $this->service->createUploadsZip($formFile);
 		$this->assertIsString($zipBytes);
 		$this->assertGreaterThan(0, strlen($zipBytes));
 
@@ -133,11 +133,11 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 			$this->assertTrue($zip->open($tempFile) === true);
 
 			// Entries are nested under their response folder (recursive add).
-			$this->assertNotFalse($zip->locateName('resp-1/one.txt'));
-			$this->assertNotFalse($zip->locateName('resp-2/two.txt'));
+			$this->assertNotFalse($zip->locateName('11111111-1111-4111-8111-111111111111/one.txt'));
+			$this->assertNotFalse($zip->locateName('22222222-2222-4222-8222-222222222222/two.txt'));
 
-			$this->assertSame('CONTENT-ONE', $zip->getFromName('resp-1/one.txt'));
-			$this->assertSame('CONTENT-TWO', $zip->getFromName('resp-2/two.txt'));
+			$this->assertSame('CONTENT-ONE', $zip->getFromName('11111111-1111-4111-8111-111111111111/one.txt'));
+			$this->assertSame('CONTENT-TWO', $zip->getFromName('22222222-2222-4222-8222-222222222222/two.txt'));
 
 			$zip->close();
 		} finally {
@@ -150,9 +150,9 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		$fileId = $formFile->getId();
 		$this->requirePublicResolvable($fileId);
 
-		$this->service->storeUpload(
+		$this->service->storeUploadPublic(
 			$fileId,
-			'resp-1',
+			'11111111-1111-4111-8111-111111111111',
 			$this->makeUploadedFile('gone.txt', 'DELETE-ME', 'text/plain')
 		);
 
@@ -160,7 +160,7 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		// Precondition: hidden folder exists.
 		$this->assertTrue($parent->nodeExists(".formvox-uploads-{$fileId}"));
 
-		$this->service->deleteAllUploads($fileId);
+		$this->service->deleteAllUploads($formFile);
 
 		$this->assertFalse($parent->nodeExists(".formvox-uploads-{$fileId}"));
 	}
@@ -173,6 +173,6 @@ class UploadServiceIntegrationTest extends IntegrationTestCase {
 		$this->requirePublicResolvable($fileId);
 
 		$this->expectException(NotFoundException::class);
-		$this->service->getUploadsFolder($fileId, false);
+		$this->service->getUploadsFolder($formFile);
 	}
 }

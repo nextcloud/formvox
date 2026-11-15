@@ -256,7 +256,7 @@
 
     <!-- Scale -->
     <div v-else-if="question.type === 'scale'" class="scale-input">
-      <span v-if="question.scaleMinLabel" class="scale-label">{{ question.scaleMinLabel }}</span>
+      <span v-if="scale.minLabel" class="scale-label">{{ scale.minLabel }}</span>
       <div
         class="scale-options"
         role="radiogroup"
@@ -279,7 +279,7 @@
           {{ n }}
         </button>
       </div>
-      <span v-if="question.scaleMaxLabel" class="scale-label">{{ question.scaleMaxLabel }}</span>
+      <span v-if="scale.maxLabel" class="scale-label">{{ scale.maxLabel }}</span>
     </div>
 
     <!-- Rating -->
@@ -492,6 +492,7 @@
 
 <script>
 import { t, n } from '@/utils/l10n';
+import { scaleOf, ratingMaxOf } from '@/utils/scale';
 import { computed, ref } from 'vue';
 import {
   NcTextField,
@@ -844,9 +845,10 @@ export default {
       });
     });
 
+    const scale = computed(() => scaleOf(props.question));
+
     const scaleRange = computed(() => {
-      const min = props.question.scaleMin || 1;
-      const max = props.question.scaleMax || 5;
+      const { min, max } = scale.value;
       const range = [];
       for (let i = min; i <= max; i++) {
         range.push(i);
@@ -855,7 +857,7 @@ export default {
     });
 
     const ratingRange = computed(() => {
-      const max = props.question.ratingMax || 5;
+      const max = ratingMaxOf(props.question);
       const range = [];
       for (let i = 1; i <= max; i++) {
         range.push(i);
@@ -1121,6 +1123,7 @@ export default {
       renderedDescription,
       renderedDescriptionHtml,
       renderPiping,
+      scale,
       scaleRange,
       ratingRange,
       toggleMultiple,
@@ -1369,8 +1372,9 @@ export default {
 .validation-error {
   margin-top: 4px;
   padding: 6px 10px;
+  // --color-error is a pale surface since NC 32; white on it was 1.18:1 (#165).
   background: var(--color-error);
-  color: white;
+  color: var(--color-error-text);
   border-radius: var(--border-radius);
   font-size: 13px;
 }
@@ -1654,7 +1658,7 @@ export default {
     margin-top: 8px;
     padding: 8px 12px;
     background: var(--color-error);
-    color: white;
+    color: var(--color-error-text);
     border-radius: var(--border-radius);
     font-size: 13px;
   }

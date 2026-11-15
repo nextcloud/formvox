@@ -20,7 +20,10 @@ class EnglishL10N implements IL10N {
 	}
 
 	public function l(string $type, $data, array $options = []) {
-		return $data instanceof \DateTimeInterface ? $data->format('Y-m-d H:i') : (string)$data;
+		if ($data instanceof \DateTimeInterface) {
+			return $data->format($type === 'date' ? 'Y-m-d' : 'Y-m-d H:i');
+		}
+		return (string)$data;
 	}
 
 	public function getLanguageCode(): string {

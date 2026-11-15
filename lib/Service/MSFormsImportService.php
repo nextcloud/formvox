@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\FormVox\Exception\ClientErrorException;
 use OCP\IL10N;
 use OCP\Security\ISecureRandom;
 use Psr\Log\LoggerInterface;
@@ -12,12 +13,16 @@ use Psr\Log\LoggerInterface;
  * Service for importing Microsoft Forms into FormVox
  */
 class MSFormsImportService {
+	/** Reasons listed one by one; the rest is counted. */
+	private const MAX_REASONS = 20;
+
 	public function __construct(
 		private FormRepository $formRepository,
 		private ResponsePersistenceService $responsePersistence,
 		private MicrosoftFormsApiClient $apiClient,
 		private ISecureRandom $secureRandom,
 		private LoggerInterface $logger,
+		private AnswerValidator $answers,
 		private IL10N $l,
 	) {
 	}
@@ -297,14 +302,16 @@ class MSFormsImportService {
 
 		// Import responses if requested
 		$responsesImported = 0;
+		$responsesSkipped = 0;
 		if ($includeResponses) {
 			try {
 				$msResponses = $this->apiClient->getResponses($accessToken, $msFormId);
-				$responsesImported = $this->importResponses($fileId, $msResponses, $questionIdMap);
+				[$responsesImported, $responsesSkipped, $reasons] = $this->importResponses($fileId, $msResponses, $questionIdMap, $formData);
+				$warnings = array_merge($warnings, $reasons);
 			} catch (\Exception $e) {
 				$this->logger->warning('Failed to import responses', ['exception' => $e]);
-				// TRANSLATORS: Import warning; %s is the technical reason, usually in English
-				$warnings[] = $this->l->t('Could not import responses: %s', [$e->getMessage()]);
+				// TRANSLATORS: Warning after a Microsoft Forms import when its responses could not be fetched
+				$warnings[] = $this->l->t('The responses could not be imported; the form itself was.');
 			}
 		}
 
@@ -314,6 +321,7 @@ class MSFormsImportService {
 			'questionsImported' => $totalQuestionCount,
 			'pagesImported' => $hasPages ? count($formPages) : 0,
 			'responsesImported' => $responsesImported,
+			'responsesSkipped' => $responsesSkipped,
 			'warnings' => $warnings,
 		];
 	}
@@ -849,8 +857,20 @@ class MSFormsImportService {
 	/**
 	 * Import responses from MS Forms
 	 */
-	private function importResponses(int $fileId, array $msResponses, array $questionIdMap): int {
+	/**
+	 * Every response passes the same checks as one submitted through the form; one that does not is
+	 * left out, with the reason for whoever imports.
+	 *
+	 * @return array{int, int, list<string>} imported, skipped, why
+	 */
+	private function importResponses(int $fileId, array $msResponses, array $questionIdMap, array $form): array {
 		$count = 0;
+		$skipped = 0;
+		$reasons = [];
+		$full = null;
+		// Files stay in Microsoft (the import already says so), so their answers are not checked or kept.
+		$form['questions'] = array_values(array_filter($form['questions'] ?? [], fn ($q) => ($q['type'] ?? '') !== 'file'));
+		$types = array_column($form['questions'], 'type', 'id');
 
 		foreach ($msResponses as $msResponse) {
 			// Map answers to FormVox question IDs
@@ -881,10 +901,30 @@ class MSFormsImportService {
 				];
 			}
 
+			foreach ($answers as $questionId => $value) {
+				$answers[$questionId] = $this->toFormVoxAnswer($types[$questionId] ?? '', $value);
+			}
+
 			try {
-				$this->responsePersistence->appendResponse($fileId, $response);
+				$response['answers'] = $this->answers->validate($form, $answers);
+			} catch (InvalidAnswerException $e) {
+				$skipped++;
+				if (count($reasons) < self::MAX_REASONS) {
+					$reasons[] = $this->l->t('A response from %1$s was not imported: %2$s', [substr((string)($msResponse['submitDate'] ?? ''), 0, 10), $e->getMessage()]);
+				}
+				continue;
+			}
+
+			try {
+				$this->responsePersistence->appendImported($fileId, $response);
 				$count++;
 			} catch (\Exception $e) {
+				if ($e instanceof ClientErrorException && $e->getReason() === 'storage_full') {
+					// Every next one would be refused for the same reason: stop and say so.
+					// TRANSLATORS: Warning after a Microsoft Forms import when the storage ran full; %d is how many responses were left out
+					$full = $this->l->t('%d responses were not imported: there is not enough storage space', [count($msResponses) - $count - $skipped]);
+					break;
+				}
 				$this->logger->warning('Failed to import response', [
 					'responseId' => $msResponse['id'] ?? 'unknown',
 					'exception' => $e,
@@ -892,7 +932,33 @@ class MSFormsImportService {
 			}
 		}
 
-		return $count;
+		if ($skipped > count($reasons)) {
+			$reasons[] = $this->l->t('%d more responses were not imported for the same kind of reasons', [$skipped - count($reasons)]);
+		}
+		if ($full !== null) {
+			$reasons[] = $full;
+		}
+
+		return [$count, $skipped, $reasons];
+	}
+
+	/**
+	 * Microsoft sends some answers in another shape than the form stores them.
+	 */
+	private function toFormVoxAnswer(string $type, mixed $value): mixed {
+		if ($type === 'multiple' && is_string($value)) {
+			// A JSON list or a ';'-separated list of the chosen options.
+			$decoded = json_decode($value, true);
+			return is_array($decoded) ? array_values($decoded) : array_values(array_filter(array_map('trim', explode(';', $value)), fn ($v) => $v !== ''));
+		}
+		if ($type === 'date' && is_string($value) && preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $value, $m)) {
+			// Microsoft's US-style month/day/year.
+			return sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[1], (int)$m[2]);
+		}
+		if ($type === 'date' && is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T/', $value)) {
+			return substr($value, 0, 10);
+		}
+		return $value;
 	}
 
 	/**

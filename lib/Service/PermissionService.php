@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\FormVox\Security\FormPermission;
 use OCP\Constants;
 use OCP\Files\File;
+use OCP\Files\Storage\ISharedStorage;
 
 class PermissionService {
 	public const ROLE_NONE = 'none';
@@ -13,53 +15,98 @@ class PermissionService {
 	public const ROLE_VIEWER = 'viewer';
 	public const ROLE_EDITOR = 'editor';
 	public const ROLE_ADMIN = 'admin';
-	public const ROLE_OWNER = 'owner';
 
 	/**
-	 * Get user's role based on Nextcloud file permissions
-	 * This is the primary method for determining access rights
-	 *
-	 * Mapping:
-	 * - Owner = OWNER (full control)
-	 * - Read + Edit = EDITOR (full form control, share permission controls public link)
-	 * - Read only = VIEWER (view only)
+	 * Role from Nextcloud's permissions on the file, opened through the user's own view.
+	 * No owner override: in a team folder getOwner() is whoever is looking (#146).
 	 */
-	public function getRoleFromFile(File $file, string $userId): string {
-		// Check if user is file owner
-		if ($file->getOwner()?->getUID() === $userId) {
-			return self::ROLE_OWNER;
-		}
-
-		$perms = $file->getPermissions();
-
-		// NC Constants: READ=1, UPDATE=2, CREATE=4, DELETE=8, SHARE=16
-		$canRead = ($perms & Constants::PERMISSION_READ) !== 0;
-		$canEdit = ($perms & Constants::PERMISSION_UPDATE) !== 0;
-
-		if (!$canRead) {
+	public function getRoleFromFile(File $file): string {
+		if (!$file->isReadable()) {
 			return self::ROLE_NONE;
 		}
-
-		// Editor gets full form control (settings, branding, responses)
-		// Share permission is checked separately for public link creation
-		if ($canEdit) {
-			return self::ROLE_EDITOR;
+		if (!$file->isUpdateable()) {
+			return self::ROLE_VIEWER;
 		}
-
-		return self::ROLE_VIEWER;
+		return $this->isDeletable($file) ? self::ROLE_ADMIN : self::ROLE_EDITOR;
 	}
 
 	/**
-	 * Check if user can share (create public response link)
-	 * Based on NC SHARE permission
+	 * Whether Nextcloud allows $permission on the form as the user opened it.
 	 */
-	public function canShareFromFile(File $file, string $userId): bool {
-		if ($file->getOwner()?->getUID() === $userId) {
+	public function allows(File $file, string $permission): bool {
+		if (!$file->isReadable()) {
+			return false;
+		}
+		return match ($permission) {
+			FormPermission::READ => true,
+			FormPermission::EDIT => (bool)$file->isUpdateable(),
+			FormPermission::DELETE => $this->isDeletable($file),
+			FormPermission::VIEW_CONTENT => $this->canSeeContent($file),
+			FormPermission::DOWNLOAD => $this->canDownload($file),
+			FormPermission::MANAGE_SHARING => (bool)$file->isUpdateable()
+				&& $this->isDeletable($file)
+				&& (bool)$file->isShareable(),
+			default => false,
+		};
+	}
+
+	/**
+	 * For someone a form was shared with, Nextcloud's "delete" on the share itself means taking it out of their
+	 * files, and it reports that only when the node was loaded through the view (e.g. after a write). What counts
+	 * for the form is the share's own delete right, however the node was loaded.
+	 */
+	private function isDeletable(File $file): bool {
+		if (!$file->isDeletable()) {
+			return false;
+		}
+		$storage = $file->getStorage();
+		if (!$storage->instanceOfStorage(ISharedStorage::class)) {
 			return true;
 		}
+		/** @var ISharedStorage $storage */
+		return ($storage->getShare()->getPermissions() & Constants::PERMISSION_DELETE) !== 0;
+	}
 
-		$perms = $file->getPermissions();
-		return ($perms & Constants::PERMISSION_SHARE) !== 0;
+	/**
+	 * Same rule as IShare::canDownload(), which only exists from NC 34.
+	 */
+	public function canDownload(File $file): bool {
+		$storage = $file->getStorage();
+		if (!$storage->instanceOfStorage(ISharedStorage::class)) {
+			return true;
+		}
+		/** @var ISharedStorage $storage */
+		$share = $storage->getShare();
+		if (($share->getPermissions() & Constants::PERMISSION_READ) === 0) {
+			return false;
+		}
+		return $share->getAttributes()?->getAttribute('permissions', 'download') !== false;
+	}
+
+	/**
+	 * Nextcloud's own verdict on seeing what a shared file holds: a share without download permission may, unless
+	 * the administrator turned "allow preview even if download is disabled" off.
+	 */
+	public function canSeeContent(File $file): bool {
+		$storage = $file->getStorage();
+		if (!$storage->instanceOfStorage(ISharedStorage::class)) {
+			return true;
+		}
+		/** @var ISharedStorage $storage */
+		return $storage->getShare()->canSeeContent();
+	}
+
+	/**
+	 * Flags the frontend uses to show or hide actions.
+	 */
+	public function getPermissionsForFile(File $file): array {
+		$permissions = $this->getPermissionsForRole(
+			$this->getRoleFromFile($file),
+			$this->allows($file, FormPermission::MANAGE_SHARING)
+		);
+		$permissions['viewResponses'] = $permissions['viewResponses'] && $this->allows($file, FormPermission::VIEW_CONTENT);
+		$permissions['canDownload'] = $this->allows($file, FormPermission::DOWNLOAD);
+		return $permissions;
 	}
 
 	/**
@@ -71,7 +118,6 @@ class PermissionService {
 			self::ROLE_VIEWER,
 			self::ROLE_EDITOR,
 			self::ROLE_ADMIN,
-			self::ROLE_OWNER,
 		]);
 	}
 
@@ -83,7 +129,6 @@ class PermissionService {
 			self::ROLE_VIEWER,
 			self::ROLE_EDITOR,
 			self::ROLE_ADMIN,
-			self::ROLE_OWNER,
 		]);
 	}
 
@@ -94,7 +139,6 @@ class PermissionService {
 		return in_array($role, [
 			self::ROLE_EDITOR,
 			self::ROLE_ADMIN,
-			self::ROLE_OWNER,
 		]);
 	}
 
@@ -106,7 +150,6 @@ class PermissionService {
 		return in_array($role, [
 			self::ROLE_EDITOR,
 			self::ROLE_ADMIN,
-			self::ROLE_OWNER,
 		]);
 	}
 
@@ -118,15 +161,14 @@ class PermissionService {
 		return in_array($role, [
 			self::ROLE_EDITOR,
 			self::ROLE_ADMIN,
-			self::ROLE_OWNER,
 		]);
 	}
 
 	/**
-	 * Check if user can delete the form
+	 * Check if user can delete the form — Nextcloud's delete permission.
 	 */
 	public function canDeleteForm(string $role): bool {
-		return $role === self::ROLE_OWNER;
+		return $role === self::ROLE_ADMIN;
 	}
 
 	/**
@@ -137,13 +179,11 @@ class PermissionService {
 		return in_array($role, [
 			self::ROLE_EDITOR,
 			self::ROLE_ADMIN,
-			self::ROLE_OWNER,
 		]);
 	}
 
 	/**
-	 * Get all permissions for a role as array
-	 * Note: canShare must be set separately using canShareFromFile()
+	 * Prefer getPermissionsForFile(), which also fills canShare and canDownload.
 	 */
 	public function getPermissionsForRole(string $role, bool $canShare = false): array {
 		return [

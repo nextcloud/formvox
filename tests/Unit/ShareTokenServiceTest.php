@@ -96,13 +96,13 @@ class ShareTokenServiceTest extends TestCase {
 	}
 
 	public function testRotateThrowsWhenNoLinkToReplace(): void {
-		$this->expectException(\DomainException::class);
+		$this->expectException(\OCA\FormVox\Exception\RequestException::class);
 		$this->expectExceptionMessageMatches('/no share link to replace/');
 		$this->service()->rotate(['other' => 1]);
 	}
 
 	public function testRotateThrowsOnEmptyToken(): void {
-		$this->expectException(\DomainException::class);
+		$this->expectException(\OCA\FormVox\Exception\RequestException::class);
 		$this->service()->rotate(['public_token' => '']);
 	}
 }

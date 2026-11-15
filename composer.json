@@ -4,7 +4,8 @@
   "type": "nextcloud-app",
   "license": "AGPL-3.0-or-later",
   "require": {
-    "php": ">=8.2"
+    "php": ">=8.2",
+    "dompdf/dompdf": "^3.1"
   },
   "require-dev": {
     "doctrine/dbal": "^4.0",
@@ -28,12 +29,13 @@
     "test:unit": "phpunit --testsuite Unit",
     "test:integration": "phpunit --configuration phpunit.integration.xml",
     "test:coverage": "phpunit --coverage-html coverage",
-    "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l",
+    "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './lib/Vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l",
     "cs:check": "php-cs-fixer fix --dry-run --diff",
     "cs:fix": "php-cs-fixer fix",
     "psalm": "psalm --no-cache",
     "psalm:baseline": "psalm --no-cache --set-baseline=tests/psalm-baseline.xml",
-    "security": "semgrep --config p/php --config p/security-audit --config p/secrets --error lib/"
+    "security": "semgrep --config p/php --config p/security-audit --config p/secrets --error --exclude lib/Vendor lib/",
+    "vendor:pdf": "@php scripts/vendor-pdf.php"
   },
   "config": {
     "sort-packages": true,
@@ -42,6 +44,18 @@
     },
     "allow-plugins": {
       "php-cs-fixer/shim": true
+    }
+  },
+  "extra": {
+    "strauss": {
+      "target_directory": "lib/Vendor",
+      "namespace_prefix": "OCA\\FormVox\\Vendor\\",
+      "classmap_prefix": "FormVox_Vendor_",
+      "constant_prefix": "FORMVOX_VENDOR_",
+      "packages": [
+        "dompdf/dompdf"
+      ],
+      "delete_vendor_packages": false
     }
   }
 }

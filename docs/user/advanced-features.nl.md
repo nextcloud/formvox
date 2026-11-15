@@ -183,6 +183,8 @@ Pas het uiterlijk van je formulieren aan zodat ze passen bij je organisatie.
 - **Accent-kleur** — knoppen en highlights
 - **Custom CSS** — geavanceerde styling (alleen beheerder)
 
+De header-afbeelding moet PNG, JPEG, GIF of WebP zijn, hooguit 2 MB.
+
 ### Per-formulier branding
 
 Elk formulier kan zijn eigen branding hebben, of overerven van organisatie-defaults.

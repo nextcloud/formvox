@@ -6,52 +6,29 @@
 import { registerFileAction, addNewFileMenuEntry, NewMenuEntryCategory, DefaultType } from '@nextcloud/files';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
+import { registerNewFormEntry, registerOpenAction } from './utils/openAction';
+import { FORM_ICON_MONO_SVG, FORM_ICON_SVG } from './utils/formIcon';
 import { t } from '@/utils/l10n';
-
-// FormVox icon as inline SVG
-const formvoxIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect x="15" y="10" width="70" height="80" rx="5" fill="#fff" stroke="#0082c9" stroke-width="3"/>
-  <rect x="25" y="25" width="35" height="4" rx="2" fill="#0082c9"/>
-  <rect x="25" y="35" width="50" height="4" rx="2" fill="#ccc"/>
-  <circle cx="28" cy="50" r="4" fill="#0082c9"/>
-  <rect x="38" y="48" width="30" height="4" rx="2" fill="#666"/>
-  <circle cx="28" cy="62" r="4" stroke="#0082c9" stroke-width="2" fill="none"/>
-  <rect x="38" y="60" width="25" height="4" rx="2" fill="#666"/>
-  <circle cx="28" cy="74" r="4" stroke="#0082c9" stroke-width="2" fill="none"/>
-  <rect x="38" y="72" width="35" height="4" rx="2" fill="#666"/>
-</svg>`;
 
 /**
  * Register file action to open .fvform files
  */
 function registerFvformFileAction() {
     try {
-        // @nextcloud/files v4 expects a plain object (IFileAction) — the
-        // FileAction class was removed. exec receives the single node
-        // (and the file list passes nodes one-by-one); return true on
-        // success, false to show an error toast, null for silent no-op.
-        registerFileAction({
-            id: 'formvox-open',
-            displayName: () => t('formvox', 'Edit with FormVox'),
-            iconSvgInline: () => formvoxIconSvg,
-            enabled: (nodes) => {
-                if (nodes.length !== 1) return false;
-                const node = nodes[0];
-                return node.type === 'file' &&
-                       (node.mime === 'application/x-fvform' ||
-                        node.basename?.toLowerCase().endsWith('.fvform'));
-            },
-            exec: async (node) => {
-                const fileId = node.fileid;
-                if (fileId) {
-                    const appUrl = generateUrl('/apps/formvox/edit/{fileId}', { fileId });
-                    window.location.href = appUrl;
-                    return true;
+        registerOpenAction({
+            registerFileAction,
+            version: window.OC?.config?.version,
+            open: (node) => {
+                const fileId = node?.fileid;
+                if (!fileId) {
+                    return false;
                 }
-                return false;
+                window.location.href = generateUrl('/apps/formvox/edit/{fileId}', { fileId });
+                return true;
             },
-            default: DefaultType.DEFAULT,
-            order: -50,
+            icon: FORM_ICON_MONO_SVG,
+            defaultType: DefaultType.DEFAULT,
+            scope: window,
         });
     } catch (e) {
         console.error('FormVox: Failed to register file action', e);
@@ -62,21 +39,24 @@ function registerFvformFileAction() {
  * Register "New form" in the new file menu
  */
 function registerNewFormVoxMenu() {
-    try {
-        addNewFileMenuEntry({
+    registerNewFormEntry({
+        addNewFileMenuEntry,
+        version: window.OC?.config?.version,
+        entry: {
             id: 'formvox-new',
             displayName: t('formvox', 'New form'),
-            iconSvgInline: formvoxIconSvg,
+            iconSvgInline: FORM_ICON_SVG,
             category: NewMenuEntryCategory.CreateNew,
             order: 30,
-            handler: async (context, content) => {
-                await createNewFvformFile(context.path || '/');
+            handler: async (context) => {
+                await createNewFvformFile(context?.path || '/');
             },
-        });
-    } catch (e) {
+        },
+        scope: window,
+    }).catch((e) => {
         console.error('FormVox: Failed to register new file menu entry', e);
         tryLegacyNewFileMenu();
-    }
+    });
 }
 
 /**
@@ -90,7 +70,7 @@ function tryLegacyNewFileMenu() {
                 displayName: t('formvox', 'New form'),
                 templateName: t('formvox', 'New form') + '.fvform',
                 iconClass: 'icon-formvox',
-                iconSvgInline: formvoxIconSvg,
+                iconSvgInline: FORM_ICON_SVG,
                 fileType: 'file',
                 handler: (context) => createNewFvformFile(context?.dir || '/'),
             });
@@ -146,44 +126,7 @@ async function createNewFvformFile(directory) {
     }
 }
 
-/**
- * Setup click handler for .fvform files as fallback
- */
-function setupFvformClickHandler() {
-    document.addEventListener('click', (e) => {
-        const nameElement = e.target.closest('.files-list__row-name-link, .files-list__row-name, a.name, .innernametext');
-        if (!nameElement) return;
-
-        const fileRow = e.target.closest('[data-cy-files-list-row], tr[data-file], .files-list__row');
-        if (!fileRow) return;
-
-        const filename = fileRow.getAttribute('data-cy-files-list-row-name') ||
-                        fileRow.getAttribute('data-file') ||
-                        fileRow.querySelector('.files-list__row-name-text')?.textContent;
-
-        if (!filename?.toLowerCase().endsWith('.fvform')) return;
-
-        const fileId = fileRow.getAttribute('data-cy-files-list-row-fileid') ||
-                      fileRow.getAttribute('data-id');
-
-        if (fileId) {
-            e.preventDefault();
-            e.stopPropagation();
-            const appUrl = generateUrl('/apps/formvox/edit/{fileId}', { fileId });
-            window.location.href = appUrl;
-        }
-    }, true);
-}
-
-// Initialize
-function init() {
-    registerFvformFileAction();
-    registerNewFormVoxMenu();
-    setupFvformClickHandler();
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 100));
-} else {
-    setTimeout(init, 100);
-}
+// As the script runs: Files' init script made the registries already, and NC 32's upload picker copies the New menu
+// once, when the first folder shows (review of the 3a fixes: it lacked New form until a folder change).
+registerFvformFileAction();
+registerNewFormVoxMenu();

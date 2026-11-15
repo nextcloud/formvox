@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
+use OCA\FormVox\Pdf\PdfMailPolicy;
 use OCA\FormVox\Service\AiFormGeneratorService;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\TemplateService;
@@ -17,26 +20,16 @@ use OCP\IL10N;
 use OCP\IRequest;
 
 class SettingsController extends Controller {
-	private IConfig $config;
-	private MicrosoftFormsAuthService $msFormsAuthService;
-	private AiFormGeneratorService $aiService;
-	private TemplateService $templateService;
-	private IL10N $l;
-
 	public function __construct(
 		IRequest $request,
-		IConfig $config,
-		MicrosoftFormsAuthService $msFormsAuthService,
-		AiFormGeneratorService $aiService,
-		TemplateService $templateService,
-		IL10N $l,
+		private IConfig $config,
+		private MicrosoftFormsAuthService $msFormsAuthService,
+		private AiFormGeneratorService $aiService,
+		private TemplateService $templateService,
+		private PdfMailPolicy $pdfMailPolicy,
+		private IL10N $l,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->config = $config;
-		$this->msFormsAuthService = $msFormsAuthService;
-		$this->aiService = $aiService;
-		$this->templateService = $templateService;
-		$this->l = $l;
 	}
 
 	/**
@@ -50,20 +43,18 @@ class SettingsController extends Controller {
 	 * Add a new template — `form` is the full form JSON snapshot (admin only)
 	 */
 	public function addAdminTemplate(string $title, string $description, array $form): DataResponse {
-		try {
-			$entry = $this->templateService->addTemplate($title, $description, $form);
-			return new DataResponse(['template' => $entry]);
-		} catch (\Throwable $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		}
+		return new DataResponse(['template' => $this->templateService->addTemplate($title, $description, $form)]);
 	}
 
 	/**
 	 * Delete a template by id (admin only)
 	 */
 	public function deleteAdminTemplate(string $id): DataResponse {
-		$ok = $this->templateService->removeTemplate($id);
-		return new DataResponse(['success' => $ok]);
+		if (!$this->templateService->removeTemplate($id)) {
+			// TRANSLATORS: Error shown when an admin removes a template that is already gone
+			throw RequestException::notFound(Translatable::t('Template not found'));
+		}
+		return new DataResponse(['success' => true]);
 	}
 
 	/**
@@ -72,6 +63,13 @@ class SettingsController extends Controller {
 	#[NoAdminRequired]
 	public function listAvailableTemplates(): DataResponse {
 		return new DataResponse(['templates' => $this->templateService->listTemplates()]);
+	}
+
+	/** Whether anonymous respondents get their PDF with the confirmation email too (admin only); not without a shared cache. */
+	public function savePdf(bool $anonymous): DataResponse {
+		$anonymous = $anonymous && $this->pdfMailPolicy->sharedCache();
+		$this->config->setAppValue(Application::APP_ID, PdfMailPolicy::ANONYMOUS_SETTING, $anonymous ? '1' : '0');
+		return new DataResponse(['anonymous' => $anonymous]);
 	}
 
 	/**

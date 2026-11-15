@@ -311,6 +311,18 @@ describe('QuestionRenderer', () => {
 			expect(wrapper.findAll('.scale-option')).toHaveLength(5)
 		})
 
+		it('starts at 0 when the scale says so', () => {
+			const wrapper = mountQ({ id: 'q1', type: 'scale', scaleMin: 0, scaleMax: 3 }, { value: null })
+			expect(wrapper.findAll('.scale-option').map((b) => b.text())).toEqual(['0', '1', '2', '3'])
+		})
+
+		it('reads the names older forms used until a save converts them (the demo 1-10)', () => {
+			const wrapper = mountQ({ id: 'q1', type: 'scale', min: 1, max: 10, minLabel: 'Not likely', maxLabel: 'Very likely' }, { value: null })
+			expect(wrapper.findAll('.scale-option')).toHaveLength(10)
+			expect(wrapper.text()).toContain('Not likely')
+			expect(wrapper.text()).toContain('Very likely')
+		})
+
 		it('emits the numeric value on click', async () => {
 			const wrapper = mountQ({ id: 'q1', type: 'scale', scaleMin: 1, scaleMax: 3 }, { value: null })
 			await wrapper.findAll('.scale-option')[1].trigger('click')

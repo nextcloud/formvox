@@ -132,16 +132,26 @@ Sta respondenten toe bestanden te uploaden bij hun antwoord.
 **Instellingen:**
 
 - Toegestane bestandstypen (bv. PDF, afbeeldingen, documenten)
-- Maximum-bestandsgrootte
-- Maximum-aantal bestanden
+- Maximum-bestandsgrootte (per vraag; 10 MB als niet ingesteld, hooguit 100 MB)
+- Maximum-aantal bestanden (per vraag; hooguit 20)
+
+**Limieten waar invullers tegenaan kunnen lopen:**
+
+- Een enkel bestand boven de limiet van de vraag wordt geweigerd, met de limiet in de foutmelding.
+- De bestand-vragen van één antwoord nemen samen hooguit `3 × (bestanden die de vragen toestaan) + 5` bestanden; dit
+  laat ruimte voor een nieuwe poging waarvan het antwoord verloren ging en voor bestanden die na een mislukte poging
+  worden vervangen.
+- Daaronder gelden ook de eigen PHP-upload-limieten van de server (`upload_max_filesize`, `post_max_size`); de
+  kleinste van de twee geldt.
 
 **Beveiliging:**
 
-- Geüploade bestanden worden veilig opgeslagen in Nextcloud
+- Geüploade bestanden worden in Nextclouds eigen opslag bewaard (FormVox's app-data, of naast het formulier-bestand
+  zolang dat nog niet naar de database is omgezet)
 - Bestanden zijn alleen toegankelijk voor de formulier-eigenaar
 - Bestanden worden verwijderd wanneer het antwoord wordt verwijderd
 
-**Let op:** bestand-uploads tellen mee voor het opslag-quotum van de formulier-eigenaar.
+**Let op:** bestanden van invullers tellen niet meer mee voor het opslag-quotum van de formulier-eigenaar of teammap.
 
 ## Geavanceerde vragen
 

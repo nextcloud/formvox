@@ -5,10 +5,22 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\BackgroundJob\UploadCleanupJob;
+use OCA\FormVox\Exception\ClientErrorException;
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
+use OCA\FormVox\Security\FormNotFoundException;
+use OCA\FormVox\Security\FormSanitizer;
+use OCA\FormVox\Security\FormSecrets;
 use OCA\FormVox\Service\BrandingService;
 use OCA\FormVox\Service\ChallengeService;
+use OCA\FormVox\Service\FormLockedException;
 use OCA\FormVox\Service\FormRepository;
+use OCA\FormVox\Service\FormSchemaValidator;
+use OCA\FormVox\Service\ResponseRefusedException;
+use OCA\FormVox\Service\ResponseRules;
 use OCA\FormVox\Service\ResponseService;
+use OCA\FormVox\Service\SubmissionIds;
 use OCA\FormVox\Service\UploadService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -20,54 +32,58 @@ use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
+use OCP\BackgroundJob\IJobList;
+use OCP\Files\NotFoundException;
 use OCP\IConfig;
+use OCP\IDateTimeFormatter;
+use OCP\IDateTimeZone;
 use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\IUser;
 use OCP\IUserSession;
+use OCP\Lock\LockedException;
+use OCP\Security\Bruteforce\IThrottler;
+use OCP\Security\Bruteforce\MaxDelayReached;
 use OCP\Util;
 
 class PublicController extends Controller {
-	private IConfig $config;
-	private IUserSession $userSession;
-	private IURLGenerator $urlGenerator;
-	private IGroupManager $groupManager;
-	private FormRepository $formRepository;
-	private UploadService $uploadService;
-	private ResponseService $responseService;
-	private BrandingService $brandingService;
-	private ChallengeService $challengeService;
-	private IInitialState $initialState;
-	private IL10N $l;
+	/** Wrong link passwords count under one name, whichever entry point they came through. */
+	private const PASSWORD_ACTION = 'formvox_password';
+	private const PASSWORD_NOT_ASKED = 'not_asked';
+	private const PASSWORD_REMEMBERED = 'remembered';
+	private const PASSWORD_GIVEN = 'given';
+	private const PASSWORD_MISSING = 'missing';
+	private const PASSWORD_WRONG = 'wrong';
+	/** Passes that spare the challenge (ChallengeService::issuePass): a retry after "busy", more files for one response. */
+	private const RETRY_PASS = 'retry';
+	private const RETRY_PASS_SECONDS = 120;
+	private const UPLOAD_PASS = 'upload';
+	private const UPLOAD_PASS_SECONDS = 7200;
 
 	public function __construct(
 		IRequest $request,
-		IConfig $config,
-		IUserSession $userSession,
-		IURLGenerator $urlGenerator,
-		IGroupManager $groupManager,
-		FormRepository $formRepository,
-		UploadService $uploadService,
-		ResponseService $responseService,
-		BrandingService $brandingService,
-		ChallengeService $challengeService,
-		IInitialState $initialState,
-		IL10N $l,
+		private IConfig $config,
+		private IUserSession $userSession,
+		private IURLGenerator $urlGenerator,
+		private IGroupManager $groupManager,
+		private FormRepository $formRepository,
+		private UploadService $uploadService,
+		private ResponseService $responseService,
+		private BrandingService $brandingService,
+		private ChallengeService $challengeService,
+		private IInitialState $initialState,
+		private FormSecrets $secrets,
+		private FormSanitizer $sanitizer,
+		private ResponseRules $rules,
+		private IL10N $l,
+		private IThrottler $throttler,
+		private IDateTimeFormatter $dateTimeFormatter,
+		private IDateTimeZone $timeZone,
+		private IJobList $jobList,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->config = $config;
-		$this->userSession = $userSession;
-		$this->urlGenerator = $urlGenerator;
-		$this->groupManager = $groupManager;
-		$this->formRepository = $formRepository;
-		$this->uploadService = $uploadService;
-		$this->responseService = $responseService;
-		$this->brandingService = $brandingService;
-		$this->challengeService = $challengeService;
-		$this->initialState = $initialState;
-		$this->l = $l;
 	}
 
 	/**
@@ -130,8 +146,9 @@ class PublicController extends Controller {
 			[
 				'appId' => Application::APP_ID,
 				'title' => $title,
-				// Formatted for the visitor's language, not a fixed d-m-Y.
-				'opensAt' => (string)$this->l->l('datetime', $opensAt, ['width' => 'medium']),
+				// In the visitor's zone where Nextcloud knows it, else the server's, and named: not bare UTC (qual#120).
+				'opensAt' => $this->dateTimeFormatter->formatDateTime($opensAt, 'long', 'short', $this->timeZone->getTimeZone(), $this->l)
+					. ' (' . $this->timeZone->getTimeZone()->getName() . ')',
 			],
 			'public'
 		);
@@ -140,107 +157,104 @@ class PublicController extends Controller {
 	}
 
 	/**
-	 * Load form by fileId and validate the public token
-	 * Returns form data if valid, null otherwise
+	 * The form behind a link, or null when there is no such form or link: only that is a not found that counts towards
+	 * brute-force protection. A busy or unreadable form is not; it reaches ExceptionMiddleware as a 503 to retry (7a, 3a-3).
 	 */
 	private function loadAndValidateForm(int $fileId, string $token): ?array {
 		try {
 			$form = $this->formRepository->loadPublic($fileId);
-
-			// Validate token matches (timing-safe)
-			$storedToken = $form['settings']['public_token'] ?? null;
-			if ($storedToken === null || !is_string($storedToken) || !hash_equals($storedToken, $token)) {
-				return null;
-			}
-
-			return $form;
-		} catch (\Exception $e) {
+		} catch (NotFoundException) {
 			return null;
 		}
+
+		// Validate token matches (timing-safe)
+		$storedToken = $form['settings']['public_token'] ?? null;
+		if ($storedToken === null || !is_string($storedToken) || !hash_equals($storedToken, $token)) {
+			return null;
+		}
+
+		return $form;
 	}
 
 	/**
-	 * Enforce share-level gates on a submission/upload request:
-	 *   - share-link expiration
-	 *   - share password (if set)
-	 * Returns an error DataResponse when blocked, or null when allowed.
+	 * The gates a submission and an upload share: the share dialog's dates, the link password, who may answer,
+	 * and signing in. Refusals are answered by ExceptionMiddleware.
+	 *
+	 * @throws ClientErrorException
 	 */
-	private function enforceShareGate(array $form, ?int $fileId = null): ?DataResponse {
-		if (!empty($form['settings']['share_starts_at'])) {
-			try {
-				$startsAt = new \DateTime($form['settings']['share_starts_at']);
-				if ($startsAt > new \DateTime()) {
-					return new DataResponse(
-						['error' => $this->l->t('This form is not yet open'), 'opensAt' => $startsAt->format(\DateTime::ATOM)],
-						Http::STATUS_FORBIDDEN
-					);
-				}
-			} catch (\Exception $e) {
-				// invalid date → ignore and continue
-			}
+	private function admit(array $form, int $fileId, string $notAllowed): void {
+		$this->rules->assertOpen($form['settings'] ?? []);
+
+		$user = $this->userSession->getUser();
+		$restricted = $this->isRestricted($form);
+		if (($restricted || $this->requiresLogin($form)) && $user === null) {
+			throw RequestException::loginRequired();
+		}
+		if ($restricted && !$this->isUserAllowed($form, $user)) {
+			throw RequestException::forbidden($notAllowed);
 		}
 
-		if (!empty($form['settings']['share_expires_at'])) {
-			try {
-				$expiresAt = new \DateTime($form['settings']['share_expires_at']);
-				if ($expiresAt < new \DateTime()) {
-					return new DataResponse(
-						['error' => $this->l->t('This form has expired')],
-						Http::STATUS_GONE
-					);
-				}
-			} catch (\Exception $e) {
-				// invalid date → ignore and continue
-			}
+		if (in_array($this->checkPassword($form, $fileId), [self::PASSWORD_MISSING, self::PASSWORD_WRONG], true)) {
+			throw RequestException::passwordRequired();
 		}
+	}
 
-		if (!empty($form['settings']['share_password_hash'])) {
-			// Accept either a fresh password param (legacy) OR a valid
-			// password cookie issued by showForm/authenticate after a
-			// successful password entry. Without this fallback, every submit
-			// on a password-protected form would fail because the frontend
-			// doesn't replay the password on every request (#82).
-			$cookieValid = $fileId !== null && $this->challengeService->verifyPasswordToken(
-				$this->request->getCookie("formvox_pw_{$fileId}"),
-				$fileId,
-			);
-			if (!$cookieValid) {
-				$providedPassword = (string)$this->request->getParam('password', '');
-				if ($providedPassword === '' || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-					return new DataResponse(
-						// TRANSLATORS: Error when a password-protected form is submitted without the password
-						['error' => $this->l->t('Password required')],
-						Http::STATUS_UNAUTHORIZED
-					);
-				}
-			}
-		}
-
-		return null;
+	private function isRestricted(array $form): bool {
+		return !empty($form['settings']['allowed_users'] ?? []) || !empty($form['settings']['allowed_groups'] ?? []);
 	}
 
 	/**
-	 * Strip every owner-only / secret settings field before a form is handed to
-	 * an anonymous visitor. Without this the whole `settings` sub-array — which
-	 * holds webhook signing secrets, hashed API keys, share allowlists and the
-	 * public token — would be serialized into the public page's initialState and
-	 * be readable via View Source. Mutates $form in place.
+	 * The link password: the cookie from an earlier visit, or the password itself (#82). Every wrong one counts
+	 * towards Nextcloud's brute-force protection, on every entry point (qual#10, secu#17); after too many it
+	 * answers 429.
+	 *
+	 * @return string one of the PASSWORD_ constants
+	 * @throws MaxDelayReached
 	 */
-	private function stripSensitiveSettings(array &$form): void {
-		if (!isset($form['settings']) || !is_array($form['settings'])) {
-			return;
+	private function checkPassword(array $form, int $fileId): string {
+		$settings = is_array($form['settings'] ?? null) ? $form['settings'] : [];
+		if (empty($settings['share_password_hash'])) {
+			return self::PASSWORD_NOT_ASKED;
 		}
-		foreach ([
-			'share_password_hash',
-			'share_password',
-			'webhooks',        // each carries a plaintext HMAC signing secret + target URL
-			'api_keys',        // bcrypt hashes + creator usernames
-			'allowed_users',   // username allowlist (PII)
-			'allowed_groups',  // group allowlist (PII)
-			'public_token',    // the share token itself
-		] as $key) {
-			unset($form['settings'][$key]);
+		if ($this->challengeService->verifyPasswordToken($this->request->getCookie("formvox_pw_{$fileId}"), $fileId, $settings)) {
+			return self::PASSWORD_REMEMBERED;
 		}
+		$provided = (string)$this->request->getParam('password', '');
+		if ($provided === '') {
+			return self::PASSWORD_MISSING;
+		}
+		$ip = $this->request->getRemoteAddress();
+		$this->throttler->sleepDelayOrThrowOnMax($ip, self::PASSWORD_ACTION);
+		if (!$this->passwordMatches($provided, $form)) {
+			$this->throttler->registerAttempt(self::PASSWORD_ACTION, $ip, ['fileId' => $fileId]);
+			return self::PASSWORD_WRONG;
+		}
+		return self::PASSWORD_GIVEN;
+	}
+
+	/**
+	 * A refusal that also counts towards brute-force protection, which only a returned response can do.
+	 */
+	private function throttledError(string $message, string $reason, int $status): DataResponse {
+		$response = new DataResponse(['error' => $message, 'reason' => $reason], $status);
+		$response->throttle();
+		return $response;
+	}
+
+	private function isAnonymous(array $form): bool {
+		return ($form['settings']['anonymous'] ?? true) !== false;
+	}
+
+	/**
+	 * A form that does not collect anonymously knows who answered, so it always needs a signed-in respondent.
+	 */
+	private function requiresLogin(array $form): bool {
+		return ($form['settings']['require_login'] ?? false) || !$this->isAnonymous($form);
+	}
+
+	private function passwordMatches(string $password, array $form): bool {
+		$hash = $this->secrets->open((string)($form['settings']['share_password_hash'] ?? ''));
+		return $password !== '' && $hash !== '' && password_verify($password, $hash);
 	}
 
 	/**
@@ -249,148 +263,70 @@ class PublicController extends Controller {
 	 */
 	#[PublicPage]
 	#[NoCSRFRequired]
-	public function showForm(int $fileId, string $token) {
-		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
+	public function showForm(int $fileId, string $token): TemplateResponse|RedirectResponse {
+		return $this->formPage($fileId, $token, 'formvox.public.showForm', false);
+	}
 
-			if ($form === null) {
-				return $this->errorResponse($this->l->t('Form not found'), Http::STATUS_NOT_FOUND);
-			}
-
-			// Check if form hasn't started yet
-			if (!empty($form['settings']['share_starts_at'])) {
-				try {
-					$startsAt = new \DateTime($form['settings']['share_starts_at']);
-					if ($startsAt > new \DateTime()) {
-						// TRANSLATORS: Fallback page title for a form without a title
-						return $this->showNotYetOpenForm($form['title'] ?? $this->l->t('Form'), $startsAt);
-					}
-				} catch (\Exception $e) {
-					// invalid date → ignore and continue
-				}
-			}
-
-			// Check if form has expired
-			if (!empty($form['settings']['share_expires_at'])) {
-				$expiresAt = new \DateTime($form['settings']['share_expires_at']);
-				if ($expiresAt < new \DateTime()) {
-					return $this->errorResponse($this->l->t('This form has expired'), Http::STATUS_GONE);
-				}
-			}
-
-			// Check if form requires login FIRST (before password check)
-			// If require_login is set, user must be logged in regardless of password
-			if ($form['settings']['require_login'] ?? false) {
-				$user = $this->userSession->getUser();
-				if ($user === null) {
-					// Redirect to login page with redirect back to this form
-					$currentUrl = $this->urlGenerator->linkToRoute('formvox.public.showForm', [
-						'fileId' => $fileId,
-						'token' => $token
-					]);
-					$loginUrl = $this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $currentUrl]);
-					return new RedirectResponse($loginUrl);
-				}
-			}
-
-			// Check user/group access restrictions
-			$hasRestrictions = !empty($form['settings']['allowed_users'] ?? [])
-							|| !empty($form['settings']['allowed_groups'] ?? []);
-
-			if ($hasRestrictions) {
-				$user = $this->userSession->getUser();
-
-				// If restrictions exist, require login first
-				if ($user === null) {
-					$currentUrl = $this->urlGenerator->linkToRoute('formvox.public.showForm', [
-						'fileId' => $fileId,
-						'token' => $token
-					]);
-					$loginUrl = $this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $currentUrl]);
-					return new RedirectResponse($loginUrl);
-				}
-
-				// Check if user is allowed
-				if (!$this->isUserAllowed($form, $user)) {
-					return $this->showUnauthorized($form['title'] ?? $this->l->t('Form'));
-				}
-			}
-
-			// Check if form is password protected (only check after login requirement is satisfied)
-			$passwordVerified = false;
-			if (!empty($form['settings']['share_password_hash'])) {
-				// A previously-issued password cookie counts as proof of
-				// password possession (avoids re-prompting on refresh).
-				$cookieToken = $this->request->getCookie("formvox_pw_{$fileId}");
-				if ($this->challengeService->verifyPasswordToken($cookieToken, $fileId)) {
-					$passwordVerified = true;
-				} else {
-					$providedPassword = $this->request->getParam('password');
-					if (empty($providedPassword)) {
-						// TRANSLATORS: Page title of the password prompt for a form without a title
-						return $this->showPasswordForm($fileId, $token, $form['title'] ?? $this->l->t('Protected form'));
-					}
-					if (!password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-						return $this->showPasswordForm(
-							$fileId,
-							$token,
-							$form['title'] ?? $this->l->t('Protected form'),
-							// TRANSLATORS: Error on the password prompt of a protected form
-							$this->l->t('Incorrect password'),
-						);
-					}
-					$passwordVerified = true;
-				}
-			}
-
-			// Get branding settings - use form-specific if set, otherwise admin defaults
-			$branding = $this->getEffectiveBranding($form);
-
-			// Preserve response count for limit checking before removing _index
-			$responseCount = $form['_index']['response_count'] ?? 0;
-			// Preserve per-option counts ONLY for questions that have a
-			// capacity limit configured, so the public form can show
-			// remaining slots without leaking counts for other questions (#104).
-			$capacityCounts = $this->extractCapacityCounts($form);
-
-			// Remove sensitive data for public view
-			unset($form['responses']);
-			unset($form['_index']);
-			unset($form['permissions']);
-			unset($form['branding']); // Don't expose branding in form data
-			$this->stripSensitiveSettings($form);
-
-			// Add response count + capacity-only counts back
-			$form['_index'] = [
-				'response_count' => $responseCount,
-				'answer_counts' => $capacityCounts,
-			];
-
-			// Provide initial state to JavaScript
-			$this->initialState->provideInitialState('fileId', $fileId);
-			$this->initialState->provideInitialState('token', $token);
-			$this->initialState->provideInitialState('form', $form);
-			$this->initialState->provideInitialState('branding', $branding);
-
-			Util::addScript(Application::APP_ID, 'formvox-public');
-			Util::addStyle(Application::APP_ID, 'public');
-
-			$response = new TemplateResponse(
-				Application::APP_ID,
-				'public/respond',
-				[
-					'appId' => Application::APP_ID,
-				],
-				'public'
-			);
-			$this->allowBlobWorker($response);
-			if ($passwordVerified) {
-				$this->setPasswordCookie($response, $fileId);
-			}
-			return $response;
-		} catch (\Exception $e) {
-			return $this->errorResponse($e->getMessage());
+	/**
+	 * The one way to the form page, for the link, the password form and embeds alike: open, signed in and
+	 * allowed where the form asks (also after the password form — secu#18), then the link password.
+	 *
+	 * @param string $route where signing in leads back to
+	 * @param bool $fromPasswordForm an empty password there is a wrong one
+	 * @throws MaxDelayReached
+	 */
+	private function formPage(int $fileId, string $token, string $route, bool $fromPasswordForm): TemplateResponse|RedirectResponse {
+		$form = $this->loadAndValidateForm($fileId, $token);
+		if ($form === null) {
+			return $this->errorResponse($this->l->t('Form not found'), Http::STATUS_NOT_FOUND);
 		}
+		$closed = $this->closedPage($form);
+		if ($closed !== null) {
+			return $closed;
+		}
+
+		$user = $this->userSession->getUser();
+		if (($this->isRestricted($form) || $this->requiresLogin($form)) && $user === null) {
+			$back = $this->urlGenerator->linkToRoute($route, ['fileId' => $fileId, 'token' => $token]);
+			return new RedirectResponse($this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $back]));
+		}
+		if ($this->isRestricted($form) && !$this->isUserAllowed($form, $user)) {
+			// TRANSLATORS: Fallback page title for a form without a title
+			return $this->showUnauthorized($form['title'] ?? $this->l->t('Form'));
+		}
+
+		$password = $this->checkPassword($form, $fileId);
+		// TRANSLATORS: Page title of the password prompt for a form without a title
+		$title = $form['title'] ?? $this->l->t('Protected form');
+		if ($password === self::PASSWORD_WRONG || ($password === self::PASSWORD_MISSING && $fromPasswordForm)) {
+			// TRANSLATORS: Error on the password prompt of a protected form
+			return $this->showPasswordForm($fileId, $token, $title, $this->l->t('Incorrect password'));
+		}
+		if ($password === self::PASSWORD_MISSING) {
+			return $this->showPasswordForm($fileId, $token, $title);
+		}
+
+		$branding = $this->getEffectiveBranding($form);
+		$public = $this->sanitizer->forPublic($form);
+		$this->initialState->provideInitialState('fileId', $fileId);
+		$this->initialState->provideInitialState('token', $token);
+		$this->initialState->provideInitialState('form', $public);
+		$this->initialState->provideInitialState('branding', $branding);
+		if ($user !== null && !empty($form['settings']['sendConfirmationEmail'])) {
+			// A signed-in respondent is written to at their account's address: the page says so.
+			$this->initialState->provideInitialState('respondent', ['email' => (string)($user->getEMailAddress() ?? '')]);
+		}
+
+		Util::addScript(Application::APP_ID, 'formvox-public');
+		Util::addStyle(Application::APP_ID, 'public');
+
+		$response = new TemplateResponse(Application::APP_ID, 'public/respond', ['appId' => Application::APP_ID], 'public');
+		$this->allowBlobWorker($response);
+		if ($password === self::PASSWORD_GIVEN) {
+			// So submit and upload can tell the password was given without asking again (#82).
+			$this->setPasswordCookie($response, $fileId, $form);
+		}
+		return $response;
 	}
 
 	/**
@@ -405,40 +341,6 @@ class PublicController extends Controller {
 		$csp = new \OCP\AppFramework\Http\ContentSecurityPolicy();
 		$csp->addAllowedWorkerSrcDomain('blob:');
 		$response->setContentSecurityPolicy($csp);
-	}
-
-	/**
-	 * Build a minimal answer_counts map containing ONLY questions that
-	 * have at least one option with a capacity limit. Used so the public
-	 * form can render "Full" / "N left" badges without leaking the full
-	 * voting tally for every question on the form (#104).
-	 *
-	 * @return array<string, array<string, int>>
-	 */
-	private function extractCapacityCounts(array $form): array {
-		$all = $form['_index']['answer_counts'] ?? [];
-		$out = [];
-		foreach ($form['questions'] ?? [] as $question) {
-			if (!in_array($question['type'] ?? '', ['choice', 'multiple', 'dropdown'], true)) {
-				continue;
-			}
-			$hasCapacity = false;
-			foreach ($question['options'] ?? [] as $opt) {
-				$cap = $opt['capacity'] ?? null;
-				if ($cap !== null && $cap !== '' && (int)$cap > 0) {
-					$hasCapacity = true;
-					break;
-				}
-			}
-			if (!$hasCapacity) {
-				continue;
-			}
-			$qid = $question['id'] ?? null;
-			if ($qid !== null && isset($all[$qid])) {
-				$out[$qid] = $all[$qid];
-			}
-		}
-		return $out;
 	}
 
 	/**
@@ -476,121 +378,91 @@ class PublicController extends Controller {
 	#[NoCSRFRequired]
 	#[AnonRateLimit(limit: 25000, period: 3600)]
 	#[BruteForceProtection(action: 'formvox_submit')]
-	public function submit(int $fileId, string $token, array $answers, ?array $altcha = null): DataResponse {
-		// Anti-bot: require a valid ALTCHA proof-of-work token before doing
-		// any work. Cost is per-browser, so 500 users behind one NAT IP each
-		// pay their own (tiny) cost — see issue #76. The AnonRateLimit above
-		// remains as a generous safety net for pathological cases.
-		if ($this->userSession->getUser() === null
-			&& !$this->challengeService->verify($altcha, $fileId)) {
-			$response = new DataResponse(
-				['error' => $this->l->t('Challenge verification failed. Please refresh the page.')],
-				Http::STATUS_TOO_MANY_REQUESTS
-			);
-			$response->throttle();
-			return $response;
+	public function submit(int $fileId, string $token, array $answers, ?array $altcha = null, ?string $submissionId = null, ?string $retryToken = null, ?string $timezone = null): DataResponse {
+		// The browser's id for this fill: a retry of a stored submission is answered as stored, not stored twice.
+		$submissionId = SubmissionIds::isValid($submissionId) ? $submissionId : null;
+		// Anti-bot: a valid ALTCHA proof-of-work token before any work. Cost is per browser, so 500 people
+		// behind one NAT address each pay their own (tiny) cost (#76). A retry after "busy" paid it already.
+		// Only with a pass: without one nothing about the answers is worked out before the proof.
+		$retrying = $submissionId !== null && $retryToken !== null && $retryToken !== ''
+			&& $this->challengeService->verifyPass($retryToken, self::RETRY_PASS, fn (): string => $this->retrySubject($fileId, $submissionId, $answers));
+		if ($this->userSession->getUser() === null && !$retrying) {
+			$refused = $this->challengeRefusal($altcha, $fileId);
+			if ($refused !== null) {
+				return $refused;
+			}
 		}
 
 		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
-
-			if ($form === null) {
-				$response = new DataResponse(
-					['error' => $this->l->t('Form not found')],
-					Http::STATUS_NOT_FOUND
-				);
-				$response->throttle();
-				return $response;
-			}
-
-			$gateError = $this->enforceShareGate($form, $fileId);
-			if ($gateError !== null) {
-				return $gateError;
-			}
-
-			// Check user/group access restrictions
-			$hasRestrictions = !empty($form['settings']['allowed_users'] ?? [])
-							|| !empty($form['settings']['allowed_groups'] ?? []);
-
-			if ($hasRestrictions) {
-				$user = $this->userSession->getUser();
-				if ($user === null || !$this->isUserAllowed($form, $user)) {
-					return new DataResponse(
-						['error' => $this->l->t('You do not have permission to submit this form')],
-						Http::STATUS_FORBIDDEN
-					);
-				}
-			}
-
-			// Check if form requires login
-			if ($form['settings']['require_login'] ?? false) {
-				$user = $this->userSession->getUser();
-				if ($user === null) {
-					return new DataResponse(
-						['error' => $this->l->t('This form requires you to be logged in')],
-						Http::STATUS_FORBIDDEN
-					);
-				}
-			}
-
-			// Check if anonymous collection is enabled
-			$isAnonymous = $form['settings']['anonymous'] ?? true;
-
-			if ($isAnonymous) {
-				// Submit as anonymous (even if user is logged in)
-				$response = $this->responseService->submitAnonymousWithForm(
-					$fileId,
-					$form,
-					$answers,
-					$this->request,
-					$token
-				);
-			} elseif ($hasRestrictions || ($form['settings']['require_login'] ?? false)) {
-				// User/group restrictions or require_login with non-anonymous = authenticated submission
-				$user = $this->userSession->getUser();
-				$response = $this->responseService->submitAuthenticated(
-					$fileId,
-					$answers,
-					$user->getUID(),
-					$user->getDisplayName()
-				);
-			} else {
-				// No login required and anonymous enabled (default)
-				$response = $this->responseService->submitAnonymousWithForm(
-					$fileId,
-					$form,
-					$answers,
-					$this->request,
-					$token
-				);
-			}
-
-			// Prepare result
-			$responseResult = [
-				'success' => true,
-				'response' => [
-					'id' => $response['id'],
-					'submitted_at' => $response['submitted_at'],
-				],
-			];
-
-			// Include score if quiz mode
-			if (isset($response['score'])) {
-				$responseResult['score'] = $response['score'];
-			}
-
-			return new DataResponse($responseResult, Http::STATUS_CREATED);
-		} catch (\RuntimeException $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_BAD_REQUEST
-			);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
+			return $this->store($fileId, $token, $answers, $submissionId, $timezone);
+		} catch (FormLockedException|LockedException $busy) {
+			// Busy for a moment: the browser retries with the same id, and this pass spares it a new challenge.
+			throw FormLockedException::withData($busy, $submissionId === null ? [] : [
+				'retryToken' => $this->challengeService->issuePass(self::RETRY_PASS, $this->retrySubject($fileId, $submissionId, $answers), self::RETRY_PASS_SECONDS),
+			]);
 		}
+	}
+
+	/**
+	 * The anti-spam proof: null when it holds. A wrong proof counts towards brute-force protection; none at all does not,
+	 * as a browser whose solving failed sends none, and many of those behind one school network would block each other.
+	 */
+	private function challengeRefusal(?array $altcha, int $fileId): ?DataResponse {
+		if ($this->challengeService->verify($altcha, $fileId)) {
+			return null;
+		}
+		// TRANSLATORS: Error shown when the anti-spam check of a public form failed
+		$message = $this->l->t('Challenge verification failed. Please refresh the page.');
+		if (empty($altcha)) {
+			return new DataResponse(['error' => $message, 'reason' => 'challenge_failed'], Http::STATUS_TOO_MANY_REQUESTS);
+		}
+		return $this->throttledError($message, 'challenge_failed', Http::STATUS_TOO_MANY_REQUESTS);
+	}
+
+	/**
+	 * A retry pass holds for this form, this fill with these answers, and this browser: a retry sends the same answers,
+	 * so the pass never carries other answers past the challenge (review of the 3a fixes).
+	 */
+	private function retrySubject(int $fileId, string $submissionId, array $answers): string {
+		return $fileId . ':' . SubmissionIds::of($submissionId, $answers) . ':' . hash('sha256', $this->request->getHeader('User-Agent'));
+	}
+
+	/** @param string|null $timezone the respondent's, as their browser says: their times in the PDF are at their clock */
+	private function store(int $fileId, string $token, array $answers, ?string $submissionId, ?string $timezone = null): DataResponse {
+		$form = $this->loadAndValidateForm($fileId, $token);
+		if ($form === null) {
+			return $this->throttledError($this->l->t('Form not found'), 'not_found', Http::STATUS_NOT_FOUND);
+		}
+		// A retry of what was stored is answered as stored, also when the form closed meanwhile; only its own fill has
+		// the id and these answers (review 3a-5).
+		$seen = SubmissionIds::stored($form, SubmissionIds::of($submissionId, $answers));
+		if ($seen !== null) {
+			$this->responseService->retried($fileId, $form, $seen);
+			return $this->created($seen);
+		}
+		// TRANSLATORS: Error shown when a form only takes answers from certain people or groups
+		$this->admit($form, $fileId, Translatable::t('You do not have permission to submit this form'));
+
+		$user = $this->userSession->getUser();
+		if (!$this->isAnonymous($form)) {
+			// Not anonymous means signed in (admit), so the response carries who answered.
+			$response = $this->responseService->submitAuthenticated($fileId, $form, $answers, $user->getUID(), $user->getDisplayName(), $submissionId, $timezone);
+		} else {
+			// Signed in only where the form limits who may answer; then counted per account, still without a name.
+			$restricted = !empty($form['settings']['allowed_users'] ?? []) || !empty($form['settings']['allowed_groups'] ?? []);
+			$account = ($restricted || ($form['settings']['require_login'] ?? false)) ? $user : null;
+			$response = $this->responseService->submitAnonymousWithForm($fileId, $form, $answers, $this->request, $account?->getUID(), $submissionId, $timezone, $user?->getUID());
+		}
+
+		return $this->created($response);
+	}
+
+	private function created(array $response): DataResponse {
+		$result = ['success' => true, 'response' => ['id' => $response['id'], 'submitted_at' => $response['submitted_at']]];
+		if (isset($response['score'])) {
+			$result['score'] = $response['score'];
+		}
+		return new DataResponse($result, Http::STATUS_CREATED);
 	}
 
 	/**
@@ -599,9 +471,8 @@ class PublicController extends Controller {
 	 */
 	#[PublicPage]
 	#[NoCSRFRequired]
-	public function embedForm(int $fileId, string $token) {
-		// Use the same logic as showForm, but return with X-Frame-Options disabled
-		$response = $this->showForm($fileId, $token);
+	public function embedForm(int $fileId, string $token): TemplateResponse|RedirectResponse {
+		$response = $this->formPage($fileId, $token, 'formvox.public.embedForm', false);
 
 		// Set embed headers based on allowed domains
 		$this->setEmbedHeaders($response);
@@ -615,10 +486,8 @@ class PublicController extends Controller {
 	 */
 	#[PublicPage]
 	#[NoCSRFRequired]
-	#[BruteForceProtection(action: 'formvox_password')]
-	public function embedAuthenticate(int $fileId, string $token) {
-		// Use the same logic as authenticate, but return with X-Frame-Options disabled
-		$response = $this->authenticate($fileId, $token);
+	public function embedAuthenticate(int $fileId, string $token): TemplateResponse|RedirectResponse {
+		$response = $this->formPage($fileId, $token, 'formvox.public.embedForm', true);
 
 		// Set embed headers based on allowed domains
 		$this->setEmbedHeaders($response);
@@ -627,164 +496,37 @@ class PublicController extends Controller {
 	}
 
 	/**
-	 * Set appropriate headers for embed responses based on allowed domains setting
+	 * Lets the configured sites frame the page by adding them to Nextcloud's own policy; replacing the header kept
+	 * frame-ancestors only and dropped every other protection of the page (secu#6, qual#45).
 	 */
-	private function setEmbedHeaders($response): void {
+	private function setEmbedHeaders(TemplateResponse|RedirectResponse $response): void {
 		if (!($response instanceof TemplateResponse)) {
 			return;
 		}
+		$configured = trim($this->config->getAppValue(Application::APP_ID, 'embed_allowed_domains', '*'));
+		$domains = preg_split('/[\s,]+/', $configured, -1, PREG_SPLIT_NO_EMPTY) ?: ['*'];
 
-		// Get allowed domains from config
-		$allowedDomains = $this->config->getAppValue(Application::APP_ID, 'embed_allowed_domains', '*');
-		$allowedDomains = trim($allowedDomains);
-
-		// Build frame-ancestors CSP value
-		if ($allowedDomains === '' || $allowedDomains === '*') {
-			// Allow all domains
-			$response->addHeader('X-Frame-Options', 'ALLOWALL');
-			$response->addHeader('Content-Security-Policy', 'frame-ancestors *');
-		} else {
-			// Parse domain list (comma, space, or newline separated)
-			$domains = preg_split('/[\s,]+/', $allowedDomains, -1, PREG_SPLIT_NO_EMPTY);
-
-			if (empty($domains)) {
-				// No valid domains = allow all (fallback)
-				$response->addHeader('X-Frame-Options', 'ALLOWALL');
-				$response->addHeader('Content-Security-Policy', 'frame-ancestors *');
-			} else {
-				// Build frame-ancestors with specific domains
-				// Always include 'self' for same-origin embedding
-				$frameAncestors = "'self'";
-
-				foreach ($domains as $domain) {
-					$domain = trim($domain);
-					if (empty($domain)) {
-						continue;
-					}
-
-					// Normalize domain format for CSP
-					// Support: example.com, *.example.com, https://example.com
-					if (!str_starts_with($domain, 'http://') && !str_starts_with($domain, 'https://')) {
-						// Add both http and https variants, or use wildcard scheme
-						$frameAncestors .= " https://{$domain}";
-					} else {
-						$frameAncestors .= " {$domain}";
-					}
-				}
-
-				// X-Frame-Options doesn't support multiple domains, so we remove it
-				// and rely solely on Content-Security-Policy frame-ancestors
-				$response->addHeader('X-Frame-Options', 'SAMEORIGIN');
-				$response->addHeader('Content-Security-Policy', "frame-ancestors {$frameAncestors}");
-			}
+		$csp = $response->getContentSecurityPolicy();
+		foreach (in_array('*', $domains, true) ? ['*'] : $domains as $domain) {
+			// A bare host means its https site.
+			$csp->addAllowedFrameAncestorDomain($domain === '*' || str_contains($domain, '://') ? $domain : 'https://' . $domain);
 		}
+		$response->setContentSecurityPolicy($csp);
+		// Browsers that know frame-ancestors ignore this; older ones would otherwise refuse every frame.
+		$response->addHeader('X-Frame-Options', in_array('*', $domains, true) ? 'ALLOWALL' : 'SAMEORIGIN');
 	}
 
 	/**
-	 * Authenticate password-protected form (POST handler)
-	 * @return TemplateResponse|RedirectResponse
+	 * The password form posts here.
 	 */
 	#[PublicPage]
 	#[NoCSRFRequired]
-	#[BruteForceProtection(action: 'formvox_password')]
-	public function authenticate(int $fileId, string $token) {
-		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
-
-			if ($form === null) {
-				return $this->errorResponse($this->l->t('Form not found'), Http::STATUS_NOT_FOUND);
-			}
-
-			// Check if form hasn't started yet
-			if (!empty($form['settings']['share_starts_at'])) {
-				try {
-					$startsAt = new \DateTime($form['settings']['share_starts_at']);
-					if ($startsAt > new \DateTime()) {
-						return $this->showNotYetOpenForm($form['title'] ?? $this->l->t('Form'), $startsAt);
-					}
-				} catch (\Exception $e) {
-					// invalid date → ignore
-				}
-			}
-
-			// Check if form has expired
-			if (!empty($form['settings']['share_expires_at'])) {
-				$expiresAt = new \DateTime($form['settings']['share_expires_at']);
-				if ($expiresAt < new \DateTime()) {
-					return $this->errorResponse($this->l->t('This form has expired'), Http::STATUS_GONE);
-				}
-			}
-
-			// Check password
-			$passwordVerified = false;
-			if (!empty($form['settings']['share_password_hash'])) {
-				$providedPassword = $this->request->getParam('password');
-				if (empty($providedPassword) || !password_verify($providedPassword, $form['settings']['share_password_hash'])) {
-					$response = $this->showPasswordForm($fileId, $token, $form['title'] ?? $this->l->t('Protected form'), $this->l->t('Incorrect password'));
-					$response->throttle();
-					return $response;
-				}
-				$passwordVerified = true;
-			}
-
-			// Password correct - show the form
-			// Get branding settings - use form-specific if set, otherwise admin defaults
-			$branding = $this->getEffectiveBranding($form);
-
-			// Preserve response count for limit checking before removing _index
-			$responseCount = $form['_index']['response_count'] ?? 0;
-			// Preserve per-option counts ONLY for questions that have a
-			// capacity limit configured, so the public form can show
-			// remaining slots without leaking counts for other questions (#104).
-			$capacityCounts = $this->extractCapacityCounts($form);
-
-			// Remove sensitive data for public view
-			unset($form['responses']);
-			unset($form['_index']);
-			unset($form['permissions']);
-			unset($form['branding']); // Don't expose branding in form data
-			$this->stripSensitiveSettings($form);
-
-			// Add response count + capacity-only counts back
-			$form['_index'] = [
-				'response_count' => $responseCount,
-				'answer_counts' => $capacityCounts,
-			];
-
-			// Provide initial state to JavaScript
-			$this->initialState->provideInitialState('fileId', $fileId);
-			$this->initialState->provideInitialState('token', $token);
-			$this->initialState->provideInitialState('form', $form);
-			$this->initialState->provideInitialState('branding', $branding);
-
-			Util::addScript(Application::APP_ID, 'formvox-public');
-			Util::addStyle(Application::APP_ID, 'public');
-
-			$response = new TemplateResponse(
-				Application::APP_ID,
-				'public/respond',
-				[
-					'appId' => Application::APP_ID,
-				],
-				'public'
-			);
-			$this->allowBlobWorker($response);
-
-			// Issue a signed password-verification cookie so subsequent API
-			// calls (submit, upload) can prove the bearer entered the correct
-			// password without resubmitting it. Without this, the share-gate
-			// would reject every submit with "Password required" (#82).
-			if ($passwordVerified) {
-				$this->setPasswordCookie($response, $fileId);
-			}
-			return $response;
-		} catch (\Exception $e) {
-			return $this->errorResponse($e->getMessage());
-		}
+	public function authenticate(int $fileId, string $token): TemplateResponse|RedirectResponse {
+		return $this->formPage($fileId, $token, 'formvox.public.showForm', true);
 	}
 
-	private function setPasswordCookie(\OCP\AppFramework\Http\Response $response, int $fileId): void {
-		$token = $this->challengeService->issuePasswordToken($fileId);
+	private function setPasswordCookie(\OCP\AppFramework\Http\Response $response, int $fileId, array $form): void {
+		$token = $this->challengeService->issuePasswordToken($fileId, is_array($form['settings'] ?? null) ? $form['settings'] : []);
 		$response->addCookie(
 			"formvox_pw_{$fileId}",
 			$token,
@@ -813,6 +555,21 @@ class PublicController extends Controller {
 	}
 
 	/**
+	 * The page for a form whose share dialog dates keep it closed now, or null while it is open.
+	 */
+	private function closedPage(array $form): ?TemplateResponse {
+		try {
+			$this->rules->assertOpen($form['settings'] ?? []);
+			return null;
+		} catch (ResponseRefusedException $e) {
+			if ($e->getReason() === 'form_not_open') {
+				return $this->showNotYetOpenForm($form['title'] ?? $this->l->t('Form'), new \DateTime((string)$e->getData()['opensAt']));
+			}
+			return $this->errorResponse($this->l->t('This form has expired'), Http::STATUS_GONE);
+		}
+	}
+
+	/**
 	 * Return an error template response
 	 */
 	private function errorResponse(string $message, int $status = Http::STATUS_BAD_REQUEST): TemplateResponse {
@@ -831,112 +588,98 @@ class PublicController extends Controller {
 	 */
 	#[PublicPage]
 	#[NoCSRFRequired]
-	#[AnonRateLimit(limit: 50, period: 3600)]
+	// A backstop only: a class behind one school network uploads far less; each response's files take a pass (7a, 3a-5).
+	#[AnonRateLimit(limit: 2500, period: 3600)]
+	#[BruteForceProtection(action: 'formvox_upload')]
 	public function uploadFile(int $fileId, string $token): DataResponse {
-		try {
-			$form = $this->loadAndValidateForm($fileId, $token);
-
-			if ($form === null) {
-				return new DataResponse(
-					['error' => $this->l->t('Form not found')],
-					Http::STATUS_NOT_FOUND
-				);
-			}
-
-			$gateError = $this->enforceShareGate($form, $fileId);
-			if ($gateError !== null) {
-				return $gateError;
-			}
-
-			// Check user/group access restrictions
-			$hasRestrictions = !empty($form['settings']['allowed_users'] ?? [])
-							|| !empty($form['settings']['allowed_groups'] ?? []);
-
-			if ($hasRestrictions) {
-				$user = $this->userSession->getUser();
-				if ($user === null || !$this->isUserAllowed($form, $user)) {
-					return new DataResponse(
-						['error' => $this->l->t('You do not have permission to upload files to this form')],
-						Http::STATUS_FORBIDDEN
-					);
-				}
-			}
-
-			// Check if form requires login
-			if ($form['settings']['require_login'] ?? false) {
-				$user = $this->userSession->getUser();
-				if ($user === null) {
-					return new DataResponse(
-						['error' => $this->l->t('This form requires you to be logged in')],
-						Http::STATUS_FORBIDDEN
-					);
-				}
-			}
-
-			// Get question ID from request
-			$questionId = $this->request->getParam('questionId');
-			if (empty($questionId)) {
-				return new DataResponse(
-					['error' => $this->l->t('Question ID is required')],
-					Http::STATUS_BAD_REQUEST
-				);
-			}
-
-			// Find the question
-			$question = $this->findQuestion($form, $questionId);
-			if ($question === null || $question['type'] !== 'file') {
-				return new DataResponse(
-					// TRANSLATORS: Upload error: the upload does not belong to a file question of this form
-					['error' => $this->l->t('Invalid question')],
-					Http::STATUS_BAD_REQUEST
-				);
-			}
-
-			// Get uploaded file
-			$uploadedFile = $this->request->getUploadedFile('file');
-			if ($uploadedFile === null || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
-				$errorMessage = $this->getUploadErrorMessage($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE);
-				return new DataResponse(
-					['error' => $errorMessage],
-					Http::STATUS_BAD_REQUEST
-				);
-			}
-
-			// Validate file size
-			$maxSizeMB = $question['maxFileSize'] ?? 10;
-			$maxSizeBytes = $maxSizeMB * 1024 * 1024;
-			if ($uploadedFile['size'] > $maxSizeBytes) {
-				return new DataResponse(
-					['error' => $this->l->t('File is too large. The maximum size is %s MB.', [$maxSizeMB])],
-					Http::STATUS_BAD_REQUEST
-				);
-			}
-
-			// Validate file type
-			if (!$this->isAllowedFileType($uploadedFile, $question)) {
-				return new DataResponse(
-					['error' => $this->l->t('This file type is not allowed')],
-					Http::STATUS_BAD_REQUEST
-				);
-			}
-
-			// Generate temporary response ID for grouping files
-			$tempResponseId = $this->request->getParam('tempResponseId');
-			if (empty($tempResponseId)) {
-				$tempResponseId = bin2hex(random_bytes(16));
-			}
-
-			// Store the file
-			$fileMetadata = $this->uploadService->storeUpload($fileId, $tempResponseId, $uploadedFile);
-			$fileMetadata['tempResponseId'] = $tempResponseId;
-
-			return new DataResponse($fileMetadata, Http::STATUS_CREATED);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
+		// Groups the files of one response; it becomes a folder name in the form's upload folder (L18).
+		$tempResponseId = $this->request->getParam('tempResponseId');
+		if (empty($tempResponseId)) {
+			$tempResponseId = bin2hex(random_bytes(16));
+		} elseif (!is_string($tempResponseId) || !UploadService::isValidResponseId($tempResponseId)) {
+			// TRANSLATORS: Error shown when an upload names an upload group that is not valid
+			throw RequestException::invalid(Translatable::t('Invalid upload id'));
 		}
+		// The first file of a response pays the anti-spam challenge; the pass it gets carries the others.
+		$anonymous = $this->userSession->getUser() === null;
+		$passSubject = $fileId . ':' . $tempResponseId;
+		if ($anonymous && !$this->challengeService->verifyPass((string)$this->request->getParam('uploadGrant', ''), self::UPLOAD_PASS, $passSubject)) {
+			$altcha = json_decode((string)$this->request->getParam('altcha', ''), true);
+			$refused = $this->challengeRefusal(is_array($altcha) ? $altcha : null, $fileId);
+			if ($refused !== null) {
+				return $refused;
+			}
+		}
+
+		try {
+			return $this->storeUpload($fileId, $token, $tempResponseId, $anonymous ? $passSubject : null);
+		} catch (FormLockedException|LockedException $busy) {
+			// Busy for a moment: the browser tries again, and this pass spares it a new challenge for the same file.
+			throw FormLockedException::withData($busy, $anonymous ? ['uploadGrant' => $this->challengeService->issuePass(self::UPLOAD_PASS, $passSubject, self::UPLOAD_PASS_SECONDS)] : []);
+		}
+	}
+
+	/** @param string|null $passSubject what the pass for the next file is for; null for a signed-in respondent, who needs none */
+	private function storeUpload(int $fileId, string $token, string $tempResponseId, ?string $passSubject): DataResponse {
+		$form = $this->loadAndValidateForm($fileId, $token) ?? throw new FormNotFoundException();
+		// TRANSLATORS: Error shown when a form only takes files from certain people or groups
+		$this->admit($form, $fileId, Translatable::t('You do not have permission to upload files to this form'));
+
+		$questionId = (string)$this->request->getParam('questionId');
+		if ($questionId === '') {
+			// TRANSLATORS: Error shown when an upload does not say which question it is for
+			throw RequestException::invalid(Translatable::t('Question ID is required'));
+		}
+		$question = $this->findQuestion($form, $questionId);
+		if ($question === null || ($question['type'] ?? '') !== 'file') {
+			// TRANSLATORS: Error shown when a file is sent for a question that does not take files
+			throw RequestException::invalid(Translatable::t('Invalid question'));
+		}
+
+		$uploadedFile = $this->request->getUploadedFile('file');
+		if ($uploadedFile === null || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
+			throw RequestException::invalid($this->uploadErrorMessage($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE));
+		}
+
+		// The question's own limit, never above the server's (PO); nothing capped it here before.
+		$maxSizeMB = min(is_numeric($question['maxFileSize'] ?? null) ? (float)$question['maxFileSize'] : 10.0, (float)FormSchemaValidator::MAX_FILE_SIZE_MB);
+		if ($uploadedFile['size'] > $maxSizeMB * 1024 * 1024) {
+			// TRANSLATORS: Error shown when an uploaded file is too large; %s is the limit in megabytes
+			throw RequestException::invalid(Translatable::t('File is too large. The maximum size is %s MB.'), [(string)$maxSizeMB]);
+		}
+		if (!$this->isAllowedFileType($uploadedFile, $question)) {
+			// TRANSLATORS: Error shown when an uploaded file is of a type the question does not take
+			throw RequestException::invalid(Translatable::t('This file type is not allowed'));
+		}
+
+		// What one response may hold, with room for retries whose answer got lost and files replaced after a failed try;
+		// a pass is no open door. A response's files nobody submits are cleared after a day (UploadCleanupJob).
+		$stored = $this->uploadService->countUploadsPublic($fileId, $tempResponseId);
+		if ($stored >= 3 * $this->filesPerResponse($form) + 5) {
+			// TRANSLATORS: Error shown when more files are sent for one response than the form's questions take
+			throw RequestException::invalid(Translatable::t('No more files can be added to this response'));
+		}
+
+		$fileMetadata = $this->uploadService->storeUploadPublic($fileId, $tempResponseId, $uploadedFile);
+		if ($stored === 0) {
+			$this->jobList->scheduleAfter(UploadCleanupJob::class, time() + UploadCleanupJob::AFTER_SECONDS, ['fileId' => $fileId, 'group' => $tempResponseId]);
+		}
+		$fileMetadata['tempResponseId'] = $tempResponseId;
+		if ($passSubject !== null) {
+			$fileMetadata['uploadGrant'] = $this->challengeService->issuePass(self::UPLOAD_PASS, $passSubject, self::UPLOAD_PASS_SECONDS);
+		}
+		return new DataResponse($fileMetadata, Http::STATUS_CREATED);
+	}
+
+	/** The files one response may hold: what its file questions take together. */
+	private function filesPerResponse(array $form): int {
+		$total = 0;
+		foreach ($form['questions'] ?? [] as $question) {
+			if (($question['type'] ?? '') === 'file') {
+				$total += max(1, (int)($question['maxFiles'] ?? 1));
+			}
+		}
+		return $total;
 	}
 
 	/**
@@ -1005,18 +748,18 @@ class PublicController extends Controller {
 	}
 
 	/**
-	 * Get human-readable upload error message
+	 * Why PHP refused an upload, in words a respondent can act on.
 	 */
-	private function getUploadErrorMessage(int $errorCode): string {
+	private function uploadErrorMessage(int $errorCode): string {
 		return match ($errorCode) {
-			UPLOAD_ERR_INI_SIZE => $this->l->t('The file exceeds the maximum upload size'),
-			UPLOAD_ERR_FORM_SIZE => $this->l->t('The file exceeds the maximum size allowed'),
-			UPLOAD_ERR_PARTIAL => $this->l->t('The file was only partially uploaded'),
-			UPLOAD_ERR_NO_FILE => $this->l->t('No file was uploaded'),
-			UPLOAD_ERR_NO_TMP_DIR => $this->l->t('Server configuration error: missing temporary folder'),
-			UPLOAD_ERR_CANT_WRITE => $this->l->t('Server error: could not write the file'),
-			UPLOAD_ERR_EXTENSION => $this->l->t('A server extension blocked the upload'),
-			default => $this->l->t('Unknown upload error'),
+			// TRANSLATORS: Error shown when an uploaded file is larger than the server allows
+			UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => Translatable::t('The file exceeds the maximum upload size'),
+			// TRANSLATORS: Error shown when an upload was interrupted
+			UPLOAD_ERR_PARTIAL => Translatable::t('The file was only partially uploaded'),
+			// TRANSLATORS: Error shown when no file was sent
+			UPLOAD_ERR_NO_FILE => Translatable::t('No file was uploaded'),
+			// TRANSLATORS: Error shown when the server could not store an upload for a reason of its own
+			default => Translatable::t('The server could not store the file'),
 		};
 	}
 }

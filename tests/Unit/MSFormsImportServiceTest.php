@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Unit;
 
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\Service\AnswerValidator;
 use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\MicrosoftFormsApiClient;
 use OCA\FormVox\Service\MSFormsImportService;
 use OCA\FormVox\Service\ResponsePersistenceService;
+use OCA\FormVox\Service\UploadService;
 use OCA\FormVox\Tests\Unit\Support\EnglishL10N;
 use OCP\Security\ISecureRandom;
 use PHPUnit\Framework\TestCase;
@@ -45,7 +48,8 @@ class MSFormsImportServiceTest extends TestCase {
 			$this->apiClient,
 			$this->secureRandom,
 			$this->logger,
-			new EnglishL10N(),
+			new AnswerValidator($this->createMock(UploadService::class), new EnglishL10N()),
+			new EnglishL10N()
 		);
 	}
 
@@ -873,7 +877,7 @@ class MSFormsImportServiceTest extends TestCase {
 		]);
 
 		$appended = [];
-		$this->responsePersistence->method('appendResponse')->willReturnCallback(
+		$this->responsePersistence->method('appendImported')->willReturnCallback(
 			function ($fileId, $response) use (&$appended) {
 				$appended[] = $response;
 				return $response;
@@ -919,7 +923,9 @@ class MSFormsImportServiceTest extends TestCase {
 
 		$this->assertSame(0, $result['responsesImported']);
 		$this->assertNotEmpty($result['warnings']);
-		$this->assertStringContainsString('Could not import responses: boom', $result['warnings'][0]);
+		// What Microsoft or the storage said stays in the log (ErrorLeakTest).
+		$this->assertSame('The responses could not be imported; the form itself was.', $result['warnings'][0]);
+		$this->assertStringNotContainsString('boom', json_encode($result));
 	}
 
 	public function testImportFormResponseAppendFailureIsSkippedNotCounted(): void {
@@ -936,7 +942,7 @@ class MSFormsImportServiceTest extends TestCase {
 		]);
 
 		$call = 0;
-		$this->responsePersistence->method('appendResponse')->willReturnCallback(
+		$this->responsePersistence->method('appendImported')->willReturnCallback(
 			function ($f, $r) use (&$call) {
 				$call++;
 				if ($call === 2) {
@@ -949,6 +955,96 @@ class MSFormsImportServiceTest extends TestCase {
 		$result = $this->service()->importForm('alice', 'token', 'msform', '/', true);
 		// Only the successful append is counted.
 		$this->assertSame(1, $result['responsesImported']);
+	}
+
+	/** Out of room: the import stops instead of reading the whole form again for every response, and says why. */
+	public function testImportStopsWhenTheStorageIsFullAndSaysHowManyWereLeftOut(): void {
+		$this->stubSecureRandom();
+		$this->primeCreate(62);
+		$this->apiClient->method('getForm')->willReturn(['title' => 'F']);
+		$this->apiClient->method('getQuestions')->willReturn([
+			['id' => 'msq', 'msType' => 'Question.Text', 'title' => 'Q', 'order' => 1],
+		]);
+		$this->formRepository->method('update')->willReturn([]);
+		$this->apiClient->method('getResponses')->willReturn(array_map(fn (int $i) => ['id' => 'r' . $i, 'answers' => ['msq' => 'a']], range(1, 4)));
+
+		$call = 0;
+		$this->responsePersistence->expects($this->exactly(2))->method('appendImported')->willReturnCallback(
+			function ($f, $r) use (&$call) {
+				if (++$call === 2) {
+					throw RequestException::storageFull();
+				}
+				return $r;
+			}
+		);
+
+		$result = $this->service()->importForm('alice', 'token', 'msform', '/', true);
+
+		$this->assertSame(1, $result['responsesImported']);
+		$this->assertContains('3 responses were not imported: there is not enough storage space', $result['warnings']);
+	}
+
+	/** Imported responses pass the same checks as submitted ones; one that does not fit is left out, with why. */
+	private function importWith(array $questions, array $responses): array {
+		$n = 0;
+		$this->secureRandom->method('generate')->willReturnCallback(function () use (&$n) {
+			return 'R' . ++$n;
+		});
+		$this->primeCreate(70);
+		$this->apiClient->method('getForm')->willReturn(['title' => 'F']);
+		$this->apiClient->method('getQuestions')->willReturn($questions);
+		$this->formRepository->method('update')->willReturn([]);
+		$this->apiClient->method('getResponses')->willReturn($responses);
+		$appended = [];
+		$this->responsePersistence->method('appendImported')->willReturnCallback(function ($f, $r) use (&$appended) {
+			$appended[] = $r;
+			return $r;
+		});
+		$result = $this->service()->importForm('alice', 'token', 'msform', '/', true);
+		$result['appended'] = $appended;
+		return $result;
+	}
+
+	public function testAnImportedResponseThatDoesNotFitTheFormIsLeftOutWithTheReason(): void {
+		$result = $this->importWith(
+			[['id' => 'colour', 'msType' => 'Question.Choice', 'title' => 'Colour', 'order' => 1, 'allowMultipleSelection' => false, 'choices' => [['text' => 'Red'], ['text' => 'Blue']]]],
+			[
+				['id' => 'r1', 'submitDate' => '2024-01-02T10:00:00Z', 'answers' => ['colour' => 'Red']],
+				['id' => 'r2', 'submitDate' => '2024-01-03T10:00:00Z', 'answers' => ['colour' => 'Purple']],
+			],
+		);
+
+		$this->assertSame(1, $result['responsesImported']);
+		$this->assertSame(1, $result['responsesSkipped']);
+		$this->assertContains("A response from 2024-01-03 was not imported: 'Purple' is not an option of question 'Colour'", $result['warnings']);
+	}
+
+	public function testMicrosoftsOwnAnswerShapesAreConvertedFirst(): void {
+		$result = $this->importWith(
+			[
+				['id' => 'tags', 'msType' => 'Question.Choice', 'title' => 'Tags', 'order' => 1, 'allowMultipleSelection' => true, 'choices' => [['text' => 'A'], ['text' => 'B']]],
+				['id' => 'day', 'msType' => 'Question.Date', 'title' => 'Day', 'order' => 2],
+			],
+			[
+				['id' => 'r1', 'answers' => ['tags' => '["A","B"]', 'day' => '1/15/2024']],
+				['id' => 'r2', 'answers' => ['tags' => 'A;B', 'day' => '2024-02-01T00:00:00Z']],
+			],
+		);
+
+		$this->assertSame(2, $result['responsesImported'], implode("\n", $result['warnings']));
+		$this->assertSame([['A', 'B'], '2024-01-15'], array_values($result['appended'][0]['answers']));
+		$this->assertSame([['A', 'B'], '2024-02-01'], array_values($result['appended'][1]['answers']));
+	}
+
+	public function testOnlyTwentyReasonsAreListedTheRestIsCounted(): void {
+		$responses = array_map(fn ($i) => ['id' => "r$i", 'submitDate' => '2024-01-01', 'answers' => ['colour' => 'Purple']], range(1, 25));
+		$result = $this->importWith(
+			[['id' => 'colour', 'msType' => 'Question.Choice', 'title' => 'Colour', 'order' => 1, 'allowMultipleSelection' => false, 'choices' => [['text' => 'Red']]]],
+			$responses,
+		);
+
+		$this->assertSame(25, $result['responsesSkipped']);
+		$this->assertContains('5 more responses were not imported for the same kind of reasons', $result['warnings']);
 	}
 
 	public function testImportFormPassesPathAndTemplateToCreate(): void {

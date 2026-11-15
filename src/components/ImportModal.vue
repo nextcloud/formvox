@@ -191,6 +191,10 @@
                 <!-- TRANSLATORS: %n is the number of responses that were imported -->
                 {{ n('formvox', '%n response imported', '%n responses imported', importResult.responsesImported) }}
               </p>
+              <p v-if="importResult.responsesSkipped > 0" class="import-skipped">
+                <!-- TRANSLATORS: %n is the number of responses that were not imported -->
+                {{ n('formvox', '%n response did not fit the form and was not imported; the reason is below.', '%n responses did not fit the form and were not imported; the reasons are below.', importResult.responsesSkipped) }}
+              </p>
             </div>
 
             <div v-if="importResult.warnings?.length > 0" class="import-warnings">

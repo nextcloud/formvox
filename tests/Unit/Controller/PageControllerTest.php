@@ -5,9 +5,16 @@ declare(strict_types=1);
 namespace OCA\FormVox\Tests\Unit\Controller;
 
 use OCA\FormVox\Controller\PageController;
+use OCA\FormVox\Security\FormNotFoundException;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\FormSanitizer;
+use OCA\FormVox\Security\LinkPasswordPolicy;
+use OCA\FormVox\Security\RequireFormPermission;
 use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Service\FormAccessService;
 use OCA\FormVox\Service\FormRepository;
+use OCA\FormVox\Service\FormRevision;
+use OCA\FormVox\Service\IntegrationStatus;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\PermissionService;
 use OCP\AppFramework\Http;
@@ -15,66 +22,55 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\Files\File;
 use OCP\IRequest;
-use OCP\IURLGenerator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Characterization tests for PageController — the three server-rendered page
- * entry points (index / editor / results). These pin the CURRENT observable
- * behaviour:
- *
- *  - index() always renders the app shell (TemplateResponse, STATUS_OK) and
- *    seeds the msFormsConfigured initial state.
- *  - editor() gates on role: any role above ROLE_NONE renders the editor;
- *    ROLE_NONE triggers `throw new NotFoundResponse()`. NotFoundResponse
- *    extends TemplateResponse and is NOT Throwable, so PHP raises a fatal
- *    \Error("Cannot throw objects that do not implement Throwable"). We pin
- *    that exact current behaviour rather than pretending it is a 404 response.
- *  - results() gates on the computed permissions['viewResponses'] flag with the
- *    same throw-a-non-throwable pattern.
- *
- * Everything is mocked against the ocp stubs; no Nextcloud server runs. We
- * assert on response class + HTTP status + the initial state handed to JS,
- * never on rendered HTML.
+ * Characterization tests for PageController: response, status and initial state for
+ * a granted request. Access to editor/results is FormAccessMiddleware's job.
  */
 class PageControllerTest extends TestCase {
 	private IRequest $request;
 	private FormRepository $formRepository;
-	private FormFileLocator $fileLocator;
+	private FormAccessService $access;
 	private PermissionService $permissionService;
 	private BrandingService $brandingService;
 	private MicrosoftFormsAuthService $msFormsAuthService;
 	private IInitialState $initialState;
-	private IURLGenerator $urlGenerator;
 
 	protected function setUp(): void {
 		parent::setUp();
 		$this->request = $this->createMock(IRequest::class);
 		$this->formRepository = $this->createMock(FormRepository::class);
-		$this->fileLocator = $this->createMock(FormFileLocator::class);
+		$this->access = $this->createMock(FormAccessService::class);
 		$this->permissionService = $this->createMock(PermissionService::class);
 		$this->brandingService = $this->createMock(BrandingService::class);
 		$this->msFormsAuthService = $this->createMock(MicrosoftFormsAuthService::class);
 		$this->initialState = $this->createMock(IInitialState::class);
-		$this->urlGenerator = $this->createMock(IURLGenerator::class);
 
 		// Sensible defaults so success paths don't crash on unmocked calls.
 		$this->brandingService->method('getBranding')->willReturn(['color' => '#fff']);
 		$this->msFormsAuthService->method('isConfigured')->willReturn(false);
 	}
 
-	private function controller(?string $userId = 'alice'): PageController {
+	private function controller(): PageController {
 		return new PageController(
 			$this->request,
 			$this->formRepository,
-			$this->fileLocator,
+			$this->access,
 			$this->permissionService,
 			$this->brandingService,
 			$this->msFormsAuthService,
 			$this->initialState,
-			$this->urlGenerator,
-			$userId
+			new FormSanitizer(),
+			$this->createMock(LinkPasswordPolicy::class),
+			$this->passThroughIntegrationStatus()
 		);
+	}
+
+	private function passThroughIntegrationStatus(): IntegrationStatus {
+		$status = $this->createMock(IntegrationStatus::class);
+		$status->method('annotate')->willReturnArgument(1);
+		return $status;
 	}
 
 	/** Capture every provideInitialState(key, value) into a keyed array. */
@@ -130,8 +126,8 @@ class PageControllerTest extends TestCase {
 	}
 
 	public function testIndexDoesNotTouchFormOrPermissionServices(): void {
-		$this->formRepository->expects($this->never())->method('load');
-		$this->fileLocator->expects($this->never())->method('getFileById');
+		$this->formRepository->expects($this->never())->method('loadForm');
+		$this->access->expects($this->never())->method('getFile');
 		$this->permissionService->expects($this->never())->method('getRoleFromFile');
 
 		$this->controller()->index();
@@ -141,25 +137,15 @@ class PageControllerTest extends TestCase {
 	// editor()
 	// ======================================================================
 
-	/**
-	 * Wire up the collaborators editor()/results() call in order:
-	 * getFileById → load → getRoleFromFile → canShareFromFile → getPermissionsForRole.
-	 */
-	private function wireForm(
-		string $role,
-		array $permissions,
-		array $form = ['title' => 'T'],
-		bool $canShare = false,
-	): void {
-		$this->fileLocator->method('getFileById')->willReturn($this->createMock(File::class));
-		$this->formRepository->method('load')->willReturn($form);
+	private function wireForm(string $role, array $permissions, array $form = ['title' => 'T']): void {
+		$this->access->method('getFile')->willReturn($this->createMock(File::class));
+		$this->formRepository->method('loadForm')->willReturn($form);
 		$this->permissionService->method('getRoleFromFile')->willReturn($role);
-		$this->permissionService->method('canShareFromFile')->willReturn($canShare);
-		$this->permissionService->method('getPermissionsForRole')->willReturn($permissions);
+		$this->permissionService->method('getPermissionsForFile')->willReturn($permissions);
 	}
 
-	public function testEditorRendersForViewerRole(): void {
-		$this->wireForm(PermissionService::ROLE_VIEWER, ['viewResponses' => false]);
+	public function testEditorRendersEditorTemplate(): void {
+		$this->wireForm(PermissionService::ROLE_VIEWER, ['viewResponses' => true]);
 		$resp = $this->controller()->editor(1);
 		$this->assertInstanceOf(TemplateResponse::class, $resp);
 		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
@@ -167,31 +153,9 @@ class PageControllerTest extends TestCase {
 		$this->assertSame('formvox', $resp->getParams()['appId']);
 	}
 
-	public function testEditorRendersForEditorRole(): void {
-		$this->wireForm(PermissionService::ROLE_EDITOR, ['viewResponses' => true]);
-		$resp = $this->controller()->editor(7);
-		$this->assertInstanceOf(TemplateResponse::class, $resp);
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-	}
-
-	public function testEditorRendersForOwnerRole(): void {
-		$this->wireForm(PermissionService::ROLE_OWNER, ['viewResponses' => true], ['title' => 'X'], true);
-		$resp = $this->controller()->editor(3);
-		$this->assertInstanceOf(TemplateResponse::class, $resp);
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-	}
-
-	public function testEditorRendersForRespondentRole(): void {
-		// Any role above ROLE_NONE passes the gate, including respondent.
-		$this->wireForm(PermissionService::ROLE_RESPONDENT, ['viewResponses' => false]);
-		$resp = $this->controller()->editor(9);
-		$this->assertInstanceOf(TemplateResponse::class, $resp);
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-	}
-
 	public function testEditorProvidesInitialStateOnSuccess(): void {
 		$form = ['title' => 'My Form', 'questions' => []];
-		$this->wireForm(PermissionService::ROLE_EDITOR, ['viewResponses' => true, 'edit' => true], $form, true);
+		$this->wireForm(PermissionService::ROLE_EDITOR, ['viewResponses' => true, 'canDownload' => true], $form);
 
 		$captured = [];
 		$this->captureInitialState($captured);
@@ -199,57 +163,54 @@ class PageControllerTest extends TestCase {
 		$this->controller()->editor(42);
 
 		$this->assertSame(42, $captured['fileId']);
-		$this->assertSame($form, $captured['form']);
+		$this->assertSame($form + ['revision' => FormRevision::of($form)], $captured['form']);
 		$this->assertSame(PermissionService::ROLE_EDITOR, $captured['role']);
-		$this->assertSame(['viewResponses' => true, 'edit' => true], $captured['permissions']);
+		$this->assertSame(['viewResponses' => true, 'canDownload' => true], $captured['permissions']);
 		$this->assertSame(['color' => '#fff'], $captured['adminBranding']);
 	}
 
-	public function testEditorPassesUserIdToPermissionLookup(): void {
-		$file = $this->createMock(File::class);
-		$this->fileLocator->method('getFileById')->willReturn($file);
-		$this->formRepository->method('load')->willReturn(['title' => 'T']);
-		$this->permissionService->expects($this->once())->method('getRoleFromFile')
-			->with($file, 'bob')->willReturn(PermissionService::ROLE_VIEWER);
-		$this->permissionService->method('canShareFromFile')->with($file, 'bob')->willReturn(false);
-		$this->permissionService->method('getPermissionsForRole')->willReturn(['viewResponses' => false]);
+	public function testEditorStateHoldsNoSecretsEvenForReadOnlyUsers(): void {
+		$form = ['title' => 'T', 'settings' => [
+			'public_token' => 'TOK',
+			'share_password_hash' => 'enc:v1:pw',
+			'api_keys' => [['id' => 'k1', 'hash' => 'enc:v1:key']],
+			'webhooks' => [['id' => 'w1', 'secret' => 'enc:v1:wh']],
+			'allow_multiple' => true,
+		]];
+		$this->wireForm(PermissionService::ROLE_VIEWER, ['viewResponses' => true, 'editSettings' => false, 'canShare' => false], $form);
 
-		$resp = $this->controller('bob')->editor(1);
-		$this->assertInstanceOf(TemplateResponse::class, $resp);
-	}
+		$captured = [];
+		$this->captureInitialState($captured);
 
-	public function testEditorNullUserIdCoercedToEmptyString(): void {
-		// userId === null → the controller passes '' to the permission lookups.
-		$file = $this->createMock(File::class);
-		$this->fileLocator->method('getFileById')->willReturn($file);
-		$this->formRepository->method('load')->willReturn(['title' => 'T']);
-		$this->permissionService->expects($this->once())->method('getRoleFromFile')
-			->with($file, '')->willReturn(PermissionService::ROLE_VIEWER);
-		$this->permissionService->method('canShareFromFile')->with($file, '')->willReturn(false);
-		$this->permissionService->method('getPermissionsForRole')->willReturn(['viewResponses' => false]);
-
-		$resp = $this->controller(null)->editor(1);
-		$this->assertInstanceOf(TemplateResponse::class, $resp);
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-	}
-
-	public function testEditorRoleNoneThrowsNonThrowableError(): void {
-		// The gate does `throw new NotFoundResponse()`, but NotFoundResponse
-		// extends TemplateResponse and is not Throwable, so PHP raises a fatal
-		// \Error. This is the current (buggy) behaviour and we pin it exactly.
-		$this->wireForm(PermissionService::ROLE_NONE, ['viewResponses' => false]);
-
-		$this->expectException(\Error::class);
-		$this->expectExceptionMessage('Cannot throw objects that do not implement Throwable');
 		$this->controller()->editor(1);
+		$settings = $captured['form']['settings'];
+		$this->assertSame(['TOK', true, true, [['id' => 'k1']], [['id' => 'w1']]], [
+			$settings['public_token'], $settings['allow_multiple'], $settings['has_share_password'], $settings['api_keys'], $settings['webhooks'],
+		]);
+		$this->assertStringNotContainsString('enc:v1:', json_encode($captured['form']));
 	}
 
-	public function testEditorPropagatesNotFoundExceptionFromGetFileById(): void {
-		// If getFileById throws (e.g. file missing), editor() does not catch it.
-		$this->fileLocator->method('getFileById')
-			->willThrowException(new \OCP\Files\NotFoundException('gone'));
+	public function testEditorTakesRoleAndPermissionsFromTheFormFile(): void {
+		$file = $this->createMock(File::class);
+		$this->access->method('getFile')->with(1)->willReturn($file);
+		$this->formRepository->method('loadForm')->willReturn(['title' => 'T']);
+		$this->permissionService->expects($this->once())->method('getRoleFromFile')
+			->with($this->identicalTo($file))->willReturn(PermissionService::ROLE_VIEWER);
+		$this->permissionService->expects($this->once())->method('getPermissionsForFile')
+			->with($this->identicalTo($file))->willReturn(['canShare' => false]);
 
-		$this->expectException(\OCP\Files\NotFoundException::class);
+		$captured = [];
+		$this->captureInitialState($captured);
+
+		$this->controller()->editor(1);
+		$this->assertSame(['canShare' => false], $captured['permissions']);
+	}
+
+	public function testEditorPropagatesFormNotFound(): void {
+		// The middleware turns this into the 404 page; the controller must not swallow it.
+		$this->access->method('getFile')->willThrowException(new FormNotFoundException('Form not found'));
+
+		$this->expectException(FormNotFoundException::class);
 		$this->controller()->editor(404);
 	}
 
@@ -257,7 +218,14 @@ class PageControllerTest extends TestCase {
 	// results()
 	// ======================================================================
 
-	public function testResultsRendersWhenViewResponsesTrue(): void {
+	/** The editor opens with read; the results page shows the responses, so it needs Nextcloud's leave to see the content. */
+	public function testTheResultsPageNeedsTheRightToSeeTheContentAndTheEditorOnlyRead(): void {
+		$required = fn (string $method) => (new \ReflectionMethod(PageController::class, $method))->getAttributes(RequireFormPermission::class)[0]->newInstance()->permission;
+
+		$this->assertSame([FormPermission::VIEW_CONTENT, FormPermission::READ], [$required('results'), $required('editor')]);
+	}
+
+	public function testResultsRendersResultsTemplate(): void {
 		$this->wireForm(PermissionService::ROLE_EDITOR, ['viewResponses' => true]);
 		$resp = $this->controller()->results(5);
 		$this->assertInstanceOf(TemplateResponse::class, $resp);
@@ -268,7 +236,7 @@ class PageControllerTest extends TestCase {
 
 	public function testResultsProvidesInitialStateOnSuccess(): void {
 		$form = ['title' => 'Survey', 'questions' => [['id' => 'q1']]];
-		$this->wireForm(PermissionService::ROLE_OWNER, ['viewResponses' => true], $form, true);
+		$this->wireForm(PermissionService::ROLE_ADMIN, ['viewResponses' => true], $form);
 
 		$captured = [];
 		$this->captureInitialState($captured);
@@ -276,62 +244,33 @@ class PageControllerTest extends TestCase {
 		$this->controller()->results(11);
 
 		$this->assertSame(11, $captured['fileId']);
-		$this->assertSame($form, $captured['form']);
-		$this->assertSame(PermissionService::ROLE_OWNER, $captured['role']);
+		$this->assertSame($form + ['revision' => FormRevision::of($form)], $captured['form']);
+		$this->assertSame(PermissionService::ROLE_ADMIN, $captured['role']);
 		$this->assertSame(['viewResponses' => true], $captured['permissions']);
-		// results() does NOT provide adminBranding (editor-only).
+		// adminBranding is only for the editor's preview fallback.
 		$this->assertArrayNotHasKey('adminBranding', $captured);
 	}
 
-	public function testResultsViewResponsesFalseThrowsNonThrowableError(): void {
-		// results() gates on permissions['viewResponses']; false → throw a
-		// NotFoundResponse, which (not being Throwable) fatals with \Error.
-		$this->wireForm(PermissionService::ROLE_VIEWER, ['viewResponses' => false]);
-
-		$this->expectException(\Error::class);
-		$this->expectExceptionMessage('Cannot throw objects that do not implement Throwable');
-		$this->controller()->results(1);
-	}
-
-	public function testResultsRoleNoneWithoutViewResponsesThrows(): void {
-		// ROLE_NONE naturally yields viewResponses=false → same fatal gate.
-		$this->wireForm(PermissionService::ROLE_NONE, ['viewResponses' => false]);
-
-		$this->expectException(\Error::class);
-		$this->controller()->results(1);
-	}
-
-	public function testResultsPassesUserIdToPermissionLookup(): void {
+	public function testResultsTakesRoleAndPermissionsFromTheFormFile(): void {
 		$file = $this->createMock(File::class);
-		$this->fileLocator->method('getFileById')->willReturn($file);
-		$this->formRepository->method('load')->willReturn(['title' => 'T']);
+		$this->access->method('getFile')->with(1)->willReturn($file);
+		$this->formRepository->method('loadForm')->willReturn(['title' => 'T']);
 		$this->permissionService->expects($this->once())->method('getRoleFromFile')
-			->with($file, 'carol')->willReturn(PermissionService::ROLE_EDITOR);
-		$this->permissionService->method('canShareFromFile')->willReturn(false);
-		$this->permissionService->method('getPermissionsForRole')->willReturn(['viewResponses' => true]);
+			->with($this->identicalTo($file))->willReturn(PermissionService::ROLE_EDITOR);
+		$this->permissionService->expects($this->once())->method('getPermissionsForFile')
+			->with($this->identicalTo($file))->willReturn(['canDownload' => false]);
 
-		$resp = $this->controller('carol')->results(1);
-		$this->assertInstanceOf(TemplateResponse::class, $resp);
+		$captured = [];
+		$this->captureInitialState($captured);
+
+		$this->controller()->results(1);
+		$this->assertSame(['canDownload' => false], $captured['permissions']);
 	}
 
-	public function testResultsNullUserIdCoercedToEmptyString(): void {
-		$file = $this->createMock(File::class);
-		$this->fileLocator->method('getFileById')->willReturn($file);
-		$this->formRepository->method('load')->willReturn(['title' => 'T']);
-		$this->permissionService->expects($this->once())->method('getRoleFromFile')
-			->with($file, '')->willReturn(PermissionService::ROLE_EDITOR);
-		$this->permissionService->method('canShareFromFile')->with($file, '')->willReturn(false);
-		$this->permissionService->method('getPermissionsForRole')->willReturn(['viewResponses' => true]);
+	public function testResultsPropagatesFormNotFound(): void {
+		$this->access->method('getFile')->willThrowException(new FormNotFoundException('Form not found'));
 
-		$resp = $this->controller(null)->results(1);
-		$this->assertSame(Http::STATUS_OK, $resp->getStatus());
-	}
-
-	public function testResultsPropagatesNotFoundExceptionFromGetFileById(): void {
-		$this->fileLocator->method('getFileById')
-			->willThrowException(new \OCP\Files\NotFoundException('gone'));
-
-		$this->expectException(\OCP\Files\NotFoundException::class);
+		$this->expectException(FormNotFoundException::class);
 		$this->controller()->results(404);
 	}
 }

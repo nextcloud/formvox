@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\RequireFormPermission;
 use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormFileLocator;
-use OCA\FormVox\Service\PermissionService;
+use OCA\FormVox\Service\FormAccessService;
+use OCA\FormVox\Service\FormLockedException;
+use OCA\FormVox\Service\FormRepository;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -15,31 +20,71 @@ use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\AppFramework\Http\DataResponse;
-use OCP\IL10N;
+use OCP\Files\IMimeTypeDetector;
 use OCP\IRequest;
 use OCP\IUserSession;
 
 class BrandingController extends Controller {
-	private BrandingService $brandingService;
-	private FormFileLocator $fileLocator;
-	private PermissionService $permissionService;
-	private IUserSession $userSession;
-	private IL10N $l;
+	/** What a branding image may be: not SVG, which can carry script (secu#54, PO 6). */
+	private const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+	private const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 	public function __construct(
 		IRequest $request,
-		BrandingService $brandingService,
-		FormFileLocator $fileLocator,
-		PermissionService $permissionService,
-		IUserSession $userSession,
-		IL10N $l,
+		private BrandingService $brandingService,
+		private FormAccessService $access,
+		private FormRepository $formRepository,
+		private IMimeTypeDetector $mimeTypeDetector,
+		private IUserSession $userSession,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->brandingService = $brandingService;
-		$this->fileLocator = $fileLocator;
-		$this->permissionService = $permissionService;
-		$this->userSession = $userSession;
-		$this->l = $l;
+	}
+
+	/**
+	 * The uploaded image, by what the file is rather than what the browser says it is.
+	 *
+	 * @return array{string, string} its temporary path and type
+	 * @throws RequestException
+	 */
+	private function uploadedImage(string $blockId): array {
+		$this->requireBlockId($blockId);
+		$file = $this->request->getUploadedFile('image');
+		if (!is_array($file) || ($file['error'] ?? null) !== UPLOAD_ERR_OK) {
+			// TRANSLATORS: Error when a branding image upload carried no file
+			throw RequestException::invalid(Translatable::t('No file was uploaded'));
+		}
+		if ((int)($file['size'] ?? 0) > self::MAX_IMAGE_BYTES) {
+			// TRANSLATORS: Error when a branding image is too large
+			throw RequestException::invalid(Translatable::t('The image is larger than 2 MB'));
+		}
+		$type = $this->mimeTypeDetector->detectContent((string)$file['tmp_name']);
+		if (!in_array($type, self::IMAGE_TYPES, true)) {
+			// TRANSLATORS: Error when a branding image is not one of the allowed formats
+			throw RequestException::invalid(Translatable::t('Use a PNG, JPEG, GIF or WebP image'));
+		}
+		return [(string)$file['tmp_name'], $type];
+	}
+
+	/** It names the image file, so only a plain name. */
+	private function requireBlockId(string $blockId): void {
+		if (preg_match('/^[\w-]{1,64}$/', $blockId) !== 1) {
+			throw RequestException::notFound(Translatable::t('Not found'));
+		}
+	}
+
+	private function imageResponse(?array $image): DataDisplayResponse {
+		if ($image === null) {
+			return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
+		}
+		$response = new DataDisplayResponse($image['content']);
+		$response->addHeader('Content-Type', $image['mimeType']);
+		$response->addHeader('X-Content-Type-Options', 'nosniff');
+		if ($image['mimeType'] === 'image/svg+xml') {
+			// One from before SVG was refused: still shown in a page, but never opened as one, where it could run script.
+			$response->addHeader('Content-Disposition', 'attachment; filename="image.svg"');
+		}
+		$response->cacheFor(3600);
+		return $response;
 	}
 
 	/**
@@ -69,34 +114,8 @@ class BrandingController extends Controller {
 	 * Upload block image (admin only)
 	 */
 	public function uploadBlockImage(string $blockId): DataResponse {
-		$file = $this->request->getUploadedFile('image');
-		if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
-			return new DataResponse(
-				['error' => $this->l->t('No file was uploaded')],
-				Http::STATUS_BAD_REQUEST
-			);
-		}
-
-		$allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
-		if (!in_array($file['type'], $allowedTypes)) {
-			return new DataResponse(
-				// TRANSLATORS: Upload error; %s is a list of file formats such as "PNG, JPEG, SVG, GIF, WebP"
-				['error' => $this->l->t('Invalid file type. Allowed: %s', ['PNG, JPEG, SVG, GIF, WebP'])],
-				Http::STATUS_BAD_REQUEST
-			);
-		}
-
-		$maxSize = 2 * 1024 * 1024; // 2MB
-		if ($file['size'] > $maxSize) {
-			return new DataResponse(
-				// TRANSLATORS: Upload error; %s is a number of megabytes, for example 2
-				['error' => $this->l->t('File is too large. The maximum size is %s MB.', [2])],
-				Http::STATUS_BAD_REQUEST
-			);
-		}
-
-		$imageId = $this->brandingService->saveBlockImage($blockId, $file['tmp_name'], $file['type']);
-		return new DataResponse(['imageId' => $imageId]);
+		[$path, $type] = $this->uploadedImage($blockId);
+		return new DataResponse(['imageId' => $this->brandingService->saveBlockImage($blockId, $path, $type)]);
 	}
 
 	/**
@@ -113,88 +132,59 @@ class BrandingController extends Controller {
 	#[PublicPage]
 	#[NoCSRFRequired]
 	public function blockImage(string $blockId): DataDisplayResponse {
-		$image = $this->brandingService->getBlockImage($blockId);
-		if ($image === null) {
-			return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
-		}
-
-		$response = new DataDisplayResponse($image['content']);
-		$response->addHeader('Content-Type', $image['mimeType']);
-		$response->cacheFor(3600); // Cache for 1 hour
-		return $response;
+		$this->requireBlockId($blockId);
+		return $this->imageResponse($this->brandingService->getBlockImage($blockId));
 	}
 
 	/**
-	 * Upload a per-form branding image (form owner / editor with branding rights).
-	 * Stored in .formvox-branding-{fileId}/ next to the .fvform file.
+	 * Per-form branding image, stored in .formvox-branding-{fileId}/ next to the .fvform.
 	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function uploadFormBlockImage(int $fileId, string $blockId): DataResponse {
-		$err = $this->requireBrandingEditPermission($fileId);
-		if ($err !== null) {
-			return $err;
-		}
-
-		$file = $this->request->getUploadedFile('image');
-		if ($file === null || $file['error'] !== UPLOAD_ERR_OK) {
-			return new DataResponse(['error' => $this->l->t('No file was uploaded')], Http::STATUS_BAD_REQUEST);
-		}
-		$allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp'];
-		if (!in_array($file['type'], $allowedTypes)) {
-			return new DataResponse(['error' => $this->l->t('Invalid file type. Allowed: %s', ['PNG, JPEG, SVG, GIF, WebP'])], Http::STATUS_BAD_REQUEST);
-		}
-		if ($file['size'] > 2 * 1024 * 1024) {
-			return new DataResponse(['error' => $this->l->t('File is too large. The maximum size is %s MB.', [2])], Http::STATUS_BAD_REQUEST);
-		}
-
-		try {
-			$imageId = $this->brandingService->saveFormBlockImage($fileId, $blockId, $file['tmp_name'], $file['type']);
-			return new DataResponse(['imageId' => $imageId]);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		[$path, $type] = $this->uploadedImage($blockId);
+		return new DataResponse(['imageId' => $this->brandingService->saveFormBlockImage($this->access->getFile($fileId), $blockId, $path, $type)]);
 	}
 
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function deleteFormBlockImage(int $fileId, string $blockId): DataResponse {
-		$err = $this->requireBrandingEditPermission($fileId);
-		if ($err !== null) {
-			return $err;
-		}
-		$this->brandingService->deleteFormBlockImage($fileId, $blockId);
+		$this->requireBlockId($blockId);
+		$this->brandingService->deleteFormBlockImage($this->access->getFile($fileId), $blockId);
 		return new DataResponse(['success' => true]);
 	}
 
+	/**
+	 * A form's own image: with its link's token, as the public page asks for it, or for whoever may open the form
+	 * (the editor, the results). Without either, any form's images could be had by its id (qual#87, secu#95).
+	 */
 	#[PublicPage]
 	#[NoCSRFRequired]
 	public function formBlockImage(int $fileId, string $blockId): DataDisplayResponse {
-		$image = $this->brandingService->getFormBlockImage($fileId, $blockId);
-		if ($image === null) {
+		$this->requireBlockId($blockId);
+		if (!$this->mayViewFormImage($fileId)) {
 			return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
 		}
-		$response = new DataDisplayResponse($image['content']);
-		$response->addHeader('Content-Type', $image['mimeType']);
-		$response->cacheFor(3600);
-		return $response;
+		return $this->imageResponse($this->brandingService->getFormBlockImage($fileId, $blockId));
 	}
 
-	private function requireBrandingEditPermission(int $fileId): ?DataResponse {
-		$userId = $this->userSession->getUser()?->getUID();
-		if ($userId === null) {
-			return new DataResponse(['error' => $this->l->t('Not authenticated')], Http::STATUS_UNAUTHORIZED);
-		}
+	private function mayViewFormImage(int $fileId): bool {
+		$token = (string)$this->request->getParam('token', '');
 		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-			if (!$this->permissionService->canEditSettings($role)) {
-				// TRANSLATORS: Error when the account may not do this with the form
-				return new DataResponse(['error' => $this->l->t('Permission denied')], Http::STATUS_FORBIDDEN);
+			if ($token !== '') {
+				$stored = $this->formRepository->loadPublic($fileId)['settings']['public_token'] ?? null;
+				return is_string($stored) && hash_equals($stored, $token);
 			}
-			return null;
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(['error' => $this->l->t('Form not found')], Http::STATUS_NOT_FOUND);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+			if ($this->userSession->getUser() === null) {
+				return false;
+			}
+			$this->access->require($fileId, FormPermission::READ);
+			return true;
+		} catch (FormLockedException $busy) {
+			// A busy form is a 503 to retry, not an image that is not there.
+			throw $busy;
+		} catch (\Throwable) {
+			return false;
 		}
 	}
 }

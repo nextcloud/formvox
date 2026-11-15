@@ -88,6 +88,14 @@ A `.fvform` file contains:
 | `quizMode` | boolean | false | Enable quiz scoring |
 | `restrictedUsers` | array | [] | Allowed user IDs |
 | `restrictedGroups` | array | [] | Allowed group IDs |
+| `notify_owner` | boolean | true | Notify the form owner on each new response. Absent means enabled; only an explicit `false` disables it |
+| `notify_recipients` | array | [] | Additional recipients, as `{"type": "user"\|"group", "id": "...", "displayName": "..."}` |
+
+> **Note:** the notification keys above are written in `snake_case`, as the
+> application stores them. Several of the other names in this table are historical
+> and do not match what is written to disk today (for example, the code uses
+> `allow_multiple`, `allowed_users` and `public_token`). Treat the source of truth
+> as `lib/Service/FormFactory.php` until this table is reconciled.
 
 ### Branding Object
 

@@ -175,4 +175,44 @@ describe('views/AdminSettings', () => {
 		// {count} is interpolated now that translate() gets the app name.
 		expect(banner.message).toContain('250 accounts')
 	})
+
+	it('sending the PDF to anonymous respondents is off unless the administrator turned it on', async () => {
+		expect(mountAdmin().vm.pdfAnonymous).toBe(false)
+
+		const wrapper = mountAdmin({ initialPdfSettings: { anonymous: false } })
+		await wrapper.vm.togglePdfAnonymous(true)
+
+		expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/apps/formvox/api/settings/pdf'), { anonymous: true })
+		expect(wrapper.vm.pdfAnonymous).toBe(true)
+	})
+
+	it('without a shared memory cache the PDF for anonymous respondents cannot be switched on', async () => {
+		const wrapper = mountAdmin({ initialPdfSettings: { anonymous: false, sharedCache: false } })
+		await wrapper.findAll('.tab-button').find(b => b.text().includes('Settings')).trigger('click')
+
+		const toggle = wrapper.findAllComponents({ name: 'NcCheckboxRadioSwitch' })
+			.find(c => c.text().includes('Also send the PDF to anonymous respondents'))
+		expect(toggle.vm.$attrs.disabled).toBe(true)
+		expect(wrapper.text()).toContain('Needs a shared memory cache (Redis or Memcached)')
+	})
+
+	it('with a shared memory cache it can', async () => {
+		const wrapper = mountAdmin({ initialPdfSettings: { anonymous: false, sharedCache: true } })
+		await wrapper.findAll('.tab-button').find(b => b.text().includes('Settings')).trigger('click')
+
+		const toggle = wrapper.findAllComponents({ name: 'NcCheckboxRadioSwitch' })
+			.find(c => c.text().includes('Also send the PDF to anonymous respondents'))
+		expect(toggle.vm.$attrs.disabled).toBe(false)
+		expect(wrapper.text()).not.toContain('Needs a shared memory cache')
+	})
+
+	it('a setting that cannot be saved is shown as it was', async () => {
+		axios.post.mockRejectedValueOnce(new Error('down'))
+		const wrapper = mountAdmin({ initialPdfSettings: { anonymous: false } })
+
+		await wrapper.vm.togglePdfAnonymous(true)
+
+		expect(wrapper.vm.pdfAnonymous).toBe(false)
+	})
 })
+

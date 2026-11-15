@@ -14,10 +14,13 @@
 		<directory name="lib" />
 		<ignoreFiles>
 			<directory name="vendor" />
+			<!-- dompdf as shipped (composer vendor:pdf): read for its types, not checked -->
+			<directory name="lib/Vendor" />
 		</ignoreFiles>
 	</projectFiles>
 	<extraFiles>
 		<directory name="vendor" />
+		<directory name="lib/Vendor" />
 	</extraFiles>
 	<stubs>
 		<!-- Internal OC\ symbol that OCP\Files\IRootFolder extends but ocp
@@ -35,14 +38,21 @@
 			<errorLevel type="suppress">
 				<referencedClass name="OC" />
 				<referencedClass name="OC\Image" />
+				<referencedClass name="OC\Files\Storage\Wrapper\Encryption" />
 				<referencedClass name="OCA\Circles\CirclesManager" />
 				<referencedClass name="OCA\Circles\Model\Circle" />
 				<referencedClass name="OCA\Circles\Model\Member" />
 				<referencedClass name="OCA\Files_Versions\Versions\IVersionManager" />
+				<referencedClass name="OCA\Files_Versions\Events\CreateVersionEvent" />
+				<referencedClass name="OCA\Files_Versions\Versions\INeedSyncVersionBackend" />
+				<referencedClass name="OCA\Files_Trashbin\Trash\ITrashManager" />
+				<referencedClass name="OCA\Files_Trashbin\Trash\ITrashItem" />
 				<referencedClass name="OCA\Files\Event\LoadAdditionalScriptsEvent" />
 				<referencedClass name="OCA\DAV\Events\SabrePluginAuthInitEvent" />
+				<referencedClass name="OCA\DAV\Events\SabrePluginAddEvent" />
 				<referencedClass name="Sabre\DAV\ServerPlugin" />
 				<referencedClass name="Sabre\DAV\Server" />
+				<referencedClass name="Sabre\DAV\Exception\ServiceUnavailable" />
 				<referencedClass name="Smalot\PdfParser\Config" />
 				<referencedClass name="Smalot\PdfParser\Parser" />
 				<referencedClass name="PhpOffice\PhpWord\IOFactory" />

@@ -4,23 +4,22 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\FormSanitizer;
+use OCA\FormVox\Security\FormSecrets;
 use OCP\Http\Client\IClientService;
 use OCP\Security\ISecureRandom;
 use Psr\Log\LoggerInterface;
 
 class WebhookService {
-	private IClientService $clientService;
-	private ISecureRandom $secureRandom;
-	private LoggerInterface $logger;
-
 	public function __construct(
-		IClientService $clientService,
-		ISecureRandom $secureRandom,
-		LoggerInterface $logger,
+		private IClientService $clientService,
+		private ISecureRandom $secureRandom,
+		private LoggerInterface $logger,
+		private FormSecrets $secrets,
+		private AccountAccess $access,
+		private FormSanitizer $sanitizer,
 	) {
-		$this->clientService = $clientService;
-		$this->secureRandom = $secureRandom;
-		$this->logger = $logger;
 	}
 
 	/**
@@ -31,6 +30,28 @@ class WebhookService {
 	}
 
 	/**
+	 * A webhook delivers to http or https only: no file:, gopher: or other schemes.
+	 */
+	public static function isAllowedUrl(string $url): bool {
+		if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+			return false;
+		}
+		$scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+		return in_array($scheme, ['http', 'https'], true) && (string)parse_url($url, PHP_URL_HOST) !== '';
+	}
+
+	/**
+	 * The URL as it may appear in a log: no credentials, query or fragment, which often carry a token.
+	 */
+	public static function describeUrl(string $url): string {
+		$parts = parse_url($url);
+		if (!is_array($parts) || !isset($parts['host'])) {
+			return '(invalid url)';
+		}
+		return ($parts['scheme'] ?? '') . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '') . ($parts['path'] ?? '');
+	}
+
+	/**
 	 * Generate a webhook ID
 	 */
 	public function generateId(): string {
@@ -38,22 +59,35 @@ class WebhookService {
 	}
 
 	/**
-	 * Trigger webhooks for an event
+	 * Send an event to the form's webhooks that listen for it.
+	 *
+	 * @param list<string>|null $only just these webhooks, by id: the ones that failed before
+	 * @param string|null $eventId the same on every try of one event (X-FormVox-Event-Id)
+	 * @param array{url: string, sha256: string, size: int, filename: string, status: string, generated_at: string}|null $pdf where the response's PDF is fetched with an API key
+	 * @return list<string> the ids of webhooks that could not be reached, to try again
 	 */
-	public function trigger(array $form, string $event, array $data): void {
+	public function trigger(int $fileId, array $form, string $event, array $data, ?array $only = null, ?string $eventId = null, ?array $pdf = null): array {
 		$webhooks = $form['settings']['webhooks'] ?? [];
+		$failed = [];
 
-		if (empty($webhooks)) {
-			return;
-		}
-
-		foreach ($webhooks as $webhook) {
-			if (!$this->shouldTrigger($webhook, $event)) {
+		foreach (is_array($webhooks) ? $webhooks : [] as $webhook) {
+			if (!is_array($webhook) || !$this->shouldTrigger($webhook, $event)) {
+				continue;
+			}
+			if ($only !== null && !in_array($webhook['id'] ?? null, $only, true)) {
+				continue;
+			}
+			// Sends responses out, so only while its creator may still take them out of Nextcloud, as with an export (M29).
+			if ($this->access->fileFor($webhook['created_by'] ?? null, $fileId, FormPermission::DOWNLOAD) === null) {
+				$this->logger->info('FormVox webhook skipped: its creator may no longer download the form', ['fileId' => $fileId, 'webhook' => $webhook['id'] ?? '']);
 				continue;
 			}
 
-			$this->send($webhook, $event, $data, $form);
+			if (!$this->send($fileId, $webhook, $event, $data, $form, $eventId ?? (($data['id'] ?? '') . ':' . $event), $pdf)) {
+				$failed[] = (string)($webhook['id'] ?? '');
+			}
 		}
+		return $failed;
 	}
 
 	/**
@@ -75,35 +109,53 @@ class WebhookService {
 	}
 
 	/**
-	 * Send webhook request
+	 * @return bool false when the receiver could not be reached or refused it; a webhook that may not send is no failure
 	 */
-	private function send(array $webhook, string $event, array $data, array $form): void {
-		$url = $webhook['url'] ?? '';
-		if (empty($url)) {
-			return;
+	private function send(int $fileId, array $webhook, string $event, array $data, array $form, string $eventId, ?array $pdf = null): bool {
+		$url = (string)($webhook['url'] ?? '');
+		if (!self::isAllowedUrl($url)) {
+			$this->logger->warning('FormVox webhook skipped: its URL is not an http or https address', ['webhook' => $webhook['id'] ?? '', 'event' => $event]);
+			return true;
 		}
+		$where = self::describeUrl($url);
 
 		$payload = [
+			// Signed with the rest, so a replayed body cannot pass as another event (review of the 3a fixes).
+			'id' => $eventId,
+			// The same, under the name integrations know it by.
+			'event_id' => $eventId,
 			'event' => $event,
 			'timestamp' => (new \DateTime())->format(\DateTime::ATOM),
+			// The id the external API knows the form by, so a receiver can fetch it or tell forms apart.
 			'form' => [
+				'id' => $fileId,
+				'fileId' => $fileId,
 				'title' => $form['title'] ?? '',
 			],
-			'data' => $data,
+			'data' => $this->sanitizer->response($data, $form),
 		];
+		// A link, never the PDF itself: fetching it takes an API key. Null says the PDF could not be kept (PO), or
+		// that there is none to name, as for a deletion.
+		$payload['pdf'] = $pdf;
 
 		$jsonPayload = json_encode($payload);
 
-		// Calculate signature
-		$secret = $webhook['secret'] ?? '';
-		$signature = $this->calculateSignature($jsonPayload, $secret);
+		$secret = $this->secrets->open((string)($webhook['secret'] ?? ''));
+		if ($secret === '') {
+			// Never unsigned: without a secret the receiver cannot tell it came from this form.
+			$this->logger->warning('FormVox webhook skipped: it has no secret that can be used', ['url' => $where, 'event' => $event]);
+			return true;
+		}
+		$timestamp = time();
 
 		$headers = [
 			'Content-Type' => 'application/json',
 			'User-Agent' => 'FormVox-Webhook/1.0',
 			'X-FormVox-Event' => $event,
-			'X-FormVox-Signature' => $signature,
-			'X-FormVox-Timestamp' => (string)time(),
+			// The same on every try, so a receiver can tell a repeat: sent at least once.
+			'X-FormVox-Event-Id' => $eventId,
+			'X-FormVox-Signature' => $this->calculateSignature($jsonPayload, $secret, $timestamp),
+			'X-FormVox-Timestamp' => (string)$timestamp,
 		];
 
 		try {
@@ -116,28 +168,30 @@ class WebhookService {
 			]);
 
 			$this->logger->info('FormVox webhook sent', [
-				'url' => $url,
+				'url' => $where,
 				'event' => $event,
 			]);
+			return true;
 		} catch (\Exception $e) {
 			$this->logger->error('FormVox webhook failed', [
-				'url' => $url,
+				'url' => $where,
 				'event' => $event,
 				'error' => $e->getMessage(),
 			]);
+			return false;
 		}
 	}
 
 	/**
 	 * Calculate HMAC signature for webhook payload
 	 */
-	public function calculateSignature(string $payload, string $secret): string {
+	public function calculateSignature(string $payload, string $secret, ?int $timestamp = null): string {
 		if (empty($secret)) {
 			return '';
 		}
 
-		$timestamp = time();
-		$signedPayload = $timestamp . '.' . $payload;
+		// The same timestamp as the X-FormVox-Timestamp header, or verification fails across a second boundary.
+		$signedPayload = ($timestamp ?? time()) . '.' . $payload;
 
 		return 'v1=' . hash_hmac('sha256', $signedPayload, $secret);
 	}
@@ -146,8 +200,8 @@ class WebhookService {
 	 * Verify webhook signature (for testing/documentation)
 	 */
 	public function verifySignature(string $payload, string $signature, string $secret, int $timestamp): bool {
-		if (empty($secret)) {
-			return true;
+		if ($secret === '') {
+			return false;
 		}
 
 		$signedPayload = $timestamp . '.' . $payload;

@@ -89,6 +89,15 @@ Een `.fvform`-bestand bevat:
 | `quizMode` | boolean | false | Quiz-scoring inschakelen |
 | `restrictedUsers` | array | [] | Toegestane user-IDs |
 | `restrictedGroups` | array | [] | Toegestane group-IDs |
+| `notify_owner` | boolean | true | Notificeer de eigenaar bij elk nieuw antwoord. Afwezig betekent aan; alleen een expliciete `false` zet het uit |
+| `notify_recipients` | array | [] | Extra ontvangers, als `{"type": "user"\|"group", "id": "...", "displayName": "..."}` |
+
+> **Let op:** de notificatie-sleutels hierboven staan in `snake_case`, zoals de
+> applicatie ze opslaat. Diverse andere namen in deze tabel zijn historisch en
+> komen niet overeen met wat er vandaag naar schijf wordt geschreven (de code
+> gebruikt bijvoorbeeld `allow_multiple`, `allowed_users` en `public_token`).
+> Beschouw `lib/Service/FormFactory.php` als de bron van waarheid totdat deze
+> tabel is bijgewerkt.
 
 ### Branding-object
 

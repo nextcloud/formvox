@@ -22,12 +22,10 @@ use OCP\IUserSession;
  * file owner is resolved through IUserManager instead.
  */
 class FilesVersionCleaner implements IFormVersionCleaner {
-	private IUserSession $userSession;
-	private IUserManager $userManager;
-
-	public function __construct(IUserSession $userSession, IUserManager $userManager) {
-		$this->userSession = $userSession;
-		$this->userManager = $userManager;
+	public function __construct(
+		private IUserSession $userSession,
+		private IUserManager $userManager,
+	) {
 	}
 
 	public function deleteVersionsForFile(File $file): void {

@@ -26,6 +26,11 @@ module.exports = {
   module: {
     rules: [
       {
+        // An icon imported with ?raw arrives as its SVG text.
+        resourceQuery: /raw/,
+        type: 'asset/source',
+      },
+      {
         test: /\.vue$/,
         loader: 'vue-loader',
         // Template comments are notes for developers and translator hints,

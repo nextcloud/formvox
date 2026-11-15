@@ -8,12 +8,15 @@ const token = loadState('formvox', 'token');
 const fileId = loadState('formvox', 'fileId');
 const form = loadState('formvox', 'form');
 const branding = loadState('formvox', 'branding');
+// Only for a signed-in respondent of a form that sends confirmations: where theirs goes.
+const respondent = loadState('formvox', 'respondent', null);
 
 const app = createApp(Respond, {
   token,
   fileId,
   form,
   branding,
+  respondent,
 });
 
 // Make translation functions globally available. Call sites pass the app id

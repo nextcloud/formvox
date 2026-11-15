@@ -123,14 +123,12 @@ Oude antwoorden exporteren en wissen:
 
 ## Notificaties
 
-Krijg een melding bij nieuwe antwoorden:
+FormVox stuurt een Nextcloud-notificatie wanneer iemand een antwoord indient. Dit
+staat standaard aan voor de eigenaar van het formulier. De ontvangers beheer je via
+**Share → Response settings → Notify on new responses**.
 
-1. Open formulier-instellingen
-2. Schakel **E-mail-notificaties** in
-3. Kies notificatie-frequentie:
-   - Elke inzending
-   - Dagelijks samenvatting
-   - Wekelijks samenvatting
+Zie [Notificaties bij nieuwe antwoorden](sharing-publishing.nl.md#notificaties-bij-nieuwe-antwoorden)
+voor de volledige uitleg.
 
 ## Best practices
 

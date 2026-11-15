@@ -1,7 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Form/document icon - gray version for search results -->
-  <path d="M8 3C6.9 3 6 3.9 6 5v22c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H8zm0 2h16v22H8V5z" fill="#555"/>
-  <rect x="10" y="10" width="12" height="2" rx="1" fill="#555"/>
-  <rect x="10" y="16" width="12" height="2" rx="1" fill="#555"/>
-  <rect x="10" y="22" width="7" height="2" rx="1" fill="#555"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- FormVox, grey for search results -->
+  <path fill="#555" fill-rule="evenodd" d="M8 4H9V5A3 3 0 0 0 12 8H20A3 3 0 0 0 23 5V4H24A3 3 0 0 1 27 7V27A3 3 0 0 1 24 30H8A3 3 0 0 1 5 27V7A3 3 0 0 1 8 4ZM12.5 2H19.5A1.5 1.5 0 0 1 21 3.5V5A1 1 0 0 1 20 6H12A1 1 0 0 1 11 5V3.5A1.5 1.5 0 0 1 12.5 2ZM9.5 10H22.5A1.5 1.5 0 0 1 24 11.5V14.5A1.5 1.5 0 0 1 22.5 16H9.5A1.5 1.5 0 0 1 8 14.5V11.5A1.5 1.5 0 0 1 9.5 10ZM10 12H22V14H10ZM10 18H15A2 2 0 0 1 17 20V25A2 2 0 0 1 15 27H10A2 2 0 0 1 8 25V20A2 2 0 0 1 10 18ZM9.251 23.449L11.251 25.449A1.2 1.2 0 0 0 13.098 25.266L15.898 21.066A1.2 1.2 0 0 0 15.566 19.402A1.2 1.2 0 0 0 13.902 19.734L11.913 22.716L10.949 21.751A1.2 1.2 0 0 0 9.251 21.751A1.2 1.2 0 0 0 9.251 23.449ZM20 22H23A1 1 0 0 1 23 24H20A1 1 0 0 1 20 22Z"/>
 </svg>

@@ -71,9 +71,9 @@ describe('IntegrationSettings', () => {
 		expect(body.permissions).toEqual(['read_form', 'read_responses'])
 		// The one-time plaintext key is exposed.
 		expect(wrapper.vm.newApiKey.key).toBe('PLAINKEY')
-		// Appended to the local form (with hash hidden, no plaintext key).
-		expect(form.settings.api_keys).toHaveLength(1)
-		expect(form.settings.api_keys[0].hash).toBe('[hidden]')
+		// Appended to the local form as the server returns it: no hash, no placeholder for an autosave to send back.
+		expect(form.settings.api_keys).toEqual([{ id: 'new1', name: 'CI', permissions: ['read_form', 'read_responses'] }])
+		expect(JSON.stringify(form)).not.toContain('PLAINKEY')
 		// Name field reset.
 		expect(wrapper.vm.newKeyName).toBe('')
 	})
@@ -123,7 +123,8 @@ describe('IntegrationSettings', () => {
 		expect(body.events).toEqual(['response.created'])
 		expect(wrapper.vm.newWebhookSecret).toBe('WSECRET')
 		expect(form.settings.webhooks).toHaveLength(1)
-		expect(form.settings.webhooks[0].secret).toBe('[hidden]')
+		expect(form.settings.webhooks[0]).not.toHaveProperty('secret')
+		expect(JSON.stringify(form)).not.toContain('WSECRET')
 		expect(wrapper.vm.newWebhookUrl).toBe('')
 	})
 
@@ -151,6 +152,37 @@ describe('IntegrationSettings', () => {
 		await wrapper.vm.deleteWebhook('w2')
 		await flushPromises()
 		expect(form.settings.webhooks.map(w => w.id)).toEqual(['w1'])
+	})
+
+	it('without full rights the keys and webhooks are listed but cannot be changed', () => {
+		const form = baseForm({
+			api_keys: [{ id: 'k1', name: 'Zapier', permissions: ['read_form'] }],
+			webhooks: [{ id: 'w1', name: 'Hook', url: 'https://x.test/h', events: [], enabled: true }],
+		})
+		const wrapper = mount(IntegrationSettings, { props: { fileId: 5, form, canManage: false } })
+
+		expect(wrapper.text()).toContain('Zapier')
+		expect(wrapper.text()).toContain('https://x.test/h')
+		expect(wrapper.find('.create-api-key').exists()).toBe(false)
+		expect(wrapper.find('.create-webhook').exists()).toBe(false)
+		expect(wrapper.findComponent({ name: 'NcCheckboxRadioSwitch' }).attributes('disabled')).toBeDefined()
+	})
+
+	it('says when a key or webhook no longer works, and why', () => {
+		const form = baseForm({
+			api_keys: [
+				{ id: 'k1', name: 'Zapier', permissions: [], creator_status: 'no_access', creator_name: 'Anna' },
+				{ id: 'k2', name: 'CRM', permissions: [], creator_status: 'ok', creator_name: 'Bob' },
+			],
+			webhooks: [{ id: 'w1', name: 'Hook', url: 'https://x.test/h', events: [], enabled: true, creator_status: 'disabled', creator_name: 'Carol' }],
+		})
+		const wrapper = mountIt(form)
+		const notes = wrapper.findAll('.integration-inactive').map(n => n.text())
+
+		expect(notes).toEqual([
+			'Inactive — Anna no longer has access to this form',
+			'Inactive — the account of Carol is disabled',
+		])
 	})
 
 	it('renders the fileId in the API documentation endpoints', () => {

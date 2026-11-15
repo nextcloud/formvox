@@ -21,8 +21,5 @@ class LoadFilesPluginListener implements IEventListener {
 
 		// Load the Files integration script
 		Util::addScript(Application::APP_ID, 'formvox-files');
-
-		// Load the filetype icons CSS
-		Util::addStyle(Application::APP_ID, 'filetypes');
 	}
 }

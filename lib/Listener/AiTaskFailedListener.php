@@ -15,12 +15,10 @@ use OCP\TaskProcessing\Events\TaskFailedEvent;
  * @template-implements IEventListener<Event>
  */
 class AiTaskFailedListener implements IEventListener {
-	private AiPendingMapper $pendingMapper;
-	private INotificationManager $notificationManager;
-
-	public function __construct(AiPendingMapper $pendingMapper, INotificationManager $notificationManager) {
-		$this->pendingMapper = $pendingMapper;
-		$this->notificationManager = $notificationManager;
+	public function __construct(
+		private AiPendingMapper $pendingMapper,
+		private INotificationManager $notificationManager,
+	) {
 	}
 
 	public function handle(Event $event): void {

@@ -30,6 +30,8 @@ Technical documentation and API reference.
 - [Architecture Overview](architecture/overview.md) - System design and components
 - [File Format](architecture/file-format.md) - The .fvform JSON schema
 - [API Reference](architecture/api-reference.md) - REST API endpoints
+- [External API & Webhooks](architecture/external-api.md) - API keys, endpoints, webhooks and their signature
+- [Windmill Example](architecture/windmill-example.md) - Every response's PDF into a Nextcloud folder
 - [Comparison](architecture/comparison.md) - FormVox vs Nextcloud Forms
 
 ## Getting Started

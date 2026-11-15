@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FormVox 1.5.0\n"
 "Report-Msgid-Bugs-To: translations@nextcloud.com\n"
-"PO-Revision-Date: 2026-10-09 00:00+0000\n"
+"PO-Revision-Date: 2026-11-14 00:00+0000\n"
 "Last-Translator: FormVox <translations@nextcloud.com>\n"
 "Language-Team: uk\n"
 "MIME-Version: 1.0\n"
@@ -13,6 +13,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "'%1$s' is not an option of question '%2$s'"
+msgstr "'%1$s' не є варіантом запитання '%2$s'"
 
 msgid "\"{question}\" does not match the required format"
 msgstr "\"{question}\" не відповідає формату"
@@ -32,11 +35,20 @@ msgstr "Залишилось {n}"
 msgid "{n} of max {max} selected"
 msgstr "{n} з макс. {max} вибрано"
 
+msgid "{name} (creator, you)"
+msgstr "{name} (автор, ви)"
+
+msgid "{name} (creator)"
+msgstr "{name} (автор)"
+
 msgid "{name} (you)"
-msgstr ""
+msgstr "{name} (ви)"
+
+msgid "{name} can no longer open this form and does not receive notifications."
+msgstr "{name} більше не може відкрити цю форму й не отримує сповіщень."
 
 msgid "{size} MB"
-msgstr ""
+msgstr "{size} МБ"
 
 msgid "* (all domains)"
 msgstr "* (all domains)"
@@ -44,29 +56,50 @@ msgstr "* (all domains)"
 msgid "/ (root folder)"
 msgstr "/ (root folder)"
 
+msgid "%1$s (question %2$s)"
+msgstr "%1$s (запитання %2$s)"
+
 msgid "%1$s is scheduled to open at:"
 msgstr "%1$s запланований запуск в:"
+
+msgid "%d more responses were not imported for the same kind of reasons"
+msgstr "Ще %d відповідей не імпортовано з подібних причин"
+
+msgid "%d responses were not imported: there is not enough storage space"
+msgstr "%d відповідей не імпортовано: недостатньо місця для зберігання"
 
 msgid "+ Add condition"
 msgstr "+ Додати умову"
 
-msgid "A server extension blocked the upload"
-msgstr ""
+msgid "A form can have at most %s questions"
+msgstr "Форма може містити щонайбільше %s запитань"
+
+msgid "A form can send respondents their answers as a PDF with the confirmation email. By default only respondents who are signed in get it."
+msgstr "Форма може надсилати респондентам їхні відповіді у форматі PDF разом із листом-підтвердженням. За замовчуванням PDF отримують лише респонденти, які увійшли в систему."
+
+msgid "A form keeps the .fvform extension"
+msgstr "Форма зберігає розширення .fvform"
+
+msgid "A number in the form is too large."
+msgstr "Число у формі занадто велике."
+
+msgid "A password is required for public links."
+msgstr "Для публічних посилань потрібен пароль."
+
+msgid "A response from %1$s was not imported: %2$s"
+msgstr "Відповідь від %1$s не імпортовано: %2$s"
 
 msgid "A subscription includes: guaranteed Nextcloud compatibility, email support, priority bug fixes, and active development."
 msgstr "Передплата включає: гарантовану сумісність із Nextcloud, підтримку електронною поштою, пріоритетне виправлення помилок та активну розробку."
 
 msgid "A title is required."
-msgstr ""
+msgstr "Потрібна назва."
 
 msgid "A unique hash of your instance URL (privacy-friendly identifier)"
 msgstr "Унікальний хеш URL вашого екземляра (ідентифікатор конфіденційності)"
 
 msgid "Access control"
 msgstr "Контроль доступу"
-
-msgid "Access denied"
-msgstr ""
 
 msgid "Access restricted"
 msgstr "Доступ обмежено"
@@ -119,11 +152,14 @@ msgstr "Додати розділ"
 msgid "Add social links in settings"
 msgstr "Додайте посилання на соц. мережі в налаштуваннях"
 
+msgid "Add someone below who should receive them."
+msgstr "Додайте нижче когось, хто має їх отримувати."
+
 msgid "Add source document (optional)"
 msgstr "Додати вихідний документ (опційно)"
 
 msgid "Add your expenses below. Click \"+ Add row\" to add more items."
-msgstr ""
+msgstr "Додайте свої витрати нижче. Натисніть \"+ Додати рядок\", щоб додати більше позицій."
 
 msgid "Added"
 msgstr "Додано"
@@ -132,7 +168,7 @@ msgid "Advanced"
 msgstr "Просунутий"
 
 msgid "AI"
-msgstr ""
+msgstr "ШІ"
 
 msgid "AI could not generate \"{formTitle}\""
 msgstr "ШІ не може згенерувати \"{formTitle}\""
@@ -141,10 +177,10 @@ msgid "AI could not generate \"%1$s\""
 msgstr "ШІ не може згенерувати \"%1$s\""
 
 msgid "AI did not generate any questions."
-msgstr ""
+msgstr "ШІ не згенерував жодного запитання."
 
 msgid "AI did not generate any usable questions."
-msgstr ""
+msgstr "ШІ не згенерував жодного придатного запитання."
 
 msgid "AI finished generating \"{formTitle}\""
 msgstr "ШІ закінчив генерацію \"{formTitle}\""
@@ -159,7 +195,7 @@ msgid "AI form generation"
 msgstr "ШІ генерація форм"
 
 msgid "AI form generation is not available on this instance."
-msgstr ""
+msgstr "Створення форм за допомогою ШІ недоступне на цьому сервері."
 
 msgid "AI generation failed."
 msgstr "Збій ШІ генерації."
@@ -180,7 +216,7 @@ msgid "AI provider available"
 msgstr "Доступний ШІ провайдер"
 
 msgid "AI returned an invalid response. Try a shorter or simpler description."
-msgstr ""
+msgstr "ШІ повернув недійсну відповідь. Спробуйте коротший або простіший опис."
 
 msgid "AI settings saved"
 msgstr "Налаштування ШІ збережено"
@@ -189,7 +225,7 @@ msgid "AI will base questions on the document and your description. Generation c
 msgstr "ШІ формуватиме запитання на основі документа та вашого опису. Генерація може тривати до 2 хвилин."
 
 msgid "AI-generated form"
-msgstr ""
+msgstr "Форма, створена ШІ"
 
 msgid "Align center"
 msgstr "Вирівняти по центру"
@@ -248,20 +284,26 @@ msgstr "Дозволені типи файлів"
 msgid "Allowed groups"
 msgstr "Дозволені групи"
 
+msgid "Also send the PDF to anonymous respondents"
+msgstr "Надсилати PDF також анонімним респондентам"
+
 msgid "Alt text"
 msgstr "Додати текст"
 
 msgid "Amount"
 msgstr "Обсяг"
 
-msgid "An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there."
-msgstr "До вашої форми автоматично додається запитання про електронну пошту. Респондент отримує підтвердження на вказану там адресу."
+msgid "An anonymous respondent can type in any email address, and it is not checked. Someone could have your mail server send a PDF with their own text to another person. At most 3 such emails go to one address a day and 200 per form an hour; above that the email goes without the PDF."
+msgstr "Анонімний респондент може ввести будь-яку адресу електронної пошти, і її не перевіряють. Так хтось може змусити ваш поштовий сервер надіслати іншій людині PDF із власним текстом. На одну адресу надсилається не більше 3 таких листів на день і не більше 200 на форму за годину; понад це лист надсилається без PDF."
+
+msgid "An email question is added to your form automatically."
+msgstr "До вашої форми автоматично додається запитання про електронну пошту."
 
 msgid "An error occurred"
-msgstr ""
+msgstr "Сталася помилка"
 
 msgid "AND"
-msgstr ""
+msgstr "ТА"
 
 msgid "Anonymous"
 msgstr "Анонімний"
@@ -273,10 +315,16 @@ msgid "Another quiz question - correct answer: In Nextcloud files"
 msgstr "Ще одне запитання вікторини — правильна відповідь: у файлах Nextcloud."
 
 msgid "Answer does not match the required format for question '%s'"
-msgstr ""
+msgstr "Відповідь не відповідає потрібному формату для запитання '%s'"
 
 msgid "Answer for question '%1$s' exceeds the %2$d-character limit"
-msgstr ""
+msgstr "Відповідь на запитання '%1$s' перевищує обмеження в %2$d символів"
+
+msgid "Answer for question '%s' is out of range"
+msgstr "Відповідь на запитання '%s' поза допустимим діапазоном"
+
+msgid "answers parameter is required and must be an object"
+msgstr "Параметр answers обов'язковий і має бути об'єктом"
 
 msgid "Any final thoughts or feedback?"
 msgstr "Чи є якісь останні думки або відгуки?"
@@ -302,6 +350,9 @@ msgstr "API key створено"
 msgid "API key deleted"
 msgstr "API key видалено"
 
+msgid "API key does not have %s permission"
+msgstr "Ключ API не має дозволу %s"
+
 msgid "Are you sure you want to delete ALL responses? This action cannot be undone."
 msgstr "Ви впевнені, що хочете видалити ВСІ відповіді? Цю дію неможливо скасувати."
 
@@ -322,6 +373,9 @@ msgstr "Ви впевнені, що хочете видалити цю відп�
 
 msgid "Are you sure you want to delete this webhook?"
 msgstr "Ви впевнені, що хочете видалити цей webhook?"
+
+msgid "Attach a PDF of the response"
+msgstr "Додати PDF відповіді"
 
 msgid "Available placeholders"
 msgstr "Доступні заповнювачі"
@@ -405,7 +459,7 @@ msgid "Center"
 msgstr "Центр"
 
 msgid "Challenge verification failed. Please refresh the page."
-msgstr ""
+msgstr "Перевірка не вдалася. Оновіть сторінку."
 
 msgid "Change source document"
 msgstr "Змінити вихідний документ"
@@ -426,10 +480,10 @@ msgid "Choose source document"
 msgstr "Оберіть вихідний документ"
 
 msgid "Click \"Grant admin consent\" for your organization"
-msgstr ""
+msgstr "Натисніть \"Grant admin consent\" для вашої організації"
 
 msgid "Click here"
-msgstr ""
+msgstr "Натисніть тут"
 
 msgid "Client ID (Application ID)"
 msgstr "Клієнт ID (ID додатку)"
@@ -470,6 +524,9 @@ msgstr "Умовна логіка / Галуження"
 msgid "Conditions"
 msgstr "Умови"
 
+msgid "Conditions and page routing that used this question were removed too"
+msgstr "Умови та переходи між сторінками, що використовували це запитання, також видалено"
+
 msgid "Configure Microsoft Azure AD credentials to enable importing forms from Microsoft Forms."
 msgstr "Сконфігуруйте облікові дані Microsoft Azure AD щоб імпортувати з Microsoft Forms."
 
@@ -480,7 +537,7 @@ msgid "Configured"
 msgstr "Налаштовано"
 
 msgid "Confirmation: %s"
-msgstr ""
+msgstr "Підтвердження: %s"
 
 msgid "Connect"
 msgstr "Підключитись"
@@ -490,6 +547,9 @@ msgstr "Підключити Microsoft Account"
 
 msgid "Connect to Microsoft"
 msgstr "Підключитись до Microsoft"
+
+msgid "Connect your Microsoft account first"
+msgstr "Спочатку підключіть свій обліковий запис Microsoft"
 
 msgid "Connect your Microsoft account to access your forms."
 msgstr "Підключіть свій обліковий запис Microsoft, щоб отримати доступ до своїх форм."
@@ -501,7 +561,7 @@ msgid "Consent (single checkbox)"
 msgstr "Згода (один прапорець)"
 
 msgid "Consent question requires boolean answer"
-msgstr ""
+msgstr "Запитання про згоду очікує відповідь так або ні"
 
 msgid "Contact the form owner if you believe this is an error."
 msgstr "Зв’яжіться з власником форми, якщо вважаєте, що це помилка."
@@ -530,29 +590,20 @@ msgstr "Скопіюйте ідентифікатор програми (кліє
 msgid "Copy this code to embed the form in your website, SharePoint, or intranet."
 msgstr "Скопіюйте цей код, щоб вбудувати форму на свій вебсайт, SharePoint або в інтранет."
 
+msgid "Copy this generated password now; it will not be shown again."
+msgstr "Скопіюйте цей згенерований пароль зараз; його більше не буде показано."
+
 msgid "Cost"
 msgstr "Вартість"
 
 msgid "Could not create FormVox form: {error}"
-msgstr ""
-
-msgid "Could not fetch your forms: %s"
-msgstr ""
-
-msgid "Could not import responses: %s"
-msgstr ""
-
-msgid "Could not import the form: %s"
-msgstr ""
-
-msgid "Could not load the form: %s"
-msgstr ""
+msgstr "Не вдалося створити форму FormVox: {error}"
 
 msgid "Could not reach the license server, so the FormVox subscription status could not be confirmed."
-msgstr ""
+msgstr "Не вдалося зв'язатися із сервером ліцензій, тому стан підписки FormVox не вдалося підтвердити."
 
 msgid "Could not reach the license server, so the subscription status could not be confirmed."
-msgstr ""
+msgstr "Не вдалося зв'язатися із сервером ліцензій, тому стан підписки не вдалося підтвердити."
 
 msgid "Could not reach the telemetry server. Please try again later."
 msgstr "Не вдалося з’єднатися із сервером телеметрії. Будь ласка, спробуйте пізніше."
@@ -560,14 +611,11 @@ msgstr "Не вдалося з’єднатися із сервером теле
 msgid "Could not resolve the selected file."
 msgstr "Не вдалося визначити вибраний файл."
 
-msgid "Could not schedule the AI task."
-msgstr ""
-
 msgid "Create"
 msgstr "Створити"
 
 msgid "Create a new registration with a name like \"FormVox Import\""
-msgstr ""
+msgstr "Створіть нову реєстрацію з назвою на кшталт \"FormVox Import\""
 
 msgid "Create a public link first to preview the form."
 msgstr "Спочатку створіть публічне посилання, щоб переглянути форму."
@@ -627,7 +675,7 @@ msgid "Cyan"
 msgstr "Блакитний"
 
 msgid "Dark"
-msgstr ""
+msgstr "Темна"
 
 msgid "Dashed"
 msgstr "Пунктир"
@@ -642,10 +690,10 @@ msgid "Date and time picker"
 msgstr "Вибір дати та часу"
 
 msgid "Date is after the allowed maximum for question '%s'"
-msgstr ""
+msgstr "Дата пізніша за дозволений максимум для запитання '%s'"
 
 msgid "Date is before the allowed minimum for question '%s'"
-msgstr ""
+msgstr "Дата раніша за дозволений мінімум для запитання '%s'"
 
 msgid "Date must be on or after {min}"
 msgstr "Дата має бути не раніше {min}"
@@ -663,7 +711,7 @@ msgid "Define rules to skip to a specific page based on answers. If no rule matc
 msgstr "Налаштуйте правила переходу до певної сторінки на основі відповідей. Якщо жодне правило не спрацьовує, відображається наступна сторінка"
 
 msgid "Delegated"
-msgstr ""
+msgstr "Делегований"
 
 msgid "Delete"
 msgstr "Видалити"
@@ -690,7 +738,7 @@ msgid "Deleted"
 msgstr "Видалено"
 
 msgid "Demo"
-msgstr ""
+msgstr "Демо"
 
 msgid "Demo form"
 msgstr "Демо Форма"
@@ -755,6 +803,9 @@ msgstr "Пампушка"
 msgid "Download all"
 msgstr "Завантажити все"
 
+msgid "Download PDF"
+msgstr "Завантажити PDF"
+
 msgid "Download QR code"
 msgstr "Завантажити QR код"
 
@@ -816,7 +867,7 @@ msgid "Edit form"
 msgstr "Редагувати форму"
 
 msgid "Edit with FormVox"
-msgstr ""
+msgstr "Редагувати у FormVox"
 
 msgid "Email"
 msgstr "Email"
@@ -897,13 +948,16 @@ msgid "equals"
 msgstr "дорівнює"
 
 msgid "Error"
-msgstr ""
+msgstr "Помилка"
 
 msgid "Error message"
 msgstr "Повідомлення про помилку"
 
 msgid "Events"
 msgstr "Події"
+
+msgid "Every question needs an id of letters, digits, - or _ (at most 64)"
+msgstr "Кожне запитання потребує ідентифікатора з літер, цифр, - або _ (не більше 64)"
 
 msgid "Examples: {pattern1} (license plate), {pattern2} (10 digits)"
 msgstr "Приклади: {pattern1} (номерний знак), {pattern2} (10 цифр)"
@@ -935,8 +989,11 @@ msgstr "Експорт ODT"
 msgid "Export options"
 msgstr "Налаштування експорту"
 
+msgid "Export PDFs (ZIP)"
+msgstr "Експортувати PDF (ZIP)"
+
 msgid "Extremely likely"
-msgstr ""
+msgstr "Надзвичайно ймовірно"
 
 msgid "Failed to connect to Microsoft"
 msgstr "Не вдалося підключитися до Microsoft"
@@ -1005,7 +1062,7 @@ msgid "Failed to remove template"
 msgstr "Не вдалося видалити шаблон"
 
 msgid "Failed to replace response link"
-msgstr ""
+msgstr "Не вдалося замінити посилання на відповідь"
 
 msgid "Failed to save access restrictions"
 msgstr "Не вдалося зберегти обмеження доступу"
@@ -1077,7 +1134,7 @@ msgid "File \"{name}\" is too large. Maximum size is {size} MB"
 msgstr "Файл «{name}» завеликий. Максимальний розмір — {size} МБ"
 
 msgid "File is too large. The maximum size is %s MB."
-msgstr ""
+msgstr "Файл завеликий. Максимальний розмір — %s МБ."
 
 msgid "File upload"
 msgstr "Завантаження файлу"
@@ -1085,17 +1142,29 @@ msgstr "Завантаження файлу"
 msgid "File-based storage"
 msgstr "Файлове сховище"
 
+msgid "Files and folders that belong to a form cannot be shared by link, email, Talk or Teams."
+msgstr "Файли й папки, що належать до форми, не можна поширювати за посиланням, електронною поштою, через Talk або Teams."
+
+msgid "Filled in by: %s"
+msgstr "Заповнено: %s"
+
+msgid "Fix what is marked; the next change is saved again."
+msgstr "Виправте позначене; наступну зміну знову буде збережено."
+
 msgid "Flexibility"
 msgstr "Гнучкість"
+
+msgid "Folders with forms cannot be downloaded through a public link."
+msgstr "Папки з формами не можна завантажити через публічне посилання."
 
 msgid "Footer"
 msgstr "Нижній колонтитул"
 
 msgid "Forest"
-msgstr ""
+msgstr "Ліс"
 
 msgid "Form"
-msgstr ""
+msgstr "Форма"
 
 msgid "Form content or titles"
 msgstr "Вміст або заголовки форми"
@@ -1107,7 +1176,7 @@ msgid "Form imported successfully!"
 msgstr "Форму успішно імпортовано!"
 
 msgid "Form not found"
-msgstr ""
+msgstr "Форму не знайдено"
 
 msgid "Form statistics"
 msgstr "Статистика форми"
@@ -1124,11 +1193,26 @@ msgstr "Назва форми"
 msgid "Formatting"
 msgstr "Форматування"
 
+msgid "FormVox database"
+msgstr "База даних FormVox"
+
+msgid "FormVox does not fully support SQLite. Responses are stored in the database, and SQLite handles one write at a time, so many respondents at once can get errors. Use MySQL, MariaDB or PostgreSQL; to move, use the command line tool \"occ db:convert-type\"."
+msgstr "FormVox не повністю підтримує SQLite. Відповіді зберігаються в базі даних, а SQLite обробляє лише один запис за раз, тому за великої кількості респондентів одночасно можуть виникати помилки. Використовуйте MySQL, MariaDB або PostgreSQL; для перенесення використовуйте інструмент командного рядка «occ db:convert-type»."
+
+msgid "FormVox emails, webhooks and notifications"
+msgstr "Листи, вебхуки та сповіщення FormVox"
+
 msgid "FormVox is free and open source (AGPL-3.0). All features work without a subscription. If FormVox is valuable to your organization, a subscription supports active development and gives you guaranteed Nextcloud compatibility and email support."
 msgstr "FormVox — безкоштовний застосунок з відкритим кодом (AGPL-3.0). Усі функції працюють без передплати. Якщо FormVox корисний для вашої організації, передплата підтримує активну розробку та надає гарантовану сумісність із Nextcloud і підтримку електронною поштою."
 
+msgid "FormVox PDF for anonymous respondents"
+msgstr "PDF FormVox для анонімних респондентів"
+
+msgid "FormVox sends confirmation emails, webhooks and notifications about new responses in the background. Without the system cron they can arrive late. Set background jobs to \"Cron\"."
+msgstr "FormVox надсилає листи-підтвердження, вебхуки та сповіщення про нові відповіді у фоновому режимі. Без системного cron вони можуть надходити із запізненням. Встановіть для фонових завдань режим \"Cron\"."
+
 msgid "FormVox subscription key was refused: {reason}"
-msgstr ""
+msgstr "Ключ підписки FormVox відхилено: {reason}"
 
 msgid "FormVox, Nextcloud, and PHP version numbers"
 msgstr "Номери версій FormVox, Nextcloud та PHP"
@@ -1179,10 +1263,10 @@ msgid "Go back"
 msgstr "Назад"
 
 msgid "Go to \"API permissions\" and add the following:"
-msgstr ""
+msgstr "Перейдіть до \"API permissions\" і додайте таке:"
 
 msgid "Go to \"Certificates & secrets\" and create a new client secret"
-msgstr ""
+msgstr "Перейдіть до \"Certificates & secrets\" і створіть новий секрет клієнта"
 
 msgid "Go to Azure Portal > Microsoft Entra ID > App registrations"
 msgstr "Перейдіть у Azure Portal > Microsoft Entra ID > App registrations (Реєстрація застосунків)"
@@ -1278,7 +1362,7 @@ msgid "Import responses only (coming soon)"
 msgstr "Імпортувати лише відповіді (незабаром)"
 
 msgid "Imported form"
-msgstr ""
+msgstr "Імпортована форма"
 
 msgid "Importing …"
 msgstr "Імпортування …"
@@ -1289,14 +1373,29 @@ msgstr "В окремій базі даних"
 msgid "In Nextcloud files"
 msgstr "У файлах Nextcloud"
 
+msgid "In question '%1$s', %2$s is larger than %3$s"
+msgstr "У запитанні '%1$s' %2$s більше за %3$s"
+
 msgid "In the cloud"
 msgstr "У хмарі"
+
+msgid "Inactive — {name} no longer has access to this form"
+msgstr "Неактивний — {name} більше не має доступу до цієї форми"
+
+msgid "Inactive — it is not known who made it"
+msgstr "Неактивний — невідомо, хто його створив"
+
+msgid "Inactive — the account of {name} is disabled"
+msgstr "Неактивний — обліковий запис {name} вимкнено"
+
+msgid "Inactive — the account of {name} no longer exists"
+msgstr "Неактивний — обліковий запис {name} більше не існує"
 
 msgid "Include your API key in the X-FormVox-API-Key header."
 msgstr "Включити свій ключ API у заголовок X-FormVox-API-Key."
 
 msgid "Incorrect password"
-msgstr ""
+msgstr "Неправильний пароль"
 
 msgid "Individual responses"
 msgstr "Окремі відповіді"
@@ -1317,25 +1416,28 @@ msgid "Intermediate - Some experience"
 msgstr "Середній рівень — є певний досвід"
 
 msgid "Introduction"
-msgstr ""
+msgstr "Вступ"
 
 msgid "Invalid answer for question '%s'"
-msgstr ""
+msgstr "Недійсна відповідь на запитання '%s'"
+
+msgid "Invalid API key"
+msgstr "Недійсний ключ API"
 
 msgid "Invalid date format for question '%s'"
-msgstr ""
+msgstr "Недійсний формат дати для запитання '%s'"
 
 msgid "Invalid datetime format for question '%s'"
-msgstr ""
-
-msgid "Invalid file type. Allowed: %s"
-msgstr ""
+msgstr "Недійсний формат дати й часу для запитання '%s'"
 
 msgid "Invalid question"
-msgstr ""
+msgstr "Недійсне запитання"
 
 msgid "Invalid time format for question '%s'"
-msgstr ""
+msgstr "Недійсний формат часу для запитання '%s'"
+
+msgid "Invalid upload id"
+msgstr "Недійсний ідентифікатор завантаження"
 
 msgid "is currently editing this form"
 msgstr "зараз редагує цю форму"
@@ -1358,8 +1460,14 @@ msgstr "не є одним із"
 msgid "is one of"
 msgstr "є одним із"
 
+msgid "It is busy right now, please keep this page open"
+msgstr "Зараз висока завантаженість, будь ласка, не закривайте цю сторінку"
+
 msgid "Italic"
 msgstr "Курсив"
+
+msgid "Keep a PDF of every response"
+msgstr "Зберігати PDF кожної відповіді"
 
 msgid "Key name"
 msgstr "Назва ключа"
@@ -1415,6 +1523,9 @@ msgstr "Налаштування посилання"
 msgid "Loading …"
 msgstr "Завантаження …"
 
+msgid "Loading more responses … {loaded} of {total}"
+msgstr "Завантаження додаткових відповідей … {loaded} з {total}"
+
 msgid "Loading statistics …"
 msgstr "Завантаження статистики …"
 
@@ -1426,6 +1537,9 @@ msgstr "Логотип"
 
 msgid "Long text"
 msgstr "Довгий текст"
+
+msgid "Made right after each submission, with the questions as the respondent saw them."
+msgstr "Створюється одразу після кожного надсилання, із запитаннями такими, якими їх бачив респондент."
 
 msgid "Manage sharing"
 msgstr "Керування спільним доступом"
@@ -1440,7 +1554,7 @@ msgid "Matrix"
 msgstr "Матриця"
 
 msgid "Matrix question"
-msgstr ""
+msgstr "Матричне запитання"
 
 msgid "Matrix/grid question with multiple rows and columns"
 msgstr "Питання-матриця/сітка з кількома рядками та стовпцями"
@@ -1494,7 +1608,7 @@ msgid "Microsoft Forms import is not configured. Please ask your administrator t
 msgstr "Імпорт із Microsoft Forms не налаштовано. Будь ласка, зверніться до адміністратора, щоб налаштувати його у меню Налаштування > FormVox > Інтеграції."
 
 msgid "Microsoft Forms is not configured. Ask your administrator to configure it."
-msgstr ""
+msgstr "Microsoft Forms не налаштовано. Попросіть адміністратора налаштувати його."
 
 msgid "Microsoft Forms settings saved"
 msgstr "Налаштування Microsoft Forms збережено"
@@ -1506,10 +1620,13 @@ msgid "Min label"
 msgstr "Мітка мінімуму"
 
 msgid "Minimal"
-msgstr ""
+msgstr "Мінімальна"
 
 msgid "Minimum selections"
 msgstr "Мінімальна кількість виборів"
+
+msgid "Missing API key. Provide X-FormVox-API-Key header."
+msgstr "Відсутній ключ API. Передайте заголовок X-FormVox-API-Key."
 
 msgid "Move to \"{section}\""
 msgstr "Перемістити в \"{section}\""
@@ -1527,10 +1644,13 @@ msgid "Multiple choice (checkboxes) - select all that apply"
 msgstr "Множинний вибір (прапорці) — виберіть усі відповідні варіанти"
 
 msgid "Multiple choice question requires array answer"
-msgstr ""
+msgstr "Запитання з кількома варіантами очікує список як відповідь"
 
 msgid "My forms"
 msgstr "Мої форми"
+
+msgid "Needs a shared memory cache (Redis or Memcached), so the limits for anonymous respondents can be kept."
+msgstr "Потребує спільного кешу пам'яті (Redis або Memcached), щоб можна було дотримуватися обмежень для анонімних респондентів."
 
 msgid "Never"
 msgstr "Ніколи"
@@ -1539,31 +1659,31 @@ msgid "New form"
 msgstr "Нова форма"
 
 msgid "New poll"
-msgstr ""
+msgstr "Нове опитування"
 
 msgid "New registration"
-msgstr ""
+msgstr "Нова реєстрація"
 
 msgid "New response link created — the previous link no longer works"
-msgstr ""
+msgstr "Створено нове посилання на відповідь — попереднє посилання більше не працює"
 
 msgid "New response to \"{formTitle}\" from {respondentName}"
-msgstr ""
+msgstr "Нова відповідь на \"{formTitle}\" від {respondentName}"
 
 msgid "New response to \"%1$s\" from %2$s"
-msgstr ""
+msgstr "Нова відповідь на \"%1$s\" від %2$s"
 
 msgid "New survey"
-msgstr ""
+msgstr "Нове опитування"
 
 msgid "Next"
 msgstr "Далі"
 
 msgid "Nextcloud dark"
-msgstr ""
+msgstr "Темна Nextcloud"
 
 msgid "Nextcloud Enterprise subscription detected on this instance. FormVox subscriptions are sold through Nextcloud — contact your Nextcloud account manager or {email}."
-msgstr ""
+msgstr "На цьому сервері виявлено підписку Nextcloud Enterprise. Підписки FormVox продаються через Nextcloud — зверніться до свого менеджера облікового запису Nextcloud або на {email}."
 
 msgid "No"
 msgstr "Ні"
@@ -1571,11 +1691,8 @@ msgstr "Ні"
 msgid "No AI provider configured"
 msgstr "Не налаштовано жодного постачальника ШІ"
 
-msgid "No AI text-to-text provider is available on this Nextcloud instance."
-msgstr ""
-
 msgid "No AI text-to-text provider is configured on this instance. Install an AI provider (for example %s) first."
-msgstr ""
+msgstr "На цьому екземплярі не налаштовано жодного постачальника ШІ для перетворення тексту на текст. Спершу встановіть постачальника ШІ (наприклад, %s)."
 
 msgid "No blocks yet. Add one below."
 msgstr "Ще немає жодного блоку. Додайте один нижче."
@@ -1586,8 +1703,11 @@ msgstr "Без кольору"
 msgid "No custom templates yet."
 msgstr "Ще немає власних шаблонів."
 
+msgid "No data provided"
+msgstr "Дані не надано"
+
 msgid "No file was uploaded"
-msgstr ""
+msgstr "Жодного файлу не було завантажено"
 
 msgid "No forms found in your Microsoft Forms account."
 msgstr "У вашому обліковому записі Microsoft Forms не знайдено жодної форми."
@@ -1609,6 +1729,9 @@ msgstr "Без максимуму"
 
 msgid "No minimum"
 msgstr "Без мінімуму"
+
+msgid "No more files can be added to this response"
+msgstr "До цієї відповіді більше не можна додати файли"
 
 msgid "No previous questions available. Conditions can only reference questions that appear before this one."
 msgstr "Немає доступних попередніх запитань. Умови можуть посилатися лише на ті запитання, які йдуть перед цим."
@@ -1632,22 +1755,25 @@ msgid "Not answered"
 msgstr "Без відповіді"
 
 msgid "Not at all likely"
-msgstr ""
-
-msgid "Not authenticated"
-msgstr ""
-
-msgid "Not connected to Microsoft. Please connect first."
-msgstr ""
+msgstr "Зовсім малоймовірно"
 
 msgid "not equals"
 msgstr "не дорівнює"
 
+msgid "Not found"
+msgstr "Не знайдено"
+
 msgid "Not likely"
 msgstr "Малоймовірно"
 
+msgid "Not logged in"
+msgstr "Вхід не виконано"
+
+msgid "Not saved. Please try again."
+msgstr "Не збережено. Спробуйте ще раз."
+
 msgid "Note: Search for \"Microsoft Forms\" under \"APIs my organization uses\""
-msgstr ""
+msgstr "Примітка: знайдіть \"Microsoft Forms\" у розділі \"APIs my organization uses\""
 
 msgid "Notes"
 msgstr "Примітки"
@@ -1665,7 +1791,7 @@ msgid "Numeric input"
 msgstr "Числове поле"
 
 msgid "Ocean"
-msgstr ""
+msgstr "Океан"
 
 msgid "ODT template"
 msgstr "Шаблон ODT"
@@ -1673,8 +1799,17 @@ msgstr "Шаблон ODT"
 msgid "ODT template …"
 msgstr "Шаблон ODT …"
 
+msgid "Off, no PDF is made for this form: not for the API, webhooks or the confirmation email."
+msgstr "Вимкнено, PDF для цієї форми не створюється: ні для API, ні для вебхуків, ні для листа-підтвердження."
+
 msgid "On external servers"
 msgstr "На зовнішніх серверах"
+
+msgid "Only an administrator can do this."
+msgstr "Це може зробити лише адміністратор."
+
+msgid "Only FormVox turns a file into a form"
+msgstr "Лише FormVox перетворює файл на форму"
 
 msgid "Only selected accounts and group members can access this form. They will need to log in."
 msgstr "Лише вибрані користувачі та члени груп мають доступ до цієї форми. Їм потрібно буде увійти в систему."
@@ -1695,7 +1830,7 @@ msgid "Option {n}"
 msgstr "Варіант {n}"
 
 msgid "Option %d"
-msgstr ""
+msgstr "Варіант %d"
 
 msgid "Option A"
 msgstr "Варіант A"
@@ -1713,7 +1848,7 @@ msgid "Options (comma separated)"
 msgstr "Варіанти (через кому)"
 
 msgid "OR"
-msgstr ""
+msgstr "АБО"
 
 msgid "Orange"
 msgstr "Помаранчевий"
@@ -1723,6 +1858,9 @@ msgstr "Інше"
 
 msgid "Overview of forms and responses in your FormVox installation."
 msgstr "Огляд форм і відповідей у вашому середовищі FormVox."
+
+msgid "Page '%s' is not valid"
+msgstr "Сторінка '%s' недійсна"
 
 msgid "Page {current} of {total}"
 msgstr "Сторінка {current} із {total}"
@@ -1736,6 +1874,9 @@ msgstr "Конструктор сторінок"
 msgid "Page routing"
 msgstr "Маршрутизація сторінок"
 
+msgid "Page routing that led to this page was removed too"
+msgstr "Переходи, що вели на цю сторінку, також видалено"
+
 msgid "Password"
 msgstr "Пароль"
 
@@ -1743,10 +1884,25 @@ msgid "Password protect"
 msgstr "Захистити паролем"
 
 msgid "Password required"
-msgstr ""
+msgstr "Потрібен пароль"
+
+msgid "PDF confirmation"
+msgstr "PDF-підтвердження"
+
+msgid "PDF generation is disabled for this form"
+msgstr "Створення PDF вимкнено для цієї форми"
+
+msgid "PDF is not ready yet"
+msgstr "PDF ще не готовий"
 
 msgid "PDF only"
 msgstr "Тільки PDF"
+
+msgid "PDFs still being made: %s. Download the ZIP again in a few minutes."
+msgstr "PDF, які ще створюються: %s. Завантажте ZIP ще раз за кілька хвилин."
+
+msgid "PDFs that could not be made: %s. Your administrator finds the reason in the Nextcloud log."
+msgstr "PDF, які не вдалося створити: %s. Адміністратор знайде причину в журналі Nextcloud."
 
 msgid "Per page:"
 msgstr "На сторінці:"
@@ -1755,7 +1911,7 @@ msgid "Performance"
 msgstr "Продуктивність"
 
 msgid "Permission denied"
-msgstr ""
+msgstr "Доступ заборонено"
 
 msgid "Permissions"
 msgstr "Дозволи"
@@ -1784,8 +1940,11 @@ msgstr "Будь ласка, дайте відповідь на всі обов'
 msgid "Please answer all rows in this question"
 msgstr "Будь ласка, заповніть усі рядки в цьому запитанні"
 
+msgid "Please answer all rows of question '%s'"
+msgstr "Дайте відповідь на всі рядки запитання '%s'"
+
 msgid "Please describe the form you want to create or pick a source document."
-msgstr ""
+msgstr "Опишіть форму, яку хочете створити, або виберіть вихідний документ."
 
 msgid "Please enter a subscription key"
 msgstr "Будь ласка, введіть ключ підписки"
@@ -1845,7 +2004,7 @@ msgid "Previous"
 msgstr "Назад"
 
 msgid "Pricing details"
-msgstr ""
+msgstr "Інформація про ціни"
 
 msgid "Primary color"
 msgstr "Основний колір"
@@ -1857,10 +2016,13 @@ msgid "Progress bar"
 msgstr "Індикатор прогресу"
 
 msgid "Protected form"
-msgstr ""
+msgstr "Захищена форма"
 
 msgid "Provide a description, an uploaded document, or both."
-msgstr ""
+msgstr "Надайте опис, завантажений документ або обидва."
+
+msgid "Public links are not allowed"
+msgstr "Публічні посилання заборонені"
 
 msgid "Purple"
 msgstr "Фіолетовий"
@@ -1868,26 +2030,50 @@ msgstr "Фіолетовий"
 msgid "Question"
 msgstr "Запитання"
 
+msgid "Question '%1$s' can have at most %2$s columns"
+msgstr "Запитання '%1$s' може мати щонайбільше %2$s стовпців"
+
+msgid "Question '%1$s' can have at most %2$s options"
+msgstr "Запитання '%1$s' може мати щонайбільше %2$s варіантів"
+
+msgid "Question '%1$s' can have at most %2$s rows"
+msgstr "Запитання '%1$s' може мати щонайбільше %2$s рядків"
+
+msgid "Question '%1$s' can have at most %2$s stars"
+msgstr "Запитання '%1$s' може мати щонайбільше %2$s зірок"
+
+msgid "Question '%1$s' can take at most %2$s files of %3$s MB each"
+msgstr "Запитання '%1$s' приймає щонайбільше %2$s файлів розміром до %3$s МБ кожен"
+
+msgid "Question '%1$s' has an invalid %2$s"
+msgstr "Запитання '%1$s' має недійсне значення %2$s"
+
 msgid "Question '%1$s': Unknown type '%2$s' converted to text"
-msgstr ""
+msgstr "Запитання '%1$s': невідомий тип '%2$s' перетворено на текст"
+
+msgid "Question '%s' has an invalid color"
+msgstr "Запитання '%s' має недійсний колір"
+
+msgid "Question '%s' has an unknown type"
+msgstr "Запитання '%s' має невідомий тип"
 
 msgid "Question '%s' is required"
-msgstr ""
+msgstr "Запитання '%s' обов'язкове"
 
 msgid "Question '%s': File upload question imported, but uploaded files cannot be migrated"
-msgstr ""
+msgstr "Запитання '%s': запитання із завантаженням файлів імпортовано, але завантажені файли перенести неможливо"
 
 msgid "Question '%s': Matrix/Likert columns could not be imported from the Microsoft Forms API. Please edit the column options manually."
-msgstr ""
+msgstr "Запитання '%s': стовпці матриці/Лайкерта не вдалося імпортувати з API Microsoft Forms. Відредагуйте варіанти стовпців вручну."
 
 msgid "Question '%s': Ranking converted to matrix (ranking functionality lost)"
-msgstr ""
+msgstr "Запитання '%s': ранжування перетворено на матрицю (функцію ранжування втрачено)"
 
 msgid "Question {n}"
-msgstr ""
+msgstr "Запитання {n}"
 
 msgid "Question ID is required"
-msgstr ""
+msgstr "Потрібен ідентифікатор запитання"
 
 msgid "Questions"
 msgstr "Запитання"
@@ -1928,6 +2114,9 @@ msgstr "Прочитати запитання вголос"
 msgid "Read responses"
 msgstr "Читати відповіді"
 
+msgid "README"
+msgstr "ПРОЧИТАЙ"
+
 msgid "Recent"
 msgstr "Нещодавні"
 
@@ -1939,6 +2128,9 @@ msgstr "Реєстрація"
 
 msgid "Regular expression"
 msgstr "Регулярний вираз"
+
+msgid "Reload"
+msgstr "Перезавантажити"
 
 msgid "Remove"
 msgstr "Видалити"
@@ -1968,10 +2160,10 @@ msgid "Replace template"
 msgstr "Замінити шаблон"
 
 msgid "Replace this link with a new one? The current link will stop working immediately, and anyone who still has it will no longer be able to open the form."
-msgstr ""
+msgstr "Замінити це посилання на нове? Поточне посилання одразу перестане працювати, і ті, хто його ще має, більше не зможуть відкрити форму."
 
 msgid "Replace with a new link"
-msgstr ""
+msgstr "Замінити новим посиланням"
 
 msgid "Report sent successfully"
 msgstr "Звіт успішно надіслано"
@@ -1986,16 +2178,19 @@ msgid "Respondent"
 msgstr "Респондент"
 
 msgid "Respondent ID"
-msgstr ""
+msgstr "ID респондента"
 
 msgid "Respondent name"
 msgstr "Ім'я респондента"
 
 msgid "Respondent type"
-msgstr ""
+msgstr "Тип респондента"
 
 msgid "Respondent:"
-msgstr ""
+msgstr "Респондент:"
+
+msgid "Response %s"
+msgstr "Відповідь %s"
 
 msgid "Response created"
 msgstr "Відповідь створено"
@@ -2007,7 +2202,7 @@ msgid "Response deleted"
 msgstr "Відповідь видалено"
 
 msgid "Response ID"
-msgstr ""
+msgstr "ID відповіді"
 
 msgid "Response link"
 msgstr "Посилання на відповідь"
@@ -2018,6 +2213,9 @@ msgstr "Посилання на відповідь створено"
 msgid "Response link deleted"
 msgstr "Посилання на відповідь видалено"
 
+msgid "Response not found"
+msgstr "Відповідь не знайдено"
+
 msgid "Response settings"
 msgstr "Налаштування відповідей"
 
@@ -2026,6 +2224,9 @@ msgstr "Відповідь оновлено"
 
 msgid "Responses ({count})"
 msgstr "Відповіді ({count})"
+
+msgid "Responses carry the respondent's name, so respondents always sign in."
+msgstr "Відповіді містять ім'я респондента, тому респонденти завжди входять у систему."
 
 msgid "Responsive width"
 msgstr "Адаптивна ширина"
@@ -2049,7 +2250,7 @@ msgid "Row {n}"
 msgstr "Рядок {n}"
 
 msgid "Row {n}: {cells}"
-msgstr ""
+msgstr "Рядок {n}: {cells}"
 
 msgid "Rows"
 msgstr "Рядки"
@@ -2086,6 +2287,9 @@ msgstr "Запланувати відкриття"
 
 msgid "Score"
 msgstr "Бали"
+
+msgid "Score: %1$s / %2$s (%3$s%%)"
+msgstr "Бали: %1$s / %2$s (%3$s%%)"
 
 msgid "Search accounts and groups"
 msgstr "Пошук користувачів та груп"
@@ -2135,11 +2339,11 @@ msgstr "Надіслати звіт зараз"
 msgid "Sending …"
 msgstr "Надсилання …"
 
-msgid "Server configuration error: missing temporary folder"
-msgstr ""
+msgid "Sending the PDF to anonymous respondents needs a shared memory cache (Redis or Memcached) to keep its limits, so it cannot be switched on."
+msgstr "Надсилання PDF анонімним респондентам потребує спільного кешу пам'яті (Redis або Memcached) для дотримання обмежень, тому його не можна ввімкнути."
 
-msgid "Server error: could not write the file"
-msgstr ""
+msgid "Sent to signed-in respondents at their account's e-mail address. Anonymous respondents get it only where the administrator allows it."
+msgstr "Надсилається респондентам, які увійшли в систему, на адресу електронної пошти їхнього облікового запису. Анонімні респонденти отримують його лише якщо це дозволив адміністратор."
 
 msgid "Set expiration"
 msgstr "Встановити термін дії"
@@ -2183,6 +2387,9 @@ msgstr "Показувати це запитання, якщо …"
 msgid "Showing {start}-{end} of {total}"
 msgstr "Відображається {start}-{end} із {total}"
 
+msgid "Signed-in respondents receive it at their account's e-mail address. Others receive it at the address they enter in the question marked as their e-mail."
+msgstr "Респонденти, які увійшли в систему, отримують його на адресу електронної пошти свого облікового запису. Інші — на адресу, вказану в запитанні, позначеному як електронна пошта."
+
 msgid "Single choice"
 msgstr "Один варіант"
 
@@ -2211,19 +2418,25 @@ msgid "Someone"
 msgstr "Хтось"
 
 msgid "Something went wrong"
-msgstr ""
+msgstr "Щось пішло не так"
+
+msgid "Something went wrong while creating the form."
+msgstr "Під час створення форми сталася помилка."
+
+msgid "Something went wrong, please try again"
+msgstr "Щось пішло не так, спробуйте ще раз"
 
 msgid "Source"
 msgstr "Джерело"
 
 msgid "Source document is too large. The maximum is %s MB."
-msgstr ""
+msgstr "Вихідний документ завеликий. Максимум %s МБ."
 
 msgid "Source document not found."
-msgstr ""
+msgstr "Вихідний документ не знайдено."
 
 msgid "Source document uploads are disabled by the administrator."
-msgstr ""
+msgstr "Завантаження вихідних документів вимкнено адміністратором."
 
 msgid "Spacer"
 msgstr "Розділювач (Відступ)"
@@ -2241,7 +2454,7 @@ msgid "Start from scratch"
 msgstr "Почати з нуля"
 
 msgid "Start import"
-msgstr ""
+msgstr "Почати імпорт"
 
 msgid "Start over"
 msgstr "Почати спочатку"
@@ -2265,10 +2478,13 @@ msgid "Submit"
 msgstr "Надіслати"
 
 msgid "Submitted at"
-msgstr ""
+msgstr "Надіслано о"
+
+msgid "Submitted on %s"
+msgstr "Надіслано %s"
 
 msgid "Submitted:"
-msgstr ""
+msgstr "Надіслано:"
 
 msgid "Submitting …"
 msgstr "Надсилання …"
@@ -2295,13 +2511,13 @@ msgid "Subscription key saved but validation failed: {reason}"
 msgstr "Ключ підписки збережено, але помилка валідації: {reason}"
 
 msgid "Subscription key was refused: {reason}"
-msgstr ""
+msgstr "Ключ підписки відхилено: {reason}"
 
 msgid "Summary"
 msgstr "Підсумок"
 
 msgid "Sunset"
-msgstr ""
+msgstr "Захід сонця"
 
 msgid "Support"
 msgstr "Підтримка"
@@ -2315,6 +2531,9 @@ msgstr "Опитування"
 msgid "Table"
 msgstr "Таблиця"
 
+msgid "Task not found"
+msgstr "Завдання не знайдено"
+
 msgid "Task type:"
 msgstr "Тип завдання:"
 
@@ -2326,6 +2545,9 @@ msgstr "Шаблон активний — цей шаблон буде вико�
 
 msgid "Template deleted"
 msgstr "Шаблон видалено"
+
+msgid "Template not found"
+msgstr "Шаблон не знайдено"
 
 msgid "Template removed"
 msgstr "Шаблон видалено"
@@ -2343,7 +2565,7 @@ msgid "Template:"
 msgstr "Шаблон:"
 
 msgid "Templates"
-msgstr ""
+msgstr "Шаблони"
 
 msgid "Templates appear in the \"New form\" dialog for everyone. Snapshot any existing form into a template here, or remove templates you no longer want to offer."
 msgstr "Шаблони з'являються в діалоговому вікні «Нова форма» для кожного користувача. Збережіть тут будь-яку наявну форму як шаблон або видаліть шаблони, які більше не хочете пропонувати."
@@ -2361,7 +2583,7 @@ msgid "Text field with email validation"
 msgstr "Текстове поле з валідацією пошти"
 
 msgid "Thank you for filling in \"%s\".\n\nWe have received your response."
-msgstr ""
+msgstr "Дякуємо, що заповнили \"%s\".\n\nМи отримали вашу відповідь."
 
 msgid "Thank you for helping improve FormVox!"
 msgstr "Дякуємо, що допомагаєте покращувати FormVox!"
@@ -2375,38 +2597,101 @@ msgstr "Сторінка подяки"
 msgid "Thank you!"
 msgstr "Дякуємо!"
 
-msgid "The AI task failed: %s"
-msgstr ""
+msgid "The account of {name} is disabled and does not receive notifications."
+msgstr "Обліковий запис {name} вимкнено, і він не отримує сповіщень."
+
+msgid "The account of {name} no longer exists and does not receive notifications."
+msgstr "Обліковий запис {name} більше не існує й не отримує сповіщень."
 
 msgid "The AI will draft questions based on your description. Generation can take up to 2 minutes."
 msgstr "ШІ підготує запитання на основі вашого опису. Генерація може тривати до 2 хвилин."
 
-msgid "The file exceeds the maximum size allowed"
-msgstr ""
+msgid "The answers are too large"
+msgstr "Відповіді завеликі"
+
+msgid "The branding is not valid"
+msgstr "Брендінг недійсний"
+
+msgid "The condition of question '%s' is not valid"
+msgstr "Умова запитання '%s' недійсна"
+
+msgid "The condition of question '%s' refers to a question that no longer exists"
+msgstr "Умова запитання '%s' посилається на запитання, якого більше не існує"
+
+msgid "The description must be text"
+msgstr "Опис має бути текстом"
 
 msgid "The file exceeds the maximum upload size"
-msgstr ""
+msgstr "Файл перевищує максимальний розмір завантаження"
 
 msgid "The file was only partially uploaded"
-msgstr ""
+msgstr "Файл завантажено лише частково"
 
-msgid "The import is not available."
-msgstr ""
+msgid "The form could not be saved, please try again"
+msgstr "Не вдалося зберегти форму, спробуйте ще раз"
 
-msgid "The Microsoft Forms connection is not available."
-msgstr ""
+msgid "The form is busy, please try again"
+msgstr "Форма зайнята, спробуйте ще раз"
+
+msgid "The image is larger than 2 MB"
+msgstr "Зображення більше за 2 МБ"
+
+msgid "The maximum number of templates has been reached"
+msgstr "Досягнуто максимальної кількості шаблонів"
+
+msgid "The Microsoft Forms import is not available"
+msgstr "Імпорт із Microsoft Forms недоступний"
 
 msgid "The option '%s' is no longer available — capacity reached"
-msgstr ""
+msgstr "Варіант '%s' більше недоступний — ліміт вичерпано"
+
+msgid "The pages must be a list"
+msgstr "Сторінки мають бути списком"
+
+msgid "The pattern of question '%s' is not a valid regular expression"
+msgstr "Шаблон запитання '%s' не є дійсним регулярним виразом"
+
+msgid "The PDF could not be made"
+msgstr "Не вдалося створити PDF"
+
+msgid "The questions must be a list"
+msgstr "Запитання мають бути списком"
+
+msgid "The responses could not be imported; the form itself was."
+msgstr "Відповіді не вдалося імпортувати; саму форму імпортовано."
+
+msgid "The scale of question '%1$s' must start at 0 or 1 and end at %2$s at most"
+msgstr "Шкала запитання '%1$s' має починатися з 0 або 1 і закінчуватися не більше ніж на %2$s"
+
+msgid "The server could not store the file"
+msgstr "Сервер не зміг зберегти файл"
+
+msgid "The setting %s has an invalid value"
+msgstr "Параметр %s має недійсне значення"
+
+msgid "The settings must be an object"
+msgstr "Налаштування мають бути об'єктом"
 
 msgid "The source must be a file."
-msgstr ""
+msgstr "Джерелом має бути файл."
 
 msgid "The telemetry server returned an error: {error}"
 msgstr "Сервер телеметрії повернув помилку: {error}"
 
+msgid "The title must be text of at most %s characters"
+msgstr "Назва має бути текстом довжиною не більше %s символів"
+
+msgid "The uploaded file for question '%s' was not found"
+msgstr "Завантажений файл для запитання '%s' не знайдено"
+
 msgid "Theme presets"
 msgstr "Шаблони тем"
+
+msgid "There is not enough storage space to save this form"
+msgstr "Недостатньо місця для збереження цієї форми"
+
+msgid "This answer is shortened in the PDF; the full answer is in FormVox."
+msgstr "Цю відповідь у PDF скорочено; повну відповідь можна переглянути у FormVox."
 
 msgid "This controls whether the next question is shown"
 msgstr "Це визначає, чи буде відображатися наступне запитання"
@@ -2420,11 +2705,20 @@ msgstr "Це значення некоректне"
 msgid "This field does not match the required format"
 msgstr "Це поле не відповідає обов'язковому формату"
 
+msgid "This file is not a FormVox form"
+msgstr "Цей файл не є формою FormVox"
+
 msgid "This file type is not allowed"
-msgstr ""
+msgstr "Цей тип файлу не дозволено"
+
+msgid "This form file is too large"
+msgstr "Цей файл форми завеликий"
 
 msgid "This form has expired"
-msgstr ""
+msgstr "Термін дії цієї форми минув"
+
+msgid "This form has no share link to replace"
+msgstr "Ця форма не має посилання для спільного доступу, яке можна замінити"
 
 msgid "This form has reached its response limit"
 msgstr "Ця форма досягла ліміту відповідей"
@@ -2438,23 +2732,32 @@ msgstr "Ця форма ще не відкрита"
 msgid "This form is password protected"
 msgstr "Ця форма захищена паролем"
 
+msgid "This form no longer exists or was moved."
+msgstr "Ця форма більше не існує або її переміщено."
+
 msgid "This form requires you to be logged in"
-msgstr ""
+msgstr "Для цієї форми потрібно увійти в систему"
 
 msgid "This form uses the default theme. Enable custom theme above to customize."
 msgstr "Ця форма використовує тему за замовчуванням. Увімкніть користувацьку тему вище для налаштування."
 
+msgid "This form was changed elsewhere."
+msgstr "Цю форму змінено в іншому місці."
+
+msgid "This form was changed elsewhere. Reload to see the latest version."
+msgstr "Цю форму змінено в іншому місці. Перезавантажте, щоб побачити останню версію."
+
 msgid "This FormVox subscription key has been deactivated. Contact us to reactivate it."
-msgstr ""
+msgstr "Цей ключ підписки FormVox деактивовано. Зв'яжіться з нами, щоб активувати його знову."
 
 msgid "This FormVox subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
-msgstr ""
+msgstr "Цей ключ підписки FormVox уже зареєстровано на іншому сервері Nextcloud. Зв'яжіться з нами, якщо цей сервер замінює той."
 
 msgid "This FormVox subscription key is not known to the license server. Check it for typos."
-msgstr ""
+msgstr "Цей ключ підписки FormVox невідомий серверу ліцензій. Перевірте, чи немає в ньому помилок."
 
 msgid "This FormVox subscription key is not valid yet."
-msgstr ""
+msgstr "Цей ключ підписки FormVox ще не дійсний."
 
 msgid "This is a quiz question with scoring - correct answer: .fvform"
 msgstr "Це запитання вікторини з оцінюванням — правильна відповідь: .fvform"
@@ -2481,25 +2784,25 @@ msgid "This question will always be shown."
 msgstr "Це запитання буде відображатися завжди."
 
 msgid "This subscription key has been deactivated. Contact us to reactivate it."
-msgstr ""
+msgstr "Цей ключ підписки деактивовано. Зв'яжіться з нами, щоб активувати його знову."
 
 msgid "This subscription key is already registered to another Nextcloud instance. Contact us if this server replaces that one."
-msgstr ""
+msgstr "Цей ключ підписки вже зареєстровано на іншому сервері Nextcloud. Зв'яжіться з нами, якщо цей сервер замінює той."
 
 msgid "This subscription key is not known to the license server. Check it for typos."
-msgstr ""
+msgstr "Цей ключ підписки невідомий серверу ліцензій. Перевірте, чи немає в ньому помилок."
 
 msgid "This subscription key is not valid yet."
-msgstr ""
+msgstr "Цей ключ підписки ще не дійсний."
 
 msgid "Time"
 msgstr "Час"
 
 msgid "Time is after the allowed maximum for question '%s'"
-msgstr ""
+msgstr "Час пізніший за дозволений максимум для запитання '%s'"
 
 msgid "Time is before the allowed minimum for question '%s'"
-msgstr ""
+msgstr "Час раніший за дозволений мінімум для запитання '%s'"
 
 msgid "Time must be at or after {min}"
 msgstr "Час має бути не раніше ніж {min}"
@@ -2512,6 +2815,9 @@ msgstr "Тільки вибір часу"
 
 msgid "Title"
 msgstr "Назва"
+
+msgid "To attach it, first turn on \"Keep a PDF of every response\" below."
+msgstr "Щоб додати його, спершу ввімкніть \"Зберігати PDF кожної відповіді\" нижче."
 
 msgid "To enable Microsoft Forms import, you need to register an application in Azure AD."
 msgstr "Щоб увімкнути імпорт із Microsoft Forms, вам потрібно зареєструвати застосунок в Azure AD."
@@ -2538,25 +2844,22 @@ msgid "Type to search …"
 msgstr "Введіть текст для пошуку …"
 
 msgid "Unknown error"
-msgstr ""
+msgstr "Невідома помилка"
 
 msgid "Unknown form"
-msgstr ""
-
-msgid "Unknown upload error"
-msgstr ""
+msgstr "Невідома форма"
 
 msgid "Unsupported file type. Use PDF, DOCX, ODT, or a plain text file."
-msgstr ""
+msgstr "Непідтримуваний тип файлу. Використовуйте PDF, DOCX, ODT або звичайний текстовий файл."
 
 msgid "Untitled form"
-msgstr ""
+msgstr "Форма без назви"
 
 msgid "Untitled section"
 msgstr "Секція без назви"
 
 msgid "Untitled template"
-msgstr ""
+msgstr "Шаблон без назви"
 
 msgid "Update response"
 msgstr "Оновити відповідь"
@@ -2589,7 +2892,10 @@ msgid "URL"
 msgstr "URL-адреса"
 
 msgid "Use \"common\" for multi-tenant, or your specific tenant ID for single-tenant."
-msgstr ""
+msgstr "Використовуйте \"common\" для кількох клієнтів (multi-tenant) або свій ідентифікатор клієнта (tenant ID) для одного клієнта."
+
+msgid "Use a PNG, JPEG, GIF or WebP image"
+msgstr "Використовуйте зображення PNG, JPEG, GIF або WebP"
 
 msgid "Use custom theme for this form"
 msgstr "Використовувати користувацьку тему для цієї форми"
@@ -2640,7 +2946,7 @@ msgid "We will send you a confirmation when you submit this form."
 msgstr "Ми надішлемо вам підтвердження, коли ви надішлете цю форму."
 
 msgid "Webhook"
-msgstr ""
+msgstr "Вебхук"
 
 msgid "Webhook created"
 msgstr "Вебхук створено"
@@ -2705,6 +3011,9 @@ msgstr "Якими інструментами для створення форм
 msgid "Width:"
 msgstr "Ширина:"
 
+msgid "Without login, a repeat is recognized by network and browser; colleagues on one network may look like one person."
+msgstr "Без входу повторне надсилання розпізнається за мережею та браузером; колеги в одній мережі можуть виглядати як одна людина."
+
 msgid "Work together"
 msgstr "Спільна робота"
 
@@ -2729,6 +3038,9 @@ msgstr "Так, будь ласка, зв'яжіться зі мною"
 msgid "You are connected to Microsoft. Click Next to select a form to import."
 msgstr "Ви підключилися до Microsoft. Натисніть «Далі», щоб вибрати форму для імпорту."
 
+msgid "You can no longer edit this form."
+msgstr "Ви більше не можете редагувати цю форму."
+
 msgid "You can view the form but not make changes right now."
 msgstr "Ви можете переглядати форму, але зараз не можете вносити зміни."
 
@@ -2745,13 +3057,13 @@ msgid "You do not have permission to edit this form"
 msgstr "У вас немає дозволу на редагування цієї форми"
 
 msgid "You do not have permission to submit this form"
-msgstr ""
+msgstr "У вас немає дозволу надсилати цю форму"
 
 msgid "You do not have permission to upload files to this form"
-msgstr ""
+msgstr "У вас немає дозволу завантажувати файли до цієї форми"
 
 msgid "You have already submitted a response to this form"
-msgstr ""
+msgstr "Ви вже надіслали відповідь на цю форму"
 
 msgid "You have no forms yet. Create one first."
 msgstr "У вас ще немає форм. Спочатку створіть одну."
@@ -2759,122 +3071,137 @@ msgstr "У вас ще немає форм. Спочатку створіть о
 msgid "You have read-only access to this form. Contact the owner to request edit permissions."
 msgstr "У вас є доступ до цієї форми лише для читання. Зверніться до власника, щоб запросити дозволи на редагування."
 
+msgid "Your account has no e-mail address, so no confirmation can be sent."
+msgstr "У вашому обліковому записі немає адреси електронної пошти, тому підтвердження надіслати неможливо."
+
 msgid "Your actual server URL"
 msgstr "Реальна URL-адреса вашого сервера"
+
+msgid "Your confirmation goes to {email}."
+msgstr "Ваше підтвердження буде надіслано на {email}."
 
 msgid "Your email address"
 msgstr "Ваша адреса електронної пошти"
 
 msgid "Your FormVox subscription expired on {date}. Renew it to keep receiving support."
-msgstr ""
+msgstr "Термін дії вашої підписки FormVox закінчився {date}. Поновіть її, щоб і надалі отримувати підтримку."
 
 msgid "Your FormVox subscription has expired. Renew it to keep receiving support."
-msgstr ""
+msgstr "Термін дії вашої підписки FormVox закінчився. Поновіть її, щоб і надалі отримувати підтримку."
 
 msgid "Your FormVox subscription key is invalid or expired. Please renew to continue receiving support."
 msgstr "Ваш ключ підписки FormVox недійсний або його термін дії закінчився. Будь ласка, поновіть його, щоб продовжувати отримувати підтримку."
 
 msgid "Your HTML here …"
-msgstr ""
+msgstr "Ваш HTML тут …"
 
 msgid "Your installation"
 msgstr "Ваше середовище"
+
+msgid "Your latest changes are not saved."
+msgstr "Ваші останні зміни не збережено."
+
+msgid "Your latest changes are not saved. Ask the owner for edit rights."
+msgstr "Ваші останні зміни не збережено. Попросіть власника надати права на редагування."
+
+msgid "Your latest changes are not saved. Reload to see the current version and continue from there."
+msgstr "Ваші останні зміни не збережено. Перезавантажте, щоб побачити поточну версію, і продовжте з неї."
 
 msgid "Your response has been recorded."
 msgstr "Вашу відповідь зафіксовано."
 
 msgid "Your response has been submitted successfully."
-msgstr ""
+msgstr "Вашу відповідь успішно надіслано."
 
 msgid "Your score"
 msgstr "Ваш результат (Бали)"
 
 msgid "Your subscription expired on {date}. Renew it to keep receiving support."
-msgstr ""
+msgstr "Термін дії вашої підписки закінчився {date}. Поновіть її, щоб і надалі отримувати підтримку."
 
 msgid "Your subscription has expired. Renew it to keep receiving support."
-msgstr ""
+msgstr "Термін дії вашої підписки закінчився. Поновіть її, щоб і надалі отримувати підтримку."
 
 msgid "%n file uploaded"
 msgid_plural "%n files uploaded"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n файл завантажено"
+msgstr[1] "%n файли завантажено"
+msgstr[2] "%n файлів завантажено"
 
 msgid "%n other editing"
 msgid_plural "%n others editing"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n інший редагує"
+msgstr[1] "%n інші редагують"
+msgstr[2] "%n інших редагують"
 
 msgid "%n question imported"
 msgid_plural "%n questions imported"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n запитання імпортовано"
+msgstr[1] "%n запитання імпортовано"
+msgstr[2] "%n запитань імпортовано"
 
 msgid "%n response"
 msgid_plural "%n responses"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n відповідь"
+msgstr[1] "%n відповіді"
+msgstr[2] "%n відповідей"
 
 msgid "%n response collected"
 msgid_plural "%n responses collected"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n відповідь зібрано"
+msgstr[1] "%n відповіді зібрано"
+msgstr[2] "%n відповідей зібрано"
+
+msgid "%n response did not fit the form and was not imported; the reason is below."
+msgid_plural "%n responses did not fit the form and were not imported; the reasons are below."
+msgstr[0] "%n відповідь не відповідала формі й не була імпортована; причину наведено нижче."
+msgstr[1] "%n відповіді не відповідали формі й не були імпортовані; причини наведено нижче."
+msgstr[2] "%n відповідей не відповідали формі й не були імпортовані; причини наведено нижче."
 
 msgid "%n response imported"
 msgid_plural "%n responses imported"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n відповідь імпортовано"
+msgstr[1] "%n відповіді імпортовано"
+msgstr[2] "%n відповідей імпортовано"
 
 msgid "%n row total across all responses"
 msgid_plural "%n rows total across all responses"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n рядок загалом у всіх відповідях"
+msgstr[1] "%n рядки загалом у всіх відповідях"
+msgstr[2] "%n рядків загалом у всіх відповідях"
 
 msgid "%n star"
 msgid_plural "%n stars"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n зірка"
+msgstr[1] "%n зірки"
+msgstr[2] "%n зірок"
 
 msgid "%n unique answer"
 msgid_plural "%n unique answers"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%n унікальна відповідь"
+msgstr[1] "%n унікальні відповіді"
+msgstr[2] "%n унікальних відповідей"
 
 msgid "FormVox is running for %n account here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
 msgid_plural "FormVox is running for %n accounts here and keeps working in full without a subscription. If your organization gets value from it, a subscription is much appreciated — it funds the maintenance. Sold through Nextcloud: contact your account manager or {email}."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "FormVox працює тут для %n користувача і повністю працює без підписки. Якщо ваша організація отримує від нього користь, підписка дуже цінується — вона фінансує супровід. Продається через Nextcloud: зверніться до свого менеджера облікового запису або на {email}."
+msgstr[1] "FormVox працює тут для %n користувачів і повністю працює без підписки. Якщо ваша організація отримує від нього користь, підписка дуже цінується — вона фінансує супровід. Продається через Nextcloud: зверніться до свого менеджера облікового запису або на {email}."
+msgstr[2] "FormVox працює тут для %n користувачів і повністю працює без підписки. Якщо ваша організація отримує від нього користь, підписка дуже цінується — вона фінансує супровід. Продається через Nextcloud: зверніться до свого менеджера облікового запису або на {email}."
 
 msgid "Maximum %n file allowed"
 msgid_plural "Maximum %n files allowed"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Дозволено максимум %n файл"
+msgstr[1] "Дозволено максимум %n файли"
+msgstr[2] "Дозволено максимум %n файлів"
 
 msgid "Select at least %n option for question '%s'"
 msgid_plural "Select at least %n options for question '%s'"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Виберіть щонайменше %n варіант у запитанні '%s'"
+msgstr[1] "Виберіть щонайменше %n варіанти у запитанні '%s'"
+msgstr[2] "Виберіть щонайменше %n варіантів у запитанні '%s'"
 
 msgid "Select at most %n option for question '%s'"
 msgid_plural "Select at most %n options for question '%s'"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
-
-msgid "The AI task timed out after %n second"
-msgid_plural "The AI task timed out after %n seconds"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Виберіть щонайбільше %n варіант у запитанні '%s'"
+msgstr[1] "Виберіть щонайбільше %n варіанти у запитанні '%s'"
+msgstr[2] "Виберіть щонайбільше %n варіантів у запитанні '%s'"

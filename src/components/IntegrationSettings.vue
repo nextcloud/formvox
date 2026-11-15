@@ -17,8 +17,9 @@
             <span class="key-name">{{ key.name }}</span>
             <span class="key-id">{{ key.id }}</span>
             <span class="key-permissions">{{ formatPermissions(key.permissions) }}</span>
+            <span v-if="inactiveReason(key)" class="integration-inactive">{{ inactiveReason(key) }}</span>
           </div>
-          <NcButton type="tertiary" @click="deleteApiKey(key.id)">
+          <NcButton v-if="canManage" type="tertiary" @click="deleteApiKey(key.id)">
             <template #icon>
               <DeleteIcon :size="18" />
             </template>
@@ -45,7 +46,7 @@
         </NcNoteCard>
       </div>
 
-      <div class="create-api-key">
+      <div v-if="canManage" class="create-api-key">
         <!-- TRANSLATORS: Label of the name field of a new API key -->
         <NcTextField :label="t('formvox', 'Key name')"
           v-model="newKeyName"
@@ -109,13 +110,15 @@
             <span class="webhook-name">{{ webhook.name }}</span>
             <span class="webhook-url">{{ webhook.url }}</span>
             <span class="webhook-events">{{ formatEvents(webhook.events) }}</span>
+            <span v-if="inactiveReason(webhook)" class="integration-inactive">{{ inactiveReason(webhook) }}</span>
           </div>
           <div class="webhook-actions">
             <NcCheckboxRadioSwitch
               :model-value="webhook.enabled"
+              :disabled="!canManage"
               @update:model-value="toggleWebhook(webhook.id, $event)"
             />
-            <NcButton type="tertiary" @click="deleteWebhook(webhook.id)">
+            <NcButton v-if="canManage" type="tertiary" @click="deleteWebhook(webhook.id)">
               <template #icon>
                 <DeleteIcon :size="18" />
               </template>
@@ -140,7 +143,7 @@
         </NcNoteCard>
       </div>
 
-      <div class="create-webhook">
+      <div v-if="canManage" class="create-webhook">
         <!-- TRANSLATORS: Label of the name field of a new webhook -->
         <NcTextField :label="t('formvox', 'Webhook name')"
           v-model="newWebhookName"
@@ -271,17 +274,24 @@ export default {
       type: Object,
       required: true,
     },
+    // Full rights; others see the list only.
+    canManage: {
+      type: Boolean,
+      default: true,
+    },
   },
   setup(props) {
     // API Keys
     const apiKeys = computed(() => {
       const keys = props.form.settings?.api_keys || [];
-      // Don't expose hash to frontend
       return keys.map(k => ({
         id: k.id,
         name: k.name,
         permissions: k.permissions,
         created_at: k.created_at,
+        created_by: k.created_by,
+        creator_status: k.creator_status,
+        creator_name: k.creator_name,
       }));
     });
 
@@ -299,13 +309,15 @@ export default {
     // Webhooks
     const webhooks = computed(() => {
       const hooks = props.form.settings?.webhooks || [];
-      // Don't expose secret to frontend
       return hooks.map(w => ({
         id: w.id,
         name: w.name,
         url: w.url,
         events: w.events,
         enabled: w.enabled,
+        created_by: w.created_by,
+        creator_status: w.creator_status,
+        creator_name: w.creator_name,
       }));
     });
 
@@ -351,7 +363,6 @@ export default {
           id: response.data.id,
           name: response.data.name,
           permissions: response.data.permissions,
-          hash: '[hidden]',
         });
 
         // Reset form
@@ -435,7 +446,6 @@ export default {
           url: response.data.url,
           events: response.data.events,
           enabled: true,
-          secret: '[hidden]',
         });
 
         // Reset form
@@ -518,6 +528,23 @@ export default {
       return permissions.map(p => labels[p] || p).join(', ');
     };
 
+    // A key or webhook works only while its creator may use the form; say so, and why not.
+    const inactiveReason = (item) => {
+      const name = item.creator_name || item.created_by || '';
+      switch (item.creator_status) {
+        case 'no_access':
+          return t('formvox', 'Inactive — {name} no longer has access to this form', { name });
+        case 'disabled':
+          return t('formvox', 'Inactive — the account of {name} is disabled', { name });
+        case 'deleted':
+          return t('formvox', 'Inactive — the account of {name} no longer exists', { name });
+        case 'none':
+          return t('formvox', 'Inactive — it is not known who made it');
+        default:
+          return '';
+      }
+    };
+
     const formatEvents = (events) => {
       // TRANSLATORS: Shown for a webhook that reacts to every event
       if (!events || events.length === 0) return t('formvox', 'All events');
@@ -533,6 +560,7 @@ export default {
     };
 
     return {
+      inactiveReason,
       // API Keys
       apiKeys,
       newKeyName,
@@ -571,6 +599,12 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.integration-inactive {
+  display: block;
+  color: var(--color-error-text, var(--color-error));
+  font-size: 0.9em;
+}
+
 .integration-settings {
   .section {
     margin-bottom: 24px;

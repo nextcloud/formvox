@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Store\FormStore;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\IMimeTypeLoader;
 use OCP\Files\IRootFolder;
@@ -23,24 +24,14 @@ class StatisticsService {
 	 */
 	public const COUNT_METHOD = 'callForAllUsers';
 
-	private IRootFolder $rootFolder;
-	private IDBConnection $db;
-	private IUserManager $userManager;
-	private LoggerInterface $logger;
-	private IMimeTypeLoader $mimeTypeLoader;
-
 	public function __construct(
-		IRootFolder $rootFolder,
-		IDBConnection $db,
-		IUserManager $userManager,
-		LoggerInterface $logger,
-		IMimeTypeLoader $mimeTypeLoader,
+		private IRootFolder $rootFolder,
+		private IDBConnection $db,
+		private IUserManager $userManager,
+		private LoggerInterface $logger,
+		private IMimeTypeLoader $mimeTypeLoader,
+		private ?FormStore $forms = null,
 	) {
-		$this->rootFolder = $rootFolder;
-		$this->db = $db;
-		$this->userManager = $userManager;
-		$this->logger = $logger;
-		$this->mimeTypeLoader = $mimeTypeLoader;
 	}
 
 	/**
@@ -112,15 +103,21 @@ class StatisticsService {
 			));
 
 			$totalResponses = 0;
+			// A form in the database has its count in its row: its file is not opened.
+			$stored = $this->forms?->counts() ?? [];
 
 			foreach ($rows as $row) {
 				try {
 					$storageId = $storageNames[(int)$row['storage']] ?? '';
 					$fileId = (int)$row['fileid'];
+					if (isset($stored[$fileId])) {
+						$totalResponses += $stored[$fileId];
+						continue;
+					}
 
-					// Only process personal folders for now (home::username)
-					if (strpos($storageId, 'home::') === 0) {
-						$userId = substr($storageId, 6);
+					// Only process personal folders for now, on disk or on S3
+					$userId = FormFileLocator::homeOwner($storageId);
+					if ($userId !== null) {
 						$userFolder = $this->rootFolder->getUserFolder($userId);
 						$nodes = $userFolder->getById($fileId);
 
@@ -151,7 +148,7 @@ class StatisticsService {
 	}
 
 	/**
-	 * Map numeric storage ids to their string ids (e.g. "home::alice")
+	 * Map numeric storage ids to their string ids (e.g. "home::alice", "object::user:alice")
 	 *
 	 * @param int[] $numericIds
 	 * @return array<int, string>

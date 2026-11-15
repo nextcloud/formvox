@@ -9,6 +9,7 @@ let branding = {};
 let telemetry = { enabled: true, lastReport: null };
 let embedSettings = { allowedDomains: '*' };
 let msFormsSettings = { clientId: '', tenantId: 'common', isConfigured: false, redirectUri: '' };
+let pdfSettings = { anonymous: false, sharedCache: false };
 
 try {
   branding = loadState('formvox', 'branding');
@@ -34,11 +35,18 @@ try {
   console.warn('FormVox: Could not load MS Forms settings state', e);
 }
 
+try {
+  pdfSettings = loadState('formvox', 'pdfSettings');
+} catch (e) {
+  console.warn('FormVox: Could not load PDF settings state', e);
+}
+
 const app = createApp(AdminSettings, {
   initialBranding: branding,
   initialTelemetry: telemetry,
   initialEmbedSettings: embedSettings,
   initialMsFormsSettings: msFormsSettings,
+  initialPdfSettings: pdfSettings,
 });
 
 // Make translation functions globally available. Call sites pass the app id

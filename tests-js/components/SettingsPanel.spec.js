@@ -4,9 +4,8 @@ import SettingsPanel from '@/components/SettingsPanel.vue'
 import axios from '@nextcloud/axios'
 
 /**
- * Characterization tests for SettingsPanel — the "Collaboration" sidebar.
- * It renders static access-control help and, on "Manage sharing", either drives
- * the Files sidebar (legacy API) or redirects to the Files app.
+ * SettingsPanel, the "Collaboration" sidebar: static access-control help, and "Manage sharing", which shows the form in
+ * the Files details view.
  */
 describe('SettingsPanel', () => {
 	beforeEach(() => {
@@ -31,34 +30,36 @@ describe('SettingsPanel', () => {
 		expect(wrapper.emitted('close')).toBeTruthy()
 	})
 
-	it('uses the legacy Files.Sidebar API when available', async () => {
-		const open = vi.fn()
-		const setActiveTab = vi.fn()
-		window.OCA = { Files: { Sidebar: { open, setActiveTab } } }
-		vi.spyOn(axios, 'get').mockResolvedValue({ data: { path: '/Forms/my.form' } })
+	it('opens the form in the Files details view, not in FormVox again', async () => {
+		const hrefSetter = vi.fn()
+		const originalLocation = window.location
+		delete window.location
+		window.location = { set href(v) { hrefSetter(v) }, get href() { return '' } }
+		const get = vi.spyOn(axios, 'get')
 
-		const wrapper = mount(SettingsPanel, { props: { fileId: 42 } })
+		const wrapper = mount(SettingsPanel, { props: { fileId: 99 } })
 		await wrapper.get('[data-stub="NcButton"]').trigger('click')
-		await new Promise((r) => setTimeout(r, 0))
 
-		expect(axios.get).toHaveBeenCalled()
-		expect(open).toHaveBeenCalledWith('/Forms/my.form')
-		expect(setActiveTab).toHaveBeenCalledWith('sharing')
+		// openfile=true would run FormVox's default action, which is opening the editor.
+		expect(hrefSetter).toHaveBeenCalledWith('/f/99?opendetails=true&openfile=false')
+		expect(get).not.toHaveBeenCalled()
+
+		window.location = originalLocation
 	})
 
-	it('falls back to redirecting to the Files app when no legacy sidebar', async () => {
-		// No window.OCA.Files.Sidebar -> must set window.location.href
+	it('does the same where the legacy Files sidebar exists', async () => {
+		const open = vi.fn()
+		window.OCA = { Files: { Sidebar: { open, setActiveTab: vi.fn() } } }
 		const hrefSetter = vi.fn()
 		const originalLocation = window.location
 		delete window.location
 		window.location = { set href(v) { hrefSetter(v) }, get href() { return '' } }
 
-		const wrapper = mount(SettingsPanel, { props: { fileId: 99 } })
+		const wrapper = mount(SettingsPanel, { props: { fileId: 42 } })
 		await wrapper.get('[data-stub="NcButton"]').trigger('click')
-		await new Promise((r) => setTimeout(r, 0))
 
-		expect(hrefSetter).toHaveBeenCalled()
-		expect(hrefSetter.mock.calls[0][0]).toContain('99')
+		expect(open).not.toHaveBeenCalled()
+		expect(hrefSetter).toHaveBeenCalledWith('/f/42?opendetails=true&openfile=false')
 
 		window.location = originalLocation
 	})

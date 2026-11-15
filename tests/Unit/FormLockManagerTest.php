@@ -4,123 +4,68 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Tests\Unit;
 
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\Service\DecodedForms;
+use OCA\FormVox\Service\FormLock;
+use OCA\FormVox\Service\FormLockedException;
 use OCA\FormVox\Service\FormLockManager;
-use OCA\FormVox\Versions\IFormVersionCleaner;
-use OCP\DB\Exception as DbException;
-use OCP\DB\IResult;
-use OCP\DB\QueryBuilder\IExpressionBuilder;
-use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\FormVox\Service\FormWriteGuard;
+use OCA\FormVox\Service\OwnWrites;
+use OCA\FormVox\Store\SecretOverlay;
+use OCA\FormVox\Store\StoredForm;
+use OCA\FormVox\Tests\Unit\Support\Fake\Redis;
+use OCP\Encryption\IManager;
 use OCP\Files\File;
 use OCP\Files\Storage\IStorage;
+use OCP\ICacheFactory;
 use OCP\IDBConnection;
 use OCP\IUserSession;
+use OCP\Lock\LockedException;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 /**
- * Characterization tests for FormLockManager — the concurrency core.
- *
- * Pins the behaviour that MUST NOT regress (#3/#7/#90/#97/#101):
- *  - the mutator runs under the lock against freshly-read on-disk content;
- *  - modified_at is stamped;
- *  - #97: a short (truncated) write throws;
- *  - #90/#101: a refused putContent is wrapped with write-context diagnostics;
- *  - the version cleaner is invoked after a successful write;
- *  - the lock row is always released (finally), even when the mutator throws;
- *  - #7: a stale lock is reclaimed before acquisition;
- *  - a unique-constraint violation on acquire retries rather than failing.
- *
- * All mocked against ocp stubs; no running server. Storage byte counts are
- * driven so the happy path writes the exact payload length.
+ * FormLockManager — the concurrency core. Pins what must not regress (#3/#7/#90/#97/#101): the mutator runs under the
+ * form's lock against what is on disk now; modified_at is stamped; a short write throws (#97); a refused write is wrapped
+ * with diagnostics (#90/#101); the lock is always released; a busy form is waited for, up to a deadline, then 503 busy.
  */
 class FormLockManagerTest extends TestCase {
-	private IDBConnection $db;
 	private IUserSession $userSession;
-	private IFormVersionCleaner $versionCleaner;
-
-	/** Recording of DB statements executed, in order: 'insert'|'select'|'delete'. */
-	private array $statements = [];
-	/** Rows the next select (reclaim probe) should return. */
-	private ?array $reclaimRow = null;
-	/** If set, the Nth insert throws this (1-based); used to simulate lock contention. */
-	private array $insertThrows = [];
-	private int $insertCount = 0;
+	private OwnWrites $ownWrites;
+	/** The form's lock: its log ('acquire'|'refused'|'release') and refusals (PHP_INT_MAX: never granted). */
+	private Redis $cache;
 
 	protected function setUp(): void {
 		parent::setUp();
-		$this->db = $this->createMock(IDBConnection::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->userSession->method('getUser')->willReturn(null);
-		$this->versionCleaner = $this->createMock(IFormVersionCleaner::class);
+		$this->ownWrites = new OwnWrites();
 
-		$expr = $this->createMock(IExpressionBuilder::class);
-		$expr->method('eq')->willReturn('eq');
-
-		$this->db->method('getQueryBuilder')->willReturnCallback(function () use ($expr): IQueryBuilder {
-			$qb = $this->createMock(IQueryBuilder::class);
-			foreach (['insert', 'delete', 'select', 'from', 'where', 'andWhere', 'values', 'setMaxResults', 'orderBy'] as $m) {
-				$qb->method($m)->willReturnSelf();
-			}
-			$qb->method('expr')->willReturn($expr);
-			$qb->method('createNamedParameter')->willReturnArgument(0);
-
-			// insert()->executeStatement() acquires the lock.
-			// select()->executeQuery()->fetch() is the reclaim probe.
-			// delete()->executeStatement() releases (or reclaims) the lock.
-			$qb->method('insert')->willReturnCallback(function () use ($qb) {
-				$this->statements[] = 'insert';
-				return $qb;
-			});
-			$qb->method('select')->willReturnCallback(function () use ($qb) {
-				$this->statements[] = 'select';
-				return $qb;
-			});
-			$qb->method('delete')->willReturnCallback(function () use ($qb) {
-				$this->statements[] = 'delete';
-				return $qb;
-			});
-
-			$qb->method('executeStatement')->willReturnCallback(function (): int {
-				// The insert is the only executeStatement that can throw for
-				// contention; deletes just succeed. Distinguish by last stmt.
-				$last = end($this->statements);
-				if ($last === 'insert') {
-					$this->insertCount++;
-					if (in_array($this->insertCount, $this->insertThrows, true)) {
-						throw $this->uniqueViolation();
-					}
-				}
-				return 1;
-			});
-
-			$result = $this->createMock(IResult::class);
-			$result->method('fetch')->willReturnCallback(fn () => $this->reclaimRow ?? false);
-			$result->method('closeCursor')->willReturn(true);
-			$qb->method('executeQuery')->willReturn($result);
-
-			return $qb;
-		});
+		$this->cache = new Redis();
 	}
 
-	private function uniqueViolation(): DbException {
-		// getMessage() is final on \Exception and can't be stubbed; the lock
-		// code checks getReason() first (the typed path), so only stub that.
-		$e = $this->createMock(DbException::class);
-		$e->method('getReason')->willReturn(DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION);
-		return $e;
+	private function manager(?DecodedForms $decoded = null, float $wait = 0.3, ?SecretOverlay $secrets = null): FormLockManager {
+		$cacheFactory = $this->createMock(ICacheFactory::class);
+		$cacheFactory->method('createLocking')->willReturn($this->cache);
+		$lock = new FormLock($cacheFactory, $this->createMock(IDBConnection::class), $this->createMock(LoggerInterface::class));
+		$guard = new FormWriteGuard($this->createMock(IManager::class), $this->createMock(\OCP\IConfig::class), $this->createMock(LoggerInterface::class));
+		return new FormLockManager($this->userSession, $this->ownWrites, $guard, $decoded ?? new DecodedForms(), $lock, $wait, $secrets);
 	}
 
-	private function manager(): FormLockManager {
-		return new FormLockManager($this->db, $this->userSession, $this->versionCleaner);
+	/** The overlay of a form in the database: its row, and secrets that pass through unchanged. */
+	private function overlayOf(StoredForm $stored): SecretOverlay {
+		$secrets = $this->createMock(SecretOverlay::class);
+		$secrets->method('stored')->willReturn($stored);
+		$secrets->method('add')->willReturnArgument(1);
+		$secrets->method('split')->willReturnCallback(fn (?StoredForm $stored, array $form) => [$form, null, null]);
+		return $secrets;
 	}
 
 	/**
-	 * A File whose storage returns $content on read and, on write, records the
-	 * payload and reports $reportedSize (default: exact payload length).
+	 * A File whose storage returns $content on read and, on write, records the payload and reports the written size
+	 * (or $reportedSizeOverride, for a short write).
 	 */
 	private function fileWithStorage(string $content, ?int $reportedSizeOverride = null, ?\Throwable $putThrows = null, array &$written = []): File {
-		// Stateful reported size: starts at the on-disk content length, updates
-		// to the written size after putContent(). A single willReturnCallback
-		// reads this holder, so there is no double-stub conflict.
 		$reportedSize = strlen($content);
 
 		$storage = $this->createMock(IStorage::class);
@@ -142,8 +87,6 @@ class FormLockManagerTest extends TestCase {
 				throw $putThrows;
 			}
 			$written[] = $payload;
-			// After the write, filesize() reflects the written size (or an
-			// override to simulate a truncated/short write).
 			$reportedSize = $reportedSizeOverride ?? strlen($payload);
 		});
 
@@ -156,38 +99,42 @@ class FormLockManagerTest extends TestCase {
 
 		$seenInsideMutator = null;
 		$ret = $this->manager()->mutateFormFileWithLock($file, function (array &$form) use (&$seenInsideMutator) {
-			$seenInsideMutator = $form;          // proves fresh on-disk content is passed
+			$seenInsideMutator = $form;
 			$form['responses'][] = ['a' => 1];
 			return 'result-value';
 		});
 
 		$this->assertSame('result-value', $ret);
 		$this->assertSame(['responses' => []], $seenInsideMutator);
-
-		// The written payload has the mutation + a modified_at stamp.
 		$this->assertCount(1, $written);
 		$decoded = json_decode($written[0], true);
 		$this->assertSame([['a' => 1]], $decoded['responses']);
 		$this->assertArrayHasKey('modified_at', $decoded);
-
-		// Version cleanup ran once; lock inserted then deleted (released).
-		// (reclaim probe select returns no row, so no extra delete from reclaim.)
-		$this->assertContains('insert', $this->statements);
-		$this->assertContains('delete', $this->statements);
+		$this->assertSame(['acquire', 'release'], $this->cache->log);
 	}
 
-	public function testVersionCleanerInvokedAfterSuccessfulWrite(): void {
-		$written = [];
-		$file = $this->fileWithStorage('{"responses":[]}', null, null, $written);
-		$this->versionCleaner->expects($this->once())->method('deleteVersionsForFile')->with($file);
+	/** PO 5: a response leaves no version; a change to the form does, and its history is no longer wiped. */
+	public function testAWriteLeavesNoVersionUnlessItChangesTheForm(): void {
+		$seen = [];
+		foreach ([false, true] as $version) {
+			$storage = $this->createMock(IStorage::class);
+			$storage->method('file_get_contents')->willReturn('{"responses":[]}');
+			$storage->method('filesize')->willReturn(false);
+			$file = $this->createMock(File::class);
+			$file->method('getStorage')->willReturn($storage);
+			$file->method('getInternalPath')->willReturn('files/form.fvform');
+			$file->method('putContent')->willReturnCallback(function () use (&$seen) {
+				$seen[] = [$this->ownWrites->active(), $this->ownWrites->withoutVersion()];
+			});
+			$this->manager()->mutateFormFileWithLock($file, function (array &$form) {
+				$form['x'] = 1;
+			}, $version);
+		}
 
-		$this->manager()->mutateFormFileWithLock($file, function (array &$form) {
-			$form['x'] = 1;
-		});
+		$this->assertSame([[true, true], [true, false]], $seen);
 	}
 
 	public function testShortWriteThrows(): void {
-		// Report a filesize SMALLER than the payload => #97 short-write guard.
 		$written = [];
 		$file = $this->fileWithStorage('{"responses":[]}', 3, null, $written);
 
@@ -209,15 +156,14 @@ class FormLockManagerTest extends TestCase {
 			$this->fail('expected RuntimeException');
 		} catch (\RuntimeException $e) {
 			$this->assertStringContainsString('Could not write form file', $e->getMessage());
-			// #90/#101: diagnostics captured (storage class + updatable flag).
 			$this->assertStringContainsString('updatable=', $e->getMessage());
 			$this->assertStringContainsString('permission denied', $e->getMessage());
 		}
+		$this->assertSame(['acquire', 'release'], $this->cache->log);
 	}
 
 	public function testInvalidJsonOnDiskThrows(): void {
-		$written = [];
-		$file = $this->fileWithStorage('not json at all', null, null, $written);
+		$file = $this->fileWithStorage('not json at all');
 
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessageMatches('/Invalid form file format/');
@@ -235,56 +181,178 @@ class FormLockManagerTest extends TestCase {
 				throw new \DomainException('abort the write');
 			});
 			$this->fail('expected DomainException');
-		} catch (\DomainException $e) {
-			// nothing written, but the lock delete (release) still ran.
+		} catch (\DomainException) {
 		}
 
 		$this->assertSame([], $written, 'mutator throw must persist nothing');
-		$this->assertContains('delete', $this->statements, 'lock must be released via finally');
+		$this->assertSame(['acquire', 'release'], $this->cache->log);
 	}
 
-	public function testStaleLockIsReclaimedBeforeAcquire(): void {
-		// reclaim probe finds an OLD timestamp => a delete (reclaim) happens
-		// before the insert.
-		$this->reclaimRow = ['configvalue' => (string)(time() - 999)];
+	/** A form that does not fit is not written at all: the old one stays whole, and the caller is told why. */
+	public function testAFormThatDoesNotFitIsNotWrittenAndSaysTheStorageIsFull(): void {
+		$storage = $this->createMock(IStorage::class);
+		$storage->method('file_get_contents')->willReturn('{"responses":[]}');
+		$storage->method('free_space')->willReturn(10);
+		$file = $this->createMock(File::class);
+		$file->method('getId')->willReturn(1);
+		$file->method('getStorage')->willReturn($storage);
+		$file->method('getInternalPath')->willReturn('files/form.fvform');
+		$file->expects($this->never())->method('putContent');
+
+		try {
+			$this->manager()->mutateFormFileWithLock($file, function (array &$form): void {
+				$form['responses'][] = ['id' => 'r1', 'answers' => ['q1' => str_repeat('x', 100)]];
+			});
+			$this->fail('A form that does not fit was written');
+		} catch (RequestException $e) {
+			$this->assertSame([507, 'storage_full'], [$e->getStatus(), $e->getReason()]);
+		}
+		$this->assertSame(['acquire', 'release'], $this->cache->log);
+	}
+
+	/**
+	 * A stored form's file holds the form only: responses, counts, outbox and submissions in it (put back from a backup
+	 * without the database) are the database's, so neither the mutator nor the file gets them again.
+	 */
+	public function testAStoredFormsFileIsWrittenWithTheFormOnly(): void {
+		$content = (string)json_encode([
+			'id' => 'uuid-in-the-file', 'title' => 'T', 'settings' => ['anonymous' => true],
+			'responses' => [['id' => 'r1', 'answers' => ['q' => 'a private answer']]],
+			'_index' => ['response_count' => 1, 'fingerprints' => ['fp-1']],
+			'_outbox' => [['id' => 'r1:response.created']],
+			'_submissions' => ['fill-1' => 'r1'],
+		]);
 		$written = [];
-		$file = $this->fileWithStorage('{"a":1}', null, null, $written);
+		$seen = null;
+
+		$this->manager(null, 0.3, $this->overlayOf(new StoredForm(5, 'uuid-of-the-row', 1, 3)))
+			->mutateFormFileWithLock($this->fileWithStorage($content, null, null, $written), function (array &$form) use (&$seen): void {
+				$seen = $form;
+				$form['title'] = 'Changed';
+			});
+
+		$this->assertSame([], $seen['responses'], 'the mutator sees the form only');
+		$this->assertSame('uuid-of-the-row', $seen['id']);
+		$decoded = json_decode($written[0], true);
+		$this->assertSame('Changed', $decoded['title']);
+		$this->assertSame([], $decoded['responses']);
+		$this->assertSame(0, $decoded['_index']['response_count']);
+		$this->assertSame([], $decoded['_index']['fingerprints']);
+		$this->assertArrayNotHasKey('_outbox', $decoded);
+		$this->assertArrayNotHasKey('_submissions', $decoded);
+		$this->assertSame('uuid-of-the-row', $decoded['id']);
+		$this->assertStringNotContainsString('a private answer', $written[0]);
+	}
+
+	/** Housekeeping within what the file held: a full quota does not refuse it, and the file keeps its time. */
+	public function testHousekeepingWithinWhatTheFileHeldIsWrittenOnAFullQuotaAndKeepsTheFilesTime(): void {
+		$content = '{"responses":[{"id":"r1","answers":{"q":"' . str_repeat('x', 200) . '"}}],"title":"T"}';
+		$written = [];
+		$storage = $this->createMock(IStorage::class);
+		$storage->method('file_get_contents')->willReturn($content);
+		$storage->method('free_space')->willReturn(0);
+		$storage->method('filesize')->willReturn(false);
+		$file = $this->createMock(File::class);
+		$file->method('getId')->willReturn(1);
+		$file->method('getStorage')->willReturn($storage);
+		$file->method('getInternalPath')->willReturn('files/form.fvform');
+		$file->method('getMTime')->willReturn(1700000000);
+		$file->method('putContent')->willReturnCallback(function (string $payload) use (&$written): void {
+			$written[] = $payload;
+		});
+		$file->expects($this->once())->method('touch')->with(1700000000);
+
+		$this->manager()->mutateFormFileWithLock($file, function (array &$form): void {
+			$form['responses'] = [];
+		}, false, false, true);
+
+		$this->assertCount(1, $written);
+		$this->assertArrayNotHasKey('modified_at', json_decode($written[0], true));
+	}
+
+	/** What this request already read is not decoded again under the lock, when the bytes are the same. */
+	public function testTheFormThisRequestAlreadyReadIsNotDecodedAgain(): void {
+		$raw = '{"responses":[]}';
+		$decoded = new DecodedForms();
+		$decoded->remember(1, $raw, ['responses' => [], 'seen' => 'before']);
+		$seen = null;
+
+		$this->manager($decoded)->mutateFormFileWithLock($this->fileWithStorage($raw), function (array &$form) use (&$seen): void {
+			$seen = $form['seen'] ?? null;
+		});
+
+		$this->assertSame('before', $seen);
+	}
+
+	/** Another writer holds the form for a moment: this one waits, then writes, instead of failing. */
+	public function testABusyFormIsWaitedFor(): void {
+		$this->cache->refusals = 3;
+		$written = [];
+
+		$this->manager()->mutateFormFileWithLock($this->fileWithStorage('{"a":1}', null, null, $written), function (array &$form) {
+			$form['a'] = 2;
+		});
+
+		$this->assertCount(1, $written);
+		$this->assertSame(['refused', 'refused', 'refused', 'acquire', 'release'], $this->cache->log);
+	}
+
+	/** Busy until the deadline: 503 busy (FormLockedException), nothing written, nothing left held. */
+	public function testAFormBusyPastTheDeadlineIsBusy(): void {
+		$this->cache->refusals = PHP_INT_MAX;
+		$written = [];
+		$start = microtime(true);
+
+		try {
+			$this->manager(null, 0.2)->mutateFormFileWithLock($this->fileWithStorage('{"a":1}', null, null, $written), function (array &$form) {
+				$form['a'] = 2;
+			});
+			$this->fail('A busy form was written');
+		} catch (FormLockedException) {
+		}
+
+		$this->assertSame([], $written);
+		$this->assertNotContains('acquire', $this->cache->log);
+		$this->assertLessThan(1.0, microtime(true) - $start, 'it gives up at its deadline');
+	}
+
+	/** Nextcloud's own lock on the file, held by a reader for a moment, is waited for instead of failing with 500. */
+	public function testAReaderHoldingTheFileIsWaitedFor(): void {
+		$written = [];
+		$attempts = 0;
+		$storage = $this->createMock(IStorage::class);
+		$storage->method('file_get_contents')->willReturn('{"a":1}');
+		$storage->method('filesize')->willReturn(false);
+		$file = $this->createMock(File::class);
+		$file->method('getId')->willReturn(1);
+		$file->method('getStorage')->willReturn($storage);
+		$file->method('getInternalPath')->willReturn('files/form.fvform');
+		$file->method('putContent')->willReturnCallback(function (string $payload) use (&$attempts, &$written): void {
+			if (++$attempts < 3) {
+				throw new LockedException('files/form.fvform');
+			}
+			$written[] = $payload;
+		});
 
 		$this->manager()->mutateFormFileWithLock($file, function (array &$form) {
 			$form['a'] = 2;
 		});
 
-		// Sequence begins: select (probe) -> delete (reclaim) -> insert (acquire).
-		$firstThree = array_slice($this->statements, 0, 3);
-		$this->assertSame(['select', 'delete', 'insert'], $firstThree);
+		$this->assertSame(3, $attempts);
+		$this->assertCount(1, $written);
+		$this->assertSame(['acquire', 'release'], $this->cache->log);
 	}
 
-	public function testFreshLockIsNotReclaimed(): void {
-		// A recent timestamp => probe returns, no reclaim delete before insert.
-		$this->reclaimRow = ['configvalue' => (string)time()];
-		$written = [];
-		$file = $this->fileWithStorage('{"a":1}', null, null, $written);
+	public function testAReaderHoldingTheFilePastTheDeadlineIsBusy(): void {
+		$file = $this->fileWithStorage('{"a":1}', null, new LockedException('files/form.fvform'));
 
-		$this->manager()->mutateFormFileWithLock($file, function (array &$form) {
-			$form['a'] = 2;
-		});
-
-		// select (probe) -> insert (acquire), no delete between them.
-		$this->assertSame('select', $this->statements[0]);
-		$this->assertSame('insert', $this->statements[1]);
-	}
-
-	public function testUniqueViolationRetriesThenSucceeds(): void {
-		// First insert throws a unique violation (lock held) => retry; second succeeds.
-		$this->insertThrows = [1];
-		$written = [];
-		$file = $this->fileWithStorage('{"a":1}', null, null, $written);
-
-		$this->manager()->mutateFormFileWithLock($file, function (array &$form) {
-			$form['a'] = 2;
-		});
-
-		$this->assertCount(1, $written, 'the retry eventually wrote once');
-		$this->assertGreaterThanOrEqual(2, $this->insertCount, 'insert was attempted at least twice');
+		$this->expectException(FormLockedException::class);
+		try {
+			$this->manager(null, 0.2)->mutateFormFileWithLock($file, function (array &$form) {
+				$form['a'] = 2;
+			});
+		} finally {
+			$this->assertSame(['acquire', 'release'], $this->cache->log);
+		}
 	}
 }

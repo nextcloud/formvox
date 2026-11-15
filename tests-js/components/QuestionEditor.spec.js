@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import QuestionEditor from '@/components/QuestionEditor.vue'
 
@@ -147,6 +147,30 @@ describe('QuestionEditor', () => {
 				base({ type: 'choice', options: [{ id: 'a', label: 'A', value: 'a', score: null }] }),
 			)
 			expect(wrapper.vm.localQuestion.options[0].score).toBe(0)
+		})
+	})
+
+	describe('date limits', () => {
+		it('stores a date limit as the local calendar day, never the UTC day that is one early east of UTC', () => {
+			const wrapper = mountEditor(base({ type: 'date' }))
+			const toIso = vi.spyOn(Date.prototype, 'toISOString')
+
+			wrapper.vm.updateDateMax(new Date(2026, 4, 31))
+			wrapper.vm.updateDateMin(new Date(2026, 0, 1))
+
+			expect(lastUpdate(wrapper).dateMax).toBe('2026-05-31')
+			expect(lastUpdate(wrapper).dateMin).toBe('2026-01-01')
+			expect(toIso).not.toHaveBeenCalled()
+			toIso.mockRestore()
+		})
+
+		it('keeps the whole moment for a datetime limit', () => {
+			const wrapper = mountEditor(base({ type: 'datetime' }))
+			const at = new Date(2026, 4, 31, 9, 30)
+
+			wrapper.vm.updateDateMax(at)
+
+			expect(lastUpdate(wrapper).dateMax).toBe(at.toISOString())
 		})
 	})
 
@@ -312,6 +336,19 @@ describe('QuestionEditor', () => {
 		})
 	})
 
+	describe('scale and star names of older forms', () => {
+		it('are moved onto the names the fields read when the question opens', () => {
+			const wrapper = mountEditor(base({ type: 'scale', min: 1, max: 10, minLabel: 'Not likely', maxLabel: 'Very likely' }))
+			expect(wrapper.vm.localQuestion).toMatchObject({ scaleMin: 1, scaleMax: 10, scaleMinLabel: 'Not likely', scaleMaxLabel: 'Very likely' })
+			expect('max' in wrapper.vm.localQuestion).toBe(false)
+		})
+
+		it('also for stars', () => {
+			const wrapper = mountEditor(base({ type: 'rating', max: 7 }))
+			expect(wrapper.vm.localQuestion.ratingMax).toBe(7)
+		})
+	})
+
 	describe('matrix rows/columns', () => {
 		it('addRow / removeRow', () => {
 			const wrapper = mountEditor(base({ type: 'matrix', rows: [{ id: 'r1', label: 'R' }], columns: [] }))
@@ -325,6 +362,15 @@ describe('QuestionEditor', () => {
 			const wrapper = mountEditor(base({ type: 'matrix', rows: [], columns: [{ id: 'c1', label: 'C', value: 1 }] }))
 			wrapper.vm.addColumn()
 			expect(wrapper.vm.localQuestion.columns[1].value).toBe(2)
+		})
+
+		it('a column added after a removal never repeats a value, or answers would mix', () => {
+			const wrapper = mountEditor(base({ type: 'matrix', rows: [], columns: [
+				{ id: 'c1', label: 'A', value: 1 }, { id: 'c2', label: 'B', value: 2 }, { id: 'c3', label: 'C', value: 3 },
+			] }))
+			wrapper.vm.removeColumn(1)
+			wrapper.vm.addColumn()
+			expect(wrapper.vm.localQuestion.columns.map(c => c.value)).toEqual([1, 3, 4])
 		})
 	})
 
@@ -864,6 +910,49 @@ describe('QuestionEditor', () => {
 			wrapper.vm.onValidationPresetChange(null)
 			expect(wrapper.vm.localQuestion.validation.pattern).toBe('')
 			expect(wrapper.vm.localQuestion.validation.errorMessage).toBe('')
+		})
+	})
+
+	describe('a save the server refused (400 invalid_form)', () => {
+		it('shows why at the question and marks it', () => {
+			const wrapper = mountEditor(base(), { errors: ['A scale goes up to 10 at most'] })
+
+			expect(wrapper.find('.question-editor__errors').text()).toBe('A scale goes up to 10 at most')
+			expect(wrapper.classes()).toContain('has-errors')
+		})
+
+		it('shows nothing extra while the question is fine', () => {
+			const wrapper = mountEditor(base())
+
+			expect(wrapper.find('.question-editor__errors').exists()).toBe(false)
+			expect(wrapper.classes()).not.toContain('has-errors')
+		})
+
+		it('also on an info block and a section', () => {
+			for (const type of ['descriptor', 'section']) {
+				const wrapper = mountEditor(base({ type }), { errors: ['Not valid'] })
+				expect(wrapper.find('.question-editor__errors').text()).toBe('Not valid')
+			}
+		})
+	})
+
+	describe('conditions on a section or an info block', () => {
+		const questions = [
+			{ id: 'q1', type: 'text' },
+			{ id: 'd1', type: 'descriptor' },
+			{ id: 's1', type: 'section' },
+			{ id: 'q2', type: 'text', sectionId: 's1' },
+		]
+
+		it('offer only the questions before it, which can be answered', async () => {
+			for (const id of ['s1', 'd1']) {
+				const question = questions.find(q => q.id === id)
+				const wrapper = mountEditor(question, { questions })
+				wrapper.vm.showConditions = true
+				await wrapper.vm.$nextTick()
+				const editor = wrapper.findComponent({ name: 'ConditionEditor' })
+				expect(editor.vm.availableQuestions.map(q => q.id)).toEqual(['q1'])
+			}
 		})
 	})
 })

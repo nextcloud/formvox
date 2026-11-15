@@ -6,6 +6,7 @@ namespace OCA\FormVox\Migration;
 
 use OCP\App\IAppManager;
 use OCP\Files\IMimeTypeLoader;
+use OCP\IAppConfig;
 use OCP\IDBConnection;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
@@ -16,14 +17,12 @@ use OCP\Migration\IRepairStep;
  * including the icon mapping for the Files app.
  */
 class RegisterMimeType implements IRepairStep {
-	private IAppManager $appManager;
-	private IMimeTypeLoader $mimeTypeLoader;
-	private IDBConnection $db;
-
-	public function __construct(IAppManager $appManager, IMimeTypeLoader $mimeTypeLoader, IDBConnection $db) {
-		$this->appManager = $appManager;
-		$this->mimeTypeLoader = $mimeTypeLoader;
-		$this->db = $db;
+	public function __construct(
+		private IAppManager $appManager,
+		private IMimeTypeLoader $mimeTypeLoader,
+		private IDBConnection $db,
+		private IAppConfig $appConfig,
+	) {
 	}
 
 	public function getName(): string {
@@ -41,7 +40,7 @@ class RegisterMimeType implements IRepairStep {
 		// Register MIME type in database
 		$this->mimeTypeLoader->getId('application/x-fvform');
 
-		// Update core config files for icon mapping
+		// Update core config files for the extension and the fallback icon
 		$this->updateMimeTypeMappingConfig($output);
 		$this->updateMimeTypeAliasesConfig($output);
 		// Clean up the icon we used to copy into signed core (integrity error #128).
@@ -57,40 +56,72 @@ class RegisterMimeType implements IRepairStep {
 	 * Add fvform to Nextcloud's mimetypemapping.json config
 	 */
 	private function updateMimeTypeMappingConfig(IOutput $output): void {
-		$configDir = \OC::$configDir;
-		$mappingFile = $configDir . 'mimetypemapping.json';
-
-		$mapping = [];
-		if (file_exists($mappingFile)) {
-			$content = file_get_contents($mappingFile);
-			$mapping = json_decode($content, true) ?? [];
+		$mappingFile = \OC::$configDir . 'mimetypemapping.json';
+		$mapping = $this->readConfigJson($mappingFile, $output);
+		if ($mapping === null || isset($mapping['fvform'])) {
+			return;
 		}
-
-		if (!isset($mapping['fvform'])) {
-			$mapping['fvform'] = ['application/x-fvform'];
-			file_put_contents($mappingFile, json_encode($mapping, JSON_PRETTY_PRINT));
-			$output->info('Added fvform to mimetypemapping.json');
-		}
+		$mapping['fvform'] = ['application/x-fvform'];
+		$this->writeConfigJson($mappingFile, $mapping, 'Added fvform to mimetypemapping.json', $output);
 	}
 
 	/**
-	 * Add fvform alias to Nextcloud's mimetypealiases.json config
+	 * Where Nextcloud cannot show a form's preview, it falls back to core's plain file icon. The 'formvox' alias that
+	 * earlier versions set pointed at an icon core does not have, which left an empty space.
 	 */
 	private function updateMimeTypeAliasesConfig(IOutput $output): void {
-		$configDir = \OC::$configDir;
-		$aliasesFile = $configDir . 'mimetypealiases.json';
-
-		$aliases = [];
-		if (file_exists($aliasesFile)) {
-			$content = file_get_contents($aliasesFile);
-			$aliases = json_decode($content, true) ?? [];
+		$aliasesFile = \OC::$configDir . 'mimetypealiases.json';
+		$aliases = $this->readConfigJson($aliasesFile, $output);
+		if ($aliases === null) {
+			return;
 		}
-
-		if (!isset($aliases['application/x-fvform'])) {
-			$aliases['application/x-fvform'] = 'formvox';
-			file_put_contents($aliasesFile, json_encode($aliases, JSON_PRETTY_PRINT));
-			$output->info('Added fvform alias to mimetypealiases.json');
+		$alias = $aliases['application/x-fvform'] ?? null;
+		if ($alias !== null && $alias !== 'formvox') {
+			return;
 		}
+		// After `occ maintenance:mimetype:update-js`, core's list holds the alias; the integrity check wants them equal.
+		$wanted = $this->aliasInCoreList() ?? 'file';
+		if ($alias === $wanted) {
+			return;
+		}
+		$aliases['application/x-fvform'] = $wanted;
+		$this->writeConfigJson($aliasesFile, $aliases, "Set the fvform alias in mimetypealiases.json to $wanted", $output);
+	}
+
+	private function aliasInCoreList(): ?string {
+		$list = @file_get_contents(\OC::$SERVERROOT . '/core/js/mimetypelist.js');
+		if ($list !== false && preg_match('#"application/x-fvform":\s*"([^"]+)"#', $list, $match) === 1) {
+			return $match[1];
+		}
+		return null;
+	}
+
+	/**
+	 * @return array<string, mixed>|null null when the file is there but cannot be read: it is left alone, so an
+	 *                                   admin's other entries are not lost
+	 */
+	private function readConfigJson(string $file, IOutput $output): ?array {
+		if (!file_exists($file)) {
+			return [];
+		}
+		$content = @file_get_contents($file);
+		if ($content !== false && trim($content) === '') {
+			return [];
+		}
+		$data = $content === false ? null : json_decode($content, true);
+		if (!is_array($data)) {
+			$output->warning("Could not read $file; FormVox left it as it is");
+			return null;
+		}
+		return $data;
+	}
+
+	private function writeConfigJson(string $file, array $data, string $done, IOutput $output): void {
+		if (@file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT)) === false) {
+			$output->warning("Could not write $file");
+			return;
+		}
+		$output->info($done);
 	}
 
 	/**
@@ -98,8 +129,7 @@ class RegisterMimeType implements IRepairStep {
 	 *
 	 * Writing into the signed core/img/filetypes directory triggers a
 	 * code-integrity EXTRA_FILE error (and can block Nextcloud AIO startup) —
-	 * see #128. The icon is not needed there: css/filetypes.css already styles
-	 * .fvform files from the app's own img directory, which is integrity-safe.
+	 * see #128. The icon is not needed there: FormPreview shows it.
 	 * This deletes any leftover file so existing installs self-heal on upgrade.
 	 */
 	private function removeStaleCoreIcon(IOutput $output): void {
@@ -118,17 +148,37 @@ class RegisterMimeType implements IRepairStep {
 	 */
 	private function updateFilecacheMimeTypes(IOutput $output): void {
 		$mimeTypeId = $this->mimeTypeLoader->getId('application/x-fvform');
+		$folderTypeId = $this->mimeTypeLoader->getId('httpd/unix-directory');
 
 		$qb = $this->db->getQueryBuilder();
 
+		// Files only: a folder named like a form stays a folder (7a, 3a-6).
 		$qb->update('filecache')
 			->set('mimetype', $qb->createNamedParameter($mimeTypeId))
 			->where($qb->expr()->like('name', $qb->createNamedParameter('%.fvform')))
-			->andWhere($qb->expr()->neq('mimetype', $qb->createNamedParameter($mimeTypeId)));
+			->andWhere($qb->expr()->neq('mimetype', $qb->createNamedParameter($mimeTypeId)))
+			->andWhere($qb->expr()->neq('mimetype', $qb->createNamedParameter($folderTypeId)));
 
 		$updated = $qb->executeStatement();
 		if ($updated > 0) {
 			$output->info("Updated MIME type for {$updated} existing .fvform files");
 		}
+
+		// Such a folder an earlier version marked as a form is a folder again; its type part was left as it was. Once:
+		// the name is matched on the whole file cache.
+		if ($this->appConfig->getValueBool('formvox', 'folders_named_like_forms_repaired')) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('filecache')
+			->set('mimetype', $qb->createNamedParameter($folderTypeId))
+			->where($qb->expr()->like('name', $qb->createNamedParameter('%.fvform')))
+			->andWhere($qb->expr()->eq('mimetype', $qb->createNamedParameter($mimeTypeId)))
+			->andWhere($qb->expr()->eq('mimepart', $qb->createNamedParameter($this->mimeTypeLoader->getId('httpd'))));
+		$repaired = $qb->executeStatement();
+		if ($repaired > 0) {
+			$output->info("Restored {$repaired} folders named like a form");
+		}
+		$this->appConfig->setValueBool('formvox', 'folders_named_like_forms_repaired', true);
 	}
 }

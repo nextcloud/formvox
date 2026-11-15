@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import axios from '@nextcloud/axios'
 import Editor from '@/views/Editor.vue'
 
 /**
@@ -32,7 +33,7 @@ const mountEditor = (overrides = {}) => {
 	const props = {
 		fileId: 123,
 		initialForm: overrides.initialForm ?? baseForm(),
-		role: overrides.role ?? 'owner',
+		role: overrides.role ?? 'admin',
 		permissions: overrides.permissions ?? fullPerms,
 	}
 	return mount(Editor, { props })
@@ -189,6 +190,64 @@ describe('views/Editor', () => {
 		expect(wrapper.vm.canEdit).toBe(false)
 	})
 
+	// What a read-only Nextcloud user gets from the server (PermissionService,
+	// role "viewer") — the integration matrix pins the server side of this.
+	const viewerPerms = {
+		respond: true,
+		viewResponses: true,
+		editQuestions: false,
+		editSettings: false,
+		deleteResponses: false,
+		deleteForm: false,
+		managePermissions: false,
+		canShare: false,
+	}
+
+	it('shows a read-only user the read-only banner and lets them look, not edit', () => {
+		const wrapper = mountEditor({ role: 'viewer', permissions: viewerPerms })
+
+		const banner = wrapper.find('.permission-banner')
+		expect(banner.exists()).toBe(true)
+		expect(banner.text()).toContain('You have read-only access to this form.')
+		expect(wrapper.vm.canEdit).toBe(false)
+		expect(wrapper.vm.canViewResponses).toBe(true)
+		expect(wrapper.vm.canShare).toBe(false)
+	})
+
+	it('a read-only user can open the share dialog, which is read-only for them', async () => {
+		const wrapper = mountEditor({ role: 'viewer', permissions: viewerPerms })
+
+		const share = wrapper.findAll('button, [data-stub="NcButton"]').find(b => b.attributes('aria-label') === 'Share')
+		expect(share.attributes('disabled')).toBeUndefined()
+		wrapper.vm.showShare = true
+		await wrapper.vm.$nextTick()
+		const dialog = wrapper.findComponent({ name: 'ShareDialog' })
+		expect(dialog.props('canShare')).toBe(false)
+		expect(dialog.props('canEditSettings')).toBe(false)
+	})
+
+	// The "I am editing" heartbeat locks others out, so a viewer must not send it.
+	it('a read-only user sends no presence heartbeat', async () => {
+		const post = vi.spyOn(axios, 'post')
+		mountEditor({ role: 'viewer', permissions: viewerPerms })
+		await flushPromises()
+		expect(post.mock.calls.filter(([url]) => String(url).includes('/presence'))).toHaveLength(0)
+		post.mockRestore()
+	})
+
+	it('an editor sends the presence heartbeat', async () => {
+		const post = vi.spyOn(axios, 'post')
+		mountEditor({ role: 'editor' })
+		await flushPromises()
+		expect(post.mock.calls.filter(([url]) => String(url).includes('/presence'))).toHaveLength(1)
+		post.mockRestore()
+	})
+
+	it('shows no read-only banner to someone who may edit', () => {
+		const wrapper = mountEditor({ role: 'editor' })
+		expect(wrapper.find('.permission-banner').exists()).toBe(false)
+	})
+
 	it('canViewResponses reflects the viewResponses permission', () => {
 		const wrapper = mountEditor({ permissions: { ...fullPerms, viewResponses: false } })
 		expect(wrapper.vm.canViewResponses).toBe(false)
@@ -260,5 +319,443 @@ describe('views/Editor', () => {
 		await wrapper.vm.$nextTick()
 		// auto-generated q2 is hidden from the editor list (#103)
 		expect(wrapper.vm.currentPageQuestions.map(q => q.id)).toEqual(['q1'])
+	})
+
+	describe('a save the server refused', () => {
+		const refusal = (message = 'A scale goes up to 10 at most') => ({
+			response: {
+				status: 400,
+				data: { error: message, reason: 'invalid_form', errors: [{ question: 'q1', field: 'scaleMax', message }] },
+			},
+		})
+		const formWithScale = () => ({ ...baseForm(), questions: [{ id: 'q1', type: 'scale', question: 'Score' }, { id: 'q2', type: 'text', question: '' }] })
+
+		afterEach(() => {
+			vi.restoreAllMocks()
+		})
+
+		it('says what is wrong at the top and at the question, until a save goes through', async () => {
+			const put = vi.spyOn(axios, 'put').mockRejectedValueOnce(refusal())
+			const wrapper = mountEditor({ initialForm: formWithScale() })
+
+			await wrapper.vm.save()
+			await flushPromises()
+
+			expect(wrapper.find('.save-error-banner').text()).toContain('Your latest changes are not saved.')
+			expect(wrapper.find('.save-error-banner').text()).toContain('“Score”: A scale goes up to 10 at most')
+			expect(wrapper.vm.errorsFor('q1')).toEqual(['A scale goes up to 10 at most'])
+			expect(wrapper.vm.errorsFor('q2')).toEqual([])
+
+			put.mockResolvedValueOnce({ data: {} })
+			await wrapper.vm.save()
+			await flushPromises()
+
+			expect(wrapper.find('.save-error-banner').exists()).toBe(false)
+			expect(wrapper.vm.errorsFor('q1')).toEqual([])
+		})
+
+		it('shows the toast once per problem, not on every change that fails the same way', async () => {
+			const dialogs = await import('@nextcloud/dialogs')
+			const showError = vi.spyOn(dialogs, 'showError')
+			vi.spyOn(axios, 'put')
+				.mockRejectedValueOnce(refusal())
+				.mockRejectedValueOnce(refusal())
+				.mockRejectedValueOnce(refusal('Another problem'))
+			const wrapper = mountEditor({ initialForm: formWithScale() })
+
+			await wrapper.vm.save()
+			await wrapper.vm.save()
+			expect(showError).toHaveBeenCalledTimes(1)
+			expect(showError).toHaveBeenCalledWith('A scale goes up to 10 at most')
+
+			await wrapper.vm.save()
+			expect(showError).toHaveBeenCalledTimes(2)
+		})
+
+		it('names a question without text by its number', async () => {
+			vi.spyOn(axios, 'put').mockRejectedValueOnce({
+				response: { status: 400, data: { error: 'x', reason: 'invalid_form', errors: [{ question: 'q2', field: 'type', message: 'Unknown type' }] } },
+			})
+			const wrapper = mountEditor({ initialForm: formWithScale() })
+
+			await wrapper.vm.save()
+			await flushPromises()
+
+			expect(wrapper.find('.save-error-banner').text()).toContain('Question 2: Unknown type')
+		})
+
+		it("shows the server's own reason for other refusals", async () => {
+			const dialogs = await import('@nextcloud/dialogs')
+			const showError = vi.spyOn(dialogs, 'showError')
+			vi.spyOn(axios, 'put').mockRejectedValueOnce({ response: { status: 409, data: { error: 'The form is busy, please try again', reason: 'busy' } } })
+			const wrapper = mountEditor({ initialForm: formWithScale() })
+
+			await wrapper.vm.save()
+
+			expect(showError).toHaveBeenCalledWith('The form is busy, please try again')
+			expect(wrapper.find('.save-error-banner').exists()).toBe(false)
+		})
+	})
+
+	describe('deleting what others point at', () => {
+		afterEach(() => {
+			vi.restoreAllMocks()
+		})
+
+		it('deleting a question removes the conditions and routing that used it, and says so', async () => {
+			const dialogs = await import('@nextcloud/dialogs')
+			const showWarning = vi.spyOn(dialogs, 'showWarning')
+			const form = baseForm()
+			form.questions = [
+				{ id: 'q1', type: 'choice' },
+				{ id: 'q2', type: 'text', showIf: { questionId: 'q1', operator: 'equals', value: 'yes' } },
+			]
+			const wrapper = mountEditor({ initialForm: form })
+
+			wrapper.vm.deleteQuestion(0)
+
+			expect(wrapper.vm.form.questions.map(q => q.id)).toEqual(['q2'])
+			expect(wrapper.vm.form.questions[0].showIf).toBeNull()
+			expect(showWarning).toHaveBeenCalledWith('Conditions and page routing that used this question were removed too')
+		})
+
+		it('deleting a question nobody uses says nothing extra', async () => {
+			const dialogs = await import('@nextcloud/dialogs')
+			const showWarning = vi.spyOn(dialogs, 'showWarning')
+			const form = baseForm()
+			form.questions = [{ id: 'q1', type: 'text' }, { id: 'q2', type: 'text' }]
+			const wrapper = mountEditor({ initialForm: form })
+
+			wrapper.vm.deleteQuestion(0)
+
+			expect(showWarning).not.toHaveBeenCalled()
+		})
+
+		it('deleting a question on a page takes it off its page and out of the routing', () => {
+			const form = baseForm()
+			form.questions = [{ id: 'q1', type: 'choice' }, { id: 'q2', type: 'text' }]
+			form.pages = [
+				{ id: 'p1', title: '', questions: ['q1'], routing: [{ questionId: 'q1', operator: 'equals', value: 'x', targetPageId: 'p2' }] },
+				{ id: 'p2', title: '', questions: ['q2'] },
+			]
+			const wrapper = mountEditor({ initialForm: form })
+
+			wrapper.vm.deleteQuestionById('q1')
+
+			expect(wrapper.vm.form.pages[0].questions).toEqual([])
+			expect(wrapper.vm.form.pages[0].routing).toEqual([])
+		})
+
+		it('deleting a page removes the routing that led to it', async () => {
+			const dialogs = await import('@nextcloud/dialogs')
+			const showWarning = vi.spyOn(dialogs, 'showWarning')
+			const form = baseForm()
+			form.questions = [{ id: 'q1', type: 'choice' }]
+			form.pages = [
+				{ id: 'p1', title: '', questions: ['q1'], routing: [{ questionId: 'q1', operator: 'equals', value: 'x', targetPageId: 'p2' }] },
+				{ id: 'p2', title: '', questions: [] },
+			]
+			const wrapper = mountEditor({ initialForm: form })
+
+			wrapper.vm.deletePage(1)
+
+			expect(wrapper.vm.form.pages[0].routing).toEqual([])
+			expect(showWarning).toHaveBeenCalledWith('Page routing that led to this page was removed too')
+		})
+	})
+
+	describe('saving from a tab that may be out of date (qual#26, test#115)', () => {
+		afterEach(() => {
+			vi.restoreAllMocks()
+		})
+
+		const withRevision = () => ({ ...baseForm(), revision: 'rev-1', settings: { share_expires_at: '2027-01-01' } })
+
+		it('sends the structure it last saw and no settings, and takes the new revision', async () => {
+			const put = vi.spyOn(axios, 'put').mockResolvedValue({ data: { form: { revision: 'rev-2' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			await wrapper.vm.save()
+
+			const [, body, config] = put.mock.calls[0]
+			expect(config.headers['If-Match']).toBe('"rev-1"')
+			expect(body).not.toHaveProperty('settings')
+			expect(wrapper.vm.form.revision).toBe('rev-2')
+		})
+
+		it('a change made while a save is under way is sent after it, on the revision that save got back (review of 3b-3b)', async () => {
+			let answer
+			const put = vi.spyOn(axios, 'put')
+				.mockImplementationOnce(() => new Promise(resolve => { answer = resolve }))
+				.mockResolvedValueOnce({ data: { form: { revision: 'rev-3' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			const first = wrapper.vm.save()
+			wrapper.vm.form.title = 'Changed meanwhile'
+			await wrapper.vm.save()
+			expect(put).toHaveBeenCalledTimes(1)
+
+			answer({ data: { form: { revision: 'rev-2' } } })
+			await first
+			await flushPromises()
+
+			expect(put).toHaveBeenCalledTimes(2)
+			expect(put.mock.calls[1][2].headers['If-Match']).toBe('"rev-2"')
+			expect(put.mock.calls[1][1].title).toBe('Changed meanwhile')
+			expect(wrapper.vm.form.revision).toBe('rev-3')
+		})
+
+		it('a save that never answers is given up in time, so the ones after it are not held back (review of 3b-3c)', async () => {
+			const put = vi.spyOn(axios, 'put').mockResolvedValue({ data: { form: { revision: 'rev-2' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			await wrapper.vm.save()
+
+			expect(put.mock.calls[0][2].timeout).toBe(180000)
+		})
+
+		it('a change made while a save timed out is still sent after it (review of 3b-3d)', async () => {
+			const put = vi.spyOn(axios, 'put')
+				.mockRejectedValueOnce({ code: 'ECONNABORTED', message: 'timeout' })
+				.mockResolvedValue({ data: { form: { revision: 'rev-2' } } })
+			vi.spyOn(axios, 'get').mockResolvedValue({ data: { form: { ...baseForm(), revision: 'rev-1' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			const first = wrapper.vm.save()
+			await wrapper.vm.save()
+			await first
+			await flushPromises()
+
+			expect(put).toHaveBeenCalledTimes(2)
+			expect(wrapper.vm.form.revision).toBe('rev-2')
+		})
+
+		it('the re-send after a save carries the pending change too, so it is not sent twice (review of 3b-3c)', async () => {
+			let answer
+			const put = vi.spyOn(axios, 'put')
+				.mockImplementationOnce(() => new Promise(resolve => { answer = resolve }))
+				.mockResolvedValue({ data: { form: { revision: 'rev-3' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			const first = wrapper.vm.save()
+			wrapper.vm.debouncedSave()
+			await wrapper.vm.save()
+			answer({ data: { form: { revision: 'rev-2' } } })
+			await first
+			await flushPromises()
+			vi.advanceTimersByTime(2000)
+			await flushPromises()
+
+			expect(put).toHaveBeenCalledTimes(2)
+		})
+
+		describe('a save without an answer (review of 3b-3d and 3b-4d)', () => {
+			const lost = (put = vi.spyOn(axios, 'put')) => put.mockRejectedValueOnce({ code: 'ECONNABORTED', message: 'timeout of 180000ms exceeded' })
+			const holds = (form) => vi.spyOn(axios, 'get').mockResolvedValue({ data: { form } })
+			const sentId = (put, call = 0) => put.mock.calls[call][2].headers['X-FormVox-Save-Id']
+
+			it('that did arrive is taken as saved, by its own id', async () => {
+				const put = lost()
+				const get = vi.spyOn(axios, 'get').mockImplementation(async () => ({ data: { form: { ...baseForm(), revision: 'rev-2', _lastSave: { id: sentId(put), revision: 'rev-2' } } } }))
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(get.mock.calls.some(([url]) => url.includes('/api/form/123'))).toBe(true)
+				expect(wrapper.vm.form.revision).toBe('rev-2')
+				expect(wrapper.vm.blocked).toBe(null)
+			})
+
+			it('is never taken for another save that left the same titles and questions', async () => {
+				const dialogs = await import('@nextcloud/dialogs')
+				const showSuccess = vi.spyOn(dialogs, 'showSuccess')
+				lost()
+				holds({ ...baseForm(), revision: 'rev-9', _lastSave: { id: 'someone-else', revision: 'rev-9' } })
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(showSuccess).not.toHaveBeenCalled()
+				expect(wrapper.vm.form.revision).toBe('rev-1')
+				expect(wrapper.vm.blocked).toBe('changed')
+			})
+
+			it('that did not arrive is a failed save, on the revision it had', async () => {
+				const dialogs = await import('@nextcloud/dialogs')
+				const showError = vi.spyOn(dialogs, 'showError')
+				lost()
+				holds({ ...baseForm(), revision: 'rev-1' })
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(showError).toHaveBeenCalled()
+				expect(wrapper.vm.form.revision).toBe('rev-1')
+				expect(wrapper.vm.blocked).toBe(null)
+			})
+
+			it('is not taken as saved when another change, without a save id, came after it', async () => {
+				const put = lost()
+				vi.spyOn(axios, 'get').mockImplementation(async () => ({ data: { form: { ...baseForm(), revision: 'rev-3', _lastSave: { id: sentId(put), revision: 'rev-2' } } } }))
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(wrapper.vm.form.revision).toBe('rev-1')
+				expect(wrapper.vm.blocked).toBe('changed')
+			})
+
+			it('is asked about after an error FormVox gave once the form was written', async () => {
+				const put = vi.spyOn(axios, 'put').mockRejectedValueOnce({ response: { status: 500, data: { reason: 'internal_error', error: 'x' } } })
+				vi.spyOn(axios, 'get').mockImplementation(async () => ({ data: { form: { ...baseForm(), revision: 'rev-2', _lastSave: { id: sentId(put), revision: 'rev-2' } } } }))
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(wrapper.vm.form.revision).toBe('rev-2')
+				expect(wrapper.vm.blocked).toBe(null)
+			})
+
+			it('an earlier lost save of this tab that landed is its own, and the later one is sent again', async () => {
+				const put = vi.spyOn(axios, 'put')
+				lost(put)
+				lost(put)
+				put.mockResolvedValue({ data: { form: { revision: 'rev-3' } } })
+				const get = vi.spyOn(axios, 'get').mockRejectedValueOnce({ code: 'ERR_NETWORK' })
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+				get.mockImplementation(async () => ({ data: { form: { ...baseForm(), revision: 'rev-2', _lastSave: { id: sentId(put, 0), revision: 'rev-2' } } } }))
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(put).toHaveBeenCalledTimes(3)
+				expect(put.mock.calls[2][2].headers['If-Match']).toBe('"rev-2"')
+				expect(wrapper.vm.form.revision).toBe('rev-3')
+				expect(wrapper.vm.blocked).toBe(null)
+			})
+
+			it.each([
+				['busy', { status: 503, data: { reason: 'busy', error: 'The form is busy, please try again' } }],
+				['a full quota', { status: 507, data: { reason: 'storage_full', error: 'Not enough storage' } }],
+			])('is not asked about after %s, which wrote nothing', async (what, response) => {
+				const dialogs = await import('@nextcloud/dialogs')
+				const showError = vi.spyOn(dialogs, 'showError')
+				vi.spyOn(axios, 'put').mockRejectedValueOnce({ response })
+				const get = vi.spyOn(axios, 'get')
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(get.mock.calls.some(([url]) => url.endsWith('/api/form/123'))).toBe(false)
+				expect(showError).toHaveBeenCalledWith(response.data.error)
+				expect(wrapper.vm.blocked).toBe(null)
+			})
+
+			it('waits for its check no longer than 30 s', async () => {
+				lost()
+				const get = holds({ ...baseForm(), revision: 'rev-1' })
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				const [, config] = get.mock.calls.find(([url]) => url.endsWith('/api/form/123'))
+				expect(config.timeout).toBe(30000)
+			})
+
+			it("is asked about after a proxy's error page too", async () => {
+				const put = vi.spyOn(axios, 'put').mockRejectedValueOnce({ response: { status: 504, data: '<html>Gateway Timeout</html>' } })
+				vi.spyOn(axios, 'get').mockImplementation(async () => ({ data: { form: { ...baseForm(), revision: 'rev-2', _lastSave: { id: sentId(put), revision: 'rev-2' } } } }))
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(wrapper.vm.form.revision).toBe('rev-2')
+				expect(wrapper.vm.blocked).toBe(null)
+			})
+
+			it('that landed only later is recognised when the next save is refused, and that save goes again', async () => {
+				const put = vi.spyOn(axios, 'put')
+				lost(put)
+				put.mockRejectedValueOnce({ response: { status: 412, data: { reason: 'changed_elsewhere', error: 'x' } } })
+				put.mockResolvedValue({ data: { form: { revision: 'rev-3' } } })
+				const get = vi.spyOn(axios, 'get').mockRejectedValueOnce({ code: 'ERR_NETWORK' })
+				const wrapper = mountEditor({ initialForm: withRevision() })
+
+				await wrapper.vm.save()
+				await flushPromises()
+				get.mockImplementation(async () => ({ data: { form: { ...baseForm(), revision: 'rev-2', _lastSave: { id: sentId(put), revision: 'rev-2' } } } }))
+				await wrapper.vm.save()
+				await flushPromises()
+
+				expect(put).toHaveBeenCalledTimes(3)
+				expect(put.mock.calls[2][2].headers['If-Match']).toBe('"rev-2"')
+				expect(wrapper.vm.form.revision).toBe('rev-3')
+				expect(wrapper.vm.blocked).toBe(null)
+			})
+		})
+
+		it('a form changed elsewhere stops this tab and offers a reload, and saves nothing more', async () => {
+			const put = vi.spyOn(axios, 'put').mockRejectedValue({ response: { status: 412, data: { reason: 'changed_elsewhere', error: 'x' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			await wrapper.vm.save()
+			await flushPromises()
+
+			expect(wrapper.vm.blocked).toBe('changed')
+			expect(wrapper.vm.canEdit).toBe(false)
+			expect(wrapper.find('.save-error-banner').text()).toContain('This form was changed elsewhere.')
+			expect(wrapper.find('.save-error-banner').text()).toContain('Reload')
+
+			await wrapper.vm.save()
+			expect(put).toHaveBeenCalledTimes(1)
+		})
+
+		it('rights taken away while editing make the editor read-only, without a toast on every key', async () => {
+			const dialogs = await import('@nextcloud/dialogs')
+			const showError = vi.spyOn(dialogs, 'showError')
+			vi.spyOn(axios, 'put').mockRejectedValue({ response: { status: 403, data: { reason: 'forbidden', error: 'x' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			await wrapper.vm.save()
+			await wrapper.vm.save()
+			await flushPromises()
+
+			expect(wrapper.vm.blocked).toBe('forbidden')
+			expect(wrapper.vm.canEdit).toBe(false)
+			expect(wrapper.find('.save-error-banner').text()).toContain('You can no longer edit this form.')
+			expect(showError).not.toHaveBeenCalled()
+		})
+
+		it('a form that is gone says so', async () => {
+			vi.spyOn(axios, 'put').mockRejectedValue({ response: { status: 404, data: { reason: 'not_found', error: 'x' } } })
+			const wrapper = mountEditor({ initialForm: withRevision() })
+
+			await wrapper.vm.save()
+			await flushPromises()
+
+			expect(wrapper.find('.save-error-banner').text()).toContain('This form no longer exists or was moved.')
+		})
+	})
+
+	it('waits for a pause of two seconds before it saves, since each save rewrites the whole file', async () => {
+		const put = vi.spyOn(axios, 'put').mockResolvedValue({ data: {} })
+		const wrapper = mountEditor()
+
+		wrapper.vm.debouncedSave()
+		vi.advanceTimersByTime(1999)
+		expect(put).not.toHaveBeenCalled()
+		vi.advanceTimersByTime(1)
+		expect(put).toHaveBeenCalledTimes(1)
+		put.mockRestore()
 	})
 })

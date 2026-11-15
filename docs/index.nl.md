@@ -33,6 +33,8 @@ Technische documentatie en API-referentie.
 - [Architectuur-overzicht](architecture/overview.md) — Systeem-design en componenten
 - [Bestandsformaat](architecture/file-format.md) — Het .fvform-JSON-schema
 - [API-referentie](architecture/api-reference.md) — REST API-endpoints
+- [Externe API & webhooks](architecture/external-api.md) — API-keys, endpoints, webhooks en hun handtekening
+- [Windmill-voorbeeld](architecture/windmill-example.md) — de PDF van elk antwoord in een Nextcloud-map (Engels)
 - [Vergelijking](architecture/comparison.md) — FormVox vs Nextcloud Forms
 
 ## Aan de slag

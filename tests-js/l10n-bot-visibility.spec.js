@@ -225,10 +225,20 @@ describe('Transifex bot visibility', () => {
 
 	it('PHP translates literals only', () => {
 		// $l->t($text) is invisible to xgettext; the bot reads lib/ and templates/.
+		// Deliberate exceptions: a message written as Translatable::t('…') (a literal the bot sees; ErrorLeakTest checks
+		// it is in the POT) is translated where it is shown, and a Nextcloud core string in core's own catalog.
+		const deferred = [
+			['lib/DAV/FormUploadPlugin.php', '->t($e->getMessage(), $e->getParams())'],
+			['lib/Middleware/ExceptionMiddleware.php', '->t($exception->getMessage(), $exception->getParams())'],
+			['lib/Notification/Notifier.php', '->t($reason)'],
+			['lib/Middleware/PublicShareMiddleware.php', "->get('lib')->t(self::SHARE_GONE)"],
+		]
 		const offenders = []
 		for (const f of [...walk(path.join(ROOT, 'lib'), ['.php']), ...walk(path.join(ROOT, 'templates'), ['.php'])]) {
 			const body = fs.readFileSync(f, 'utf8')
 			for (const m of body.matchAll(/->[tn]\(\s*([^'"\s])/g)) {
+				const at = body.slice(Math.max(0, m.index - 14), m.index + 60)
+				if (deferred.some(([file, call]) => rel(f) === file && at.includes(call))) continue
 				offenders.push(`${rel(f)}: ${body.slice(m.index, m.index + 50).split('\n')[0]}`)
 			}
 		}

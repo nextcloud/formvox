@@ -15,13 +15,14 @@ use OCP\AppFramework\Http\DataDownloadResponse;
  * UploadService::storeUpload first, then read back through the controller.
  *
  * The logged-in owner (from IntegrationTestCase) owns the .fvform file it
- * writes into its own home folder, so PermissionService::getRoleFromFile
- * returns ROLE_OWNER and canViewResponses() passes on the always-run path.
+ * writes into its own home folder — Nextcloud gives it every permission there,
+ * so PermissionService::getRoleFromFile returns ROLE_ADMIN and
+ * canViewResponses() passes on the always-run path.
  *
  * @group DB
  */
 class FormUploadControllerIntegrationTest extends IntegrationTestCase {
-	private const RESPONSE_ID = 'resp-1';
+	private const RESPONSE_ID = '11111111-1111-4111-8111-111111111111';
 	private const UPLOAD_MIME = 'image/png';
 	private const UPLOAD_BYTES = "\x89PNG\r\n\x1a\nformvox-integration-upload-bytes";
 
@@ -35,7 +36,7 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 		$this->requirePublicResolvable($fileId);
 
 		$uploadService = $this->getService(UploadService::class);
-		$meta = $uploadService->storeUpload(
+		$meta = $uploadService->storeUploadPublic(
 			$fileId,
 			self::RESPONSE_ID,
 			$this->makeUploadedFile('photo.png', self::UPLOAD_BYTES, self::UPLOAD_MIME)
@@ -50,7 +51,7 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 		$this->assertSame(self::UPLOAD_BYTES, $response->render());
 		// The mimetype is derived from the stored file by Nextcloud, not from the
 		// $_FILES 'type' we passed in; assert on what the real file reports.
-		$storedFile = $uploadService->getUpload($fileId, self::RESPONSE_ID, $storedName);
+		$storedFile = $uploadService->getUpload($formFile, self::RESPONSE_ID, $storedName);
 		$this->assertSame($storedFile->getMimeType(), $response->getHeaders()['Content-Type']);
 	}
 
@@ -64,7 +65,7 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 		$this->requirePublicResolvable($fileId);
 
 		$uploadService = $this->getService(UploadService::class);
-		$uploadService->storeUpload(
+		$uploadService->storeUploadPublic(
 			$fileId,
 			self::RESPONSE_ID,
 			$this->makeUploadedFile('doc.png', self::UPLOAD_BYTES, self::UPLOAD_MIME)
@@ -94,7 +95,7 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 		// Store one real upload so the uploads folder exists; then ask for a
 		// filename that was never stored.
 		$uploadService = $this->getService(UploadService::class);
-		$uploadService->storeUpload(
+		$uploadService->storeUploadPublic(
 			$fileId,
 			self::RESPONSE_ID,
 			$this->makeUploadedFile('present.png', self::UPLOAD_BYTES, self::UPLOAD_MIME)
@@ -103,8 +104,8 @@ class FormUploadControllerIntegrationTest extends IntegrationTestCase {
 		/** @var FormUploadController $controller */
 		$controller = $this->getService(FormUploadController::class);
 
-		$this->expectException(\Exception::class);
-		$this->expectExceptionMessage('File not found');
+		// The middleware turns this into a 404.
+		$this->expectException(\OCP\Files\NotFoundException::class);
 		$controller->downloadUpload($fileId, self::RESPONSE_ID, 'nope.jpg');
 	}
 }

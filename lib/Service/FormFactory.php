@@ -16,10 +16,9 @@ use OCP\IL10N;
  * mocked IL10N, with no filesystem or database.
  */
 class FormFactory {
-	private IL10N $l;
-
-	public function __construct(IL10N $l) {
-		$this->l = $l;
+	public function __construct(
+		private IL10N $l,
+	) {
 	}
 
 	/**
@@ -40,7 +39,6 @@ class FormFactory {
 			'settings' => [
 				'anonymous' => true,
 				'allow_multiple' => false,
-				'expires_at' => null,
 				'require_login' => false,
 				'allowed_users' => [],
 				'allowed_groups' => [],
@@ -53,7 +51,6 @@ class FormFactory {
 			'pages' => null,
 			'branding' => null, // null = use admin defaults, object = custom branding
 			'_index' => [
-				'_checksum' => '',
 				'response_count' => 0,
 				'last_response_at' => null,
 				'fingerprints' => [],
@@ -289,12 +286,12 @@ class FormFactory {
 						'question' => $this->l->t('How likely are you to recommend FormVox?'),
 						'description' => $this->l->t('Linear scale (1-10)'),
 						'required' => true,
-						'min' => 1,
-						'max' => 10,
+						'scaleMin' => 1,
+						'scaleMax' => 10,
 						// TRANSLATORS: Label at the low end of an example rating scale
-						'minLabel' => $this->l->t('Not likely'),
+						'scaleMinLabel' => $this->l->t('Not likely'),
 						// TRANSLATORS: Label at the high end of an example rating scale
-						'maxLabel' => $this->l->t('Very likely'),
+						'scaleMaxLabel' => $this->l->t('Very likely'),
 					],
 					[
 						'id' => 'demo_rating',
@@ -302,7 +299,7 @@ class FormFactory {
 						'question' => $this->l->t('Rate this demo form'),
 						'description' => $this->l->t('Star rating (1-5 stars)'),
 						'required' => true,
-						'max' => 5,
+						'ratingMax' => 5,
 					],
 					// Section 5: Quiz Mode
 					[
@@ -449,6 +446,10 @@ class FormFactory {
 	 * Generate an RFC 4122 v4 UUID.
 	 */
 	public function generateUuid(): string {
+		return self::uuid();
+	}
+
+	public static function uuid(): string {
 		$data = random_bytes(16);
 		$data[6] = chr(ord($data[6]) & 0x0f | 0x40); // Version 4
 		$data[8] = chr(ord($data[8]) & 0x3f | 0x80); // Variant RFC 4122
@@ -460,13 +461,13 @@ class FormFactory {
 	 */
 	public function sanitizeFilename(string $name): string {
 		// Remove invalid characters
-		$name = preg_replace('/[\/\\\\:*?"<>|]/', '', $name);
+		$name = preg_replace('/[\/\\\\:*?"<>|]/u', '', $name) ?? '';
 		// Replace spaces with dashes
-		$name = preg_replace('/\s+/', '-', $name);
+		$name = preg_replace('/\s+/u', '-', $name) ?? '';
 		// Lowercase
 		$name = strtolower($name);
-		// Limit length
-		$name = substr($name, 0, 50);
+		// Characters, not bytes: a name cut through a character is no valid name.
+		$name = mb_substr($name, 0, 50);
 		// Default if empty
 		if (empty($name)) {
 			$name = 'form';

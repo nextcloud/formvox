@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\FormSanitizer;
+use OCA\FormVox\Security\LinkPasswordPolicy;
+use OCA\FormVox\Security\RequireFormPermission;
 use OCA\FormVox\Service\BrandingService;
-use OCA\FormVox\Service\FormFileLocator;
+use OCA\FormVox\Service\FormAccessService;
 use OCA\FormVox\Service\FormRepository;
+use OCA\FormVox\Service\IntegrationStatus;
 use OCA\FormVox\Service\MicrosoftFormsAuthService;
 use OCA\FormVox\Service\PermissionService;
 use OCP\AppFramework\Controller;
@@ -16,39 +21,22 @@ use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\IRequest;
-use OCP\IURLGenerator;
 use OCP\Util;
 
 class PageController extends Controller {
-	private FormRepository $formRepository;
-	private FormFileLocator $fileLocator;
-	private PermissionService $permissionService;
-	private BrandingService $brandingService;
-	private MicrosoftFormsAuthService $msFormsAuthService;
-	private IInitialState $initialState;
-	private IURLGenerator $urlGenerator;
-	private ?string $userId;
-
 	public function __construct(
 		IRequest $request,
-		FormRepository $formRepository,
-		FormFileLocator $fileLocator,
-		PermissionService $permissionService,
-		BrandingService $brandingService,
-		MicrosoftFormsAuthService $msFormsAuthService,
-		IInitialState $initialState,
-		IURLGenerator $urlGenerator,
-		?string $userId,
+		private FormRepository $formRepository,
+		private FormAccessService $access,
+		private PermissionService $permissionService,
+		private BrandingService $brandingService,
+		private MicrosoftFormsAuthService $msFormsAuthService,
+		private IInitialState $initialState,
+		private FormSanitizer $sanitizer,
+		private LinkPasswordPolicy $linkPasswords,
+		private IntegrationStatus $integrations,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->formRepository = $formRepository;
-		$this->fileLocator = $fileLocator;
-		$this->permissionService = $permissionService;
-		$this->brandingService = $brandingService;
-		$this->msFormsAuthService = $msFormsAuthService;
-		$this->initialState = $initialState;
-		$this->urlGenerator = $urlGenerator;
-		$this->userId = $userId;
 	}
 
 	/**
@@ -69,32 +57,14 @@ class PageController extends Controller {
 	}
 
 	/**
-	 * Form editor page
-	 * Users with read access can view the form in read-only mode
+	 * Editor page; read-only users get it in read-only mode.
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::READ)]
 	public function editor(int $fileId): TemplateResponse {
-		$file = $this->fileLocator->getFileById($fileId);
-		$form = $this->formRepository->load($fileId);
-		$role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
-		$canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');
-		$permissions = $this->permissionService->getPermissionsForRole($role, $canShare);
-
-		// User needs at least read access (viewer role or higher)
-		if ($role === PermissionService::ROLE_NONE) {
-			throw new \OCP\AppFramework\Http\NotFoundResponse();
-		}
-
-		// Get admin branding for preview fallback
-		$adminBranding = $this->brandingService->getBranding();
-
-		// Provide initial state to JavaScript
-		$this->initialState->provideInitialState('fileId', $fileId);
-		$this->initialState->provideInitialState('form', $form);
-		$this->initialState->provideInitialState('role', $role);
-		$this->initialState->provideInitialState('permissions', $permissions);
-		$this->initialState->provideInitialState('adminBranding', $adminBranding);
+		$this->provideFormState($fileId);
+		$this->initialState->provideInitialState('adminBranding', $this->brandingService->getBranding());
 
 		Util::addScript(Application::APP_ID, 'formvox-editor');
 		Util::addStyle(Application::APP_ID, 'editor');
@@ -105,26 +75,13 @@ class PageController extends Controller {
 	}
 
 	/**
-	 * Results page
+	 * The responses themselves: a share Nextcloud lets look but not see the content of gets its 403 page.
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[RequireFormPermission(FormPermission::VIEW_CONTENT)]
 	public function results(int $fileId): TemplateResponse {
-		$file = $this->fileLocator->getFileById($fileId);
-		$form = $this->formRepository->load($fileId);
-		$role = $this->permissionService->getRoleFromFile($file, $this->userId ?? '');
-		$canShare = $this->permissionService->canShareFromFile($file, $this->userId ?? '');
-		$permissions = $this->permissionService->getPermissionsForRole($role, $canShare);
-
-		if (!$permissions['viewResponses']) {
-			throw new \OCP\AppFramework\Http\NotFoundResponse();
-		}
-
-		// Provide initial state to JavaScript
-		$this->initialState->provideInitialState('fileId', $fileId);
-		$this->initialState->provideInitialState('form', $form);
-		$this->initialState->provideInitialState('role', $role);
-		$this->initialState->provideInitialState('permissions', $permissions);
+		$this->provideFormState($fileId);
 
 		Util::addScript(Application::APP_ID, 'formvox-results');
 		Util::addStyle(Application::APP_ID, 'results');
@@ -132,5 +89,15 @@ class PageController extends Controller {
 		return new TemplateResponse(Application::APP_ID, 'results', [
 			'appId' => Application::APP_ID,
 		]);
+	}
+
+	private function provideFormState(int $fileId): void {
+		$file = $this->access->getFile($fileId);
+		$permissions = $this->permissionService->getPermissionsForFile($file);
+		$this->initialState->provideInitialState('fileId', $fileId);
+		$this->initialState->provideInitialState('form', $this->integrations->annotate($fileId, $this->sanitizer->forUser($this->formRepository->loadForm($fileId), $permissions)));
+		$this->initialState->provideInitialState('role', $this->permissionService->getRoleFromFile($file));
+		$this->initialState->provideInitialState('permissions', $permissions);
+		$this->initialState->provideInitialState('linkPasswordEnforced', $this->linkPasswords->isEnforced());
 	}
 }

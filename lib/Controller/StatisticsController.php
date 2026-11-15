@@ -12,17 +12,12 @@ use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 
 class StatisticsController extends Controller {
-	private StatisticsService $statisticsService;
-	private TelemetryService $telemetryService;
-
 	public function __construct(
 		IRequest $request,
-		StatisticsService $statisticsService,
-		TelemetryService $telemetryService,
+		private StatisticsService $statisticsService,
+		private TelemetryService $telemetryService,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->statisticsService = $statisticsService;
-		$this->telemetryService = $telemetryService;
 	}
 
 	/**

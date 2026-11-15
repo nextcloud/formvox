@@ -7,6 +7,9 @@
       <p class="share-description">
         {{ t('formvox', 'Share this form with others to collect responses.') }}
       </p>
+      <p v-if="!canEditSettings" class="share-readonly-note">
+        {{ t('formvox', 'You have read-only access to this form. Contact the owner to request edit permissions.') }}
+      </p>
 
       <div class="share-link-section">
         <!-- TRANSLATORS: Heading: the public link people use to fill in the form -->
@@ -55,7 +58,7 @@
           <!-- TRANSLATORS: Heading -->
           {{ t('formvox', 'Response settings') }}
         </h3>
-        <div class="section-content">
+        <fieldset class="section-content" :disabled="!canEditSettings">
           <NcCheckboxRadioSwitch
             :model-value="responseSettings.allowAnonymous"
             @update:model-value="updateResponseSetting('anonymous', $event)"
@@ -70,13 +73,20 @@
           >
             {{ t('formvox', 'Allow multiple submissions') }}
           </NcCheckboxRadioSwitch>
+          <p v-if="responseSettings.allowAnonymous && !responseSettings.allowMultiple && !responseSettings.requireLogin && !accessRestrictions.enabled" class="hint">
+            {{ t('formvox', 'Without login, a repeat is recognized by network and browser; colleagues on one network may look like one person.') }}
+          </p>
 
           <NcCheckboxRadioSwitch
-            :model-value="responseSettings.requireLogin"
+            :model-value="responseSettings.requireLogin || !responseSettings.allowAnonymous"
+            :disabled="!responseSettings.allowAnonymous"
             @update:model-value="updateResponseSetting('require_login', $event)"
           >
             {{ t('formvox', 'Require login to respond') }}
           </NcCheckboxRadioSwitch>
+          <p v-if="!responseSettings.allowAnonymous" class="hint">
+            {{ t('formvox', 'Responses carry the respondent\'s name, so respondents always sign in.') }}
+          </p>
 
           <!-- Confirmation email to respondent (#103) -->
           <NcCheckboxRadioSwitch
@@ -86,7 +96,7 @@
             {{ t('formvox', 'Email confirmation to respondent') }}
           </NcCheckboxRadioSwitch>
           <div v-if="responseSettings.sendConfirmationEmail" class="confirmation-email-fields">
-            <small class="hint">{{ t('formvox', 'An email question is added to your form automatically. The respondent receives a confirmation at the address they enter there.') }}</small>
+            <small class="hint">{{ t('formvox', 'An email question is added to your form automatically.') }} {{ t('formvox', 'Signed-in respondents receive it at their account\'s e-mail address. Others receive it at the address they enter in the question marked as their e-mail.') }}</small>
             <NcTextField
               :model-value="responseSettings.confirmationEmailSubject"
               :placeholder="t('formvox', 'Subject (optional, default uses form title)')"
@@ -98,7 +108,35 @@
               :rows="3"
               @update:model-value="updateResponseSetting('confirmationEmailBody', $event)"
             />
+            <NcCheckboxRadioSwitch
+              :model-value="responseSettings.confirmationEmailPdf"
+              :disabled="!responseSettings.keepResponsePdf"
+              @update:model-value="updateResponseSetting('confirmationEmailPdf', !!$event)"
+            >
+              {{ t('formvox', 'Attach a PDF of the response') }}
+            </NcCheckboxRadioSwitch>
+            <small v-if="!responseSettings.keepResponsePdf" class="hint">
+              <!-- TRANSLATORS: Hint under the disabled "Attach a PDF of the response" option; "Keep a PDF of every response" is the switch below it -->
+              {{ t('formvox', 'To attach it, first turn on "Keep a PDF of every response" below.') }}
+            </small>
+            <small v-else-if="responseSettings.confirmationEmailPdf" class="hint">{{ t('formvox', 'Sent to signed-in respondents at their account\'s e-mail address. Anonymous respondents get it only where the administrator allows it.') }}</small>
           </div>
+
+          <NcCheckboxRadioSwitch
+            :model-value="responseSettings.keepResponsePdf"
+            @update:model-value="updateResponseSetting('keepResponsePdf', !!$event)"
+          >
+            <!-- TRANSLATORS: Switch: the form keeps a PDF of each response, for downloads, the API, webhooks and the confirmation email -->
+            {{ t('formvox', 'Keep a PDF of every response') }}
+          </NcCheckboxRadioSwitch>
+          <p v-if="responseSettings.keepResponsePdf" class="hint">
+            <!-- TRANSLATORS: Hint under the switch "Keep a PDF of every response" when it is on -->
+            {{ t('formvox', 'Made right after each submission, with the questions as the respondent saw them.') }}
+          </p>
+          <p v-else class="hint">
+            <!-- TRANSLATORS: Hint under the switch "Keep a PDF of every response" when it is off -->
+            {{ t('formvox', 'Off, no PDF is made for this form: not for the API, webhooks or the confirmation email.') }}
+          </p>
 
           <div class="notify-recipients">
             <span class="section-label">{{ t('formvox', 'Notify on new responses') }}</span>
@@ -107,14 +145,18 @@
                 v-for="r in notifyRecipients"
                 :key="r.type + '-' + r.id"
                 class="chip"
+                :class="{ 'chip--inactive': isCreatorChip(r) && creatorWarning }"
               >
                 <AccountIcon v-if="r.type === 'user'" :size="14" />
                 <AccountGroupIcon v-else :size="14" />
-                <span>{{ r.displayName || r.id }}</span>
+                <span>{{ recipientLabel(r) }}</span>
                 <button type="button" class="remove-btn" @click="removeNotifyRecipient(r)">×</button>
               </div>
             </div>
-            <div class="search-field">
+            <p v-if="creatorWarning && notifyRecipients.some(isCreatorChip)" class="hint creator-warning">
+              {{ creatorWarning }} {{ t('formvox', 'Add someone below who should receive them.') }}
+            </p>
+            <div v-if="canEditSettings" class="search-field">
               <NcTextField
                 v-model="notifySearchTerm"
                 :label="t('formvox', 'Search accounts and groups')"
@@ -177,7 +219,7 @@
               {{ t('formvox', 'Current responses: {current} / {max}', { current: responseCount, max: responseSettings.maxResponses }) }}
             </p>
           </div>
-        </div>
+        </fieldset>
       </div>
 
       <!-- Link Settings Section (always visible) -->
@@ -188,13 +230,31 @@
           {{ t('formvox', 'Link settings') }}
         </h3>
         <div class="section-content">
+          <fieldset :disabled="!canShare">
           <NcCheckboxRadioSwitch
             :model-value="linkSettings.passwordProtected"
+            :disabled="passwordEnforced && linkSettings.passwordProtected"
             @update:model-value="togglePassword"
           >
             <!-- TRANSLATORS: Switch: require a password for the public link -->
             {{ t('formvox', 'Password protect') }}
           </NcCheckboxRadioSwitch>
+          <p v-if="passwordEnforced" class="hint">
+            {{ t('formvox', 'A password is required for public links.') }}
+          </p>
+
+          <NcNoteCard v-if="generatedPassword" type="warning" class="generated-password">
+            <p>{{ t('formvox', 'Copy this generated password now; it will not be shown again.') }}</p>
+            <div class="generated-password__value">
+              <code>{{ generatedPassword }}</code>
+              <NcButton type="tertiary" @click="copyGeneratedPassword">
+                <template #icon>
+                  <CopyIcon :size="18" />
+                </template>
+                {{ generatedPasswordCopied ? t('formvox', 'Copied!') : t('formvox', 'Copy') }}
+              </NcButton>
+            </div>
+          </NcNoteCard>
 
           <div v-if="linkSettings.passwordProtected" class="password-field">
             <!-- TRANSLATORS: Label of the password field -->
@@ -250,6 +310,9 @@
             />
           </div>
 
+          </fieldset>
+
+          <fieldset :disabled="!canEditSettings">
           <NcCheckboxRadioSwitch
             :model-value="accessRestrictions.enabled"
             @update:model-value="toggleAccessRestrictions"
@@ -262,7 +325,7 @@
               {{ t('formvox', 'Only selected accounts and group members can access this form. They will need to log in.') }}
             </p>
 
-            <div class="search-field">
+            <div v-if="canEditSettings" class="search-field">
               <NcTextField
                 v-model="searchTerm"
                 :label="t('formvox', 'Search accounts and groups')"
@@ -334,14 +397,16 @@
             </div>
           </div>
 
-          <div class="delete-link-section">
+          </fieldset>
+
+          <fieldset v-if="canShare" class="delete-link-section">
             <NcButton type="tertiary" @click="replaceShareLink">
               {{ t('formvox', 'Replace with a new link') }}
             </NcButton>
             <NcButton type="tertiary" @click="deleteShareLink">
               {{ t('formvox', 'Delete response link') }}
             </NcButton>
-          </div>
+          </fieldset>
         </div>
       </div>
 
@@ -394,13 +459,13 @@
             </div>
           </div>
 
-          <!-- API & Webhooks -->
+          <!-- API & Webhooks: visible to everyone, managed with full rights -->
           <div class="advanced-subsection">
             <h4>
               <ApiIcon :size="16" />
               {{ t('formvox', 'API and webhooks') }}
             </h4>
-            <IntegrationSettings :file-id="fileId" :form="form" />
+            <IntegrationSettings :file-id="fileId" :form="form" :can-manage="canShare" />
           </div>
 
           <!-- Responses -->
@@ -414,7 +479,7 @@
               <!-- TRANSLATORS: %n is the number of responses -->
               {{ n('formvox', '%n response collected', '%n responses collected', responseCount) }}
             </p>
-            <NcButton type="error" @click="confirmDeleteResponses">
+            <NcButton type="error" :disabled="!canEditSettings" @click="confirmDeleteResponses">
               {{ t('formvox', 'Delete all responses') }}
             </NcButton>
           </div>
@@ -442,6 +507,7 @@ import {
   NcTextArea,
   NcCheckboxRadioSwitch,
   NcDateTimePickerNative,
+  NcNoteCard,
 } from '@nextcloud/vue';
 import { generateUrl } from '@nextcloud/router';
 import axios from '@nextcloud/axios';
@@ -462,6 +528,7 @@ export default {
   name: 'ShareDialog',
   components: {
     NcModal,
+    NcNoteCard,
     NcButton,
     NcTextField,
     NcTextArea,
@@ -488,9 +555,20 @@ export default {
       type: Object,
       required: true,
     },
+    // Full rights: the link, its password and dates, API keys and webhooks.
     canShare: {
       type: Boolean,
       default: true,
+    },
+    // Edit rights: response settings, notifications and who may answer.
+    canEditSettings: {
+      type: Boolean,
+      default: true,
+    },
+    // Nextcloud requires a password on public links for this user.
+    passwordEnforced: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ['close', 'responsesDeleted'],
@@ -499,6 +577,8 @@ export default {
     const shareToken = ref(null);
     const copied = ref(false);
     const creatingLink = ref(false);
+    const generatedPassword = ref(null);
+    const generatedPasswordCopied = ref(false);
     const linkInput = ref(null);
     const responseCount = ref(props.form._index?.response_count || 0);
 
@@ -602,23 +682,71 @@ export default {
     const notifySearchTerm = ref('');
     const notifySearchResults = reactive({ users: [], groups: [] });
     const currentUserId = window.OC?.currentUser || '';
-    const currentUserDisplayName = window.OC?.getCurrentUser?.()?.displayName || currentUserId;
 
-    // Build initial recipients list: include owner if notify_owner is enabled
-    const initialRecipients = (props.form.settings?.notify_recipients || []).map(r => ({
+    // The form's creator and whether they still receive notifications, as the
+    // server decides it (FormCreatorService). Loaded when the dialog opens —
+    // never assumed to be whoever is looking (#146).
+    const creator = ref(null);
+    const isCreatorChip = (r) => r.type === 'user' && !!creator.value?.id && r.id === creator.value.id;
+
+    const notifyRecipients = reactive((props.form.settings?.notify_recipients || []).map(r => ({
       type: r.type,
       id: r.id,
       displayName: r.displayName || r.id,
-    }));
-    // Add current user (owner) if notify_owner is true and not already in the list
-    if ((props.form.settings?.notify_owner ?? true) !== false && currentUserId) {
-      if (!initialRecipients.find(r => r.type === 'user' && r.id === currentUserId)) {
-        // TRANSLATORS: {name} is the name of the person looking at the dialog
-        const displayName = t('formvox', '{name} (you)', { name: currentUserDisplayName });
-        initialRecipients.unshift({ type: 'user', id: currentUserId, displayName });
+    })));
+
+    const loadCreator = async () => {
+      try {
+        const response = await axios.get(
+          generateUrl('/apps/formvox/api/form/{fileId}/creator', { fileId: props.fileId })
+        );
+        creator.value = response.data?.id ? response.data : null;
+      } catch (error) {
+        console.error('Failed to load the form creator:', error);
+        return;
       }
-    }
-    const notifyRecipients = reactive(initialRecipients);
+      if (creator.value && (props.form.settings?.notify_owner ?? true) !== false
+        && !notifyRecipients.some(isCreatorChip)) {
+        notifyRecipients.unshift({
+          type: 'user',
+          id: creator.value.id,
+          displayName: creator.value.displayName || creator.value.id,
+        });
+      }
+    };
+
+    const recipientLabel = (r) => {
+      const name = r.displayName || r.id;
+      if (isCreatorChip(r)) {
+        return r.id === currentUserId
+          ? t('formvox', '{name} (creator, you)', { name })
+          : t('formvox', '{name} (creator)', { name });
+      }
+      if (r.type === 'user' && r.id === currentUserId) {
+        // TRANSLATORS: {name} is the name of the person looking at the dialog
+        return t('formvox', '{name} (you)', { name });
+      }
+      return name;
+    };
+
+    // Why the creator, although listed, does not receive notifications.
+    const creatorWarning = computed(() => {
+      const c = creator.value;
+      if (!c || c.status === 'ok') {
+        return '';
+      }
+      const name = c.displayName || c.id;
+      switch (c.status) {
+        case 'no_access':
+          return t('formvox', '{name} can no longer open this form and does not receive notifications.', { name });
+        case 'disabled':
+          return t('formvox', 'The account of {name} is disabled and does not receive notifications.', { name });
+        case 'deleted':
+          return t('formvox', 'The account of {name} no longer exists and does not receive notifications.', { name });
+        default:
+          return '';
+      }
+    });
 
     // Response settings state
     const responseSettings = reactive({
@@ -631,6 +759,8 @@ export default {
       sendConfirmationEmail: props.form.settings?.sendConfirmationEmail ?? false,
       confirmationEmailSubject: props.form.settings?.confirmationEmailSubject || '',
       confirmationEmailBody: props.form.settings?.confirmationEmailBody || '',
+      confirmationEmailPdf: props.form.settings?.confirmationEmailPdf ?? false,
+      keepResponsePdf: props.form.settings?.keepResponsePdf ?? false,
     });
 
     // Access restrictions state
@@ -651,23 +781,9 @@ export default {
           const baseUrl = window.location.origin;
           shareLink.value = `${baseUrl}${generateUrl('/apps/formvox/public/{fileId}/{token}', { fileId: props.fileId, token: shareToken.value })}`;
 
-          // Load password setting (check hash since plaintext is removed after save)
-          if (props.form.settings.share_password_hash) {
-            linkSettings.passwordProtected = true;
-            linkSettings.password = '********'; // Don't show actual password
-          }
-
-          // Load expiration setting
-          if (props.form.settings.share_expires_at) {
-            linkSettings.expires = true;
-            linkSettings.expiresAt = new Date(props.form.settings.share_expires_at);
-          }
-
-          // Load scheduled opening setting
-          if (props.form.settings.share_starts_at) {
-            linkSettings.hasStart = true;
-            linkSettings.startsAt = new Date(props.form.settings.share_starts_at);
-          }
+          // The server only says whether a password is set; the field stays empty until a new one is typed.
+          linkSettings.password = '';
+          showStoredLinkSettings();
         }
       } catch (error) {
         console.error('Error loading shares:', error);
@@ -732,12 +848,31 @@ export default {
         // Update local form object
         props.form.settings.public_token = token;
 
+        // Where a password is required the server generates one and returns it this once.
+        if (response.data?.generatedSharePassword) {
+          generatedPassword.value = response.data.generatedSharePassword;
+          linkSettings.passwordProtected = true;
+          props.form.settings.has_share_password = true;
+        }
+
         showSuccess(t('formvox', 'Response link created'));
       } catch (error) {
-        showError(t('formvox', 'Failed to create response link'));
+        showError(error.response?.data?.error || t('formvox', 'Failed to create response link'));
         console.error(error);
       } finally {
         creatingLink.value = false;
+      }
+    };
+
+    const copyGeneratedPassword = async () => {
+      try {
+        await navigator.clipboard.writeText(generatedPassword.value);
+        generatedPasswordCopied.value = true;
+        setTimeout(() => {
+          generatedPasswordCopied.value = false;
+        }, 2000);
+      } catch (error) {
+        showError(t('formvox', 'Failed to copy'));
       }
     };
 
@@ -793,13 +928,13 @@ export default {
       linkSettings.passwordProtected = enabled;
       if (!enabled) {
         linkSettings.password = '';
-        saveLinkSettings();
+        saveLinkSettings(null);
       }
     };
 
     const savePassword = () => {
       if (linkSettings.password) {
-        saveLinkSettings();
+        saveLinkSettings(linkSettings.password);
       }
     };
 
@@ -828,31 +963,25 @@ export default {
       saveLinkSettings();
     };
 
-    const saveLinkSettings = async () => {
+    // As stored, also after a save that failed: a switch never shows what was not saved.
+    const showStoredLinkSettings = () => {
+      const settings = props.form.settings || {};
+      linkSettings.passwordProtected = !!settings.has_share_password;
+      linkSettings.expires = !!settings.share_expires_at;
+      linkSettings.expiresAt = settings.share_expires_at ? new Date(settings.share_expires_at) : null;
+      linkSettings.hasStart = !!settings.share_starts_at;
+      linkSettings.startsAt = settings.share_starts_at ? new Date(settings.share_starts_at) : null;
+    };
+
+    // The server keeps the other settings; the password only goes along when it is set or removed on purpose.
+    const saveLinkSettings = async (newPassword = undefined) => {
       try {
         const settings = {
-          ...props.form.settings,
+          share_expires_at: linkSettings.expires && linkSettings.expiresAt ? linkSettings.expiresAt.toISOString() : null,
+          share_starts_at: linkSettings.hasStart && linkSettings.startsAt ? linkSettings.startsAt.toISOString() : null,
         };
-
-        // Update password
-        if (linkSettings.passwordProtected && linkSettings.password) {
-          settings.share_password = linkSettings.password;
-        } else {
-          settings.share_password = null;
-        }
-
-        // Update expiration
-        if (linkSettings.expires && linkSettings.expiresAt) {
-          settings.share_expires_at = linkSettings.expiresAt.toISOString();
-        } else {
-          settings.share_expires_at = null;
-        }
-
-        // Update start date
-        if (linkSettings.hasStart && linkSettings.startsAt) {
-          settings.share_starts_at = linkSettings.startsAt.toISOString();
-        } else {
-          settings.share_starts_at = null;
+        if (newPassword !== undefined) {
+          settings.share_password = newPassword;
         }
 
         await axios.put(
@@ -860,15 +989,20 @@ export default {
           { settings }
         );
 
-        // Update local form object
-        props.form.settings.share_password = settings.share_password;
         props.form.settings.share_expires_at = settings.share_expires_at;
         props.form.settings.share_starts_at = settings.share_starts_at;
+        if (newPassword !== undefined) {
+          props.form.settings.has_share_password = !!newPassword;
+          linkSettings.password = '';
+          generatedPassword.value = null;
+        }
 
         // TRANSLATORS: Confirmation message
         showSuccess(t('formvox', 'Settings saved'));
       } catch (error) {
-        showError(t('formvox', 'Failed to save settings'));
+        // Nextcloud's own reason when it refuses a password, e.g. too short or required.
+        showError(error.response?.data?.error || t('formvox', 'Failed to save settings'));
+        showStoredLinkSettings();
         console.error(error);
       }
     };
@@ -935,7 +1069,7 @@ export default {
 
         // Update local form object
         props.form.settings.public_token = null;
-        delete props.form.settings.share_password_hash;
+        props.form.settings.has_share_password = false;
         props.form.settings.share_expires_at = null;
         props.form.settings.share_starts_at = null;
 
@@ -1099,22 +1233,27 @@ export default {
 
     const saveNotifyRecipients = async () => {
       try {
-        // Filter out the owner from the stored recipients (owner is tracked via notify_owner)
+        // The creator is tracked via notify_owner, everyone else — including
+        // a team member who adds themselves — as a stored recipient.
         const otherRecipients = notifyRecipients
-          .filter(r => !(r.type === 'user' && r.id === currentUserId))
+          .filter(r => !isCreatorChip(r))
           .map(r => ({ type: r.type, id: r.id, displayName: r.displayName }));
-        const ownerInList = notifyRecipients.some(r => r.type === 'user' && r.id === currentUserId);
+        // Without a known creator there is no creator chip to read it from,
+        // so keep whatever is stored.
+        const notifyOwner = creator.value
+          ? notifyRecipients.some(isCreatorChip)
+          : (props.form.settings?.notify_owner ?? true) !== false;
 
         const settings = {
           ...props.form.settings,
-          notify_owner: ownerInList,
+          notify_owner: notifyOwner,
           notify_recipients: otherRecipients,
         };
         await axios.put(
           generateUrl('/apps/formvox/api/form/{fileId}', { fileId: props.fileId }),
           { settings }
         );
-        props.form.settings.notify_owner = ownerInList;
+        props.form.settings.notify_owner = notifyOwner;
         props.form.settings.notify_recipients = otherRecipients;
       } catch (error) {
         showError(t('formvox', 'Failed to save notification recipients'));
@@ -1139,6 +1278,8 @@ export default {
         sendConfirmationEmail: 'sendConfirmationEmail',
         confirmationEmailSubject: 'confirmationEmailSubject',
         confirmationEmailBody: 'confirmationEmailBody',
+        confirmationEmailPdf: 'confirmationEmailPdf',
+        keepResponsePdf: 'keepResponsePdf',
       };
       if (keyMap[key]) {
         responseSettings[keyMap[key]] = value;
@@ -1287,6 +1428,7 @@ export default {
     onMounted(async () => {
       await loadExistingShare();
       loadAccessRestrictions();
+      loadCreator();
       generateQr();
     });
 
@@ -1313,6 +1455,9 @@ export default {
       downloadQr,
       createShareLink,
       copyLink,
+      generatedPassword,
+      generatedPasswordCopied,
+      copyGeneratedPassword,
       copyEmbedCode,
       togglePassword,
       toggleLinkExpiration,
@@ -1334,6 +1479,10 @@ export default {
       notifySearchTerm,
       notifySearchResults,
       notifyRecipients,
+      creator,
+      creatorWarning,
+      isCreatorChip,
+      recipientLabel,
       searchNotifySharees,
       addNotifyRecipient,
       removeNotifyRecipient,
@@ -1366,6 +1515,30 @@ export default {
   .share-description {
     color: var(--color-text-maxcontrast);
     margin: 0 0 24px;
+  }
+
+  .generated-password__value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    code {
+      user-select: all;
+    }
+  }
+
+  .share-readonly-note {
+    margin: -16px 0 24px;
+    color: var(--color-text-maxcontrast);
+  }
+
+  // Groups controls so one `disabled` covers them all; no visual box of its own.
+  fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
   }
 
   h3 {
@@ -1782,6 +1955,11 @@ export default {
     border-radius: var(--border-radius-pill);
     font-size: 13px;
 
+    &--inactive span {
+      text-decoration: line-through;
+      color: var(--color-text-maxcontrast);
+    }
+
     .remove-btn {
       background: none;
       border: none;
@@ -1796,6 +1974,12 @@ export default {
         color: var(--color-error);
       }
     }
+  }
+
+  .creator-warning {
+    display: block;
+    margin: -4px 0 10px;
+    color: var(--color-warning-text, var(--color-warning));
   }
 
   .search-field {

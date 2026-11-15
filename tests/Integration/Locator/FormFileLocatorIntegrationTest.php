@@ -148,4 +148,24 @@ class FormFileLocatorIntegrationTest extends IntegrationTestCase {
 			. 'enabled CI lane.'
 		);
 	}
+
+	/** secu#9: a JSON file with a link token of its own, dropped anywhere, is never opened as a form. */
+	public function testAFileThatIsNoFormIsNeverOpenedAsOne(): void {
+		$planted = $this->userFolder->newFile('planted ' . uniqid() . '.json', (string)json_encode([
+			'title' => 'Planted', 'questions' => [], 'settings' => ['public_token' => 'chosen-by-the-uploader'],
+		]));
+		$locator = Server::get(FormFileLocator::class);
+
+		try {
+			$locator->getFileById($planted->getId());
+			$this->fail('a JSON file was opened as a form through the session');
+		} catch (NotFoundException) {
+		}
+		try {
+			Server::get(\OCA\FormVox\Service\FormRepository::class)->loadPublic($planted->getId());
+			$this->fail('a JSON file was opened as a form through a public link');
+		} catch (NotFoundException) {
+		}
+		$this->assertTrue(true);
+	}
 }

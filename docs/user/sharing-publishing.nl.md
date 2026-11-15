@@ -78,6 +78,44 @@ Dit is handig voor:
 - Interne enquêtes die een publiek-stijl interface nodig hebben
 - Antwoorden verzamelen van specifieke afdelingen
 
+### Notificaties bij nieuwe antwoorden
+
+FormVox stuurt een **Nextcloud-notificatie** (de bel in de bovenbalk) wanneer iemand
+een antwoord indient. Dit staat standaard aan voor degene die het formulier heeft
+aangemaakt — je hoeft het niet zelf in te schakelen.
+
+Zo bekijk of wijzig je wie een melding krijgt:
+
+1. Open je formulier en klik op **Share**
+2. Zoek onder **Response settings** de optie **Notify on new responses**
+3. Je eigen naam staat daar als chip wanneer je de eigenaar van het formulier bent
+4. Voeg via het zoekveld andere gebruikers of groepen toe
+5. Wil je zelf geen melding meer? Verwijder dan je eigen chip
+
+Er gaat één notificatie per inzending uit — er is geen dagelijkse of wekelijkse
+samenvatting.
+
+> **Let op:** dit zijn Nextcloud-notificaties in de app, geen e-mails. Of je ze ook
+> per mail krijgt, hangt af van je persoonlijke Nextcloud-instellingen
+> (**Instellingen → Persoonlijk → Notificaties**), niet van FormVox. De aparte
+> instelling **Email confirmation to respondent** in hetzelfde venster stuurt mail
+> naar de invuller, niet naar jou.
+
+Het blok **Response settings** verschijnt pas zodra er een responslink bestaat. Zie
+je het niet, maak dan eerst de link aan onder **Response link**.
+
+#### Geen notificaties bij een formulier in een Team Folder?
+
+Staat je formulier in een Team Folder (Groupfolder) en krijg je geen meldingen, voeg
+jezelf dan expliciet als ontvanger toe onder **Notify on new responses** in plaats
+van te vertrouwen op het eigenaarschap. Een expliciet genoemde gebruiker of groep
+krijgt altijd een melding.
+
+Dit omzeilt een fout in versies tot en met 1.5.1: bij een formulier in een Team
+Folder kon de eigenaars-notificatie bij een ander lid van de groep terechtkomen in
+plaats van bij de maker van het formulier. Jezelf expliciet toevoegen kan daarna
+gewoon blijven staan.
+
 ## Formulieren embedden
 
 Eén van FormVox' meest flexibele features is de mogelijkheid om formulieren direct te embedden in elke website of elk platform dat HTML ondersteunt. Dit betekent dat je formulieren kunnen leven waar je gebruikers al zijn — zonder ze te hoeven doorverwijzen naar een aparte pagina.

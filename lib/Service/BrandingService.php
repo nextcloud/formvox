@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCA\FormVox\AppInfo\Application;
+use OCP\Files\File;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFolder;
@@ -13,24 +14,19 @@ use OCP\IL10N;
 use OCP\IURLGenerator;
 
 class BrandingService {
-	private IConfig $config;
-	private IAppData $appData;
-	private UploadService $uploadService;
-	private IURLGenerator $urlGenerator;
-	private IL10N $l;
-
 	private const DEFAULT_GLOBAL_STYLES = [
 		'primaryColor' => '#0082c9',
 		'backgroundColor' => '#ffffff',
 		'fontFamily' => 'default',
 	];
 
-	public function __construct(IConfig $config, IAppData $appData, UploadService $uploadService, IURLGenerator $urlGenerator, IL10N $l) {
-		$this->config = $config;
-		$this->appData = $appData;
-		$this->uploadService = $uploadService;
-		$this->urlGenerator = $urlGenerator;
-		$this->l = $l;
+	public function __construct(
+		private IConfig $config,
+		private IAppData $appData,
+		private UploadService $uploadService,
+		private IURLGenerator $urlGenerator,
+		private IL10N $l,
+	) {
 	}
 
 	/**
@@ -201,11 +197,11 @@ class BrandingService {
 
 	/**
 	 * Form-scoped variants — store branding images in a hidden folder next to
-	 * the .fvform file (mirrors the .formvox-uploads-{fileId} pattern). This
-	 * way they travel with the form on move and are cleaned up on delete.
+	 * the .fvform file (mirrors the .formvox-uploads-{fileId} pattern), or in app
+	 * data for a form in the database (UploadService::getBrandingFolder).
 	 */
-	public function saveFormBlockImage(int $fileId, string $blockId, string $tmpPath, string $mimeType): string {
-		$folder = $this->uploadService->getBrandingFolder($fileId, true);
+	public function saveFormBlockImage(File $formFile, string $blockId, string $tmpPath, string $mimeType): string {
+		$folder = $this->uploadService->getBrandingFolder($formFile, true);
 		$extension = $this->getExtensionFromMimeType($mimeType);
 		$filename = 'block_' . $blockId . '.' . $extension;
 
@@ -226,9 +222,12 @@ class BrandingService {
 		return $blockId;
 	}
 
+	/**
+	 * For public rendering: resolves the form through any account that can read it.
+	 */
 	public function getFormBlockImage(int $fileId, string $blockId): ?array {
 		try {
-			$folder = $this->uploadService->getBrandingFolder($fileId);
+			$folder = $this->uploadService->getBrandingFolderPublic($fileId);
 			foreach ($folder->getDirectoryListing() as $file) {
 				if (strpos($file->getName(), 'block_' . $blockId . '.') === 0) {
 					return [
@@ -243,9 +242,9 @@ class BrandingService {
 		return null;
 	}
 
-	public function deleteFormBlockImage(int $fileId, string $blockId): void {
+	public function deleteFormBlockImage(File $formFile, string $blockId): void {
 		try {
-			$folder = $this->uploadService->getBrandingFolder($fileId, true);
+			$folder = $this->uploadService->getBrandingFolder($formFile);
 			foreach ($folder->getDirectoryListing() as $node) {
 				if (strpos($node->getName(), 'block_' . $blockId . '.') === 0) {
 					$node->delete();
@@ -262,7 +261,6 @@ class BrandingService {
 	private function getExtensionFromMimeType(string $mimeType): string {
 		return match ($mimeType) {
 			'image/jpeg' => 'jpg',
-			'image/svg+xml' => 'svg',
 			'image/gif' => 'gif',
 			'image/webp' => 'webp',
 			default => 'png',

@@ -18,30 +18,15 @@ use Psr\Log\LoggerInterface;
 class TelemetryService {
 	private const TELEMETRY_URL = 'https://licenses.voxcloud.nl/api/telemetry/formvox';
 
-	private IClientService $httpClient;
-	private IConfig $config;
-	private LoggerInterface $logger;
-	private IUserManager $userManager;
-	private StatisticsService $statisticsService;
-	private LicenseService $licenseService;
-	private ?IRegistry $subscriptionRegistry;
-
 	public function __construct(
-		IClientService $httpClient,
-		IConfig $config,
-		LoggerInterface $logger,
-		IUserManager $userManager,
-		StatisticsService $statisticsService,
-		LicenseService $licenseService,
-		?IRegistry $subscriptionRegistry = null,
+		private IClientService $httpClient,
+		private IConfig $config,
+		private LoggerInterface $logger,
+		private IUserManager $userManager,
+		private StatisticsService $statisticsService,
+		private LicenseService $licenseService,
+		private ?IRegistry $subscriptionRegistry = null,
 	) {
-		$this->httpClient = $httpClient;
-		$this->config = $config;
-		$this->logger = $logger;
-		$this->userManager = $userManager;
-		$this->statisticsService = $statisticsService;
-		$this->licenseService = $licenseService;
-		$this->subscriptionRegistry = $subscriptionRegistry;
 	}
 
 	/**

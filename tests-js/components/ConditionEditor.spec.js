@@ -126,4 +126,17 @@ describe('ConditionEditor', () => {
 		const actionBtns = wrapper.findAll('.actions [data-stub="NcButton"]')
 		expect(actionBtns.length).toBe(2)
 	})
+
+	it('offers no section or info block, only what can be answered', () => {
+		const wrapper = mount(ConditionEditor, { props: {
+			questions: [{ id: 's1', type: 'section' }, { id: 'q1', type: 'text' }, { id: 'd1', type: 'descriptor' }, { id: 'q2', type: 'text' }],
+			currentQuestionId: 'q2',
+		} })
+		expect(wrapper.vm.availableQuestions.map(q => q.id)).toEqual(['q1'])
+	})
+
+	it('offers nothing when it cannot tell where the question is, rather than later questions', () => {
+		const wrapper = mount(ConditionEditor, { props: { questions: [{ id: 'q1', type: 'text' }, { id: 'q2', type: 'text' }], currentQuestionId: 'gone' } })
+		expect(wrapper.vm.availableQuestions).toEqual([])
+	})
 })

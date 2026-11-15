@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
 use OCP\Security\ISecureRandom;
 
 /**
@@ -20,10 +22,9 @@ use OCP\Security\ISecureRandom;
  * checks, responses); the token decisions live here.
  */
 class ShareTokenService {
-	private ISecureRandom $secureRandom;
-
-	public function __construct(ISecureRandom $secureRandom) {
-		$this->secureRandom = $secureRandom;
+	public function __construct(
+		private ISecureRandom $secureRandom,
+	) {
 	}
 
 	/**
@@ -100,12 +101,13 @@ class ShareTokenService {
 	 *
 	 * @param array $currentSettings the form's current settings
 	 * @return array the settings to persist (with a fresh token)
-	 * @throws \DomainException if there is no existing link to replace
+	 * @throws RequestException if there is no existing link to replace
 	 */
 	public function rotate(array $currentSettings): array {
 		$existing = $currentSettings['public_token'] ?? null;
 		if (!is_string($existing) || $existing === '') {
-			throw new \DomainException('This form has no share link to replace');
+			// TRANSLATORS: Error shown when replacing a form's link while it has none
+			throw RequestException::invalid(Translatable::t('This form has no share link to replace'));
 		}
 
 		$currentSettings['public_token'] = $this->generateToken();

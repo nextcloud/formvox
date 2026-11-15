@@ -4,351 +4,235 @@ declare(strict_types=1);
 
 namespace OCA\FormVox\Service;
 
-use OCA\FormVox\AppInfo\Application;
-use OCP\IGroupManager;
+use OCA\FormVox\Security\FormSanitizer;
+use OCP\Files\File;
+use OCP\Files\NotFoundException;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
-use OCP\Mail\IMailer;
-use OCP\Notification\IManager as INotificationManager;
+use OCP\Security\ICrypto;
 use Psr\Log\LoggerInterface;
 
 class ResponseService {
-	private FormRepository $formRepository;
-	private FormFileLocator $fileLocator;
-	private ResponsePersistenceService $responsePersistence;
-	private IndexService $indexService;
-	private WebhookService $webhookService;
-	private INotificationManager $notificationManager;
-	private IGroupManager $groupManager;
-	private IMailer $mailer;
-	private IURLGenerator $urlGenerator;
-	private IL10N $l;
-	private LoggerInterface $logger;
-
 	public function __construct(
-		FormRepository $formRepository,
-		FormFileLocator $fileLocator,
-		ResponsePersistenceService $responsePersistence,
-		IndexService $indexService,
-		WebhookService $webhookService,
-		INotificationManager $notificationManager,
-		IGroupManager $groupManager,
-		IMailer $mailer,
-		IURLGenerator $urlGenerator,
-		IL10N $l,
-		LoggerInterface $logger,
+		private FormRepository $formRepository,
+		private FormFileLocator $fileLocator,
+		private ResponsePersistenceService $responsePersistence,
+		private IndexService $indexService,
+		private IURLGenerator $urlGenerator,
+		private IL10N $l,
+		private LoggerInterface $logger,
+		private AnswerValidator $answers,
+		private ICrypto $crypto,
+		private FormSanitizer $sanitizer,
+		private ResponseRules $rules,
 	) {
-		$this->formRepository = $formRepository;
-		$this->fileLocator = $fileLocator;
-		$this->responsePersistence = $responsePersistence;
-		$this->indexService = $indexService;
-		$this->webhookService = $webhookService;
-		$this->notificationManager = $notificationManager;
-		$this->groupManager = $groupManager;
-		$this->mailer = $mailer;
-		$this->urlGenerator = $urlGenerator;
-		$this->l = $l;
-		$this->logger = $logger;
 	}
 
 	/**
-	 * Submit a response as an anonymous user
+	 * A response on an anonymous form. $accountId is the respondent when the form makes them sign in:
+	 * never stored, only used to recognise a repeat.
 	 */
-	public function submitAnonymous(int $fileId, array $answers, IRequest $request, string $shareToken): array {
-		$form = $this->formRepository->load($fileId);
-		return $this->submitAnonymousWithForm($fileId, $form, $answers, $request, $shareToken);
+	/** @param string|null $signedInAs the account of a respondent who is signed in, though not named in the response */
+	public function submitAnonymousWithForm(int $fileId, array $form, array $answers, IRequest $request, ?string $accountId = null, ?string $submissionId = null, ?string $timezone = null, ?string $signedInAs = null): array {
+		return $this->submitPublic($fileId, $form, $answers, [
+			'type' => 'anonymous',
+			'fingerprint' => $this->fingerprint($fileId, $request, $accountId),
+		], $submissionId, $timezone, $signedInAs ?? $accountId);
 	}
 
 	/**
-	 * Submit a response as an anonymous user (with form already loaded)
+	 * A response that carries who answered; the share link already admitted them, so they need no rights on the file (#77).
 	 */
-	public function submitAnonymousWithForm(int $fileId, array $form, array $answers, IRequest $request, string $shareToken): array {
-		// Check if form accepts responses
-		$this->validateFormAcceptsResponses($form);
-
-		// Calculate fingerprint
-		$fingerprint = $this->calculateFingerprint($request, $shareToken);
-
-		// Check for duplicate submission
-		if (!($form['settings']['allow_multiple'] ?? false)) {
-			if ($this->indexService->hasFingerprint($form, $fingerprint)) {
-				throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
-			}
-		}
-
-		// Validate answers
-		$this->validateAnswers($form, $answers);
-
-		// Create response
-		$response = [
-			'id' => $this->generateUuid(),
-			'submitted_at' => date('c'),
-			'respondent' => [
-				'type' => 'anonymous',
-				'fingerprint' => $fingerprint,
-			],
-			'answers' => $answers,
-		];
-
-		// Calculate score if quiz mode
-		if ($this->isQuizMode($form)) {
-			$response['score'] = $this->calculateScore($form, $answers);
-		}
-
-		// Re-check limits under the write lock against the fresh form state, so
-		// parallel submissions can't each pass the pre-lock snapshot check and
-		// oversell capacity / exceed max_responses / bypass no-duplicate (#4).
-		$guard = function (array $freshForm) use ($fingerprint, $answers) {
-			$this->validateFormAcceptsResponses($freshForm);
-			if (!($freshForm['settings']['allow_multiple'] ?? false)) {
-				if ($this->indexService->hasFingerprint($freshForm, $fingerprint)) {
-					throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
-				}
-			}
-			$this->validateCapacity($freshForm, $answers);
-		};
-
-		// Append response (use public method since no user is logged in)
-		$result = $this->responsePersistence->appendResponsePublic($fileId, $response, $guard);
-
-		// Trigger webhook
-		$this->webhookService->trigger($form, 'response.created', $response);
-
-		// Send notification to form owner
-		$this->notifyFormOwner($fileId, $form, $response);
-
-		// Confirmation email to respondent (best-effort, #103)
-		$this->sendConfirmationEmail($form, $answers);
-
-		return $result;
+	public function submitAuthenticated(int $fileId, array $form, array $answers, string $userId, string $displayName, ?string $submissionId = null, ?string $timezone = null): array {
+		return $this->submitPublic($fileId, $form, $answers, [
+			'type' => 'user',
+			'user_id' => $userId,
+			'display_name' => $displayName,
+		], $submissionId, $timezone, $userId);
 	}
 
 	/**
-	 * Submit a response as an authenticated user
-	 */
-	public function submitAuthenticated(int $fileId, array $answers, string $userId, string $displayName): array {
-		// Use the admin-bypass loader: respondents are authenticated for
-		// identity (the response is attributed to $userId) but they don't
-		// need file/folder permissions on the form file itself. The share
-		// link + token already validated their right to submit. (#77)
-		$form = $this->formRepository->loadPublic($fileId);
-
-		// Check if form accepts responses
-		$this->validateFormAcceptsResponses($form);
-
-		// Check for duplicate submission
-		if (!($form['settings']['allow_multiple'] ?? false)) {
-			if ($this->indexService->hasUserResponse($form, $userId)) {
-				throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
-			}
-		}
-
-		// Validate answers
-		$this->validateAnswers($form, $answers);
-
-		// Create response
-		$response = [
-			'id' => $this->generateUuid(),
-			'submitted_at' => date('c'),
-			'respondent' => [
-				'type' => 'user',
-				'user_id' => $userId,
-				'display_name' => $displayName,
-			],
-			'answers' => $answers,
-		];
-
-		// Calculate score if quiz mode
-		if ($this->isQuizMode($form)) {
-			$response['score'] = $this->calculateScore($form, $answers);
-		}
-
-		// Re-check limits under the write lock against the fresh form state (#4).
-		$guard = function (array $freshForm) use ($userId, $answers) {
-			$this->validateFormAcceptsResponses($freshForm);
-			if (!($freshForm['settings']['allow_multiple'] ?? false)) {
-				if ($this->indexService->hasUserResponse($freshForm, $userId)) {
-					throw new \RuntimeException($this->l->t('You have already submitted a response to this form'));
-				}
-			}
-			$this->validateCapacity($freshForm, $answers);
-		};
-
-		// Append response (use public method so respondent doesn't need file permissions)
-		$result = $this->responsePersistence->appendResponsePublic($fileId, $response, $guard);
-
-		// Trigger webhook
-		$this->webhookService->trigger($form, 'response.created', $response);
-
-		// Send notification to form owner
-		$this->notifyFormOwner($fileId, $form, $response);
-
-		// Confirmation email to respondent (best-effort, #103)
-		$this->sendConfirmationEmail($form, $answers);
-
-		return $result;
-	}
-
-	/**
-	 * Send a plain-text confirmation email to the respondent (best-effort).
+	 * A response through the external API: the same answers check and rules as one through the form (M16, Q7).
 	 *
-	 * Conditions: form has `settings.sendConfirmationEmail` true, exactly
-	 * one question is flagged `useAsRespondentEmail` (and has validation
-	 * type email), the respondent filled in a syntactically valid email.
-	 * All failures are logged and swallowed — never break the submit (#103).
+	 * @throws InvalidAnswerException|ResponseRefusedException
 	 */
-	private function sendConfirmationEmail(array $form, array $answers): void {
-		try {
-			if (empty($form['settings']['sendConfirmationEmail'])) {
-				return;
-			}
-			// Find the question flagged as respondent email
-			$emailField = null;
-			foreach ($form['questions'] ?? [] as $q) {
-				if (!empty($q['useAsRespondentEmail']) && in_array($q['type'] ?? '', ['text', 'textarea'], true)) {
-					$emailField = $q;
-					break;
-				}
-			}
-			if ($emailField === null) {
-				return;
-			}
-			$to = trim((string)($answers[$emailField['id']] ?? ''));
-			if ($to === '' || !$this->mailer->validateMailAddress($to)) {
-				return;
-			}
-
-			$formTitle = $form['title'] ?? $this->l->t('Form');
-			$subject = trim((string)($form['settings']['confirmationEmailSubject'] ?? ''));
-			if ($subject === '') {
-				// TRANSLATORS: Subject of the confirmation email to a respondent; %s is the form title
-				$subject = $this->l->t('Confirmation: %s', [$formTitle]);
-			}
-			$body = trim((string)($form['settings']['confirmationEmailBody'] ?? ''));
-			if ($body === '') {
-				// TRANSLATORS: Body of the confirmation email to a respondent; %s is the form title
-				$body = $this->l->t("Thank you for filling in \"%s\".\n\nWe have received your response.", [$formTitle]);
-			}
-
-			$message = $this->mailer->createMessage();
-			$message->setTo([$to]);
-			$message->setSubject($subject);
-			$message->setPlainBody($body);
-
-			$failed = $this->mailer->send($message);
-			if (!empty($failed)) {
-				$this->logger->warning('FormVox confirmation email partly failed', ['failed' => $failed]);
-			}
-		} catch (\Throwable $e) {
-			$this->logger->warning('FormVox confirmation email failed: ' . $e->getMessage());
-		}
+	public function submitViaApi(int $fileId, File $file, array $form, array $answers, array $keyConfig): array {
+		$response = $this->newResponse($form, $this->answers->validate($form, $answers, fn () => $file), self::apiRespondent($keyConfig));
+		// API ids stay 32 hex characters, as integrations have seen them so far.
+		$response['id'] = bin2hex(random_bytes(16));
+		$response['source'] = 'api';
+		$response['api_key_id'] = $keyConfig['id'] ?? null;
+		$this->rules->assertNew($form, $response);
+		// Webhooks and notifications follow from a background job, so the integration need not wait for them.
+		$this->responsePersistence->append($file, $response, [ResponseOutbox::WEBHOOKS, ResponseOutbox::NOTIFY], $this->l->getLanguageCode());
+		return $response;
 	}
 
 	/**
-	 * Send a Nextcloud notification to the form owner
+	 * Replaces a response's answers by id; any response may be changed (PO), recorded by which key.
+	 * The form's rules apply under the lock, as for a new response.
+	 *
+	 * @throws InvalidAnswerException|ResponseRefusedException|NotFoundException
 	 */
-	private function notifyFormOwner(int $fileId, array $form, array $response): void {
-		try {
-			$respondentId = ($response['respondent']['type'] ?? '') === 'user'
-				? ($response['respondent']['user_id'] ?? '')
-				: '';
-
-			// Left out for anonymous respondents, and the title when there is none,
-			// so the Notifier translates its fallbacks in the recipient's language.
-			$subject = isset($form['title']) ? ['formTitle' => $form['title']] : [];
-			if (($response['respondent']['type'] ?? '') === 'user') {
-				$subject['respondentName'] = $response['respondent']['display_name'] ?? $respondentId;
+	public function updateViaApi(int $fileId, File $file, array $form, string $responseId, array $answers, array $keyConfig): array {
+		$answers = $this->answers->validate($form, $answers, fn () => $file);
+		$quiz = $this->isQuizMode($form);
+		$updated = $this->responsePersistence->update($file, $responseId, function (array $response) use ($answers, $keyConfig, $form, $quiz) {
+			$response['answers'] = $answers;
+			$response['updated_at'] = (new \DateTime())->format(\DateTime::ATOM);
+			$response['updated_by'] = 'api:' . ($keyConfig['id'] ?? 'unknown');
+			if ($quiz) {
+				$response['score'] = $this->calculateScore($form, $answers);
 			}
-			$subject['fileId'] = $fileId;
+			return $response;
+		});
 
-			// Collect all user IDs to notify
-			$recipientIds = [];
+		// Its webhook follows from the background job, in order after the response's own created.
+		return $updated;
+	}
 
-			// 1. Form owner (if notify_owner is enabled)
-			if (($form['settings']['notify_owner'] ?? true) !== false) {
-				$file = $this->fileLocator->getFileByIdPublic($fileId);
-				$owner = $file->getOwner();
-				if ($owner !== null) {
-					$recipientIds[] = $owner->getUID();
-				}
-			}
+	/**
+	 * The one way a response is deleted, from the web or the API; integrations hear about it either way (L33).
+	 *
+	 * @throws NotFoundException
+	 */
+	public function deleteResponse(int $fileId, File $file, string $responseId): void {
+		// Its webhook follows from the background job and carries only its id (PO: deleted is gone).
+		$this->responsePersistence->delete($file, $responseId);
+	}
 
-			// 2. Additional recipients from settings
-			foreach ($form['settings']['notify_recipients'] ?? [] as $recipient) {
-				if (($recipient['type'] ?? '') === 'user') {
-					$recipientIds[] = $recipient['id'];
-				} elseif (($recipient['type'] ?? '') === 'group') {
-					$group = $this->groupManager->get($recipient['id']);
-					if ($group !== null) {
-						foreach ($group->getUsers() as $user) {
-							$recipientIds[] = $user->getUID();
-						}
-					}
-				}
-			}
+	/** A retry answered as stored: what its first try set off is sent if it still waits. */
+	public function retried(int $fileId, array $form, array $stored): void {
+		$this->responsePersistence->retried($fileId, $form, $stored);
+	}
 
-			// Deduplicate and exclude the respondent
-			$recipientIds = array_unique($recipientIds);
-			$recipientIds = array_filter($recipientIds, fn ($id) => $id !== $respondentId);
+	/**
+	 * Every response at once; integrations hear about each one, as for a single delete (PO).
+	 */
+	public function deleteAllResponses(int $fileId, File $file): void {
+		// Each deleted response's webhook follows from the background job.
+		$this->responsePersistence->deleteAll($file);
+	}
 
-			// Send notifications
-			foreach ($recipientIds as $userId) {
-				$notification = $this->notificationManager->createNotification();
-				$notification->setApp(Application::APP_ID)
-					->setUser($userId)
-					->setDateTime(new \DateTime())
-					->setObject('response', $response['id'])
-					->setSubject('response_submitted', $subject);
-
-				$this->notificationManager->notify($notification);
-			}
-		} catch (\Exception $e) {
-			// Don't let notification failures break form submission
+	/**
+	 * The shared way in for the form page: answers checked, rules asked now for a clear answer and again under the lock.
+	 *
+	 * @throws InvalidAnswerException|ResponseRefusedException
+	 */
+	/** @param string|null $account the signed-in respondent's account: the confirmation goes to its address */
+	private function submitPublic(int $fileId, array $form, array $answers, array $respondent, ?string $submissionId = null, ?string $timezone = null, ?string $account = null): array {
+		// A retry of a submission that was stored: the same answer, before any rule could refuse it as a second one.
+		$submission = SubmissionIds::of($submissionId, $answers);
+		$seen = $this->responsePersistence->submitted($fileId, $form, $submission);
+		if ($seen !== null) {
+			$this->responsePersistence->retried($fileId, $form, $seen);
+			return $seen;
 		}
+		$answers = $this->answers->validate($form, $answers, fn () => $this->fileLocator->getFileByIdPublicForWrite($fileId));
+		$response = $this->newResponse($form, $answers, $respondent, $timezone);
+		$this->rules->assertNew($form, $response);
+		// Webhooks, notifications and the confirmation email follow from a background job: the respondent has their
+		// answer without waiting for a slow receiver or mail server (7a, 3a-4).
+		return $this->responsePersistence->appendResponsePublic($fileId, $response, [ResponseOutbox::WEBHOOKS, ResponseOutbox::NOTIFY, ResponseOutbox::MAIL], $this->l->getLanguageCode(), $submission, $account !== null, $account);
+	}
+
+	private function newResponse(array $form, array $answers, array $respondent, ?string $timezone = null): array {
+		$response = [
+			'id' => $this->generateUuid(),
+			'submitted_at' => date('c'),
+			// Its PDF is in the language the form was filled in, also when it is made later.
+			'language' => $this->l->getLanguageCode(),
+			'respondent' => $respondent,
+			'answers' => $answers,
+		];
+		// Where the browser named a real zone: its times in the PDF are at the respondent's clock.
+		if (\OCA\FormVox\Pdf\TimeZones::name($timezone) !== null) {
+			$response['timezone'] = $timezone;
+		}
+		if ($this->isQuizMode($form)) {
+			$response['score'] = $this->calculateScore($form, $answers);
+		}
+		return $response;
+	}
+
+	/**
+	 * Who answered through the API, so the results view shows it like any other respondent (M30).
+	 */
+	public static function apiRespondent(array $keyConfig): array {
+		return [
+			'type' => 'api',
+			'key_id' => (string)($keyConfig['id'] ?? ''),
+			'display_name' => (string)($keyConfig['name'] ?? 'API'),
+		];
 	}
 
 	/**
 	 * Get summary statistics for a form
 	 */
 	public function getSummary(int $fileId): array {
-		$form = $this->formRepository->load($fileId);
-		return $this->buildSummary($form);
+		$form = $this->formRepository->loadForm($fileId);
+		return $this->buildSummary($form, $this->formRepository->eachResponse($fileId, $form));
 	}
 
 	/**
-	 * Get summary statistics for a form (public access)
+	 * Build the summary in one pass over the responses, a page at a time: counted as rebuildIndex counts them, plus the
+	 * different typed answers and the numeric statistics.
+	 *
+	 * @param iterable<array> $responses
 	 */
-	public function getSummaryPublic(int $fileId): array {
-		$form = $this->formRepository->loadPublic($fileId);
-		return $this->buildSummary($form);
-	}
-
-	/**
-	 * Build summary from form data
-	 */
-	private function buildSummary(array $form): array {
-
-		$summary = [
-			'responseCount' => $this->indexService->getResponseCount($form),
-			'lastResponseAt' => $form['_index']['last_response_at'] ?? null,
-			'questions' => [],
-		];
-
+	private function buildSummary(array $form, iterable $responses): array {
 		// Sections are UI grouping containers, not questions — exclude them
 		// so they don't show up as empty "questions" in the results summary.
 		$questions = array_values(array_filter(
 			$form['questions'] ?? [],
 			fn ($q) => !in_array($q['type'] ?? '', ['section', 'descriptor'], true),
 		));
+		// Typed answers are not in the index (H6); the summary counts them from the responses.
+		$typed = [];
+		/** @var array<string, array{0: float, 1: int, 2: float, 3: float}|null> $numeric sum, count, min and max */
+		$numeric = [];
+		foreach ($questions as $question) {
+			if (in_array($question['type'], ['text', 'textarea', 'number', 'date', 'datetime', 'time'], true)) {
+				$typed[(string)$question['id']] = [];
+			}
+			if (in_array($question['type'], ['number', 'scale', 'rating'], true)) {
+				$numeric[(string)$question['id']] = null;
+			}
+		}
+
+		$index = ['response_count' => 0, 'last_response_at' => null, 'answer_counts' => []];
+		foreach ($responses as $response) {
+			$this->indexService->tally($index, $form, $response);
+			foreach (array_keys($typed) as $questionId) {
+				$answer = $response['answers'][$questionId] ?? null;
+				if (is_scalar($answer) && $answer !== '') {
+					$typed[$questionId][(string)$answer] = true;
+				}
+			}
+			foreach ($numeric as $questionId => $stat) {
+				$answer = $response['answers'][$questionId] ?? null;
+				// An older stored '1e400' would be infinite here, and the summary could not go out as JSON.
+				if ($answer !== null && is_numeric($answer) && is_finite((float)$answer)) {
+					$value = (float)$answer;
+					$numeric[$questionId] = $stat === null ? [$value, 1, $value, $value] : [$stat[0] + $value, $stat[1] + 1, min($stat[2], $value), max($stat[3], $value)];
+				}
+			}
+		}
+
+		$summary = [
+			'responseCount' => $index['response_count'],
+			'lastResponseAt' => $index['last_response_at'],
+			'questions' => [],
+		];
 
 		foreach ($questions as $question) {
-			$questionId = $question['id'];
+			$questionId = (string)$question['id'];
 			$questionSummary = [
-				'id' => $questionId,
+				'id' => $question['id'],
 				'type' => $question['type'],
 				'question' => $question['question'],
-				'answerCounts' => $this->indexService->getAnswerStats($form, $questionId),
+				'answerCounts' => $index['answer_counts'][$questionId] ?? [],
 			];
 
 			// Preserve options/rows/columns so the frontend can map stored
@@ -365,12 +249,15 @@ class ResponseService {
 				}
 			}
 
-			// For numeric types, calculate average
-			if (in_array($question['type'], ['number', 'scale', 'rating'])) {
-				$stats = $this->calculateNumericStats($form, $questionId);
-				$questionSummary['average'] = $stats['average'];
-				$questionSummary['min'] = $stats['min'];
-				$questionSummary['max'] = $stats['max'];
+			if (array_key_exists($questionId, $typed)) {
+				$questionSummary['uniqueAnswers'] = count($typed[$questionId]);
+			}
+
+			if (array_key_exists($questionId, $numeric)) {
+				$stat = $numeric[$questionId];
+				$questionSummary['average'] = $stat === null ? null : round($stat[0] / $stat[1], 2);
+				$questionSummary['min'] = $stat === null ? null : $stat[2];
+				$questionSummary['max'] = $stat === null ? null : $stat[3];
 			}
 
 			$summary['questions'][] = $questionSummary;
@@ -383,13 +270,27 @@ class ResponseService {
 	 * Get all responses for a form
 	 */
 	public function getResponses(int $fileId, ?string $dateFilter = null): array {
-		$form = $this->formRepository->load($fileId);
-
+		$form = $this->formRepository->loadForm($fileId);
 		if ($dateFilter !== null) {
-			return $this->indexService->getResponsesByDate($form, $dateFilter);
+			$day = [];
+			foreach ($this->formRepository->eachResponse($fileId, $form) as $response) {
+				if (substr((string)($response['submitted_at'] ?? ''), 0, 10) === $dateFilter) {
+					$day[] = $response;
+				}
+			}
+			return $this->sanitizer->responses($day);
 		}
+		return $this->sanitizer->responses($this->formRepository->page($fileId, $form)['responses']);
+	}
 
-		return $form['responses'] ?? [];
+	/**
+	 * One page of responses, oldest first, and the cursor of the next.
+	 *
+	 * @return array{responses: list<array>, next: ?string}
+	 */
+	public function getResponsePage(int $fileId, int $limit, ?string $after = null): array {
+		$page = $this->formRepository->page($fileId, $this->formRepository->loadForm($fileId), $limit, $after);
+		return ['responses' => $this->sanitizer->responses($page['responses']), 'next' => $page['next']];
 	}
 
 	/**
@@ -410,20 +311,16 @@ class ResponseService {
 	}
 
 	/**
-	 * Build the shared export table (header + data rows) used by both the CSV
-	 * and XLSX exporters, so the two formats stay identical in content.
+	 * The shared export table used by both the CSV and XLSX exporters, so the two formats stay identical in content:
+	 * the header row, then one row per response, read a page at a time; nothing at all when there are no responses.
 	 *
 	 * Every string cell is run through sanitizeCsvCell() — formula injection
-	 * applies to XLSX just as much as CSV. Returns ['headers' => string[],
-	 * 'rows' => array<array<string>>], or null when there are no responses.
+	 * applies to XLSX just as much as CSV.
+	 *
+	 * @return \Generator<int, list<mixed>>
 	 */
-	private function buildExportData(int $fileId): ?array {
-		$form = $this->formRepository->load($fileId);
-		$responses = $form['responses'] ?? [];
-
-		if (empty($responses)) {
-			return null;
-		}
+	private function exportRows(int $fileId): \Generator {
+		$form = $this->formRepository->loadForm($fileId);
 
 		// Sections are UI grouping containers, not questions — exclude them
 		// so they don't appear as empty columns next to the answer columns.
@@ -448,130 +345,139 @@ class ResponseService {
 			$headers[] = $this->sanitizeCsvCell($question['question'] ?? '');
 		}
 
-		$rows = [];
-		foreach ($responses as $response) {
-			$row = [
-				$response['id'],
-				$response['submitted_at'],
-				$response['respondent']['type'],
-				$response['respondent']['user_id'] ?? $response['respondent']['fingerprint'] ?? '',
-			];
+		$first = true;
+		foreach ($this->formRepository->eachResponse($fileId, $form) as $response) {
+			if ($first) {
+				yield $headers;
+				$first = false;
+			}
+			yield $this->exportRow($questions, $response);
+		}
+	}
 
-			foreach ($questions as $question) {
-				$answer = $response['answers'][$question['id']] ?? '';
+	/** @return list<mixed> */
+	private function exportRow(array $questions, array $response): array {
+		$row = [
+			$response['id'],
+			$response['submitted_at'],
+			$response['respondent']['type'] ?? (($response['source'] ?? '') === 'api' ? 'api' : 'anonymous'),
+			// The fingerprint only tells the server about repeats; it is not a respondent (M13).
+			$response['respondent']['user_id'] ?? '',
+		];
 
-				// Consent: render boolean as Yes/No so it is human-readable (#94).
-				if (($question['type'] ?? '') === 'consent') {
-					$answer = $answer === true ? $this->l->t('Yes') : ($answer === false ? $this->l->t('No') : '');
+		foreach ($questions as $question) {
+			$answer = $response['answers'][$question['id']] ?? '';
+
+			// Consent: render boolean as Yes/No so it is human-readable (#94).
+			if (($question['type'] ?? '') === 'consent') {
+				$answer = $answer === true ? $this->l->t('Yes') : ($answer === false ? $this->l->t('No') : '');
+			}
+
+			// Matrix questions: format as "Row: Column" pairs
+			if (($question['type'] ?? '') === 'matrix' && is_array($answer)) {
+				$rowsDef = $question['rows'] ?? [];
+				$columns = $question['columns'] ?? [];
+				$rowMap = [];
+				foreach ($rowsDef as $r) {
+					$rowMap[$r['id']] = $r['label'] ?? $r['id'];
 				}
-
-				// Matrix questions: format as "Row: Column" pairs
-				if (($question['type'] ?? '') === 'matrix' && is_array($answer)) {
-					$rowsDef = $question['rows'] ?? [];
-					$columns = $question['columns'] ?? [];
-					$rowMap = [];
-					foreach ($rowsDef as $r) {
-						$rowMap[$r['id']] = $r['label'] ?? $r['id'];
+				$colMap = [];
+				foreach ($columns as $c) {
+					$colMap[$c['value'] ?? $c['id']] = $c['label'] ?? $c['value'] ?? '';
+				}
+				$parts = [];
+				foreach ($answer as $rowId => $colValue) {
+					$rowLabel = $rowMap[$rowId] ?? $rowId;
+					$colLabel = $colMap[$colValue] ?? $colValue;
+					$parts[] = $rowLabel . ': ' . $colLabel;
+				}
+				$answer = implode(', ', $parts);
+			} elseif (($question['type'] ?? '') === 'table' && is_array($answer)) {
+				// Table answers are arrays of row objects keyed by column id.
+				// Replace internal column ids with the user-defined label.
+				$columns = $question['columns'] ?? [];
+				$colLabels = [];
+				foreach ($columns as $c) {
+					$cid = $c['id'] ?? null;
+					if ($cid !== null) {
+						$colLabels[$cid] = $c['label'] ?? $cid;
 					}
-					$colMap = [];
-					foreach ($columns as $c) {
-						$colMap[$c['value'] ?? $c['id']] = $c['label'] ?? $c['value'] ?? '';
+				}
+				$relabelled = [];
+				foreach ($answer as $rowObj) {
+					if (!is_array($rowObj)) {
+						continue;
 					}
-					$parts = [];
-					foreach ($answer as $rowId => $colValue) {
-						$rowLabel = $rowMap[$rowId] ?? $rowId;
-						$colLabel = $colMap[$colValue] ?? $colValue;
-						$parts[] = $rowLabel . ': ' . $colLabel;
+					$relabelledRow = [];
+					foreach ($rowObj as $cid => $val) {
+						$key = $colLabels[$cid] ?? $cid;
+						$relabelledRow[$key] = $val;
 					}
-					$answer = implode(', ', $parts);
-				} elseif (($question['type'] ?? '') === 'table' && is_array($answer)) {
-					// Table answers are arrays of row objects keyed by column id.
-					// Replace internal column ids with the user-defined label.
-					$columns = $question['columns'] ?? [];
-					$colLabels = [];
-					foreach ($columns as $c) {
-						$cid = $c['id'] ?? null;
-						if ($cid !== null) {
-							$colLabels[$cid] = $c['label'] ?? $cid;
-						}
-					}
-					$relabelled = [];
-					foreach ($answer as $rowObj) {
-						if (!is_array($rowObj)) {
-							continue;
-						}
-						$relabelledRow = [];
-						foreach ($rowObj as $cid => $val) {
-							$key = $colLabels[$cid] ?? $cid;
-							$relabelledRow[$key] = $val;
-						}
-						$relabelled[] = $relabelledRow;
-					}
-					$answer = json_encode($relabelled, JSON_UNESCAPED_UNICODE);
-				} else {
-					// Map option values to labels for choice/multiple/dropdown questions
-					$options = $question['options'] ?? [];
-					if (!empty($options)) {
-						$optionMap = [];
-						foreach ($options as $opt) {
-							$optionMap[$opt['value'] ?? $opt['id']] = $opt['label'] ?? $opt['value'] ?? '';
-						}
-
-						if (is_array($answer)) {
-							$answer = array_map(function ($val) use ($optionMap) {
-								return $optionMap[$val] ?? $val;
-							}, $answer);
-						} elseif (is_string($answer) && isset($optionMap[$answer])) {
-							$answer = $optionMap[$answer];
-						}
+					$relabelled[] = $relabelledRow;
+				}
+				$answer = json_encode($relabelled, JSON_UNESCAPED_UNICODE);
+			} else {
+				// Map option values to labels for choice/multiple/dropdown questions
+				$options = $question['options'] ?? [];
+				if (!empty($options)) {
+					$optionMap = [];
+					foreach ($options as $opt) {
+						$optionMap[$opt['value'] ?? $opt['id']] = $opt['label'] ?? $opt['value'] ?? '';
 					}
 
 					if (is_array($answer)) {
-						// Table or file answers: serialize as JSON
-						if (!empty($answer) && is_array(reset($answer))) {
-							$answer = json_encode($answer, JSON_UNESCAPED_UNICODE);
-						} else {
-							$answer = implode(', ', $answer);
-						}
+						$answer = array_map(function ($val) use ($optionMap) {
+							return $optionMap[$val] ?? $val;
+						}, $answer);
+					} elseif (is_string($answer) && isset($optionMap[$answer])) {
+						$answer = $optionMap[$answer];
 					}
 				}
-				// Formula-injection safety, applied uniformly to every cell.
-				$row[] = is_string($answer) ? $this->sanitizeCsvCell($answer) : $answer;
-			}
 
-			$rows[] = $row;
+				if (is_array($answer)) {
+					// Table or file answers: serialize as JSON
+					if (!empty($answer) && is_array(reset($answer))) {
+						$answer = json_encode($answer, JSON_UNESCAPED_UNICODE);
+					} else {
+						$answer = implode(', ', $answer);
+					}
+				}
+			}
+			// Formula-injection safety, applied uniformly to every cell.
+			$row[] = is_string($answer) ? $this->sanitizeCsvCell($answer) : $answer;
 		}
 
-		return ['headers' => $headers, 'rows' => $rows];
+		return $row;
 	}
 
 	/**
 	 * Export responses to CSV format
 	 */
 	public function exportCsv(int $fileId): string {
-		$data = $this->buildExportData($fileId);
-		if ($data === null) {
-			return '';
-		}
-
 		$output = fopen('php://temp', 'r+');
+		$any = false;
 
 		// Semicolon separator + BOM (no sep= directive) — see the return
 		// statement below for why. eol: "\r\n" matches Excel's record
 		// separator and the \r\n we normalise within cells (#83).
-		fputcsv($output, $data['headers'], separator: ';', eol: "\r\n");
-
-		foreach ($data['rows'] as $row) {
-			// Normalise embedded newlines so Excel renders them as in-cell
-			// line breaks instead of new rows (cells are already sanitised).
-			$row = array_map(function ($v) {
-				if (!is_string($v)) {
-					return $v;
-				}
-				$v = str_replace(["\r\n", "\r"], ["\n", "\n"], $v);
-				return str_replace("\n", "\r\n", $v);
-			}, $row);
+		foreach ($this->exportRows($fileId) as $r => $row) {
+			$any = true;
+			if ($r > 0) {
+				// Normalise embedded newlines so Excel renders them as in-cell
+				// line breaks instead of new rows (cells are already sanitised).
+				$row = array_map(function ($v) {
+					if (!is_string($v)) {
+						return $v;
+					}
+					$v = str_replace(["\r\n", "\r"], ["\n", "\n"], $v);
+					return str_replace("\n", "\r\n", $v);
+				}, $row);
+			}
 			fputcsv($output, $row, separator: ';', eol: "\r\n");
+		}
+		if (!$any) {
+			fclose($output);
+			return '';
 		}
 
 		rewind($output);
@@ -600,79 +506,88 @@ class ResponseService {
 	 * xlsx bytes, or '' when there are no responses.
 	 */
 	public function exportXlsx(int $fileId): string {
-		$data = $this->buildExportData($fileId);
-		if ($data === null) {
-			return '';
-		}
-
-		// Build the single worksheet: header row + data rows, inline strings.
-		$allRows = array_merge([$data['headers']], $data['rows']);
-		$sheetRows = '';
-		foreach ($allRows as $r => $row) {
-			$rowNum = $r + 1;
-			$cells = '';
-			$col = 0;
-			foreach ($row as $value) {
-				$ref = $this->xlsxColumnLetter($col) . $rowNum;
-				$col++;
-				if ($value === null || $value === '') {
-					continue; // empty cell — omit entirely
+		// The single worksheet, header row + data rows with inline strings, written to a file a row at a time.
+		$sheetFile = tempnam(sys_get_temp_dir(), 'formvox_sheet_');
+		$tempFile = null;
+		try {
+			$sheet = fopen($sheetFile, 'w');
+			fwrite($sheet, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+				. '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+				. '<sheetData>');
+			$any = false;
+			foreach ($this->exportRows($fileId) as $r => $row) {
+				$any = true;
+				$rowNum = $r + 1;
+				$cells = '';
+				$col = 0;
+				foreach ($row as $value) {
+					$ref = $this->xlsxColumnLetter($col) . $rowNum;
+					$col++;
+					if ($value === null || $value === '') {
+						continue; // empty cell — omit entirely
+					}
+					if (is_int($value) || is_float($value)) {
+						$cells .= '<c r="' . $ref . '"><v>' . $value . '</v></c>';
+					} else {
+						// Inline string; xml:space="preserve" keeps leading/trailing spaces
+						// (e.g. our formula-injection guard prefixes a value with an apostrophe).
+						$cells .= '<c r="' . $ref . '" t="inlineStr"><is><t xml:space="preserve">'
+							. $this->xmlEscape((string)$value) . '</t></is></c>';
+					}
 				}
-				if (is_int($value) || is_float($value)) {
-					$cells .= '<c r="' . $ref . '"><v>' . $value . '</v></c>';
-				} else {
-					// Inline string; xml:space="preserve" keeps leading/trailing spaces
-					// (e.g. our formula-injection guard prefixes a value with an apostrophe).
-					$cells .= '<c r="' . $ref . '" t="inlineStr"><is><t xml:space="preserve">'
-						. $this->xmlEscape((string)$value) . '</t></is></c>';
+				fwrite($sheet, '<row r="' . $rowNum . '">' . $cells . '</row>');
+			}
+			fwrite($sheet, '</sheetData></worksheet>');
+			fclose($sheet);
+			if (!$any) {
+				return '';
+			}
+
+			$contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+				. '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+				. '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+				. '<Default Extension="xml" ContentType="application/xml"/>'
+				. '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+				. '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+				. '</Types>';
+
+			$rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+				. '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+				. '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+				. '</Relationships>';
+
+			$workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+				. '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+				. ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+				. '<sheets><sheet name="Responses" sheetId="1" r:id="rId1"/></sheets></workbook>';
+
+			$workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+				. '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+				. '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+				. '</Relationships>';
+
+			$tempFile = tempnam(sys_get_temp_dir(), 'formvox_xlsx_');
+			$zip = new \ZipArchive();
+			if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+				throw new \RuntimeException('Failed to create XLSX file');
+			}
+			$zip->addFromString('[Content_Types].xml', $contentTypes);
+			$zip->addFromString('_rels/.rels', $rootRels);
+			$zip->addFromString('xl/workbook.xml', $workbook);
+			$zip->addFromString('xl/_rels/workbook.xml.rels', $workbookRels);
+			$zip->addFile($sheetFile, 'xl/worksheets/sheet1.xml');
+			$zip->close();
+
+			$content = file_get_contents($tempFile);
+			return $content === false ? '' : $content;
+		} finally {
+			// Also when reading the responses or making the ZIP fails halfway.
+			foreach ([$sheetFile, $tempFile] as $file) {
+				if (is_string($file) && is_file($file)) {
+					unlink($file);
 				}
 			}
-			$sheetRows .= '<row r="' . $rowNum . '">' . $cells . '</row>';
 		}
-
-		$sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-			. '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-			. '<sheetData>' . $sheetRows . '</sheetData></worksheet>';
-
-		$contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-			. '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-			. '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-			. '<Default Extension="xml" ContentType="application/xml"/>'
-			. '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-			. '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-			. '</Types>';
-
-		$rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-			. '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-			. '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
-			. '</Relationships>';
-
-		$workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-			. '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
-			. ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-			. '<sheets><sheet name="Responses" sheetId="1" r:id="rId1"/></sheets></workbook>';
-
-		$workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-			. '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-			. '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-			. '</Relationships>';
-
-		$tempFile = tempnam(sys_get_temp_dir(), 'formvox_xlsx_');
-		$zip = new \ZipArchive();
-		if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-			throw new \RuntimeException('Failed to create XLSX file');
-		}
-		$zip->addFromString('[Content_Types].xml', $contentTypes);
-		$zip->addFromString('_rels/.rels', $rootRels);
-		$zip->addFromString('xl/workbook.xml', $workbook);
-		$zip->addFromString('xl/_rels/workbook.xml.rels', $workbookRels);
-		$zip->addFromString('xl/worksheets/sheet1.xml', $sheetXml);
-		$zip->close();
-
-		$content = file_get_contents($tempFile);
-		unlink($tempFile);
-
-		return $content === false ? '' : $content;
 	}
 
 	/**
@@ -702,451 +617,48 @@ class ResponseService {
 	 * Export responses to JSON format
 	 */
 	public function exportJson(int $fileId): string {
-		$form = $this->formRepository->load($fileId);
-
-		return json_encode([
+		$form = $this->formRepository->loadForm($fileId);
+		$flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE;
+		$head = json_encode([
 			'title' => $form['title'],
 			'exportedAt' => date('c'),
 			'questions' => $form['questions'],
-			'responses' => $form['responses'] ?? [],
-		], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+			'responses' => [],
+		], $flags);
+		if ($head === false) {
+			throw new \RuntimeException('The form could not be encoded');
+		}
+
+		// The responses a page at a time, laid out as json_encode lays out the whole: two levels in.
+		$output = fopen('php://temp', 'r+');
+		fwrite($output, substr($head, 0, -strlen("[]\n}")));
+		$first = true;
+		foreach ($this->formRepository->eachResponse($fileId, $form) as $response) {
+			$json = json_encode($this->sanitizer->response($response), $flags);
+			if ($json === false) {
+				fclose($output);
+				throw new \RuntimeException('A response could not be encoded');
+			}
+			fwrite($output, ($first ? "[\n" : ",\n") . preg_replace('/^/m', '        ', $json));
+			$first = false;
+		}
+		fwrite($output, $first ? "[]\n}" : "\n    ]\n}");
+		rewind($output);
+		$json = (string)stream_get_contents($output);
+		fclose($output);
+		return $json;
 	}
 
 	/**
-	 * Validate that the form accepts responses
+	 * Recognises a repeat without recording who it was: keyed with the server's secret and the form, and
+	 * without the share token, so a new link does not reset it (M13, L5). A signed-in respondent of an
+	 * anonymous form counts per account (M34); anyone else per network and browser.
 	 */
-	private function validateFormAcceptsResponses(array $form): void {
-		$settings = $form['settings'] ?? [];
-
-		// Check expiration
-		if (!empty($settings['expires_at'])) {
-			$expiresAt = new \DateTime($settings['expires_at']);
-			if ($expiresAt < new \DateTime()) {
-				throw new \RuntimeException($this->l->t('This form has expired'));
-			}
-		}
-
-		// Check response limit
-		$maxResponses = $settings['max_responses'] ?? 0;
-		if ($maxResponses > 0) {
-			$currentCount = $this->indexService->getResponseCount($form);
-			if ($currentCount >= $maxResponses) {
-				$limitMessage = $settings['limit_message'] ?? '';
-				if (empty($limitMessage)) {
-					$limitMessage = $this->l->t('This form has reached its response limit');
-				}
-				throw new \RuntimeException($limitMessage);
-			}
-		}
-	}
-
-	/**
-	 * Validate answers against form questions
-	 */
-	private function validateAnswers(array $form, array $answers): void {
-		$questionIds = array_column($form['questions'] ?? [], 'id');
-		$questionsById = [];
-		foreach ($form['questions'] ?? [] as $question) {
-			$questionsById[$question['id']] = $question;
-		}
-
-		// Check required questions
-		foreach ($form['questions'] ?? [] as $question) {
-			$questionId = $question['id'];
-
-			// Skip non-answerable UI items (section headers, info blocks).
-			// They never store an answer so a stray required flag should
-			// not reject the submit (#64).
-			if (in_array($question['type'] ?? '', ['section', 'descriptor'], true)) {
-				continue;
-			}
-
-			// Skip if question is conditionally hidden
-			if ($this->isQuestionHidden($question, $answers, $questionsById)) {
-				continue;
-			}
-
-			if ($question['required'] ?? false) {
-				$a = $answers[$questionId] ?? null;
-				$missing = $a === null || $a === '' || $a === [];
-				// Consent: only an explicit `true` counts as answered (#94).
-				if (($question['type'] ?? '') === 'consent') {
-					$missing = $a !== true;
-				}
-				if ($missing) {
-					// TRANSLATORS: Error shown to a respondent; %s is the text of the question
-					throw new \RuntimeException($this->l->t("Question '%s' is required", [$question['question']]));
-				}
-			}
-		}
-
-		// Validate answer types
-		foreach ($answers as $questionId => $answer) {
-			if (!in_array($questionId, $questionIds)) {
-				continue; // Skip unknown questions
-			}
-
-			$question = $questionsById[$questionId];
-			$this->validateAnswerType($question, $answer);
-		}
-
-		// Capacity limits per option (#104)
-		$this->validateCapacity($form, $answers);
-	}
-
-	/**
-	 * Reject submission if any selected option has reached its capacity.
-	 * Counts come from the existing _index.answer_counts aggregator.
-	 */
-	private function validateCapacity(array $form, array $answers): void {
-		$counts = $form['_index']['answer_counts'] ?? [];
-		foreach ($form['questions'] ?? [] as $question) {
-			if (!in_array($question['type'] ?? '', ['choice', 'multiple', 'dropdown'], true)) {
-				continue;
-			}
-			$qid = $question['id'];
-			$selected = $answers[$qid] ?? null;
-			if ($selected === null || $selected === '' || $selected === []) {
-				continue;
-			}
-			$selectedValues = is_array($selected) ? $selected : [$selected];
-			foreach ($question['options'] ?? [] as $option) {
-				$capacity = $option['capacity'] ?? null;
-				if ($capacity === null || $capacity === '' || (int)$capacity <= 0) {
-					continue; // unlimited
-				}
-				$optValue = $option['value'] ?? $option['id'] ?? null;
-				if ($optValue === null || !in_array($optValue, $selectedValues, true)) {
-					continue;
-				}
-				$used = (int)($counts[$qid][$optValue] ?? 0);
-				if ($used >= (int)$capacity) {
-					$label = $option['label'] ?? $optValue;
-					// TRANSLATORS: Error shown to a respondent; %s is the label of an answer option that has no places left
-					throw new \RuntimeException($this->l->t("The option '%s' is no longer available — capacity reached", [$label]));
-				}
-			}
-		}
-	}
-
-	/**
-	 * Validate answer matches question type
-	 */
-	private function validateAnswerType(array $question, $answer): void {
-		$type = $question['type'];
-
-		switch ($type) {
-			case 'number':
-			case 'scale':
-			case 'rating':
-				if ($answer !== '' && !is_numeric($answer)) {
-					// TRANSLATORS: Error shown to a respondent; %s is the question text
-					throw new \RuntimeException($this->l->t("Invalid answer for question '%s'", [$question['question']]));
-				}
-				break;
-
-			case 'multiple':
-				if (!is_array($answer)) {
-					throw new \RuntimeException($this->l->t('Multiple choice question requires array answer'));
-				}
-				// Min/max selection limits (#113). Empty answers are handled by
-				// the required-check; only enforce bounds on a non-empty answer.
-				$count = count($answer);
-				$min = (int)($question['minSelections'] ?? 0);
-				$max = (int)($question['maxSelections'] ?? 0);
-				if ($count > 0 && $min > 0 && $count < $min) {
-					// TRANSLATORS: Error shown to a respondent; %n is the minimum number of options to tick, %s the question text
-					throw new \RuntimeException($this->l->n("Select at least %n option for question '%s'", "Select at least %n options for question '%s'", $min, [$question['question']]));
-				}
-				if ($max > 0 && $count > $max) {
-					// TRANSLATORS: Error shown to a respondent; %n is the maximum number of options to tick, %s the question text
-					throw new \RuntimeException($this->l->n("Select at most %n option for question '%s'", "Select at most %n options for question '%s'", $max, [$question['question']]));
-				}
-				break;
-
-			case 'textarea':
-			case 'text':
-				// Character limit (#113). mb_strlen counts characters, so a
-				// multi-byte umlaut counts as one, matching the browser counter.
-				$maxLength = (int)($question['maxLength'] ?? 0);
-				if ($maxLength > 0 && is_string($answer) && mb_strlen($answer) > $maxLength) {
-					// TRANSLATORS: Error shown to a respondent; %1$s is the question text, %2$d the maximum number of characters
-					throw new \RuntimeException($this->l->t("Answer for question '%1\$s' exceeds the %2\$d-character limit", [$question['question'], $maxLength]));
-				}
-				break;
-
-			case 'consent':
-				// Accept boolean true/false. The required-check enforces
-				// that 'true' is mandatory when the question is required.
-				if (!is_bool($answer) && $answer !== '' && $answer !== null) {
-					throw new \RuntimeException($this->l->t('Consent question requires boolean answer'));
-				}
-				break;
-
-			case 'date':
-				if ($answer !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $answer)) {
-					// TRANSLATORS: Error; %s is the question text
-					throw new \RuntimeException($this->l->t("Invalid date format for question '%s'", [$question['question']]));
-				}
-				break;
-
-			case 'datetime':
-				if ($answer !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/', $answer)) {
-					// TRANSLATORS: Error; %s is the question text; a datetime is a date with a time
-					throw new \RuntimeException($this->l->t("Invalid datetime format for question '%s'", [$question['question']]));
-				}
-				break;
-
-			case 'time':
-				if ($answer !== '' && !preg_match('/^\d{2}:\d{2}$/', $answer)) {
-					// TRANSLATORS: Error; %s is the question text
-					throw new \RuntimeException($this->l->t("Invalid time format for question '%s'", [$question['question']]));
-				}
-				break;
-		}
-
-		// Custom pattern validation (for text-based fields)
-		if (!empty($question['validation']['pattern'])) {
-			$pattern = $question['validation']['pattern'];
-			// Only validate non-empty answers
-			if ($answer !== '' && $answer !== null) {
-				// Escape delimiter and validate the pattern
-				$escapedPattern = '/' . str_replace('/', '\/', $pattern) . '/';
-				if (@preg_match($escapedPattern, '') === false) {
-					// Invalid regex pattern - log and skip validation
-					return;
-				}
-				if (!preg_match($escapedPattern, (string)$answer)) {
-					$errorMsg = $question['validation']['errorMessage']
-						// TRANSLATORS: Error shown to a respondent; %s is the question text
-						?? $this->l->t("Answer does not match the required format for question '%s'", [$question['question']]);
-					throw new \RuntimeException($errorMsg);
-				}
-			}
-		}
-
-		// Date/Time range validation (only for non-empty answers)
-		if ($answer !== '' && $answer !== null) {
-			if (in_array($type, ['date', 'datetime'])) {
-				if (!empty($question['dateMin']) && $answer < $question['dateMin']) {
-					// TRANSLATORS: Error shown to a respondent; %s is the question text
-					throw new \RuntimeException($this->l->t("Date is before the allowed minimum for question '%s'", [$question['question']]));
-				}
-				if (!empty($question['dateMax']) && $answer > $question['dateMax']) {
-					// TRANSLATORS: Error shown to a respondent; %s is the question text
-					throw new \RuntimeException($this->l->t("Date is after the allowed maximum for question '%s'", [$question['question']]));
-				}
-			}
-			if ($type === 'time') {
-				if (!empty($question['timeMin']) && $answer < $question['timeMin']) {
-					// TRANSLATORS: Error shown to a respondent; %s is the question text
-					throw new \RuntimeException($this->l->t("Time is before the allowed minimum for question '%s'", [$question['question']]));
-				}
-				if (!empty($question['timeMax']) && $answer > $question['timeMax']) {
-					// TRANSLATORS: Error shown to a respondent; %s is the question text
-					throw new \RuntimeException($this->l->t("Time is after the allowed maximum for question '%s'", [$question['question']]));
-				}
-			}
-		}
-	}
-
-	/**
-	 * Check if a question is hidden due to conditional logic
-	 */
-	private function isQuestionHidden(array $question, array $answers, array $questionsById): bool {
-		// Question is hidden if its parent section is hidden (#92). A
-		// required question inside a section whose showIf evaluates false
-		// must not be enforced — the respondent never saw the field.
-		if (!empty($question['sectionId']) && isset($questionsById[$question['sectionId']])) {
-			$section = $questionsById[$question['sectionId']];
-			if (isset($section['showIf']) && !$this->evaluateCondition($section['showIf'], $answers, $questionsById)) {
-				return true;
-			}
-		}
-
-		if (!isset($question['showIf'])) {
-			return false;
-		}
-
-		return !$this->evaluateCondition($question['showIf'], $answers, $questionsById);
-	}
-
-	/**
-	 * Evaluate a conditional expression
-	 */
-	/**
-	 * Build a list of values to match against for a choice/multiple/dropdown
-	 * question. The answer is stored as option.value (e.g. "optdca45095")
-	 * but historically the routing/showIf editor saved option.label (e.g.
-	 * "Ja"). Accept either form so existing forms with label-based rules
-	 * keep working alongside new value-based ones. (#99)
-	 *
-	 * @return list<mixed>
-	 */
-	private function choiceCompareCandidates(string $questionId, $compareValue, array $questionsById): array {
-		$question = $questionsById[$questionId] ?? null;
-		if ($question === null || !in_array($question['type'] ?? '', ['choice', 'multiple', 'dropdown'], true)) {
-			return [$compareValue];
-		}
-		$opts = $question['options'] ?? [];
-		foreach ($opts as $o) {
-			$v = $o['value'] ?? $o['id'] ?? null;
-			$label = $o['label'] ?? null;
-			if ($label === $compareValue || $v === $compareValue) {
-				$out = [];
-				if ($v !== null) {
-					$out[] = $v;
-				}
-				if ($label !== null && $label !== $v) {
-					$out[] = $label;
-				}
-				return $out;
-			}
-		}
-		return [$compareValue];
-	}
-
-	private function evaluateCondition(array $condition, array $answers, array $questionsById = []): bool {
-		// Combined conditions (AND/OR)
-		if (isset($condition['operator']) && isset($condition['conditions'])) {
-			$op = strtolower($condition['operator']);
-			$results = array_map(
-				fn ($c) => $this->evaluateCondition($c, $answers, $questionsById),
-				$condition['conditions']
-			);
-
-			if ($op === 'and') {
-				return !in_array(false, $results, true);
-			} elseif ($op === 'or') {
-				return in_array(true, $results, true);
-			}
-			return false;
-		}
-
-		// Simple condition
-		if (isset($condition['questionId'], $condition['operator'])) {
-			$questionId = $condition['questionId'];
-			$operator = $condition['operator'];
-			$value = $condition['value'] ?? null;
-			$answer = $answers[$questionId] ?? null;
-			$isArrayAnswer = is_array($answer);
-			$candidates = $this->choiceCompareCandidates($questionId, $value, $questionsById);
-
-			switch ($operator) {
-				case 'equals':
-					if ($isArrayAnswer) {
-						foreach ($candidates as $c) {
-							if (in_array($c, $answer, true)) {
-								return true;
-							}
-						}
-						return false;
-					}
-					return in_array($answer, $candidates, true);
-				case 'notEquals':
-					if ($isArrayAnswer) {
-						foreach ($candidates as $c) {
-							if (in_array($c, $answer, true)) {
-								return false;
-							}
-						}
-						return true;
-					}
-					return !in_array($answer, $candidates, true);
-				case 'contains':
-					if ($isArrayAnswer) {
-						foreach ($candidates as $c) {
-							if (in_array($c, $answer, true)) {
-								return true;
-							}
-						}
-						return false;
-					}
-					if (!is_string($answer)) {
-						return false;
-					}
-					foreach ($candidates as $c) {
-						if (str_contains($answer, (string)$c)) {
-							return true;
-						}
-					}
-					return false;
-				case 'notContains':
-					if ($isArrayAnswer) {
-						foreach ($candidates as $c) {
-							if (in_array($c, $answer, true)) {
-								return false;
-							}
-						}
-						return true;
-					}
-					if (!is_string($answer)) {
-						return true;
-					}
-					foreach ($candidates as $c) {
-						if (str_contains($answer, (string)$c)) {
-							return false;
-						}
-					}
-					return true;
-				case 'isEmpty':
-					return $answer === null || $answer === '' || $answer === [];
-				case 'isNotEmpty':
-					return $answer !== null && $answer !== '' && $answer !== [];
-				case 'greaterThan': {
-					$a = $isArrayAnswer ? ($answer[0] ?? null) : $answer;
-					return is_numeric($a) && $a > $value;
-				}
-				case 'lessThan': {
-					$a = $isArrayAnswer ? ($answer[0] ?? null) : $answer;
-					return is_numeric($a) && $a < $value;
-				}
-				case 'in':
-					if (!is_array($value)) {
-						return false;
-					}
-					if ($isArrayAnswer) {
-						foreach ($answer as $a) {
-							if (in_array($a, $value, true)) {
-								return true;
-							}
-						}
-						return false;
-					}
-					return in_array($answer, $value, true);
-				case 'notIn':
-					if (!is_array($value)) {
-						return true;
-					}
-					if ($isArrayAnswer) {
-						foreach ($answer as $a) {
-							if (in_array($a, $value, true)) {
-								return false;
-							}
-						}
-						return true;
-					}
-					return !in_array($answer, $value, true);
-			}
-		}
-
-		// Unknown / unset operator → don't match. Returning true used to
-		// silently fire showIf and page-routing rules when a rule was
-		// half-configured (#99).
-		return false;
-	}
-
-	/**
-	 * Calculate fingerprint for anonymous users
-	 */
-	private function calculateFingerprint(IRequest $request, string $shareToken): string {
-		$data = implode('|', [
-			$request->getRemoteAddress(),
-			$request->getHeader('User-Agent'),
-			$shareToken,
-		]);
-
-		return 'sha256:' . hash('sha256', $data);
+	private function fingerprint(int $fileId, IRequest $request, ?string $accountId): string {
+		$subject = $accountId !== null
+			? 'account|' . $accountId
+			: 'request|' . $request->getRemoteAddress() . '|' . $request->getHeader('User-Agent');
+		return 'v2:' . bin2hex($this->crypto->calculateHMAC($fileId . '|' . $subject));
 	}
 
 	/**
@@ -1216,30 +728,6 @@ class ResponseService {
 			'max' => $maxScore,
 			'percentage' => $maxScore > 0 ? round(($totalScore / $maxScore) * 100, 1) : 0,
 			'byQuestion' => $questionScores,
-		];
-	}
-
-	/**
-	 * Calculate numeric statistics for a question
-	 */
-	private function calculateNumericStats(array $form, string $questionId): array {
-		$values = [];
-
-		foreach ($form['responses'] ?? [] as $response) {
-			$answer = $response['answers'][$questionId] ?? null;
-			if ($answer !== null && is_numeric($answer)) {
-				$values[] = (float)$answer;
-			}
-		}
-
-		if (empty($values)) {
-			return ['average' => null, 'min' => null, 'max' => null];
-		}
-
-		return [
-			'average' => round(array_sum($values) / count($values), 2),
-			'min' => min($values),
-			'max' => max($values),
 		];
 	}
 

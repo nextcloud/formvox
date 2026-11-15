@@ -77,6 +77,43 @@ This is useful for:
 - Internal surveys that need a public-style interface
 - Collecting responses from specific departments
 
+### Notifications on New Responses
+
+FormVox sends a **Nextcloud notification** (the bell in the top bar) when someone
+submits a response. This is on by default for the person who created the form —
+you do not have to switch it on.
+
+To see or change who gets notified:
+
+1. Open your form and click **Share**
+2. Under **Response settings**, find **Notify on new responses**
+3. Your own name is listed there as a chip when you are the form owner
+4. Use the search field to add other users or groups
+5. To stop receiving them yourself, remove your own chip
+
+Notifications are sent per submission — there is no daily or weekly summary.
+
+> **Note:** these are in-app Nextcloud notifications, not emails. Whether they also
+> reach you by mail depends on your personal Nextcloud notification settings
+> (**Settings → Personal → Notifications**), not on FormVox. The separate
+> **Email confirmation to respondent** setting in the same dialog sends mail to the
+> person filling in the form, not to you.
+
+The **Response settings** section only appears once a response link exists. If you
+do not see it, create the link first under **Response link**.
+
+#### Not receiving notifications for a form in a Team Folder?
+
+If your form lives in a Team Folder (Groupfolder) and notifications do not reach
+you, add yourself explicitly as a recipient under **Notify on new responses**
+instead of relying on being the owner. An explicitly named user or group is always
+notified.
+
+This works around a defect in versions up to and including 1.5.1: for a form in a
+Team Folder, the owner notification could go to another member of the group rather
+than to the form's creator. Adding yourself explicitly is safe to keep in place
+afterwards.
+
 ## Embedding Forms
 
 One of FormVox's most flexible features is the ability to embed forms directly into any website or platform that supports HTML. This means your forms can live exactly where your users already are — no need to redirect them to a separate page.

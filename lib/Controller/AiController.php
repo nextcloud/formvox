@@ -6,42 +6,28 @@ namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
 use OCA\FormVox\Db\AiPendingMapper;
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
 use OCA\FormVox\Service\AiFormGeneratorService;
 use OCP\AppFramework\Controller;
-use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\Files\IRootFolder;
-use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\TaskProcessing\IManager as ITaskManager;
 use OCP\TaskProcessing\Task;
 
 class AiController extends Controller {
-	private AiFormGeneratorService $aiService;
-	private IUserSession $userSession;
-	private IRootFolder $rootFolder;
-	private ITaskManager $taskManager;
-	private AiPendingMapper $pendingMapper;
-	private IL10N $l;
-
 	public function __construct(
 		IRequest $request,
-		AiFormGeneratorService $aiService,
-		IUserSession $userSession,
-		IRootFolder $rootFolder,
-		ITaskManager $taskManager,
-		AiPendingMapper $pendingMapper,
-		IL10N $l,
+		private AiFormGeneratorService $aiService,
+		private IUserSession $userSession,
+		private IRootFolder $rootFolder,
+		private ITaskManager $taskManager,
+		private AiPendingMapper $pendingMapper,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->aiService = $aiService;
-		$this->userSession = $userSession;
-		$this->rootFolder = $rootFolder;
-		$this->taskManager = $taskManager;
-		$this->pendingMapper = $pendingMapper;
-		$this->l = $l;
 	}
 
 	/**
@@ -56,37 +42,23 @@ class AiController extends Controller {
 		$description = trim($description);
 		$title = trim($title);
 
-		$userId = $this->userSession->getUser()?->getUID();
-		if ($userId === null) {
-			// TRANSLATORS: Error when a request has no logged-in account
-			return new DataResponse(['error' => $this->l->t('Not authenticated')], Http::STATUS_UNAUTHORIZED);
-		}
+		$userId = $this->userSession->getUser()?->getUID() ?? throw RequestException::notLoggedIn();
 		if ($title === '') {
-			return new DataResponse(['error' => $this->l->t('A title is required.')], Http::STATUS_BAD_REQUEST);
+			// TRANSLATORS: Error shown when an AI form is asked for without a title
+			throw RequestException::invalid(Translatable::t('A title is required.'));
 		}
 		if ($description === '' && ($sourceFileId === null || $sourceFileId <= 0)) {
-			return new DataResponse(
-				['error' => $this->l->t('Please describe the form you want to create or pick a source document.')],
-				Http::STATUS_BAD_REQUEST
-			);
+			// TRANSLATORS: Error shown when an AI form is asked for without a description or a document
+			throw RequestException::invalid(Translatable::t('Please describe the form you want to create or pick a source document.'));
 		}
-
 		if (!$this->aiService->isAvailable()) {
-			return new DataResponse(
-				['error' => $this->l->t('AI form generation is not available on this instance.')],
-				Http::STATUS_FORBIDDEN
-			);
+			// TRANSLATORS: Error shown when the instance has no AI provider for generating forms
+			throw RequestException::turnedOff(Translatable::t('AI form generation is not available on this instance.'));
 		}
 
-		try {
-			$taskId = $this->aiService->scheduleGeneration($description, $userId, $sourceFileId);
-			$this->pendingMapper->createPending($taskId, $title, $path);
-			return new DataResponse(['taskId' => $taskId]);
-		} catch (\RuntimeException $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		$taskId = $this->aiService->scheduleGeneration($description, $userId, $sourceFileId);
+		$this->pendingMapper->createPending($taskId, $title, $path);
+		return new DataResponse(['taskId' => $taskId]);
 	}
 
 	/**
@@ -95,18 +67,16 @@ class AiController extends Controller {
 	 */
 	#[NoAdminRequired]
 	public function getTask(int $taskId): DataResponse {
-		$userId = $this->userSession->getUser()?->getUID();
-		if ($userId === null) {
-			return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
-		}
-
+		$userId = $this->userSession->getUser()?->getUID() ?? throw RequestException::notLoggedIn();
 		try {
 			$task = $this->taskManager->getTask($taskId);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => 'Task not found'], Http::STATUS_NOT_FOUND);
+		} catch (\OCP\TaskProcessing\Exception\NotFoundException|\OCP\TaskProcessing\Exception\Exception) {
+			$task = null;
 		}
-		if ($task->getUserId() !== $userId) {
-			return new DataResponse(['error' => 'Forbidden'], Http::STATUS_FORBIDDEN);
+		// Someone else's task looks the same as one that does not exist.
+		if ($task === null || $task->getUserId() !== $userId) {
+			// TRANSLATORS: Error shown when polling an AI task that does not exist or is someone else's
+			throw RequestException::notFound(Translatable::t('Task not found'));
 		}
 
 		$body = [
@@ -144,18 +114,8 @@ class AiController extends Controller {
 	 */
 	#[NoAdminRequired]
 	public function resolveFile(string $path): DataResponse {
-		$userId = $this->userSession->getUser()?->getUID();
-		if ($userId === null) {
-			return new DataResponse(['error' => 'Not authenticated'], Http::STATUS_UNAUTHORIZED);
-		}
-		try {
-			$userFolder = $this->rootFolder->getUserFolder($userId);
-			$node = $userFolder->get($path);
-			return new DataResponse(['fileId' => $node->getId()]);
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(['error' => 'File not found'], Http::STATUS_NOT_FOUND);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
+		$userId = $this->userSession->getUser()?->getUID() ?? throw RequestException::notLoggedIn();
+		// A missing file is a 404 through ExceptionMiddleware.
+		return new DataResponse(['fileId' => $this->rootFolder->getUserFolder($userId)->get($path)->getId()]);
 	}
 }

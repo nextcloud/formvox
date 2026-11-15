@@ -148,6 +148,26 @@
         </div>
 
       </div>
+
+      <div class="settings-section">
+        <h2>{{ t('formvox', 'PDF confirmation') }}</h2>
+        <p class="settings-section-desc">
+          {{ t('formvox', 'A form can send respondents their answers as a PDF with the confirmation email. By default only respondents who are signed in get it.') }}
+        </p>
+        <NcCheckboxRadioSwitch
+          :model-value="pdfAnonymous"
+          :disabled="!pdfSharedCache"
+          @update:model-value="togglePdfAnonymous"
+        >
+          {{ t('formvox', 'Also send the PDF to anonymous respondents') }}
+        </NcCheckboxRadioSwitch>
+        <p v-if="!pdfSharedCache" class="settings-section-desc">
+          {{ t('formvox', 'Needs a shared memory cache (Redis or Memcached), so the limits for anonymous respondents can be kept.') }}
+        </p>
+        <NcNoteCard v-if="pdfAnonymous" type="warning">
+          {{ t('formvox', 'An anonymous respondent can type in any email address, and it is not checked. Someone could have your mail server send a PDF with their own text to another person. At most 3 such emails go to one address a day and 200 per form an hour; above that the email goes without the PDF.') }}
+        </NcNoteCard>
+      </div>
     </div>
 
     <!-- Support Tab -->
@@ -291,6 +311,10 @@ export default {
       type: Object,
       default: () => ({ allowedDomains: '*' }),
     },
+    initialPdfSettings: {
+      type: Object,
+      default: () => ({ anonymous: false, sharedCache: false }),
+    },
     initialMsFormsSettings: {
       type: Object,
       default: () => ({ clientId: '', tenantId: 'common', isConfigured: false, redirectUri: '' }),
@@ -329,6 +353,20 @@ export default {
       allowedDomains: props.initialEmbedSettings?.allowedDomains || '*',
     });
     const savingEmbedSettings = ref(false);
+
+    const pdfAnonymous = ref(props.initialPdfSettings?.anonymous === true);
+    // Without Redis or Memcached the limits cannot hold, so it cannot be switched on.
+    const pdfSharedCache = props.initialPdfSettings?.sharedCache === true;
+    const togglePdfAnonymous = async (enabled) => {
+      pdfAnonymous.value = !!enabled;
+      try {
+        await axios.post(generateUrl('/apps/formvox/api/settings/pdf'), { anonymous: !!enabled });
+        showSuccess(t('formvox', 'Settings saved'));
+      } catch (error) {
+        pdfAnonymous.value = !enabled;
+        showError(t('formvox', 'Failed to save settings'));
+      }
+    };
 
     // MS Forms settings
     const msFormsSettings = reactive({
@@ -495,6 +533,9 @@ export default {
       telemetryEnabled,
       telemetryStatus,
       embedSettings,
+      pdfAnonymous,
+      pdfSharedCache,
+      togglePdfAnonymous,
       savingEmbedSettings,
       msFormsSettings,
       savingMsFormsSettings,

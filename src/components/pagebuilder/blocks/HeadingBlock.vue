@@ -26,7 +26,8 @@ export default {
   },
   setup(props) {
     const alignmentClass = computed(() => `align-${props.block.alignment || 'center'}`);
-    const headingTag = computed(() => props.block.settings.level || 'h1');
+    // Only a heading: the level used to become any tag the branding named (secu#8).
+    const headingTag = computed(() => (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(props.block.settings.level) ? props.block.settings.level : 'h1'));
 
     const headingStyle = computed(() => {
       const color = props.block.settings.color;

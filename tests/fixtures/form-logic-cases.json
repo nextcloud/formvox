@@ -1,0 +1,173 @@
+{
+	"_about": "One table for both lib/Service/FormLogic.php (tests/Unit/FormLogicTest.php) and src/utils/formLogic.js (tests-js/utils/formLogic.spec.js): what a respondent sees must be worked out the same in the browser and on the server.",
+	"conditions": [
+		{ "name": "a 0 is an answer", "condition": { "questionId": "q1", "operator": "isEmpty" }, "answers": { "q1": 0 }, "expect": false },
+		{ "name": "a 0 is not empty", "condition": { "questionId": "q1", "operator": "isNotEmpty" }, "answers": { "q1": 0 }, "expect": true },
+		{ "name": "an unchecked consent is empty", "condition": { "questionId": "q1", "operator": "isEmpty" }, "answers": { "q1": false }, "expect": true },
+		{ "name": "an empty matrix is empty", "condition": { "questionId": "q1", "operator": "isEmpty" }, "answers": { "q1": {} }, "expect": true },
+		{ "name": "an empty list is empty", "condition": { "questionId": "q1", "operator": "isEmpty" }, "answers": { "q1": [] }, "expect": true },
+		{ "name": "no answer is empty", "condition": { "questionId": "q1", "operator": "isEmpty" }, "answers": {}, "expect": true },
+		{ "name": "an empty text is empty", "condition": { "questionId": "q1", "operator": "isEmpty" }, "answers": { "q1": "" }, "expect": true },
+		{ "name": "a number equals its text", "condition": { "questionId": "q1", "operator": "equals", "value": "5" }, "answers": { "q1": 5 }, "expect": true },
+		{ "name": "a text equals a number", "condition": { "questionId": "q1", "operator": "equals", "value": 5 }, "answers": { "q1": "5" }, "expect": true },
+		{ "name": "a choice rule may name the label", "condition": { "questionId": "q1", "operator": "equals", "value": "Yes" }, "answers": { "q1": "opt1" },
+			"questions": [{ "id": "q1", "type": "choice", "options": [{ "value": "opt1", "label": "Yes" }, { "value": "opt2", "label": "No" }] }], "expect": true },
+		{ "name": "a choice rule on another option", "condition": { "questionId": "q1", "operator": "equals", "value": "No" }, "answers": { "q1": "opt1" },
+			"questions": [{ "id": "q1", "type": "choice", "options": [{ "value": "opt1", "label": "Yes" }, { "value": "opt2", "label": "No" }] }], "expect": false },
+		{ "name": "several choices contain one", "condition": { "questionId": "q1", "operator": "equals", "value": "b" }, "answers": { "q1": ["a", "b"] }, "expect": true },
+		{ "name": "several choices, not equal", "condition": { "questionId": "q1", "operator": "notEquals", "value": "b" }, "answers": { "q1": ["a", "b"] }, "expect": false },
+		{ "name": "a text contains a word", "condition": { "questionId": "q1", "operator": "contains", "value": "world" }, "answers": { "q1": "hello world" }, "expect": true },
+		{ "name": "several choices contain an item, not a piece of one", "condition": { "questionId": "q1", "operator": "contains", "value": "a" }, "answers": { "q1": ["ab", "c"] }, "expect": false },
+		{ "name": "nothing does not contain", "condition": { "questionId": "q1", "operator": "notContains", "value": "x" }, "answers": {}, "expect": true },
+		{ "name": "a later date is greater", "condition": { "questionId": "q1", "operator": "greaterThan", "value": "2026-01-01" }, "answers": { "q1": "2026-05-01" }, "expect": true },
+		{ "name": "a later date is not less", "condition": { "questionId": "q1", "operator": "lessThan", "value": "2026-01-01" }, "answers": { "q1": "2026-05-01" }, "expect": false },
+		{ "name": "a later time on the same day is greater", "condition": { "questionId": "q1", "operator": "greaterThan", "value": "2026-01-01T09:00" }, "answers": { "q1": "2026-01-01T10:00" }, "expect": true },
+		{ "name": "numbers compare as numbers, not as text", "condition": { "questionId": "q1", "operator": "greaterThan", "value": "9" }, "answers": { "q1": 10 }, "expect": true },
+		{ "name": "a number in text compares as a number", "condition": { "questionId": "q1", "operator": "lessThan", "value": 100 }, "answers": { "q1": "25.5" }, "expect": true },
+		{ "name": "an empty answer is not greater than anything", "condition": { "questionId": "q1", "operator": "greaterThan", "value": "-1" }, "answers": { "q1": "" }, "expect": false },
+		{ "name": "a word is not greater than a number", "condition": { "questionId": "q1", "operator": "greaterThan", "value": "1" }, "answers": { "q1": "abc" }, "expect": false },
+		{ "name": "in, by label", "condition": { "questionId": "q1", "operator": "in", "value": ["Yes", "Maybe"] }, "answers": { "q1": "opt1" },
+			"questions": [{ "id": "q1", "type": "dropdown", "options": [{ "value": "opt1", "label": "Yes" }] }], "expect": true },
+		{ "name": "not in, by label", "condition": { "questionId": "q1", "operator": "notIn", "value": ["Yes"] }, "answers": { "q1": "opt1" },
+			"questions": [{ "id": "q1", "type": "dropdown", "options": [{ "value": "opt1", "label": "Yes" }] }], "expect": false },
+		{ "name": "in without a list never matches", "condition": { "questionId": "q1", "operator": "in", "value": "a" }, "answers": { "q1": "a" }, "expect": false },
+		{ "name": "not in without a list always matches", "condition": { "questionId": "q1", "operator": "notIn", "value": "a" }, "answers": { "q1": "a" }, "expect": true },
+		{ "name": "a ticked consent equals true", "condition": { "questionId": "q1", "operator": "equals", "value": "true" }, "answers": { "q1": true }, "expect": true },
+		{ "name": "and of nothing holds", "condition": { "operator": "and", "conditions": [] }, "answers": {}, "expect": true },
+		{ "name": "or of nothing does not", "condition": { "operator": "or", "conditions": [] }, "answers": {}, "expect": false },
+		{ "name": "nested groups", "condition": { "operator": "or", "conditions": [
+			{ "questionId": "q1", "operator": "equals", "value": "x" },
+			{ "operator": "and", "conditions": [{ "questionId": "q1", "operator": "isNotEmpty" }, { "questionId": "q2", "operator": "isEmpty" }] }
+		] }, "answers": { "q1": "y" }, "expect": true },
+		{ "name": "an unknown operator never matches", "condition": { "questionId": "q1", "operator": "matches", "value": "x" }, "answers": { "q1": "x" }, "expect": false },
+		{ "name": "a capitalised group is not a group", "condition": { "operator": "AND", "conditions": [] }, "answers": {}, "expect": false },
+		{ "name": "a condition without a question never matches", "condition": { "operator": "isEmpty" }, "answers": {}, "expect": false }
+	],
+	"forms": [
+		{
+			"name": "an answer to a hidden question does not count",
+			"form": { "questions": [
+				{ "id": "q1", "type": "choice" },
+				{ "id": "q2", "type": "choice", "showIf": { "questionId": "q1", "operator": "equals", "value": "yes" } },
+				{ "id": "q3", "type": "text", "showIf": { "questionId": "q2", "operator": "equals", "value": "yes" } }
+			] },
+			"answers": { "q1": "no", "q2": "yes", "q3": "left over" },
+			"hidden": ["q2", "q3"], "pages": null
+		},
+		{
+			"name": "a hidden section hides its questions",
+			"form": { "questions": [
+				{ "id": "q1", "type": "choice" },
+				{ "id": "s1", "type": "section", "showIf": { "questionId": "q1", "operator": "equals", "value": "yes" } },
+				{ "id": "q2", "type": "text", "sectionId": "s1" },
+				{ "id": "q3", "type": "text" }
+			] },
+			"answers": { "q1": "no", "q2": "x", "q3": "y" },
+			"hidden": ["q2", "s1"], "pages": null
+		},
+		{
+			"name": "a 0 counts as answered for what follows",
+			"form": { "questions": [
+				{ "id": "q1", "type": "scale", "scaleMin": 0, "scaleMax": 10 },
+				{ "id": "q2", "type": "text", "showIf": { "questionId": "q1", "operator": "isNotEmpty" } }
+			] },
+			"answers": { "q1": 0 },
+			"hidden": [], "pages": null
+		},
+		{
+			"name": "routing skips a page, and what is on it",
+			"form": {
+				"questions": [{ "id": "q1", "type": "choice" }, { "id": "q2", "type": "text", "required": true }, { "id": "q3", "type": "text" }],
+				"pages": [
+					{ "id": "p1", "questions": ["q1"], "routing": [{ "questionId": "q1", "operator": "equals", "value": "skip", "targetPageId": "p3" }] },
+					{ "id": "p2", "questions": ["q2"] },
+					{ "id": "p3", "questions": ["q3"] }
+				]
+			},
+			"answers": { "q1": "skip", "q2": "typed before going back", "q3": "z" },
+			"hidden": ["q2"], "pages": ["p1", "p3"]
+		},
+		{
+			"name": "without a matching rule the pages follow in order",
+			"form": {
+				"questions": [{ "id": "q1", "type": "choice" }, { "id": "q2", "type": "text" }, { "id": "q3", "type": "text" }],
+				"pages": [
+					{ "id": "p1", "questions": ["q1"], "routing": [{ "questionId": "q1", "operator": "equals", "value": "skip", "targetPageId": "p3" }] },
+					{ "id": "p2", "questions": ["q2"] },
+					{ "id": "p3", "questions": ["q3"] }
+				]
+			},
+			"answers": { "q1": "stay" },
+			"hidden": [], "pages": ["p1", "p2", "p3"]
+		},
+		{
+			"name": "a question on no page is on the last page",
+			"form": {
+				"questions": [{ "id": "q1", "type": "choice" }, { "id": "q2", "type": "text" }, { "id": "q4", "type": "email" }],
+				"pages": [
+					{ "id": "p1", "questions": ["q1"], "routing": [{ "questionId": "q1", "operator": "equals", "value": "skip", "targetPageId": "p3" }] },
+					{ "id": "p2", "questions": ["q2"] },
+					{ "id": "p3", "questions": [] }
+				]
+			},
+			"answers": { "q1": "skip", "q4": "a@example.com" },
+			"hidden": ["q2"], "pages": ["p1", "p3"]
+		},
+		{
+			"name": "a rule back to a page already visited leads on to the next page",
+			"form": {
+				"questions": [{ "id": "q1", "type": "text" }, { "id": "q2", "type": "choice" }, { "id": "q3", "type": "text" }],
+				"pages": [
+					{ "id": "p1", "questions": ["q1"] },
+					{ "id": "p2", "questions": ["q2"], "routing": [{ "questionId": "q2", "operator": "equals", "value": "again", "targetPageId": "p1" }] },
+					{ "id": "p3", "questions": ["q3"] }
+				]
+			},
+			"answers": { "q2": "again" },
+			"hidden": [], "pages": ["p1", "p2", "p3"]
+		},
+		{
+			"name": "routing on a hidden question does not fire",
+			"form": {
+				"questions": [
+					{ "id": "q1", "type": "choice" },
+					{ "id": "q2", "type": "choice", "showIf": { "questionId": "q1", "operator": "equals", "value": "yes" } },
+					{ "id": "q3", "type": "text" },
+					{ "id": "q4", "type": "text" }
+				],
+				"pages": [
+					{ "id": "p1", "questions": ["q1", "q2"], "routing": [{ "questionId": "q2", "operator": "equals", "value": "jump", "targetPageId": "p3" }] },
+					{ "id": "p2", "questions": ["q3"] },
+					{ "id": "p3", "questions": ["q4"] }
+				]
+			},
+			"answers": { "q1": "no", "q2": "jump" },
+			"hidden": ["q2"], "pages": ["p1", "p2", "p3"]
+		},
+		{
+			"name": "a rule to a page that does not exist leads to the next page",
+			"form": {
+				"questions": [{ "id": "q1", "type": "choice" }, { "id": "q2", "type": "text" }],
+				"pages": [
+					{ "id": "p1", "questions": ["q1"], "routing": [{ "questionId": "q1", "operator": "isNotEmpty", "targetPageId": "gone" }] },
+					{ "id": "p2", "questions": ["q2"] }
+				]
+			},
+			"answers": { "q1": "a" },
+			"hidden": [], "pages": ["p1", "p2"]
+		},
+		{
+			"name": "a half-made rule never leads anywhere",
+			"form": {
+				"questions": [{ "id": "q1", "type": "choice" }, { "id": "q2", "type": "text" }, { "id": "q3", "type": "text" }],
+				"pages": [
+					{ "id": "p1", "questions": ["q1"], "routing": [{ "questionId": "q1", "operator": "", "targetPageId": "p3" }] },
+					{ "id": "p2", "questions": ["q2"] },
+					{ "id": "p3", "questions": ["q3"] }
+				]
+			},
+			"answers": { "q1": "a" },
+			"hidden": [], "pages": ["p1", "p2", "p3"]
+		}
+	]
+}

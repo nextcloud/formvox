@@ -5,128 +5,84 @@ declare(strict_types=1);
 namespace OCA\FormVox\Controller;
 
 use OCA\FormVox\AppInfo\Application;
-use OCA\FormVox\Service\FormFileLocator;
-use OCA\FormVox\Service\PermissionService;
-use OCA\FormVox\Service\ResponsePersistenceService;
+use OCA\FormVox\Exception\RequestException;
+use OCA\FormVox\L10n\Translatable;
+use OCA\FormVox\Pdf\ResponsePdf;
+use OCA\FormVox\Security\FormPermission;
+use OCA\FormVox\Security\RequireFormPermission;
+use OCA\FormVox\Service\FormAccessService;
+use OCA\FormVox\Service\FormRepository;
 use OCA\FormVox\Service\ResponseService;
 use OCP\AppFramework\Controller;
-use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\StrictCookiesRequired;
+use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
-use OCP\IUserSession;
 
 class ResponseController extends Controller {
-	private FormFileLocator $fileLocator;
-	private ResponsePersistenceService $responsePersistence;
-	private ResponseService $responseService;
-	private PermissionService $permissionService;
-	private IUserSession $userSession;
+	/** The most responses one page holds. */
+	/** The largest page the results page asks for: Nextcloud 35 holds any `limit` to 500 unless the method says otherwise. */
+	public const MAX_PAGE = 2000;
 
 	public function __construct(
 		IRequest $request,
-		FormFileLocator $fileLocator,
-		ResponsePersistenceService $responsePersistence,
-		ResponseService $responseService,
-		PermissionService $permissionService,
-		IUserSession $userSession,
+		private ResponseService $responseService,
+		private FormAccessService $access,
+		private FormRepository $formRepository,
+		private ResponsePdf $pdfs,
 	) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->fileLocator = $fileLocator;
-		$this->responsePersistence = $responsePersistence;
-		$this->responseService = $responseService;
-		$this->permissionService = $permissionService;
-		$this->userSession = $userSession;
 	}
 
 	/**
-	 * Get responses for a form
+	 * @param int<1, 2000>|null $limit as MAX_PAGE
 	 */
 	#[NoAdminRequired]
-	public function getResponses(int $fileId, ?string $date = null): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			if (!$this->permissionService->canViewResponses($role)) {
-				return new DataResponse(
-					['error' => 'Permission denied'],
-					Http::STATUS_FORBIDDEN
-				);
-			}
-
-			$responses = $this->responseService->getResponses($fileId, $date);
-			$summary = $this->responseService->getSummary($fileId);
-
-			return new DataResponse([
-				'responses' => $responses,
-				'summary' => $summary,
-			]);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
+	#[RequireFormPermission(FormPermission::VIEW_CONTENT)]
+	public function getResponses(int $fileId, ?string $date = null, ?int $limit = null, ?string $after = null): DataResponse {
+		if ($limit === null || $date !== null) {
+			$data = ['responses' => $this->responseService->getResponses($fileId, $date)];
+		} else {
+			$data = $this->responseService->getResponsePage($fileId, max(1, min(self::MAX_PAGE, $limit)), $after);
 		}
+		// A later page needs no summary: the first one brought it.
+		if ($after === null) {
+			$data['summary'] = $this->responseService->getSummary($fileId);
+		}
+		return new DataResponse($data);
 	}
 
-	/**
-	 * Delete all responses
-	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function deleteAllResponses(int $fileId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
-
-			if (!$this->permissionService->canDeleteResponses($role)) {
-				return new DataResponse(
-					['error' => 'Permission denied'],
-					Http::STATUS_FORBIDDEN
-				);
-			}
-
-			$this->responsePersistence->deleteAllResponses($fileId);
-			return new DataResponse(['success' => true]);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
-		}
+		$this->responseService->deleteAllResponses($fileId, $this->access->getFile($fileId));
+		return new DataResponse(['success' => true]);
 	}
 
-	/**
-	 * Delete a response
-	 */
 	#[NoAdminRequired]
+	#[RequireFormPermission(FormPermission::EDIT)]
 	public function deleteResponse(int $fileId, string $responseId): DataResponse {
-		try {
-			$file = $this->fileLocator->getFileById($fileId);
-			$userId = $this->userSession->getUser()?->getUID() ?? '';
-			$role = $this->permissionService->getRoleFromFile($file, $userId);
+		$this->responseService->deleteResponse($fileId, $this->access->getFile($fileId), $responseId);
+		return new DataResponse(['success' => true]);
+	}
 
-			if (!$this->permissionService->canDeleteResponses($role)) {
-				return new DataResponse(
-					['error' => 'Permission denied'],
-					Http::STATUS_FORBIDDEN
-				);
-			}
-
-			$this->responsePersistence->deleteResponse($fileId, $responseId);
-			return new DataResponse(['success' => true]);
-		} catch (\OCP\Files\NotFoundException $e) {
-			return new DataResponse(
-				['error' => 'Response not found'],
-				Http::STATUS_NOT_FOUND
-			);
-		} catch (\Exception $e) {
-			return new DataResponse(
-				['error' => $e->getMessage()],
-				Http::STATUS_INTERNAL_SERVER_ERROR
-			);
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	// Heavy to make: only from Nextcloud's own pages, not from a link on another site.
+	#[StrictCookiesRequired]
+	#[RequireFormPermission(FormPermission::DOWNLOAD)]
+	public function getResponsePdf(int $fileId, string $responseId): DataDownloadResponse {
+		$form = $this->formRepository->loadForm($fileId);
+		if (!ResponsePdf::keptFor($form)) {
+			throw RequestException::pdfOff();
 		}
+		$download = $this->pdfs->download($this->access->getFile($fileId), $form, fn () => $this->formRepository->response($fileId, $form, $responseId));
+		if ($download === null) {
+			// TRANSLATORS: Error when the response whose PDF was asked for does not exist
+			throw RequestException::notFound(Translatable::t('Response not found'));
+		}
+		return new DataDownloadResponse($download[0], $download[1], 'application/pdf');
 	}
 }

@@ -9,6 +9,7 @@ const initialForm = loadState('formvox', 'form');
 const role = loadState('formvox', 'role');
 const permissions = loadState('formvox', 'permissions');
 const adminBranding = loadState('formvox', 'adminBranding', null);
+const linkPasswordEnforced = loadState('formvox', 'linkPasswordEnforced', false);
 
 const app = createApp(Editor, {
   fileId,
@@ -16,6 +17,7 @@ const app = createApp(Editor, {
   role,
   permissions,
   adminBranding,
+  linkPasswordEnforced,
 });
 
 // Make translation functions globally available. Call sites pass the app id

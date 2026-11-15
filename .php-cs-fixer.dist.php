@@ -16,6 +16,7 @@ $config
 	->getFinder()
 	->notPath('build')
 	->notPath('l10n')
+	->notPath('lib/Vendor')
 	->notPath('node_modules')
 	->notPath('src')
 	->notPath('vendor')

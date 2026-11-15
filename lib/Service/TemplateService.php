@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\FormVox\Service;
 
 use OCA\FormVox\AppInfo\Application;
+use OCA\FormVox\Security\FormSanitizer;
 use OCP\IConfig;
 use Psr\Log\LoggerInterface;
 
@@ -20,6 +21,8 @@ class TemplateService {
 	public function __construct(
 		private IConfig $config,
 		private LoggerInterface $logger,
+		private FormSanitizer $sanitizer,
+		private FormSchemaValidator $schema,
 	) {
 	}
 
@@ -64,7 +67,8 @@ class TemplateService {
 		}
 		foreach ($decoded as $t) {
 			if (($t['id'] ?? '') === $id) {
-				return $t['form'] ?? null;
+				// Also cleans templates stored before forTemplate() dropped integrations.
+				return is_array($t['form'] ?? null) ? $this->sanitizer->forTemplate($t['form']) : null;
 			}
 		}
 		return null;
@@ -79,11 +83,11 @@ class TemplateService {
 		$list = $raw === '' ? [] : (json_decode($raw, true) ?: []);
 
 		if (count($list) >= self::MAX_TEMPLATES) {
-			throw new \RuntimeException('Template limit reached');
+			throw TemplateLimitException::reached();
 		}
 
-		// Sanitize form structure
-		$cleanForm = $this->stripRuntimeFields($form);
+		// Sanitize form structure; every form made from it starts from what is stored here.
+		$cleanForm = $this->schema->check($this->sanitizer->forTemplate($form));
 		$cleanForm['title'] = $title;
 		$cleanForm['description'] = $description;
 
@@ -109,6 +113,35 @@ class TemplateService {
 		];
 	}
 
+	/**
+	 * Rewrites stored templates through forTemplate(), for those saved before it dropped secrets, people and
+	 * links: they still sat in appconfig, only filtered when read. Run once by the CleanStoredTemplates repair step.
+	 *
+	 * @return int how many templates were cleaned
+	 */
+	public function cleanStored(): int {
+		$raw = $this->config->getAppValue(Application::APP_ID, self::KEY, '');
+		$list = $raw === '' ? null : json_decode($raw, true);
+		if (!is_array($list)) {
+			return 0;
+		}
+		$cleaned = 0;
+		foreach ($list as $i => $template) {
+			if (!is_array($template) || !is_array($template['form'] ?? null)) {
+				continue;
+			}
+			$clean = $this->sanitizer->forTemplate($template['form']);
+			if ($clean != $template['form']) {
+				$list[$i]['form'] = $clean;
+				$cleaned++;
+			}
+		}
+		if ($cleaned > 0) {
+			$this->config->setAppValue(Application::APP_ID, self::KEY, json_encode($list, JSON_UNESCAPED_UNICODE));
+		}
+		return $cleaned;
+	}
+
 	public function removeTemplate(string $id): bool {
 		$raw = $this->config->getAppValue(Application::APP_ID, self::KEY, '');
 		if ($raw === '') {
@@ -125,27 +158,5 @@ class TemplateService {
 		}
 		$this->config->setAppValue(Application::APP_ID, self::KEY, json_encode($list, JSON_UNESCAPED_UNICODE));
 		return true;
-	}
-
-	private function stripRuntimeFields(array $form): array {
-		unset(
-			$form['responses'],
-			$form['_index'],
-			$form['permissions'],
-			$form['created_at'],
-			$form['modified_at'],
-			$form['id'],
-		);
-		// Strip share-link / password state — templates shouldn't carry these.
-		if (isset($form['settings']) && is_array($form['settings'])) {
-			unset(
-				$form['settings']['public_token'],
-				$form['settings']['share_password'],
-				$form['settings']['share_password_hash'],
-				$form['settings']['share_expires_at'],
-				$form['settings']['share_starts_at'],
-			);
-		}
-		return $form;
 	}
 }

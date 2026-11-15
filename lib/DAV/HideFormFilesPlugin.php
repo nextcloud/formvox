@@ -18,10 +18,10 @@ use Sabre\HTTP\ResponseInterface;
  */
 class HideFormFilesPlugin extends ServerPlugin {
 	private ?Server $server = null;
-	private LoggerInterface $logger;
 
-	public function __construct(LoggerInterface $logger) {
-		$this->logger = $logger;
+	public function __construct(
+		private LoggerInterface $logger,
+	) {
 	}
 
 	public function getPluginName(): string {

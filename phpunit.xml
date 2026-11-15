@@ -19,6 +19,7 @@
         </include>
         <exclude>
             <directory>./lib/Migration</directory>
+            <directory>./lib/Vendor</directory>
         </exclude>
     </source>
     <!--
