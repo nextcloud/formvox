@@ -48,6 +48,59 @@ Voeg een wachtwoord toe aan publieke formulieren:
 - Wijzig wachtwoorden periodiek
 - Neem het wachtwoord niet op in dezelfde mail als de link
 
+### Linkwachtwoord verplicht door Nextcloud
+
+Sinds 1.6.0 volgt FormVox de regels van Nextcloud voor wachtwoorden op openbare links,
+dezelfde regels als voor een openbare deellink in Bestanden:
+
+- **Dwing wachtwoordbeveiliging af** onder **Instellingen → Beheer → Delen**: staat die
+  aan, dan krijgt een nieuwe antwoord-link een gegenereerd wachtwoord, één keer getoond
+  aan degene die de link maakt, en kan het wachtwoord er niet meer af. Links die al
+  bestonden voordat de instelling aan ging, blijven werken zoals ze zijn, zonder
+  wachtwoord, tot iemand er een instelt.
+- **Wachtwoordbeleid:** een wachtwoord dat iemand instelt, moet voldoen aan het
+  wachtwoordbeleid van Nextcloud voor delen (de app `password_policy`), en een
+  gegenereerd wachtwoord komt uit die app als die aan staat.
+- **Vraag altijd naar een wachtwoord** gebruikt FormVox niet: zonder afdwingen blijft
+  het wachtwoord op de link van een formulier optioneel.
+
+Dit geldt ook voor formulieren waarbij respondenten moeten inloggen, of waarvan de link
+beperkt is tot gebruikers of groepen. Respondenten loggen dan in én vullen het
+wachtwoord in.
+
+#### Standaard aan bij een configuratie-preset
+
+Vanaf Nextcloud 32 zetten de presets School, Universiteit, Hostingbedrijf, Kleine
+organisatie en de twee grotere organisaties (`config_preset` 4 t/m 9 in `config.php`)
+**Dwing wachtwoordbeveiliging af** aan, tenzij een beheerder die instelling zelf heeft
+gezet. **Vraag altijd naar een wachtwoord** blijft dan uit, dus de instellingenpagina
+toont **Dwing wachtwoordbeveiliging af** als aan, maar grijs.
+
+Afdwingen uitzetten:
+
+1. Ga naar **Instellingen → Beheer → Delen**
+2. Zet **Vraag altijd naar een wachtwoord** aan; pas dan is de schakelaar eronder te
+   wijzigen
+3. Zet **Dwing wachtwoordbeveiliging af** uit
+4. Zet **Vraag altijd naar een wachtwoord** weer uit als je dat niet wilt voor Bestanden
+
+Dit verandert de regel voor elke openbare link op je Nextcloud, niet alleen voor
+FormVox.
+
+#### Groepen uitzonderen
+
+Wil je afdwingen houden voor de meeste gebruikers, maar niet voor wie de formulieren
+beheert, voeg hun groepen dan toe onder **Sluit groepen uit van wachtwoordvereisten**.
+FormVox kijkt naar de groepen van degene die de link maakt of wijzigt, niet naar die van
+de respondenten. Het veld verschijnt alleen als `config.php` dit bevat:
+
+```php
+'sharing.allow_disabled_password_enforcement_groups' => true,
+```
+
+en is, net als de schakelaar erboven, alleen te wijzigen zolang **Vraag altijd naar een
+wachtwoord** aan staat.
+
 ### Vervaldatums
 
 Stel automatische verloop in:
