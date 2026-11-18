@@ -54,6 +54,32 @@ Vereist een wachtwoord om het formulier te benaderen:
 2. Voer een wachtwoord in en klik op **Save**
 3. Deel het wachtwoord apart met de beoogde respondenten
 
+Het wachtwoord moet voldoen aan de wachtwoordregels van je Nextcloud voor delen; doet
+het dat niet, dan zegt FormVox bij het opslaan waarom. FormVox bewaart alleen een hash
+van het wachtwoord en kan het je dus niet opnieuw laten zien. Wijzigen doe je door een
+nieuw wachtwoord in te voeren en op **Save** te klikken: iedereen die het formulier al
+had geopend, moet dan het nieuwe wachtwoord invullen.
+
+#### Als het wachtwoord niet uit kan
+
+Je beheerder kan in Nextcloud een wachtwoord verplichten op elke openbare link
+(**Dwing wachtwoordbeveiliging af** onder **Instellingen → Beheer → Delen**). Sinds
+versie 1.6.0 volgt FormVox die instelling, net als een openbare deellink in Bestanden:
+
+- Een nieuwe antwoord-link krijgt meteen een wachtwoord. FormVox toont het één keer,
+  met *Copy this generated password now; it will not be shown again.* Kopieer het, of
+  stel een eigen wachtwoord in en klik op **Save**.
+- **Password protect** blijft aan en kan niet uit. Het venster meldt
+  *A password is required for public links.*
+- Een link die al bestond voordat je beheerder de instelling aanzette, blijft zonder
+  wachtwoord werken. Zet je het wachtwoord daarop aan, dan blijft het aan.
+- Dit geldt ook als **Require login to respond** aan staat, of als de link beperkt is
+  tot gebruikers of groepen: respondenten loggen dan in én vullen het wachtwoord in.
+
+Alleen je beheerder kan dit veranderen. Die kan de instelling uitzetten, of jouw groep
+ervan uitzonderen; zie
+[Linkwachtwoord verplicht door Nextcloud](../admin/security.nl.md#linkwachtwoord-verplicht-door-nextcloud).
+
 ### Vervaldatum
 
 Stel een deadline in voor formulier-toegang:

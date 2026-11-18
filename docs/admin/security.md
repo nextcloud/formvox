@@ -45,6 +45,57 @@ Add a password to public forms:
 - Change passwords periodically
 - Don't include password in the same message as the link
 
+### Link passwords required by Nextcloud
+
+Since 1.6.0, FormVox follows Nextcloud's rules for passwords on public links, the
+same rules as for a public share in Files:
+
+- **Enforce password protection** under **Administration settings → Sharing**: when it
+  is on, a new response link gets a generated password, shown once to the person who
+  creates the link, and the password cannot be removed. Links created before the
+  setting was switched on keep working as they are, without a password, until someone
+  sets one.
+- **Password policy:** a password someone sets must pass Nextcloud's password policy
+  for shares (the Password policy app, `password_policy`), and a generated one comes
+  from that app when it is enabled.
+- **Always ask for a password** is not used by FormVox: without enforcement, the
+  password on a form's link stays optional.
+
+This also applies to forms that ask respondents to log in, or that restrict the link
+to users or groups. Respondents then log in and enter the password as well.
+
+#### On by default with a configuration preset
+
+On Nextcloud 32 and later, the presets School, University, Hosting company, Small
+organization, Big organization and Large organization (`config_preset` 4 to 9 in
+`config.php`) switch **Enforce password protection** on, unless an administrator has
+set it explicitly.
+**Always ask for a password** stays off, so the settings page shows **Enforce password
+protection** as on but greyed out.
+
+To switch enforcement off:
+
+1. Go to **Administration settings → Sharing**
+2. Switch on **Always ask for a password**; the switch below it can only be changed then
+3. Switch off **Enforce password protection**
+4. Switch **Always ask for a password** off again if you do not want it for Files
+
+This changes the rule for every public link on your Nextcloud, not only for FormVox.
+
+#### Excluding groups
+
+To keep enforcement for most users but not for the people who manage forms, add their
+groups under **Exclude groups from password requirements**. FormVox looks at the groups
+of the person who creates or changes the link, not at the respondents. The field
+appears only when `config.php` contains:
+
+```php
+'sharing.allow_disabled_password_enforcement_groups' => true,
+```
+
+and, like the switch above it, can only be changed while **Always ask for a password**
+is on.
+
 ### Expiration Dates
 
 Set automatic expiration:

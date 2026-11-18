@@ -54,6 +54,31 @@ Require a password to access the form:
 2. Enter a password and click **Save**
 3. Share the password separately with intended respondents
 
+The password must meet your Nextcloud's password rules for shares; if it does not,
+saving tells you why. FormVox keeps only a hash of the password, so it cannot show it
+to you again. To change it, enter a new one and click **Save**: everyone who already
+opened the form has to enter the new password.
+
+#### When the password cannot be switched off
+
+Your administrator can require a password on every public link in Nextcloud
+(**Enforce password protection** under **Administration settings → Sharing**). Since
+version 1.6.0, FormVox follows that setting, just like a public share in Files:
+
+- A new response link gets a password straight away. FormVox shows it once, with
+  *Copy this generated password now; it will not be shown again.* Copy it, or set
+  your own password and click **Save**.
+- **Password protect** stays on and cannot be switched off. The dialog says
+  *A password is required for public links.*
+- A link created before your administrator switched the setting on keeps working
+  without a password. Once you switch its password on, it stays on.
+- This also applies when **Require login to respond** is on, or when the link is
+  restricted to users or groups: respondents then log in and enter the password too.
+
+Only your administrator can change this. They can switch the setting off, or exclude
+your group from it; see
+[Link passwords required by Nextcloud](../admin/security.md#link-passwords-required-by-nextcloud).
+
 ### Expiration Date
 
 Set a deadline for form access:
