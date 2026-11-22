@@ -45,6 +45,40 @@ Add a password to public forms:
 - Change passwords periodically
 - Don't include password in the same message as the link
 
+### Who may create a public link
+
+Since 1.6.0, FormVox follows Nextcloud's settings for public links, the same settings as
+for a public share in Files. Only someone whom Nextcloud allows to create link shares can
+create a form's response link, or replace it with a new one. Under **Administration
+settings → Sharing**, that takes:
+
+- **Allow users to share via link and emails** switched on;
+- the person not in a group under **Exclude groups from creating link shares**;
+- under **Limit sharing based on groups**: the person not in an excluded group, or, with
+  an allow list, in an allowed group.
+
+Otherwise **Create response link** answers *Public links are not allowed*, and **Replace
+with a new link** fails. Before 1.6.0, FormVox did not check these settings, so the
+message can appear for the first time after the update.
+
+FormVox looks only at the person who creates or replaces the link, not at the
+respondents. To keep public links closed for most accounts, allow them only for the
+groups that manage forms. This also applies to forms that ask respondents to log in, or
+that restrict the link to users or groups: respondents reach those through the response
+link as well.
+
+The configuration presets (`config_preset`) do not change these settings. To read them
+on the command line:
+
+```bash
+occ config:app:get core shareapi_allow_links
+occ config:app:get core shareapi_allow_links_exclude_groups
+occ config:app:get core shareapi_exclude_groups
+occ config:app:get core shareapi_exclude_groups_list
+```
+
+An empty result means the default: link shares allowed, and no groups excluded.
+
 ### Link passwords required by Nextcloud
 
 Since 1.6.0, FormVox follows Nextcloud's rules for passwords on public links, the

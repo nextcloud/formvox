@@ -48,6 +48,42 @@ Voeg een wachtwoord toe aan publieke formulieren:
 - Wijzig wachtwoorden periodiek
 - Neem het wachtwoord niet op in dezelfde mail als de link
 
+### Wie een openbare link mag maken
+
+Sinds 1.6.0 volgt FormVox de instellingen van Nextcloud voor openbare links, dezelfde
+instellingen als voor een openbare deellink in Bestanden. Alleen wie van Nextcloud
+deellinks mag maken, kan de antwoord-link van een formulier maken of vervangen door een
+nieuwe. Onder **Instellingen → Beheer → Delen** vraagt dat:
+
+- **Sta gebruikers toe om te delen via een link en e-mail** aan;
+- de persoon niet in een groep onder **Sta deze groepen niet toe om deellinks te maken**;
+- onder **Beperk delen op basis van groepen**: de persoon niet in een uitgesloten groep,
+  of, bij een lijst van toegestane groepen, wel in een toegestane groep.
+
+Anders antwoordt **Create response link** met *Public links are not allowed* (in het
+Nederlands: *Openbare links zijn niet toegestaan*), en mislukt **Replace with a new
+link**. Vóór 1.6.0 keek FormVox niet naar deze instellingen, dus de melding kan na de
+update voor het eerst verschijnen.
+
+FormVox kijkt alleen naar degene die de link maakt of vervangt, niet naar de
+respondenten. Wil je openbare links voor de meeste accounts dichthouden, sta ze dan alleen
+toe voor de groepen die formulieren beheren. Dit geldt ook voor formulieren waarbij
+respondenten moeten inloggen, of waarvan de link beperkt is tot gebruikers of groepen:
+ook die bereiken respondenten via de antwoord-link.
+
+De configuratie-presets (`config_preset`) veranderen deze instellingen niet. Uitlezen
+op de commandoregel:
+
+```bash
+occ config:app:get core shareapi_allow_links
+occ config:app:get core shareapi_allow_links_exclude_groups
+occ config:app:get core shareapi_exclude_groups
+occ config:app:get core shareapi_exclude_groups_list
+```
+
+Een lege uitkomst betekent de standaard: deellinks toegestaan en geen groepen
+uitgesloten.
+
 ### Linkwachtwoord verplicht door Nextcloud
 
 Sinds 1.6.0 volgt FormVox de regels van Nextcloud voor wachtwoorden op openbare links,

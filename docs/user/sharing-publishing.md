@@ -44,6 +44,18 @@ Create a link that anyone can access:
 4. Configure options under **Link settings** (see below)
 5. Copy the link, or download the QR code
 
+#### When FormVox says "Public links are not allowed"
+
+Since version 1.6.0, FormVox follows your Nextcloud's settings for public links, just
+like a public share in Files. If your administrator does not allow you to create link
+shares, **Create response link** answers *Public links are not allowed*, and **Replace
+with a new link** fails. This can happen for the first time after the update to 1.6.0,
+because earlier versions did not check these settings.
+
+Only your administrator can change this. They can allow link shares for you, or for a
+group you are in; see
+[Who may create a public link](../admin/security.md#who-may-create-a-public-link).
+
 ## Public Link Options
 
 ### Password Protection

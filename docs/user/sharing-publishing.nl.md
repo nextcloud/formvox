@@ -44,6 +44,19 @@ Maak een link die iedereen kan benaderen:
 4. Configureer de opties onder **Link settings** (zie hieronder)
 5. Kopieer de link, of download de QR-code
 
+#### Als FormVox "Public links are not allowed" meldt
+
+Sinds versie 1.6.0 volgt FormVox de instellingen van je Nextcloud voor openbare links,
+net als een openbare deellink in Bestanden. Mag je van je beheerder geen deellinks
+maken, dan antwoordt **Create response link** met *Public links are not allowed* (in het
+Nederlands: *Openbare links zijn niet toegestaan*), en mislukt **Replace with a new
+link**. Dat kan na de update naar 1.6.0 voor het eerst gebeuren, omdat eerdere versies
+niet naar deze instellingen keken.
+
+Alleen je beheerder kan dit veranderen. Die kan deellinks voor jou toestaan, of voor een
+groep waar je in zit; zie
+[Wie een openbare link mag maken](../admin/security.nl.md#wie-een-openbare-link-mag-maken).
+
 ## Publieke-link-opties
 
 ### Wachtwoord-bescherming
